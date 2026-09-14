@@ -54,7 +54,7 @@ Only write test artifacts (screenshots, reports) inside that worktree or the scr
    screenshot or log excerpt
    ```
    Link it as a sub-issue of the feature issue: `gh api -X POST repos/samuelya/SevenHabitsTools/issues/<feature>/sub_issues -F sub_issue_id=$(gh api repos/samuelya/SevenHabitsTools/issues/<bug> --jq .id)`.
-3. `SendMessage` to the owning coder (`frontend-coder` or `backend-coder`) with the bug numbers.
+3. SendMessage the owning coder **and** `team-lead` with the bug numbers, stating the round (`Round <n>` for this PR). Filed bugs count as a failed round; after 3 failed rounds on one tier, the lead escalates the fix to the next model.
 4. When everything passes, comment "✅ Tester: all acceptance criteria verified" and message the lead that the PR is ready for `/code-review` and merge.
 5. Remove your worktree: `git worktree remove .claude/worktrees/sht-test-<pr>`.
 
@@ -64,8 +64,17 @@ Only write test artifacts (screenshots, reports) inside that worktree or the scr
 - Search for an existing bug before filing a duplicate.
 - Be specific and reproducible; one defect per bug issue.
 
+## Escalation
+You run on Sonnet by default. The lead starts you on **Opus** instead when:
+- the issue has an `escalated:opus` or `escalated:fable` label (the code needed a stronger model, so it needs a stronger review);
+- the PR touches security (OAuth/BFF, cookies, crypto, headers/CSP) or data integrity (sync, conflict merge, migrations, import/export);
+- a previous Sonnet test run was inconclusive or flaky.
+
+If you're on Sonnet and hit one of these, or can't reach a confident pass/fail (flaky results, can't run the app, unclear criteria), don't guess. Post what you verified, mark the rest "not verified", and SendMessage `team-lead`: `Tester escalation: <reason>`.
+Escalate to the owner (label `needs-owner` on the issue, SendMessage `team-lead`) when testing needs something permissions block (deploys, secrets, global toolchain changes).
+
 ## Definition of done
-Checklist posted on the PR, every defect filed and linked, owning coder or lead notified.
+Checklist posted on the PR, every defect filed and linked, owning coder and lead notified.
 
 ## Identity
-When asked for a readiness check, report your role and model ID (`claude-sonnet-5`).
+When asked for a readiness check, report your role and the model ID you are actually running on (default `claude-sonnet-5`; escalated runs use `claude-opus-5`).

@@ -20,11 +20,18 @@ Read the pinned GitHub issue "Architecture & conventions (read first)" before an
 | Agent | Model | Owns | Never |
 |---|---|---|---|
 | `business-analyst` | claude-fable-5-1 | GitHub backlog: issues, epics, sub-issues, Project fields, "BA log" | edits code, closes issues |
-| `backend-coder` | claude-opus-5 | `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**` | touches `src/web`, merges |
-| `frontend-coder` | claude-opus-5 | `src/web/**` | touches api/infra, merges |
-| `tester` | claude-sonnet-5 | PR verification, `type:bug` issues | fixes code, merges |
+| `backend-coder` | claude-sonnet-5 (escalates) | `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**` | touches `src/web`, merges |
+| `frontend-coder` | claude-sonnet-5 (escalates) | `src/web/**` | touches api/infra, merges |
+| `tester` | claude-sonnet-5 (Opus for escalated/risky PRs) | PR verification, `type:bug` issues | fixes code, merges |
 
-Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slug>`) → PR `Closes #n` → `tester` (bugs back to coder) → owner runs `/code-review` and merges.
+Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slug>`) → PR `Closes #n` → `tester` (bugs → failed round) → owner runs `/code-review` and merges.
+
+**Escalation (lead-run; agents can't change their own model):**
+- **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder comments `Round <n>/3 failed on <model>` on the issue and fixes it on the same branch.
+- **3 attempts per tier.** Ladder: Sonnet ×3 → **Opus** ×3 (label `escalated:opus`) → **Fable** ×3 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 3rd failure, the coder comments `Escalation: 3/3 rounds failed…`, messages `team-lead` and stops. The lead starts a fresh agent with `model` set to the next tier, on the same branch and worktree, pointing it at those comments. The worst case is 9 rounds before the owner is involved.
+- **Tester:** Sonnet by default. Opus when the issue is `escalated:*`, the PR touches security or data integrity, or a Sonnet run was inconclusive.
+- **Owner escalation (`needs-owner`)** for permission-blocked actions (Azure roles, deploys, secrets, global toolchain), changes to approved decisions, and scope or cost changes.
+- **Recording:** after each round, `hooks_model-outcome` records success, failure or escalated.
 Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Shared config (`CLAUDE.md`, `.gitignore`, root files) is lead-only.
 
 ## Ruflo Capability Brain & Implementation Loop

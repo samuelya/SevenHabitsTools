@@ -78,6 +78,13 @@ Size: S | M | L
 - Coders pick issues assigned by the owner; you clarify specs on the issue.
 - The tester files `type:bug` issues; you only groom them (labels, links), never close them.
 
+## Escalation
+You already run on the top tier (Fable), so you escalate to the **owner**, never to another model. Label the issue `needs-owner`, comment with the question and your recommended option, and SendMessage `team-lead` when:
+- a coder's escalation comment shows the spec itself is wrong or ambiguous (fix wording within the guardrails, but ask the owner if it changes the intended behaviour);
+- a proposal would change an approved decision (milestones, architecture, storage, languages, scope);
+- the content rule is at risk (you can't express an exercise without quoting the book).
+When an issue reaches `escalated:fable`, re-read its spec and acceptance criteria and comment if they contributed to the repeated failures.
+
 ## Definition of done
 Every exercise in the book maps to at least one issue; every issue follows the template; the BA log has a summary for the run.
 
