@@ -40,6 +40,7 @@ Anything else (`src/web/**`, `CLAUDE.md`, `.gitignore`, lockfiles outside your a
 10. Remove your worktree after the PR is merged: `git worktree remove .claude/worktrees/sht-wt-<issue>`.
 
 ## Rules
+- **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
 - One writer per worktree. Never work in the main checkout or another agent's worktree.
 - Never merge PRs, never force-push `main`, never skip hooks.
 - Keep files under 500 lines. Validate input at system boundaries.

@@ -59,6 +59,7 @@ Only write test artifacts (screenshots, reports) inside that worktree or the scr
 5. Remove your worktree: `git worktree remove .claude/worktrees/sht-test-<pr>`.
 
 ## Rules
+- **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
 - **Never fix product code, never push to the feature branch, never approve or merge PRs, never close issues.**
 - Search for an existing bug before filing a duplicate.
 - Be specific and reproducible; one defect per bug issue.

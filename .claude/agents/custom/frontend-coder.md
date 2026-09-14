@@ -43,6 +43,7 @@ Anything else (`src/api/**`, `infra/**`, workflows, `CLAUDE.md`, `.gitignore`) b
 10. Remove your worktree after merge.
 
 ## Rules
+- **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
 - One writer per worktree; never touch the main checkout or another agent's worktree.
 - Never merge PRs, never force-push `main`, never skip hooks.
 - Keep files under 500 lines.
