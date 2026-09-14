@@ -1,0 +1,67 @@
+<mat-sidenav-container class="shell" [class.shell--handset]="handset()">
+  <mat-sidenav
+    [mode]="handset() ? 'over' : 'side'"
+    [opened]="!handset()"
+    [disableClose]="!handset()"
+  >
+    <div class="side-nav__brand">{{ labels.text('app.name') }}</div>
+    <nav [attr.aria-label]="labels.text('nav.main')">
+      <mat-nav-list>
+        @for (item of navItems; track item.path) {
+          <a
+            mat-list-item
+            [routerLink]="item.path"
+            routerLinkActive
+            #rla="routerLinkActive"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
+            ariaCurrentWhenActive="page"
+            [activated]="rla.isActive"
+          >
+            <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ labels.text(item.labelKey) }}</span>
+          </a>
+        }
+      </mat-nav-list>
+    </nav>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="shell__content">
+    <mat-toolbar class="top-bar" role="banner">
+      @if (backUrl(); as back) {
+        <a
+          mat-icon-button
+          class="top-bar__back"
+          [routerLink]="back"
+          [attr.aria-label]="labels.text('nav.back')"
+        >
+          <mat-icon class="flip-in-rtl" aria-hidden="true">arrow_back</mat-icon>
+        </a>
+      }
+      <span class="top-bar__title" data-testid="page-title">{{ pageTitle() }}</span>
+    </mat-toolbar>
+
+    <main class="page">
+      <router-outlet />
+    </main>
+
+    @if (handset()) {
+      <nav class="bottom-nav" [attr.aria-label]="labels.text('nav.main')">
+        @for (item of navItems; track item.path) {
+          <a
+            class="bottom-nav__item"
+            matRipple
+            [routerLink]="item.path"
+            routerLinkActive="bottom-nav__item--active"
+            [routerLinkActiveOptions]="{ exact: item.exact }"
+            ariaCurrentWhenActive="page"
+          >
+            <span class="bottom-nav__indicator">
+              <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+            </span>
+            <span class="bottom-nav__label">{{ labels.text(item.labelKey) }}</span>
+          </a>
+        }
+      </nav>
+    }
+  </mat-sidenav-content>
+</mat-sidenav-container>

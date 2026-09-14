@@ -1,0 +1,97 @@
+@use '@angular/material' as mat;
+
+$latin-font:
+  Roboto,
+  system-ui,
+  -apple-system,
+  'Segoe UI',
+  'Helvetica Neue',
+  Arial,
+  sans-serif;
+$arabic-font: 'Noto Sans Arabic', $latin-font;
+
+html {
+  // Light and dark palettes follow the operating system preference.
+  color-scheme: light dark;
+
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+        theme-type: color-scheme,
+      ),
+      typography: (
+        plain-family: $latin-font,
+        brand-family: $latin-font,
+      ),
+      density: 0,
+    )
+  );
+
+  @include mat.sidenav-overrides(
+    (
+      container-divider-color: var(--mat-sys-outline-variant),
+      container-shape: 0,
+      container-width: 256px,
+    )
+  );
+}
+
+// Noto Sans Arabic is only referenced, and therefore only downloaded, for Arabic.
+html:lang(ar) {
+  @include mat.theme(
+    (
+      typography: (
+        plain-family: $arabic-font,
+        brand-family: $arabic-font,
+      ),
+    )
+  );
+}
+
+html,
+body {
+  block-size: 100%;
+}
+
+body {
+  margin: 0;
+  font: var(--mat-sys-body-large);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+[dir='rtl'] .flip-in-rtl {
+  transform: scaleX(-1);
+}
+
+.page-heading {
+  margin-block: 0 12px;
+  font: var(--mat-sys-headline-small);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
