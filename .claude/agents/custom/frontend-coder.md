@@ -31,7 +31,7 @@ Anything else (`src/api/**`, `infra/**`, workflows, `CLAUDE.md`, `.gitignore`) b
 - No cloud/OAuth calls until the Cloud Sync milestone is unblocked.
 
 ## Workflow
-1. Isolated worktree: `git fetch origin && git worktree add ../sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
+1. Isolated worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with unit tests; add/extend a Playwright spec for the user-visible flow.
 4. Verify in `src/web`: `npm ci && npm run lint && npm test -- --watch=false && npm run build`.

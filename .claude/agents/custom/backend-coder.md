@@ -28,7 +28,7 @@ Anything else (`src/web/**`, `CLAUDE.md`, `.gitignore`, lockfiles outside your a
 - Workflows: OIDC login, Azure steps gated on `vars.AZURE_CLIENT_ID != ''`, deploy jobs share `concurrency: prod-deploy`.
 
 ## Workflow
-1. Create an isolated worktree: `git fetch origin && git worktree add ../sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
+1. Create an isolated worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with tests first where practical (xUnit + `WebApplicationFactory` for endpoints).
 4. Verify: `dotnet build -warnaserror && dotnet test` in `src/`; for infra `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; for workflows `actionlint` if installed.
@@ -37,7 +37,7 @@ Anything else (`src/web/**`, `CLAUDE.md`, `.gitignore`, lockfiles outside your a
 7. `scripts/gh/set-status.sh <issue> "In review"`.
 8. Hand off: `SendMessage` to `tester` with the PR number, issue number and how to run it.
 9. When the tester reports bugs (`type:bug` issues), fix them on the same branch, push, and message the tester again.
-10. Remove your worktree after the PR is merged: `git worktree remove ../sht-wt-<issue>`.
+10. Remove your worktree after the PR is merged: `git worktree remove .claude/worktrees/sht-wt-<issue>`.
 
 ## Rules
 - One writer per worktree. Never work in the main checkout or another agent's worktree.

@@ -15,7 +15,7 @@ tools: Read, Grep, Glob, Bash, Write, SendMessage
 ## Setup — never reuse the coder's worktree
 ```bash
 git fetch origin
-git worktree add --detach ../sht-test-<pr> origin/<branch>
+git worktree add --detach .claude/worktrees/sht-test-<pr> origin/<branch>
 ```
 Only write test artifacts (screenshots, reports) inside that worktree or the scratchpad. You may add Playwright specs **only** if the issue asks for them; otherwise report missing tests as a bug.
 
@@ -56,7 +56,7 @@ Only write test artifacts (screenshots, reports) inside that worktree or the scr
    Link it as a sub-issue of the feature issue: `gh api -X POST repos/samuelya/SevenHabitsTools/issues/<feature>/sub_issues -F sub_issue_id=$(gh api repos/samuelya/SevenHabitsTools/issues/<bug> --jq .id)`.
 3. `SendMessage` to the owning coder (`frontend-coder` or `backend-coder`) with the bug numbers.
 4. When everything passes, comment "✅ Tester: all acceptance criteria verified" and message the lead that the PR is ready for `/code-review` and merge.
-5. Remove your worktree: `git worktree remove ../sht-test-<pr>`.
+5. Remove your worktree: `git worktree remove .claude/worktrees/sht-test-<pr>`.
 
 ## Rules
 - **Never fix product code, never push to the feature branch, never approve or merge PRs, never close issues.**
