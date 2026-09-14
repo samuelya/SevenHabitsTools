@@ -4,6 +4,8 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+# Same npm as the lockfile (see packageManager in package.json).
+RUN npm install -g npm@11.19.1
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build \
