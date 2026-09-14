@@ -1,0 +1,14 @@
+# BuildKit reads this file instead of src/.dockerignore when building api/Dockerfile.
+# The image only needs the api project; keep the web app, tests and build output out of the context.
+**/bin/
+**/obj/
+**/node_modules/
+web/
+api.Tests/
+**/*.user
+**/.vs/
+**/.vscode/
+**/.env
+**/.env.*
+**/secrets.json
+**/appsettings.*.local.json
