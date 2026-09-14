@@ -1,3 +1,6 @@
+# ---------- Private reference material (copyrighted, never commit) ----------
+documents/
+
 # ---------- Secrets ----------
 .env
 .env.local
