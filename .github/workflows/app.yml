@@ -107,6 +107,8 @@ jobs:
           cache: npm
           cache-dependency-path: src/web/package-lock.json
 
+      - run: npm install -g npm@11.19.1
+      - run: npm -v
       - run: npm ci
       - run: npm run lint --if-present
       - run: npm test --if-present
