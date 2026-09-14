@@ -12,6 +12,21 @@
 - Keep files under 500 lines
 - Validate input at system boundaries
 
+## Seven Habits Tools — Team
+
+Run `/team-up` at the start of each implementation session (ruflo registrations expire).
+Read the pinned GitHub issue "Architecture & conventions (read first)" before any work.
+
+| Agent | Model | Owns | Never |
+|---|---|---|---|
+| `business-analyst` | claude-fable-5-1 | GitHub backlog: issues, epics, sub-issues, Project fields, "BA log" | edits code, closes issues |
+| `backend-coder` | claude-opus-5 | `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**` | touches `src/web`, merges |
+| `frontend-coder` | claude-opus-5 | `src/web/**` | touches api/infra, merges |
+| `tester` | claude-sonnet-5 | PR verification, `type:bug` issues | fixes code, merges |
+
+Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slug>`) → PR `Closes #n` → `tester` (bugs back to coder) → owner runs `/code-review` and merges.
+Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Shared config (`CLAUDE.md`, `.gitignore`, root files) is lead-only.
+
 ## Ruflo Capability Brain & Implementation Loop
 
 Ruflo is the coordination ledger and policy decision point. Claude Code is the
