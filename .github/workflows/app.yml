@@ -1,0 +1,213 @@
+name: App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - .github/workflows/app.yml
+  pull_request:
+    paths:
+      - src/**
+      - .github/workflows/app.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/samuelya/sevenhabitstools-api
+  WEB_IMAGE: ghcr.io/samuelya/sevenhabitstools-web
+  RESOURCE_GROUP: rg-sevenhabitstools-prod
+
+jobs:
+  detect:
+    name: Detect projects
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.detect.outputs.api }}
+      web: ${{ steps.detect.outputs.web }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Detect api and web projects
+        id: detect
+        run: |
+          api=false
+          web=false
+          if [[ -d src/api ]] && [[ -n "$(find src/api -name '*.csproj' -print -quit)" ]]; then
+            api=true
+          fi
+          if [[ -f src/web/package.json ]]; then
+            web=true
+          fi
+          if [[ "$api" == false && "$web" == false ]]; then
+            echo "::notice::No api (src/api/**/*.csproj) or web (src/web/package.json) project yet; nothing to build."
+          fi
+          echo "api=$api web=$web"
+          {
+            echo "api=$api"
+            echo "web=$web"
+          } >> "$GITHUB_OUTPUT"
+
+  api:
+    name: API build and test
+    needs: detect
+    if: needs.detect.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Locate solution
+        id: sln
+        run: |
+          target="$(find src -maxdepth 1 \( -name '*.slnx' -o -name '*.sln' \) -print -quit)"
+          echo "path=${target:-src/api}" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore "${{ steps.sln.outputs.path }}"
+
+      - name: Build
+        run: dotnet build "${{ steps.sln.outputs.path }}" --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test "${{ steps.sln.outputs.path }}" --no-build
+
+  web:
+    name: Web lint, test and build
+    needs: detect
+    if: needs.detect.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm test --if-present
+      - run: npm run build
+
+  images:
+    name: Build and push images
+    needs: [detect, api, web]
+    if: ${{ !cancelled() && needs.detect.outputs.api == 'true' && needs.detect.outputs.web == 'true' && needs.api.result == 'success' && needs.web.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push api
+        uses: docker/build-push-action@v7
+        with:
+          context: src
+          file: src/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.API_IMAGE }}:${{ github.sha }}
+            ${{ env.API_IMAGE }}:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Build and push web
+        uses: docker/build-push-action@v7
+        with:
+          context: src/web
+          file: src/web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+            ${{ env.WEB_IMAGE }}:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Check package visibility
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for name in sevenhabitstools-api sevenhabitstools-web; do
+            visibility="$(gh api "/users/samuelya/packages/container/$name" --jq .visibility 2>/dev/null || echo unknown)"
+            if [[ "$visibility" != public ]]; then
+              echo "::warning::Package $name visibility is '$visibility'. Make it public (GitHub > Packages > $name > Package settings > Change visibility) so Azure Container Apps can pull it without credentials."
+            fi
+          done
+
+  azure-not-configured:
+    name: Azure not configured
+    needs: images
+    if: ${{ !cancelled() && needs.images.result == 'success' && (vars.AZURE_CLIENT_ID == '' || vars.DEPLOY_ENABLED != 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain skipped deploy
+        run: echo "::notice::Deploy skipped. Set repository variables AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID and DEPLOY_ENABLED=true to deploy to Azure."
+
+  deploy:
+    name: Deploy to prod
+    needs: images
+    if: ${{ !cancelled() && needs.images.result == 'success' && vars.AZURE_CLIENT_ID != '' && vars.DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    concurrency:
+      group: prod-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy Container App
+        id: deploy
+        env:
+          MS_OAUTH_CLIENT_ID: ${{ vars.MS_OAUTH_CLIENT_ID }}
+          GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+          OAUTH_SECRETS_CONFIGURED: ${{ vars.OAUTH_SECRETS_CONFIGURED == 'true' }}
+        run: |
+          fqdn="$(az deployment group create \
+            --name "app-${{ github.run_id }}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/app.bicep \
+            --parameters \
+              apiImage="$API_IMAGE:${{ github.sha }}" \
+              webImage="$WEB_IMAGE:${{ github.sha }}" \
+              apiProbePath=/healthz \
+              msOAuthClientId="$MS_OAUTH_CLIENT_ID" \
+              googleOAuthClientId="$GOOGLE_OAUTH_CLIENT_ID" \
+              oauthSecretsConfigured="$OAUTH_SECRETS_CONFIGURED" \
+            --query properties.outputs.fqdn.value \
+            --output tsv)"
+          echo "fqdn=$fqdn" >> "$GITHUB_OUTPUT"
+          echo "### App URL: https://$fqdn" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Smoke test
+        env:
+          FQDN: ${{ steps.deploy.outputs.fqdn }}
+        run: curl --fail --silent --show-error --retry 10 --retry-delay 10 --retry-all-errors "https://$FQDN/healthz"
