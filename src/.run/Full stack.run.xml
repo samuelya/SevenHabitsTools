@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration name="Full stack" type="CompoundRunConfigurationType">
+    <toRun name="API" type="DotNetProject" />
+    <toRun name="Web (npm start)" type="js.build_tools.npm" />
+    <toRun name="Web: Chrome debug (8080)" type="JavaScriptDebugType" />
+    <method v="2" />
+  </configuration>
+</component>

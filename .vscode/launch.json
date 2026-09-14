@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API (.NET)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build api",
+      "program": "${workspaceFolder}/src/api/bin/Debug/net10.0/SevenHabits.Api.dll",
+      "cwd": "${workspaceFolder}/src/api",
+      "launchSettingsFilePath": "${workspaceFolder}/src/api/Properties/launchSettings.json",
+      "launchSettingsProfile": "Api (full stack)",
+      "console": "internalConsole",
+      "stopAtEntry": false
+    },
+    {
+      "name": "Web: Chrome (4200)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:4200",
+      "webRoot": "${workspaceFolder}/src/web",
+      "preLaunchTask": "web: start"
+    },
+    {
+      "name": "Web: Chrome via API (8080)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:8080",
+      "webRoot": "${workspaceFolder}/src/web",
+      "preLaunchTask": "web: start"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack",
+      "configurations": ["API (.NET)", "Web: Chrome via API (8080)"],
+      "stopAll": true
+    }
+  ]
+}

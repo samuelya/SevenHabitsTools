@@ -5,7 +5,7 @@ namespace SevenHabits.Api.Middleware;
 /// Headers are written in <see cref="HttpResponse.OnStarting(Func{Task})"/> so they overwrite
 /// anything copied from the upstream response.
 /// </summary>
-public sealed class SecurityHeadersMiddleware(RequestDelegate next)
+public sealed class SecurityHeadersMiddleware(RequestDelegate next, IHostEnvironment environment)
 {
     public static readonly IReadOnlyDictionary<string, string> Headers = new Dictionary<string, string>
     {
@@ -20,19 +20,32 @@ public sealed class SecurityHeadersMiddleware(RequestDelegate next)
         ["X-Frame-Options"] = "DENY",
     };
 
+    // Development only: the "Api (full stack)" launch profile proxies to `ng serve` on 4200 through YARP, and
+    // the Angular dev server's live-reload client can open a WebSocket directly to that origin. Never applied
+    // outside Development, so production and Testing responses keep the exact policy above.
+    private const string DevelopmentConnectSrcAdditions = "http://localhost:4200 ws://localhost:4200";
+
     public Task InvokeAsync(HttpContext context)
     {
+        var isDevelopment = environment.IsDevelopment();
+
         context.Response.OnStarting(static state =>
         {
-            var headers = ((HttpResponse)state).Headers;
+            var (response, isDevelopment) = ((HttpResponse Response, bool IsDevelopment))state;
+            var headers = response.Headers;
             foreach (var (name, value) in Headers)
             {
-                headers[name] = value;
+                headers[name] = isDevelopment && name == "Content-Security-Policy"
+                    ? RelaxForDevelopment(value)
+                    : value;
             }
 
             return Task.CompletedTask;
-        }, context.Response);
+        }, (context.Response, isDevelopment));
 
         return next(context);
     }
+
+    private static string RelaxForDevelopment(string contentSecurityPolicy) =>
+        contentSecurityPolicy.Replace("connect-src 'self'", $"connect-src 'self' {DevelopmentConnectSrcAdditions}");
 }

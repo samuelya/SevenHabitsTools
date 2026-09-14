@@ -1,0 +1,26 @@
+# Prod-like local check (needs Docker Desktop): same two containers as the Container App,
+# api on 8080 (external) and web on 8081 (internal, proxied by YARP). See README "Run locally".
+services:
+  api:
+    build:
+      context: src
+      dockerfile: api/Dockerfile
+      args:
+        APP_VERSION: local
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ReverseProxy__UiUpstream: http://web:8081
+      OAuth__Microsoft__ClientId: ${MS_OAUTH_CLIENT_ID:-}
+      OAuth__Google__ClientId: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+    depends_on:
+      - web
+
+  web:
+    build:
+      context: src/web
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
