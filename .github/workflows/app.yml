@@ -78,6 +78,18 @@ jobs:
       - name: Test
         run: dotnet test "${{ steps.sln.outputs.path }}" --no-build
 
+      - uses: docker/setup-buildx-action@v4
+
+      # Verifies the Dockerfile on every PR; the images job pushes it from main.
+      - name: Build api image (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: src
+          file: src/api/Dockerfile
+          push: false
+          build-args: APP_VERSION=${{ github.sha }}
+          cache-from: type=gha,scope=api
+
   web:
     name: Web lint, test and build
     needs: detect
@@ -125,6 +137,7 @@ jobs:
           context: src
           file: src/api/Dockerfile
           push: true
+          build-args: APP_VERSION=${{ github.sha }}
           tags: |
             ${{ env.API_IMAGE }}:${{ github.sha }}
             ${{ env.API_IMAGE }}:latest
