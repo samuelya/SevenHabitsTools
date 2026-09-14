@@ -117,7 +117,7 @@ jobs:
   images:
     name: Build and push images
     needs: [detect, api, web]
-    if: ${{ !cancelled() && needs.detect.outputs.api == 'true' && needs.detect.outputs.web == 'true' && needs.api.result == 'success' && needs.web.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ !cancelled() && needs.detect.outputs.api == 'true' && needs.detect.outputs.web == 'true' && needs.api.result == 'success' && needs.web.result == 'success' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
