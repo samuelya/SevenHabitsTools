@@ -21,18 +21,22 @@ const BACKUP_KEY = 'backup-previous';
  * one at a time, in call order — the `StorageAdapter` contract's "the later call wins" — rather
  * than relying on IndexedDB's own same-store transaction ordering, which not every fake
  * implementation reproduces exactly.
+ *
+ * Takes `INDEXED_DB` through a field-initializer `inject()` (not a constructor parameter): a
+ * constructor parameter typed `IDBFactory` makes Angular's compiler inject *by that type* instead
+ * of respecting an `inject(INDEXED_DB)` default, since `IDBFactory` also happens to be a real
+ * global class — it fails at either build time (`NG2003`, with no type annotation to infer from)
+ * or, worse, silently at runtime (`NG0201: No provider found for IDBFactory`, with one). Tests
+ * construct this through `TestBed` with `INDEXED_DB` overridden, the same way every other adapter
+ * or service in this codebase is tested, rather than `new`-ing it directly.
  */
 @Injectable()
 export class IndexedDbAdapter implements StorageAdapter {
   readonly kind = 'indexeddb';
 
-  private readonly idb: IDBFactory;
+  private readonly idb = inject(INDEXED_DB) as IDBFactory;
   private dbPromise: Promise<IDBDatabase> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
-
-  constructor(idb: IDBFactory = inject(INDEXED_DB) as IDBFactory) {
-    this.idb = idb;
-  }
 
   async load(): Promise<RootDocument | null> {
     return this.enqueue(async () => {

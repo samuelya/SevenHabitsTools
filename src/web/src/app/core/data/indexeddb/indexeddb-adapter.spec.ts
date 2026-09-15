@@ -1,8 +1,19 @@
 import { IDBFactory } from 'fake-indexeddb';
+import { TestBed } from '@angular/core/testing';
+import { INDEXED_DB } from '../../browser/indexed-db';
 import { describeStorageAdapterContract } from '../storage-adapter.contract';
 import { RootDocument } from '../document.model';
 import { StorageAdapter } from '../storage-adapter';
 import { IndexedDbAdapter } from './indexeddb-adapter';
+
+/** Constructs `IndexedDbAdapter` through `TestBed` with `INDEXED_DB` overridden to `idb` — see the
+ * class doc comment for why a plain `new IndexedDbAdapter(idb)` doesn't work. */
+function createAdapter(idb: IDBFactory): StorageAdapter {
+  TestBed.configureTestingModule({
+    providers: [IndexedDbAdapter, { provide: INDEXED_DB, useValue: idb }],
+  });
+  return TestBed.inject(IndexedDbAdapter);
+}
 
 function sampleDoc(deviceId: string): RootDocument {
   return {
@@ -35,15 +46,15 @@ function readRawKey(idb: IDBFactory, key: string): Promise<unknown> {
 describe('IndexedDbAdapter', () => {
   // Each test gets its own in-memory `IDBFactory` so the contract's "nothing saved yet" cases
   // never see data left over from another test.
-  describeStorageAdapterContract(() => new IndexedDbAdapter(new IDBFactory()));
+  describeStorageAdapterContract(() => createAdapter(new IDBFactory()));
 
   it('reports its kind as indexeddb', () => {
-    expect(new IndexedDbAdapter(new IDBFactory()).kind).toBe('indexeddb');
+    expect(createAdapter(new IDBFactory()).kind).toBe('indexeddb');
   });
 
   it('keeps the previous good version in backup-previous before overwriting current', async () => {
     const idb = new IDBFactory();
-    const adapter: StorageAdapter = new IndexedDbAdapter(idb);
+    const adapter = createAdapter(idb);
     const first = sampleDoc('device-1');
     const second = sampleDoc('device-2');
 
@@ -56,7 +67,7 @@ describe('IndexedDbAdapter', () => {
 
   it('does not write a backup on the very first save (nothing to back up yet)', async () => {
     const idb = new IDBFactory();
-    const adapter: StorageAdapter = new IndexedDbAdapter(idb);
+    const adapter = createAdapter(idb);
 
     await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
 
@@ -65,7 +76,7 @@ describe('IndexedDbAdapter', () => {
 
   it('clears both current and backup-previous', async () => {
     const idb = new IDBFactory();
-    const adapter: StorageAdapter = new IndexedDbAdapter(idb);
+    const adapter = createAdapter(idb);
     await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
     await adapter.save(sampleDoc('device-2'), { reason: 'flush' });
 
@@ -78,7 +89,7 @@ describe('IndexedDbAdapter', () => {
   it('reuses one database connection across calls instead of reopening it every time', async () => {
     const idb = new IDBFactory();
     const openSpy = vi.spyOn(idb, 'open');
-    const adapter: StorageAdapter = new IndexedDbAdapter(idb);
+    const adapter = createAdapter(idb);
 
     await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
     await adapter.load();
@@ -101,7 +112,7 @@ describe('IndexedDbAdapter', () => {
         return request;
       }),
     } as unknown as IDBFactory;
-    const adapter: StorageAdapter = new IndexedDbAdapter(fakeIdb);
+    const adapter = createAdapter(fakeIdb);
 
     await expect(adapter.load()).rejects.toBe(openError);
     await expect(adapter.save(sampleDoc('device-1'), { reason: 'flush' })).rejects.toBe(openError);
@@ -120,8 +131,8 @@ describe('IndexedDbAdapter', () => {
       };
       request.onerror = () => reject(request.error);
     });
-    const adapter: StorageAdapter = new IndexedDbAdapter(idb);
     const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
 
     await expect(adapter.load()).rejects.toBeTruthy();
     await expect(adapter.load()).rejects.toBeTruthy();
