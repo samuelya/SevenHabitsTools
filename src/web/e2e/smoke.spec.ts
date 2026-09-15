@@ -25,14 +25,6 @@ test.describe('app shell smoke', () => {
   });
 
   test('applies the global stylesheet under the production CSP', async ({ page }) => {
-    test.fixme(
-      true,
-      "Needs #118 — production's critical-CSS inlining emits a <link media=print onload=...> " +
-        "that the production CSP's default-src blocks, so the global stylesheet (icon font, " +
-        'Noto Sans Arabic, .page-heading etc.) never applies. This suite serves the build behind ' +
-        'the same CSP (e2e/static-server.mjs) so it reproduces the bug until #118 disables ' +
-        'inlineCritical for production.',
-    );
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
     const navIcon = page.locator('mat-icon').first();
@@ -51,14 +43,29 @@ test.describe('app shell smoke', () => {
   });
 
   test('the production CSP blocks nothing on load', async ({ page, cspViolations }) => {
-    test.fixme(
-      true,
-      'Needs #118 — see the previous test; the inlined critical-CSS onload currently violates ' +
-        "the production CSP's default-src on every load.",
-    );
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     expect(cspViolations).toEqual([]);
+  });
+
+  test('the served index.html never reintroduces a print-gated stylesheet link', async ({
+    page,
+  }) => {
+    // Direct regression guard for #118: the two tests above catch the symptom (font/CSP), this
+    // one catches the exact cause — Angular's critical-CSS inlining emitting a
+    // `<link media="print" onload="...">` that only swaps to `all` via a CSP-blocked inline
+    // handler. Asserts against the raw served HTML so a future change to `angular.json`
+    // (`optimization.styles.inlineCritical`) fails here immediately instead of only downstream.
+    const response = await page.goto('/');
+    const html = (await response?.text()) ?? '';
+    const stylesheetLinks = [...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*>/g)].map(
+      (match) => match[0],
+    );
+    expect(stylesheetLinks.length).toBeGreaterThan(0);
+    for (const link of stylesheetLinks) {
+      expect(link).not.toContain('media="print"');
+      expect(link).not.toContain('onload=');
+    }
   });
 
   test('navigates between the top-level pages', async ({ page }, testInfo) => {
