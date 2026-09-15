@@ -4,27 +4,18 @@ import { TestBed } from '@angular/core/testing';
 import { registerBackupModel } from '../../core/data/backup/backup.model';
 import { NoopAdapter } from '../../core/data/noop-storage-adapter';
 import {
-  ModelRegistration,
-  resetRegistryForTesting,
-  snapshotRegistryForTesting,
-} from '../../core/data/registry';
-import {
   StorageEstimateInfo,
   StoragePersistenceService,
 } from '../../core/data/storage-persistence.service';
 import { STORAGE_ADAPTER } from '../../core/data/storage-adapter';
 import { SettingsPage } from './settings-page';
 
-// Vitest here runs with `isolate: false` (shared module state across spec files): snapshot the
-// baseline and register `backup` before each test (the embedded `BackupSection` calls
-// `featureStore('backup')`), then restore exactly that baseline after — not a blind clear,
-// matching `registry.spec.ts`.
-let registryBaseline: ReadonlyMap<string, ModelRegistration>;
-beforeEach(() => {
-  registryBaseline = snapshotRegistryForTesting();
-  registerBackupModel();
-});
-afterEach(() => resetRegistryForTesting(registryBaseline));
+// Vitest here runs with `isolate: false` (shared module state across spec files): re-assert the
+// `backup` registration before each test (the embedded `BackupSection` calls
+// `featureStore('backup')`). A permanent, real registration — like `pwa`'s own bare
+// `registerModel()` call, not a test-only fixture — so this deliberately never restores the
+// registry to a prior snapshot afterward (see `backup.model.spec.ts`).
+beforeEach(() => registerBackupModel());
 
 function text(fixture: { nativeElement: HTMLElement }, selector: string): string {
   return fixture.nativeElement.querySelector(selector)?.textContent?.trim() ?? '';

@@ -7,23 +7,14 @@ import { registerBackupModel } from '../../../core/data/backup/backup.model';
 import { DocumentImportExportService } from '../../../core/data/backup/document-import-export.service';
 import { RootDocument } from '../../../core/data/document.model';
 import { DocumentStore } from '../../../core/data/document.store';
-import {
-  ModelRegistration,
-  resetRegistryForTesting,
-  snapshotRegistryForTesting,
-} from '../../../core/data/registry';
 import { BackupSection, IMPORT_CONFIRM_DIALOG_LOADER } from './backup-section';
 
-// Vitest here runs with `isolate: false` (shared module state across spec files): snapshot the
-// baseline and register `backup` before each test (`BackupSection` calls `featureStore('backup')`
-// itself, regardless of `DocumentImportExportService` being faked below), then restore exactly
-// that baseline after — not a blind clear, matching `registry.spec.ts`.
-let registryBaseline: ReadonlyMap<string, ModelRegistration>;
-beforeEach(() => {
-  registryBaseline = snapshotRegistryForTesting();
-  registerBackupModel();
-});
-afterEach(() => resetRegistryForTesting(registryBaseline));
+// Vitest here runs with `isolate: false` (shared module state across spec files): re-assert the
+// `backup` registration before each test (`BackupSection` calls `featureStore('backup')` itself,
+// regardless of `DocumentImportExportService` being faked below). A permanent, real registration
+// — like `pwa`'s own bare `registerModel()` call, not a test-only fixture — so this deliberately
+// never restores the registry to a prior snapshot afterward (see `backup.model.spec.ts`).
+beforeEach(() => registerBackupModel());
 
 function text(fixture: ComponentFixture<BackupSection>, selector: string): string {
   return (fixture.nativeElement as HTMLElement).querySelector(selector)?.textContent?.trim() ?? '';

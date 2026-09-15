@@ -1,23 +1,17 @@
 import { BACKUP_MODEL_KEY, BACKUP_PATH, registerBackupModel } from './backup.model';
-import {
-  ModelRegistration,
-  getRegisteredModels,
-  resetRegistryForTesting,
-  snapshotRegistryForTesting,
-} from '../registry';
+import { getRegisteredModels } from '../registry';
 
 describe('backup model', () => {
   // Vitest here runs with `isolate: false` (shared module state across spec files), so the
-  // registry is a genuinely global singleton for the whole suite: snapshot the baseline and
-  // register before each test (in case an earlier file's own reset cleared it), then restore
-  // exactly that baseline after — not a blind clear, which would just as easily wipe a real
-  // registration (e.g. `pwa`) another spec file needs — matching `registry.spec.ts`.
-  let baseline: ReadonlyMap<string, ModelRegistration>;
-  beforeEach(() => {
-    baseline = snapshotRegistryForTesting();
-    registerBackupModel();
-  });
-  afterEach(() => resetRegistryForTesting(baseline));
+  // registry is a genuine global singleton for the whole suite: re-assert the registration before
+  // each test in case an earlier file's own `resetRegistryForTesting()` cleared it.
+  // `registerBackupModel()` is a permanent, real registration — the same category as `pwa`'s bare
+  // `registerModel()` call — not a test-only fixture, so unlike `registry.spec.ts`'s own temporary
+  // registrations this deliberately never "restores" the registry to a prior snapshot afterward:
+  // doing so risks reverting past another model's *first* registration if it happens to occur
+  // (lazily, via any import) during this file's own tests, permanently losing it for the rest of
+  // the run.
+  beforeEach(() => registerBackupModel());
 
   function registration() {
     const found = getRegisteredModels().find((model) => model.key === BACKUP_MODEL_KEY);

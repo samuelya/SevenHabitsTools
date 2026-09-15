@@ -13,21 +13,13 @@ import { STORAGE_ADAPTER, StorageAdapter } from '../storage-adapter';
 import { registerBackupModel } from './backup.model';
 import { DocumentImportExportService } from './document-import-export.service';
 import { CURRENT_SCHEMA_VERSION } from '../document.model';
-import {
-  ModelRegistration,
-  resetRegistryForTesting,
-  snapshotRegistryForTesting,
-} from '../registry';
 
-// Vitest here runs with `isolate: false` (shared module state across spec files): snapshot the
-// baseline and register `backup` before each test (another spec's reset may have cleared it), then
-// restore exactly that baseline after — not a blind clear, matching `registry.spec.ts`.
-let registryBaseline: ReadonlyMap<string, ModelRegistration>;
-beforeEach(() => {
-  registryBaseline = snapshotRegistryForTesting();
-  registerBackupModel();
-});
-afterEach(() => resetRegistryForTesting(registryBaseline));
+// Vitest here runs with `isolate: false` (shared module state across spec files): re-assert the
+// `backup` registration before each test (another spec's `resetRegistryForTesting()` may have
+// cleared it). A permanent, real registration — like `pwa`'s own bare `registerModel()` call, not
+// a test-only fixture — so this deliberately never restores the registry to a prior snapshot
+// afterward (see `backup.model.spec.ts`).
+beforeEach(() => registerBackupModel());
 
 function validDoc(overrides: Record<string, unknown> = {}) {
   return {
