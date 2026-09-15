@@ -36,12 +36,17 @@ exactly. Each is called out with a comment in the workflow above the job.
 Renaming any of them means updating the ruleset in the same change:
 
 - `Detect projects` (`app.yml`)
+- `Detect infra changes` (`infra.yml`)
 - `API build and test` (`app.yml`)
 - `Web lint, test, build and e2e` (`app.yml`)
 - `Lint and build Bicep` (`infra.yml`)
 
-The `Detect infra changes` job in `infra.yml` is plumbing for the change
-detection above; it is not itself a required check.
+Both `detect` jobs must be required too, not just the jobs they gate. When
+a `detect` job fails, the jobs that `need` it are **skipped**, not failed —
+and GitHub treats a skipped job as satisfying a required check. If
+`Detect projects` / `Detect infra changes` themselves weren't required, a
+bug in the detection script could make every downstream job show as
+skipped and let a PR merge with nothing actually built, tested or linted.
 
 ## Adding a new required job
 

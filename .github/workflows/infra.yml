@@ -23,6 +23,11 @@ env:
 
 jobs:
   detect:
+    # Name is referenced by the "Protect main" branch ruleset's required status checks;
+    # renaming this job requires updating the ruleset too. It must stay required: if this
+    # job fails, `validate` is skipped rather than failed, and a skipped job satisfies a
+    # required check — so without requiring `detect` too, broken detection could let a PR
+    # merge with nothing linted or built.
     name: Detect infra changes
     runs-on: ubuntu-latest
     outputs:
