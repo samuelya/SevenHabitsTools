@@ -24,6 +24,43 @@ test.describe('app shell smoke', () => {
     await expect(page).toHaveTitle('Home | Seven Habits Tools');
   });
 
+  test('applies the global stylesheet under the production CSP', async ({ page }) => {
+    test.fixme(
+      true,
+      "Needs #118 — production's critical-CSS inlining emits a <link media=print onload=...> " +
+        "that the production CSP's default-src blocks, so the global stylesheet (icon font, " +
+        'Noto Sans Arabic, .page-heading etc.) never applies. This suite serves the build behind ' +
+        'the same CSP (e2e/static-server.mjs) so it reproduces the bug until #118 disables ' +
+        'inlineCritical for production.',
+    );
+    await page.goto('/');
+    await page.evaluate(() => document.fonts.ready);
+    const navIcon = page.locator('mat-icon').first();
+    await expect(navIcon).toHaveCSS('font-family', /Material Symbols Outlined/);
+    // `document.fonts.check()` returns true for an undeclared family too (it falls back to a
+    // generic font that counts as "loaded"), so it can't tell a missing @font-face from a loaded
+    // one — check the actual FontFaceSet entries instead, matching #118's acceptance criteria.
+    const iconFontLoaded = await page.evaluate(() =>
+      [...document.fonts].some(
+        (font) =>
+          font.family.replace(/^"|"$/g, '') === 'Material Symbols Outlined' &&
+          font.status === 'loaded',
+      ),
+    );
+    expect(iconFontLoaded).toBe(true);
+  });
+
+  test('the production CSP blocks nothing on load', async ({ page, cspViolations }) => {
+    test.fixme(
+      true,
+      'Needs #118 — see the previous test; the inlined critical-CSS onload currently violates ' +
+        "the production CSP's default-src on every load.",
+    );
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    expect(cspViolations).toEqual([]);
+  });
+
   test('navigates between the top-level pages', async ({ page }, testInfo) => {
     await page.goto('/');
     const nav = mainNav(page, testInfo.project.name);

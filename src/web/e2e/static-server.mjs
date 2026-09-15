@@ -1,11 +1,20 @@
 #!/usr/bin/env node
 // Serves a built Angular bundle for the Playwright suite. Single responsibility: static files
-// with SPA fallback, mirroring the two rules that matter from the production nginx config
-// (nginx/default.conf) — deep links fall back to the app shell, and index.html is never cached —
-// without pulling in Docker or an extra runtime dependency.
+// with SPA fallback and the production Content-Security-Policy, mirroring the two rules that
+// matter from the production nginx config (nginx/default.conf) — deep links fall back to the app
+// shell, and index.html is never cached — without pulling in Docker or an extra runtime
+// dependency.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
+
+// Mirrors `SecurityHeadersMiddleware.Headers["Content-Security-Policy"]`
+// (src/api/Middleware/SecurityHeadersMiddleware.cs) exactly, so a build that only works because
+// this suite is more permissive than production (issue #118) fails here too. src/api is owned by
+// backend-coder and out of scope for src/web changes — keep this in sync by hand if that policy
+// ever changes; the value is quoted verbatim in a comment there for easy diffing.
+const PRODUCTION_CSP =
+  "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'";
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -48,6 +57,7 @@ function startServer(root, port) {
       res.writeHead(200, {
         'content-type': MIME_TYPES[extname(filePath)] ?? 'application/octet-stream',
         'cache-control': isAppShell ? 'no-cache' : 'public, max-age=31536000, immutable',
+        'content-security-policy': PRODUCTION_CSP,
       });
       res.end(body);
     } catch {

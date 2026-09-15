@@ -43,6 +43,24 @@ The four projects all use Chromium to keep CI fast. If a feature needs cross-bro
 later, add `webkit`/`firefox` variants of the affected projects rather than switching everything
 over — see `playwright.config.ts`.
 
+## Served behind the production Content-Security-Policy
+
+`e2e/static-server.mjs` sends the same `Content-Security-Policy` header production does
+(`SecurityHeadersMiddleware.Headers`, `src/api/Middleware/SecurityHeadersMiddleware.cs` — kept in
+sync by hand as a literal in the server, since `src/web` cannot depend on `src/api`). This is
+deliberate: `ng serve` and a plainer static server are both more permissive than production, which
+is exactly how issue #118 (production stylesheet stuck on `media="print"` because the CSP blocks
+the critical-CSS `onload`) went undetected until it shipped. Running behind the real CSP here means
+the same class of bug fails in this suite instead.
+
+Two `smoke.spec.ts` assertions exist for this: the global stylesheet actually applies (icon font,
+via `document.fonts`) and no `securitypolicyviolation` fires on load (`cspViolations` fixture).
+Both are currently `test.fixme`, pointing at #118 — they fail today because #118 isn't fixed yet
+(verified locally; that's expected). Unskip them once #118 disables
+`optimization.styles.inlineCritical` for the production build configuration in `angular.json`.
+The rest of the suite, including the accessibility scans, already runs behind this CSP and found
+no new violations caused by #118's broken stylesheet.
+
 ## Fixtures (`e2e/fixtures.ts`)
 
 - `seedDocument(doc)` — writes `doc` (merged onto a minimal valid document) to IndexedDB

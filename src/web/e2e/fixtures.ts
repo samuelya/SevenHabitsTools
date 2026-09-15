@@ -77,6 +77,14 @@ export interface SevenHabitsFixtures {
   /** Seeds IndexedDB with `doc` merged onto `defaultDocument()`, before the next navigation. */
   seedDocument(doc: SeedDocument): Promise<void>;
   /**
+   * Content-Security-Policy violations reported by the page since the fixture was set up (empty
+   * array, appended to as `securitypolicyviolation` events fire). The suite serves the build
+   * behind the same CSP production sends (`e2e/static-server.mjs`), so this catches the class of
+   * bug in issue #118: a build artifact (e.g. an inlined `onload` handler) that only "works"
+   * because a dev server or a plainer static server is more permissive than production.
+   */
+  cspViolations: string[];
+  /**
    * Seeds `settings.language` (`settings.language: 'en' | 'ar'`, per issue #28's data model)
    * before the next navigation. Combine with `seedDocument` by passing `{ settings: { language } }`
    * to it directly instead — this fixture always seeds a fresh default document, so calling both
@@ -110,6 +118,24 @@ export const test = base.extend<SevenHabitsFixtures>({
     await use(async () => {
       await context.setOffline(true);
     });
+  },
+
+  cspViolations: async ({ page }, use) => {
+    const violations: string[] = [];
+    await page.exposeFunction('__reportCspViolation', (description: string) => {
+      violations.push(description);
+    });
+    await page.addInitScript(() => {
+      document.addEventListener('securitypolicyviolation', (event) => {
+        // Exposed by the `cspViolations` fixture just above; not available outside a test run.
+        (
+          window as unknown as { __reportCspViolation(description: string): void }
+        ).__reportCspViolation(
+          `${event.violatedDirective} blocked ${event.blockedURI || event.sourceFile || 'inline content'}`,
+        );
+      });
+    });
+    await use(violations);
   },
 });
 
