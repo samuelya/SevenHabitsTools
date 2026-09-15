@@ -45,7 +45,9 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="shell__content">
+    <app-offline-indicator />
     <app-read-only-banner />
+    <app-pwa-install-banner />
     <mat-toolbar class="top-bar" role="banner">
       @if (backUrl(); as back) {
         <a

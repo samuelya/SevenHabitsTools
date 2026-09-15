@@ -10,7 +10,17 @@
       content="Personal planning tools for working through the seven habits."
     />
     <meta name="color-scheme" content="light dark" />
+    <!-- Matches manifest.webmanifest's theme_color (Material azure tone 40) so the browser UI and
+         an installed window's title bar use the same colour before the app itself has painted. -->
+    <meta name="theme-color" content="#005cbb" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- iOS Safari ignores the manifest for installability and the home-screen icon; these three
+         tags are its equivalent (Add to Home Screen guidance lives in the install-prompt feature). -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="7 Habits Tools" />
   </head>
   <body>
     <app-root></app-root>

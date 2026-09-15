@@ -11,6 +11,8 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map } from 'rxjs';
 import { ReadOnlyBanner } from '../../data/multi-tab/read-only-banner';
 import { Labels } from '../../i18n/labels';
+import { OfflineIndicator } from '../../pwa/offline-indicator';
+import { PwaInstallBanner } from '../../pwa/pwa-install-banner';
 import { GithubLink } from '../../../shared/ui/github-link/github-link';
 import { AppTitleStrategy } from '../app-title-strategy';
 import { NAV_ITEMS } from '../nav-items';
@@ -31,6 +33,8 @@ export const HANDSET_QUERY = '(max-width: 599.98px)';
     MatRippleModule,
     MatSidenavModule,
     MatToolbarModule,
+    OfflineIndicator,
+    PwaInstallBanner,
     ReadOnlyBanner,
   ],
   templateUrl: './shell.html',

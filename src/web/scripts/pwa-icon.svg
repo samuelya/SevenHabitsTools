@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!--
+    Original mark for Seven Habits Tools: a "7" built from two straight strokes on a solid
+    Material "azure" primary (tone 40, #005cbb) background. No third-party or book branding.
+    The glyph stays within the ~40-unit safe-zone radius from centre so this file works for both
+    a regular ("any") and a maskable manifest icon without separate artwork (see pwa.model.ts /
+    the manifest generation notes in the PR description).
+  -->
+  <rect width="100" height="100" fill="#005cbb" />
+  <path
+    d="M 30 30 L 70 30 L 42 78"
+    fill="none"
+    stroke="#fdfbff"
+    stroke-width="13"
+    stroke-linecap="square"
+    stroke-linejoin="round"
+  />
+</svg>

@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 // Serves a built Angular bundle for the Playwright suite. Single responsibility: static files
-// with SPA fallback and the production Content-Security-Policy, mirroring the two rules that
-// matter from the production nginx config (nginx/default.conf) — deep links fall back to the app
-// shell, and index.html is never cached — without pulling in Docker or an extra runtime
-// dependency.
+// with SPA fallback, the production Content-Security-Policy and the production cache-control
+// rules (nginx/default.conf) — deep links fall back to the app shell, only content-hashed build
+// output is cached as immutable, and everything else (index.html, ngsw.json, ngsw-worker.js,
+// manifest.webmanifest, ...) is always revalidated, so the service worker's update check
+// (issue #27) behaves the same here as it does in production — without pulling in Docker or an
+// extra runtime dependency.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -15,6 +17,12 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 // ever changes; the value is quoted verbatim in a comment there for easy diffing.
 const PRODUCTION_CSP =
   "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'";
+
+// Mirrors the hashed-filename regex in nginx/default.conf exactly (e.g. main-X4D5JBA2.js,
+// media/font-K6BLXDDP.woff2) — everything else falls through to "no-cache" there, including
+// index.html, ngsw.json, ngsw-worker.js, safety-worker.js and manifest.webmanifest.
+const HASHED_FILE_PATTERN =
+  /-[A-Za-z0-9_-]{8}\.(?:js|mjs|css|woff2?|ttf|otf|png|jpe?g|gif|svg|webp|avif|ico)$/i;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -51,12 +59,12 @@ function startServer(root, port) {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const requested = decodeURIComponent(url.pathname);
     const filePath = (await resolveStaticFile(root, requested)) ?? join(root, 'index.html');
-    const isAppShell = filePath === join(root, 'index.html');
+    const isHashed = HASHED_FILE_PATTERN.test(filePath);
     try {
       const body = await readFile(filePath);
       res.writeHead(200, {
         'content-type': MIME_TYPES[extname(filePath)] ?? 'application/octet-stream',
-        'cache-control': isAppShell ? 'no-cache' : 'public, max-age=31536000, immutable',
+        'cache-control': isHashed ? 'public, max-age=31536000, immutable' : 'no-cache',
         'content-security-policy': PRODUCTION_CSP,
       });
       res.end(body);

@@ -3,9 +3,7 @@
   "version": 1,
   "cli": {
     "packageManager": "npm",
-    "schematicCollections": [
-      "angular-eslint"
-    ]
+    "schematicCollections": ["angular-eslint"]
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -46,7 +44,7 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "512kB",
                   "maximumError": "1MB"
                 },
                 {
@@ -63,7 +61,9 @@
                   "inlineCritical": false
                 },
                 "fonts": true
-              }
+              },
+              "namedChunks": true,
+              "serviceWorker": "ngsw-config.json"
             },
             "development": {
               "optimization": false,

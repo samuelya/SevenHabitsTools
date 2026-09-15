@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "navigationUrls": [
+    "/**",
+    "!/**/*.*",
+    "!/**/*__*",
+    "!/**/*__*/**",
+    "!/api/**"
+  ],
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": [
+          "/favicon.ico",
+          "/index.html",
+          "/manifest.webmanifest",
+          "/main-*.js",
+          "/styles-*.css",
+          "/media/material-symbols-outlined-*"
+        ]
+      }
+    },
+    {
+      "name": "chunks",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/*.js"]
+      }
+    },
+    {
+      "name": "assets",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/media/noto-sans-arabic-*",
+          "/icons/*.png",
+          "/apple-touch-icon.png"
+        ]
+      }
+    }
+  ]
+}
