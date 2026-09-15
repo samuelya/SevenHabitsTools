@@ -1,12 +1,19 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { EnvironmentProviders, Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { appConfig } from '../app.config';
 import { Shell } from '../core/layout/shell/shell';
+import { registerGithubIcon } from '../shared/ui/github-link/github-icon';
 
-/** Configures the real app providers with a fixed viewport class. */
+/**
+ * Configures the real app providers with a fixed viewport class. Does not touch `TestBed.inject`
+ * itself — some specs call `TestBed.overrideProvider` between this and `renderShellAt`, which
+ * TestBed only allows before the testing module has been instantiated.
+ */
 export function configureApp(options: {
   handset: boolean;
   providers?: (Provider | EnvironmentProviders)[];
@@ -24,8 +31,14 @@ export function configureApp(options: {
   });
 }
 
-/** Renders the shell and navigates to `url`. */
+/**
+ * Renders the shell and navigates to `url`. Also registers the `github` icon literal here (rather
+ * than in `configureApp`): `provideAppInitializer`s don't run under `TestBed.createComponent` the
+ * way they do under `bootstrapApplication`, and this is the first point every spec using this
+ * helper is guaranteed to have finished any `TestBed.overrideProvider` calls.
+ */
 export async function renderShellAt(url: string): Promise<ComponentFixture<Shell>> {
+  registerGithubIcon(TestBed.inject(MatIconRegistry), TestBed.inject(DomSanitizer));
   const fixture = TestBed.createComponent(Shell);
   await TestBed.inject(Router).navigateByUrl(url);
   await fixture.whenStable();

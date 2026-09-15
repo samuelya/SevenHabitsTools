@@ -6,6 +6,7 @@ import {
 } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
+import { DomSanitizer } from '@angular/platform-browser';
 import {
   provideRouter,
   TitleStrategy,
@@ -21,6 +22,7 @@ import { STORAGE_ADAPTER } from './core/data/storage-adapter';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { FEATURE_ROUTES } from './core/routing/feature-route';
 import { ROUTE_REGISTRY } from './route-registry';
+import { registerGithubIcon } from './shared/ui/github-link/github-icon';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -36,7 +38,9 @@ export const appConfig: ApplicationConfig = {
     // Stand-in until the IndexedDB adapter (#35) lands; swap this line, nothing else changes.
     { provide: STORAGE_ADAPTER, useClass: NoopAdapter },
     provideAppInitializer(() => {
-      inject(MatIconRegistry).setDefaultFontSetClass('material-symbols-outlined');
+      const iconRegistry = inject(MatIconRegistry);
+      iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
+      registerGithubIcon(iconRegistry, inject(DomSanitizer));
     }),
     provideAppInitializer(() => {
       const persistence = inject(DocumentPersistence);

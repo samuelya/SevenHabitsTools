@@ -29,7 +29,10 @@ describe('About feature', () => {
 
     const repoLink = host.querySelector<HTMLAnchorElement>('app-about-page a[target="_blank"]');
     expect(repoLink?.getAttribute('href')).toBe('https://github.com/samuelya/SevenHabitsTools');
-    expect(repoLink?.getAttribute('rel')).toBe('noopener');
+    expect(repoLink?.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(repoLink?.getAttribute('aria-label')).toBe('Source code on GitHub');
+    expect(repoLink?.querySelector('.github-link__label')?.textContent?.trim()).toBe('GitHub');
+    expect(host.textContent).not.toContain('View the source on GitHub');
 
     const privacyLink = host.querySelector<HTMLAnchorElement>(
       'app-about-page a[href^="/settings"]',

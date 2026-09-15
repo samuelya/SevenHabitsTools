@@ -10,6 +10,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { Labels } from '../../i18n/labels';
+import { GithubLink } from '../../../shared/ui/github-link/github-link';
 import { AppTitleStrategy } from '../app-title-strategy';
 import { NAV_ITEMS } from '../nav-items';
 
@@ -22,6 +23,7 @@ export const HANDSET_QUERY = '(max-width: 599.98px)';
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    GithubLink,
     MatButtonModule,
     MatIconModule,
     MatListModule,

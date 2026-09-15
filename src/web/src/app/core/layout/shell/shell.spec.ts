@@ -53,6 +53,22 @@ describe('Shell', () => {
       expect(text(about?.querySelector('[matListItemTitle]'))).toBe('About');
     });
 
+    it('links to the GitHub repository from the side navigation footer, after About', async () => {
+      const fixture = await renderShellAt('/');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const footerLinks = [...host.querySelectorAll<HTMLAnchorElement>('.side-nav__footer a')];
+      expect(footerLinks[0]?.getAttribute('href')).toBe('/about');
+
+      const github = footerLinks[1];
+      expect(github?.getAttribute('href')).toBe('https://github.com/samuelya/SevenHabitsTools');
+      expect(github?.getAttribute('target')).toBe('_blank');
+      expect(github?.getAttribute('rel')).toBe('noopener noreferrer');
+      expect(github?.getAttribute('aria-label')).toBe('Source code on GitHub');
+      expect(github?.querySelector('mat-icon svg')).toBeTruthy();
+      expect(github?.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
     it('shows the page title and hides the back button on top-level pages', async () => {
       const fixture = await renderShellAt('/journal');
       const host = fixture.nativeElement as HTMLElement;

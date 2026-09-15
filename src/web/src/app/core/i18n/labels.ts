@@ -14,6 +14,7 @@ const EN: Readonly<Record<string, string>> = {
   'nav.journal': 'Journal',
   'nav.settings': 'Settings',
   'nav.about': 'About',
+  'nav.github': 'GitHub',
   'home.welcome': 'Work through every exercise of the seven habits, at your own pace.',
   'home.browseHabits': 'Browse habits',
   'habits.intro': 'Pick a habit to see its exercises.',
@@ -39,7 +40,9 @@ const EN: Readonly<Record<string, string>> = {
     'is the best way to get the most from these exercises.',
   'about.versionLabel': 'Version',
   'about.versionUnknown': 'unknown',
-  'about.repoLink': 'View the source on GitHub',
+  // Reused as both the side-nav footer link's accessible name/tooltip and the About page link's
+  // accessible name; the short visible label next to the icon is `nav.github`.
+  'about.repoLink': 'Source code on GitHub',
   'about.privacyLink': 'Privacy note',
   'settings.privacyTitle': 'Privacy',
   'settings.privacyNote':

@@ -1,0 +1,36 @@
+:host {
+  display: inline-flex;
+}
+
+.github-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-inline-size: 44px;
+  min-block-size: 44px;
+  padding-inline: 10px;
+  border-radius: 22px;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+  outline: none;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.github-link__icon {
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.github-link__label {
+  font: var(--mat-sys-label-large);
+  white-space: nowrap;
+}
