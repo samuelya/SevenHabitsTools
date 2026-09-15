@@ -11,21 +11,7 @@ documents/
 appsettings.*.local.json
 secrets.json
 
-# ---------- Ruflo / Claude Flow runtime ----------
-.swarm/
-ruvector.db
-*.db-wal
-*.db-shm
-.claude-flow/data/
-.claude-flow/logs/
-.claude-flow/sessions/
-.claude-flow/neural/
-.claude-flow/metrics/
-.claude-flow/agents/
-.claude-flow/swarm/
-.claude-flow/learning/
-.claude-flow/security/audit-status.json
-.claude-flow/policy/state.json
+# ---------- Claude Code (local) ----------
 .claude/settings.local.json
 .claude/worktrees/
 

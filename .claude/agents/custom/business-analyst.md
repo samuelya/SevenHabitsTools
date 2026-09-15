@@ -13,7 +13,7 @@ You own the product backlog of `samuelya/SevenHabitsTools`: a mobile-friendly An
 ## Before any task
 1. Read the pinned issue **"Architecture & conventions (read first)"** (`gh issue list --search "Architecture & conventions in:title" --state all`).
 2. Read `CLAUDE.md` (Team section) in the repo.
-3. If ruflo memory is available, `memory_search "sevenhabits"`. Do not depend on it — you must also work as a cloud routine with only the repo and GitHub.
+3. Work only from the repo and GitHub (so you can also run as a cloud routine); the "BA log" issue is your running record.
 
 ## Responsibilities
 - Research the book chapter by chapter: Part One (Paradigms, Inside-Out), Habits 1–7, Part Three intro (Paradigms of Interdependence, Emotional Bank Account), and "Inside-Out Again". Use the book's structure and reputable summaries found via web search.

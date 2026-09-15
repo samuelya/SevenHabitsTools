@@ -1,22 +1,23 @@
 ---
 name: team-up
-description: Register the Seven Habits Tools agent team (business-analyst, backend-coder, frontend-coder, tester) in ruflo and verify it is ready
+description: Readiness check for the Seven Habits Tools agent team (business-analyst, backend-coder, frontend-coder, tester) before an implementation session
 ---
 
 # Team up — Seven Habits Tools
 
-Ruflo agent registrations expire, so run this at the start of every implementation session.
+Run this at the start of an implementation session.
 
-1. Load the ruflo MCP tools with ToolSearch: `select:mcp__claude-flow__swarm_init,mcp__claude-flow__swarm_status,mcp__claude-flow__agent_spawn,mcp__claude-flow__agent_list,mcp__claude-flow__memory_search`.
-2. `swarm_init` with topology `hierarchical`, maxAgents `6`, strategy `specialized`.
-3. `agent_spawn` four times (skip any already listed by `agent_list`):
-   - `business-analyst` — type `researcher`, model `inherit` (runs `claude-fable-5-1`), capabilities: book research, issue specs, backlog grooming
-   - `backend-coder` — type `coder`, model `sonnet` (escalates to opus → fable), capabilities: .NET 10 API, YARP, OAuth BFF, Bicep, GitHub Actions
-   - `frontend-coder` — type `coder`, model `sonnet` (escalates to opus → fable), capabilities: Angular, Material, signals, IndexedDB, Transloco RTL, PWA
-   - `tester` — type `tester`, model `sonnet` (opus for escalated or risky PRs), capabilities: acceptance testing, Playwright, RTL/mobile checks, bug reports
-4. `memory_search` query `sevenhabits escalation` (namespace `agents`) — confirm the four charters, the pipeline entry and `sevenhabits-escalation-policy` exist. If any are missing, store them from `.claude/agents/custom/*.md` and the Escalation block in `CLAUDE.md`.
-5. `gh auth status` — confirm scopes include `repo` and `project`.
-6. List open escalations: `gh issue list -R samuelya/SevenHabitsTools --label needs-owner --label escalated:opus --label escalated:fable` (run once per label) and report them to the owner first.
-7. Print a table: agent | ruflo registered | definition file | default model.
+1. `gh auth status`: confirm the scopes include `repo` and `project`.
+2. Confirm the four team definitions exist in `.claude/agents/custom/` (`business-analyst`, `backend-coder`, `frontend-coder`, `tester`) and read each one's `model:` line.
+3. List open escalations and report them to the owner first. Run once per label:
+   `gh issue list -R samuelya/SevenHabitsTools --label needs-owner`, then `--label escalated:opus`, then `--label escalated:fable`.
+4. List open PRs (`gh pr list -R samuelya/SevenHabitsTools`) and leftover worktrees (`git worktree list`). Flag any worktree whose PR is already merged.
+5. Print a table with the columns: agent | definition file | default model | escalation tiers.
 
-Pipeline reminder: owner picks an issue → `backend-coder`/`frontend-coder` (own worktree, PR) → `tester` (bugs = failed round) → owner runs `/code-review` and merges. Escalation: 3 rounds per tier, Sonnet → Opus → Fable → owner (see `CLAUDE.md`). `business-analyst` curates the backlog independently.
+Pipeline reminder:
+- The owner picks an issue.
+- `backend-coder` or `frontend-coder` implements it in its own worktree and opens a PR.
+- `tester` verifies the PR; bugs count as a failed round.
+- The owner runs `/code-review` and merges.
+
+Escalation is 3 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`). `business-analyst` curates the backlog independently.

@@ -10,7 +10,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 
 ## Before any task
 1. Read the GitHub issue you were given (`gh issue view <n> --comments`) and the pinned **"Architecture & conventions (read first)"** issue.
-2. Read `CLAUDE.md` (Team section). If ruflo memory is available, `memory_search "sevenhabits"`.
+2. Read `CLAUDE.md` (Team section).
 3. Check dependencies listed in the issue are closed. If not, stop and report.
 
 ## File ownership
