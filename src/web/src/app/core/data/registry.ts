@@ -38,9 +38,24 @@ export function getRegisteredModels(): readonly ModelRegistration[] {
   return [...registrations.values()];
 }
 
-/** Test-only: clears the registry so specs can register fixtures without colliding. */
-export function resetRegistryForTesting(): void {
+/** Test-only: the registry's current contents, to restore after a test registers temporary
+ * fixtures (`resetRegistryForTesting(snapshot)`). Real `<feature>.model.ts` files register
+ * themselves as a side effect of being imported — which, depending on module/worker sharing
+ * between spec files, may already have happened once elsewhere in the same test run and won't
+ * happen again, so a reset must restore those, not just leave the registry empty. */
+export function snapshotRegistryForTesting(): ReadonlyMap<string, ModelRegistration> {
+  return new Map(registrations);
+}
+
+/** Test-only: clears the registry, then restores `snapshot` if given (otherwise leaves it empty)
+ * — see `snapshotRegistryForTesting()`. */
+export function resetRegistryForTesting(snapshot?: ReadonlyMap<string, ModelRegistration>): void {
   registrations.clear();
+  if (snapshot) {
+    for (const [key, registration] of snapshot) {
+      registrations.set(key, registration);
+    }
+  }
 }
 
 /**

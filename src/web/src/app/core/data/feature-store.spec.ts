@@ -1,13 +1,25 @@
 import { TestBed } from '@angular/core/testing';
 import { featureStore } from './feature-store';
-import { registerModel, resetRegistryForTesting } from './registry';
+import {
+  ModelRegistration,
+  registerModel,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+} from './registry';
 
 interface Mission {
   statement: string;
 }
 
 describe('featureStore', () => {
-  afterEach(() => resetRegistryForTesting());
+  // See registry.spec.ts: restore exactly what was registered before this test, not an empty
+  // registry — real `<feature>.model.ts` files register themselves once, as a side effect of
+  // being imported, and won't do so again.
+  let baseline: ReadonlyMap<string, ModelRegistration>;
+  beforeEach(() => {
+    baseline = snapshotRegistryForTesting();
+  });
+  afterEach(() => resetRegistryForTesting(baseline));
 
   it('throws for a key nobody registered', () => {
     expect(() =>

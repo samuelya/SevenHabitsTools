@@ -130,15 +130,28 @@ test.describe('app shell smoke', () => {
     // Once #28 lands: assert <html lang="ar" dir="rtl"> and that the shell nav mirrors.
   });
 
-  test('works offline after the first load', async ({ page, goOffline }) => {
-    test.fixme(
-      true,
-      'Needs #27 (PWA) — there is no service worker yet, so lazy feature chunks are not cached ' +
-        'and navigation after going offline would fail for reasons unrelated to this harness.',
-    );
+  test('works offline after the first load', async ({ page, goOffline }, testInfo) => {
     await page.goto('/');
+    // The service worker never controls the load that registers it (only future navigations do),
+    // so reload once while still online: this second load is fully served — and, for anything not
+    // already prefetched as part of the app shell, cached — through it (ngsw-config.json).
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+
+    const nav = mainNav(page, testInfo.project.name);
+    await nav.getByRole('link', { name: 'Habits' }).click();
+    await expect(page).toHaveURL(/\/habits$/);
+
     await goOffline();
-    // Once #27 lands: assert navigation and the already-visited page still work offline.
+    await page.reload();
+    await expect(page.getByTestId('page-title')).toHaveText('Habits');
+
+    // Client-side navigation back to an already-loaded route: no network needed either way, but
+    // exercises the same offline app instance a user would actually be poking at.
+    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
   });
 
   for (const path of VISITED_PAGES) {

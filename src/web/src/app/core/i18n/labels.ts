@@ -72,6 +72,13 @@ const EN: Readonly<Record<string, string>> = {
     'The browser may clear this data under storage pressure. Export a backup from time to time.',
   'settings.storage.unknown': 'Storage persistence status is not available in this browser.',
   'settings.storage.usageLabel': 'Used',
+  'data.pwa.offline': "You're offline. Your changes stay saved on this device.",
+  'data.pwa.updateAvailable': 'A new version of this app is available.',
+  'data.pwa.updateRequired': 'This app needs to reload to keep working.',
+  'data.pwa.reload': 'Reload',
+  'data.pwa.install.message': 'Install Seven Habits Tools for quick, offline access.',
+  'data.pwa.install.action': 'Install',
+  'data.pwa.install.iosHint': 'Install this app: tap the Share icon, then "Add to Home Screen".',
 };
 
 @Injectable({ providedIn: 'root' })

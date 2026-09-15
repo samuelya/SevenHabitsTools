@@ -32,15 +32,17 @@ describe('DocumentStore', () => {
     it('reads the value at a path and stays in sync with later writes', () => {
       const store = configureStore('2026-01-01T00:00:00.000Z');
       const settings = store.select<Record<string, unknown>>('settings');
-
-      expect(settings()).toEqual({});
+      // Not necessarily {}: registered models (registry.ts) may contribute their own defaults
+      // under `settings`, e.g. `settings.pwa` (#27) — this test only cares that a write merges
+      // onto whatever was already there.
+      const initial = settings();
 
       store.update<Record<string, unknown>>('settings', (current) => ({
         ...current,
         theme: 'dark',
       }));
 
-      expect(settings()).toEqual({ theme: 'dark' });
+      expect(settings()).toEqual({ ...initial, theme: 'dark' });
     });
   });
 
@@ -76,10 +78,11 @@ describe('DocumentStore', () => {
     it('does not mutate the previous document value', () => {
       const store = configureStore('2026-01-01T00:00:00.000Z');
       const before = store.document();
+      const initialSettings = before.settings;
 
       store.update<Record<string, unknown>>('settings', () => ({ theme: 'dark' }));
 
-      expect(before.settings).toEqual({});
+      expect(before.settings).toEqual(initialSettings);
       expect(store.document()).not.toBe(before);
     });
 
