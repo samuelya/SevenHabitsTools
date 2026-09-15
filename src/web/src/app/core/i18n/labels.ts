@@ -27,6 +27,7 @@ const EN: Readonly<Record<string, string>> = {
   'habits.interdependence.title': 'Paradigms of interdependence',
   'placeholder.comingSoon': 'Coming soon.',
   'hub.noExercises': 'Exercises for this habit are coming soon.',
+  'data.migration.schemaTooNew': 'This file was saved by a newer version of the app.',
 };
 
 @Injectable({ providedIn: 'root' })
