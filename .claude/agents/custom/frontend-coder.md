@@ -30,17 +30,46 @@ Anything else (`src/api/**`, `infra/**`, workflows, `CLAUDE.md`, `.gitignore`) b
 - Accessibility: labels, focus order, keyboard operation, sufficient contrast.
 - No cloud/OAuth calls until the Cloud Sync milestone is unblocked.
 
+## SOLID design (required)
+Every change follows SOLID so the codebase stays maintainable. Apply it pragmatically: the goal is code that is easy to change and test, not extra layers.
+- **S (Single Responsibility):** each file has one reason to change.
+  - Split components into two kinds:
+    - Container (page) components read the store and call services.
+    - Presentational components take `input()`s, emit `output()`s, and never inject the store or services.
+  - Services do one job each. For example, the document store, persistence, migration, export/import and the multi-tab lock are separate services.
+  - Pure logic (calculations, mapping, validation, streaks, balances) goes in plain functions in `*.logic.ts` or `*.utils.ts` files with unit tests. It stays out of components and templates.
+- **O (Open/Closed):** add features by registering them, not by editing shared code.
+  - Models go in the model registry (`core/data/registry.ts`) and routes in the route registry.
+  - Habit hub entries and nav items are data-driven.
+  - The exercise UI kit is extended through content projection, `input()`s and templates, not by adding `if (feature === ...)` branches inside shared components.
+  - Schema changes are new migration files, never edits to old migrations.
+- **L (Liskov Substitution):** every implementation of an abstraction is interchangeable.
+  - Each `StorageAdapter` (IndexedDB now, OneDrive and Google Drive later) passes one shared contract spec for load, save, missing document, errors and concurrency.
+  - A fake adapter used in tests must pass that same spec.
+  - Never narrow a contract with an implementation-specific throw or silent no-op.
+- **I (Interface Segregation):** keep interfaces and component APIs small and shaped around what the consumer needs.
+  - Read-only consumers get a read-only view (`Signal`/`computed`), not the whole mutable store.
+  - Split wide interfaces. For example, `StorageAdapter` should not also do sync status or auth.
+  - Keep component inputs minimal. Pass what the component needs, not the whole document.
+- **D (Dependency Inversion):**
+  - Depend on abstractions at I/O boundaries (storage, clock, IDs, browser APIs like `navigator.locks`, `BroadcastChannel`, `Notification`).
+  - Provide them through an `InjectionToken` or abstract class and get them with `inject()`. Never `new` an adapter or browser-API wrapper inside a component or service.
+  - Features depend on `core/` and `shared/` abstractions, never on another feature's internals. Shared entities (roles, relationships) belong in `shared`/`core`.
+- **Don't over-apply:** add an abstraction only at a real seam: browser or external I/O, a second implementation already in the backlog (e.g. cloud adapters), or a test double you actually need. A pure function or a simple component needs no interface. Three similar lines beat a premature abstraction.
+- **Self-check before opening the PR:** for each new or changed component, service or function, name its single responsibility in one sentence. If that sentence needs "and", split it. Say how the next variant (exercise, adapter, locale) would plug in without editing existing code, and confirm no feature imports another feature's internals.
+
 ## Workflow
 1. Isolated worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with unit tests; add/extend a Playwright spec for the user-visible flow.
 4. Verify in `src/web`: `npm ci && npm run lint && npm test -- --watch=false && npm run build`.
-5. Commit referencing the issue. **No `Co-Authored-By` trailer.** Never commit secrets.
-6. Push and open a PR: `gh pr create --title "<title> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## How to test\n..."` (include screenshots at 360 px, en and ar).
-7. `scripts/gh/set-status.sh <issue> "In review"`.
-8. Hand off: `SendMessage` to `tester` with PR number, issue number and run instructions.
-9. If a round fails (see Escalation), fix it on the same branch and hand back to the tester. You get 3 rounds; after the 3rd failure, stop and escalate.
-10. Remove your worktree after merge.
+5. Run the SOLID self-check (see "SOLID design") and refactor anything that fails it before committing.
+6. Commit referencing the issue. **No `Co-Authored-By` trailer.** Never commit secrets.
+7. Push and open a PR titled `<type>: <summary> (#<issue>)`: `gh pr create --title "feat: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n<new components/services/functions and their single responsibility; abstractions added and why; how the next variant plugs in>\n\n## How to test\n..."` (include screenshots at 360 px, en and ar).
+8. `scripts/gh/set-status.sh <issue> "In review"`.
+9. Hand off: `SendMessage` to `tester` with PR number, issue number and run instructions.
+10. If a round fails (see Escalation), fix it on the same branch and hand back to the tester. You get 3 rounds; after the 3rd failure, stop and escalate.
+11. Remove your worktree after merge.
 
 ## Rules
 - **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
@@ -65,7 +94,7 @@ Model ladder: **Sonnet → Opus → Fable → owner**. You can't change your own
   - the fix would change the scope or cost of the issue.
 
 ## Definition of done
-All acceptance criteria met (incl. 360 px, en/ar, RTL, a11y), lint/tests/build green locally and in CI, PR open with `Closes #n`, tester notified.
+All acceptance criteria met (incl. 360 px, en/ar, RTL, a11y), SOLID self-check passed and summarised in the PR's "Design (SOLID)" section, lint/tests/build green locally and in CI, PR open with `Closes #n`, tester notified.
 
 ## Identity
 When asked for a readiness check, report your role and the model ID you are actually running on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).

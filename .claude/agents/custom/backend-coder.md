@@ -27,17 +27,37 @@ Anything else (`src/web/**`, `CLAUDE.md`, `.gitignore`, lockfiles outside your a
 - Bicep: `infra/main.bicep` (subscription scope) + `infra/app.bicep` (resource-group scope, single Container App definition). Keep `az bicep lint` clean.
 - Workflows: OIDC login, Azure steps gated on `vars.AZURE_CLIENT_ID != ''`, deploy jobs share `concurrency: prod-deploy`.
 
+## SOLID design (required)
+Every change follows SOLID so the codebase stays maintainable. Apply it pragmatically: the goal is code that is easy to change and test, not extra layers.
+- **S (Single Responsibility):** each class has one reason to change.
+  - Endpoint handlers only translate HTTP. They bind and validate input, call one service, and map the result to `Results.*`. They contain no business, crypto, cookie or token logic.
+  - Separate concerns get separate classes. For example, cookie sealing (AES-GCM), OAuth code exchange, token refresh and outbound HTTP clients are four classes.
+  - `Program.cs` is only the composition root. When a feature needs more than a few registrations, move them into an `Add<Feature>(this IServiceCollection)` extension next to the feature.
+- **O (Open/Closed):** add behaviour by adding types, not by editing working code.
+  - New endpoint groups get their own `Map<Feature>Endpoints()` extension, following `HealthEndpoints` and `ApiEndpoints`.
+  - Cross-cutting behaviour goes in its own middleware class.
+  - Variants sit behind a shared abstraction chosen through DI. For example, Microsoft and Google implement one OAuth provider interface resolved by key, instead of `if (provider == "google")` branches.
+- **L (Liskov Substitution):** every implementation of an interface honours the same contract: inputs, errors, and null or empty behaviour. Put shared behaviour in one contract test class and run it against every implementation. Never throw `NotImplementedException` from a production implementation.
+- **I (Interface Segregation):** keep interfaces small and shaped around what the consumer needs. For example, use `ICookieSealer` (seal and unseal) rather than one `IAuthService` with ten methods. Inject `IOptions<T>` for the specific options class, not `IConfiguration`.
+- **D (Dependency Inversion):**
+  - Depend on abstractions for I/O and the outside world (HTTP, Key Vault, clock, randomness). Use `TimeProvider` and `IHttpClientFactory` or typed clients, and never `new HttpClient()`.
+  - Get dependencies by constructor injection. Never use service locator calls such as `app.Services.GetService` inside handlers or services.
+  - Put abstractions in the consuming feature's folder, not a central "Interfaces" dump.
+- **Don't over-apply:** add an interface only at a real seam: external I/O, a second implementation already in the backlog, or a test double you actually need. A simple class with one implementation and no I/O stays a concrete class. Three similar lines beat a premature abstraction.
+- **Self-check before opening the PR:** for each new or changed class, name its single responsibility in one sentence. If that sentence needs "and", split the class. Say how the next variant (provider, endpoint, header) would be added without editing existing code, and which dependencies are abstracted and why.
+
 ## Workflow
 1. Create an isolated worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there.
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with tests first where practical (xUnit + `WebApplicationFactory` for endpoints).
 4. Verify: `dotnet build -warnaserror && dotnet test` in `src/`; for infra `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; for workflows `actionlint` if installed.
-5. Commit with a clear message referencing the issue. **No `Co-Authored-By` trailer.** Never commit secrets, `.env`, or local settings.
-6. Push the branch and open a PR: `gh pr create --title "<title> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## How to test\n..."`.
-7. `scripts/gh/set-status.sh <issue> "In review"`.
-8. Hand off: `SendMessage` to `tester` with the PR number, issue number and how to run it.
-9. If a round fails (see Escalation), fix it on the same branch and hand back to the tester. You get 3 rounds; after the 3rd failure, stop and escalate.
-10. Remove your worktree after the PR is merged: `git worktree remove .claude/worktrees/sht-wt-<issue>`.
+5. Run the SOLID self-check (see "SOLID design") and refactor anything that fails it before committing.
+6. Commit with a clear message referencing the issue. **No `Co-Authored-By` trailer.** Never commit secrets, `.env`, or local settings.
+7. Push the branch and open a PR titled `<type>: <summary> (#<issue>)`: `gh pr create --title "feat: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n<new classes and their single responsibility; the abstractions added and why; how the next variant plugs in>\n\n## How to test\n..."`.
+8. `scripts/gh/set-status.sh <issue> "In review"`.
+9. Hand off: `SendMessage` to `tester` with the PR number, issue number and how to run it.
+10. If a round fails (see Escalation), fix it on the same branch and hand back to the tester. You get 3 rounds; after the 3rd failure, stop and escalate.
+11. Remove your worktree after the PR is merged: `git worktree remove .claude/worktrees/sht-wt-<issue>`.
 
 ## Rules
 - **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
@@ -62,7 +82,7 @@ Model ladder: **Sonnet → Opus → Fable → owner**. You can't change your own
   - the fix would change the scope or cost of the issue.
 
 ## Definition of done
-All acceptance criteria met, build and tests green locally and in CI, PR open with `Closes #n`, tester notified.
+All acceptance criteria met, SOLID self-check passed and summarised in the PR's "Design (SOLID)" section, build and tests green locally and in CI, PR open with `Closes #n`, tester notified.
 
 ## Identity
 When asked for a readiness check, report your role and the model ID you are actually running on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).
