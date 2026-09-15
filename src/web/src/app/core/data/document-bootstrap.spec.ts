@@ -2,7 +2,12 @@ import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { runDocumentBootstrap } from './document-bootstrap';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
-import { registerModel, resetRegistryForTesting } from './registry';
+import {
+  ModelRegistration,
+  registerModel,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+} from './registry';
 import { StorageAdapter } from './storage-adapter';
 
 function fakeAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
@@ -104,7 +109,15 @@ describe('runDocumentBootstrap', () => {
   });
 
   describe('a document at the current schema version with a broken shape', () => {
-    afterEach(() => resetRegistryForTesting());
+    // Restore the registry to whatever it held before this describe's own test-only `mission`
+    // fixture, rather than wiping it: a blind clear would just as easily erase a real, permanent
+    // registration (e.g. `pwa`, `backup`) another spec needs, under Vitest's `isolate: false`
+    // (shared module state) — matching `registry.spec.ts`/`feature-store.spec.ts`.
+    let baseline: ReadonlyMap<string, ModelRegistration>;
+    beforeEach(() => {
+      baseline = snapshotRegistryForTesting();
+    });
+    afterEach(() => resetRegistryForTesting(baseline));
 
     it.each([
       ['missing everything but schemaVersion', { schemaVersion: CURRENT_SCHEMA_VERSION }],

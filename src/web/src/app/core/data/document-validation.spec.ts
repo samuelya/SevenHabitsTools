@@ -1,6 +1,11 @@
 import { CURRENT_SCHEMA_VERSION } from './document.model';
 import { resolveDocument } from './document-validation';
-import { registerModel, resetRegistryForTesting } from './registry';
+import {
+  ModelRegistration,
+  registerModel,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+} from './registry';
 
 function validStored(overrides: Record<string, unknown> = {}) {
   return {
@@ -16,7 +21,15 @@ function validStored(overrides: Record<string, unknown> = {}) {
 }
 
 describe('resolveDocument', () => {
-  afterEach(() => resetRegistryForTesting());
+  // Restore the registry to whatever it held before this file's own test-only `mission` fixture,
+  // rather than wiping it: a blind clear would just as easily erase a real, permanent registration
+  // (e.g. `pwa`, `backup`) another spec needs, under Vitest's `isolate: false` (shared module
+  // state) — matching `registry.spec.ts`/`feature-store.spec.ts`.
+  let baseline: ReadonlyMap<string, ModelRegistration>;
+  beforeEach(() => {
+    baseline = snapshotRegistryForTesting();
+  });
+  afterEach(() => resetRegistryForTesting(baseline));
 
   it('accepts a document already at the current schema version and shape', () => {
     const stored = validStored();

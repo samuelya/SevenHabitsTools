@@ -1,6 +1,11 @@
 import { buildImportPreview } from './import-preview.logic';
 import { newRecord, softDelete } from '../record';
-import { registerModel, resetRegistryForTesting } from '../registry';
+import {
+  ModelRegistration,
+  registerModel,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+} from '../registry';
 import { RootDocument } from '../document.model';
 
 function doc(overrides: Record<string, unknown> = {}): RootDocument {
@@ -22,7 +27,17 @@ function doc(overrides: Record<string, unknown> = {}): RootDocument {
 }
 
 describe('buildImportPreview', () => {
-  afterEach(() => resetRegistryForTesting());
+  // buildImportPreview() walks every registered model, so — unlike most specs here — these tests
+  // need genuine isolation from whatever is ambiently registered (e.g. `pwa`, `backup`), not just
+  // their own fixtures cleaned up: snapshot the real baseline to restore afterward (protecting
+  // other specs, matching `registry.spec.ts`/`feature-store.spec.ts`), but clear to empty for the
+  // duration of each test itself, so each one only ever sees what it registers.
+  let baseline: ReadonlyMap<string, ModelRegistration>;
+  beforeEach(() => {
+    baseline = snapshotRegistryForTesting();
+    resetRegistryForTesting();
+  });
+  afterEach(() => resetRegistryForTesting(baseline));
 
   it('reports the document updatedAt', () => {
     expect(buildImportPreview(doc()).updatedAt).toBe('2026-01-05T00:00:00.000Z');
