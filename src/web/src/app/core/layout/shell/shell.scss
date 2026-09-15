@@ -70,6 +70,12 @@ a.side-nav__row:focus-visible {
   font: var(--mat-sys-title-large);
 }
 
+// Pushes `app-language-menu` to the end of the toolbar regardless of whether the back button (and
+// therefore the title's own inline-start padding) is present.
+.top-bar__spacer {
+  flex: 1 1 auto;
+}
+
 .page {
   flex: 1;
   overflow-y: auto;

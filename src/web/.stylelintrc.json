@@ -1,0 +1,12 @@
+{
+  "plugins": ["stylelint-use-logical"],
+  "overrides": [
+    {
+      "files": ["**/*.scss"],
+      "customSyntax": "postcss-scss"
+    }
+  ],
+  "rules": {
+    "csstools/use-logical": "always"
+  }
+}

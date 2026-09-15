@@ -1,25 +1,40 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
-import { Labels } from '../i18n/labels';
+import { TranslocoService } from '@jsverse/transloco';
+import { switchMap } from 'rxjs';
 
 /**
- * Routes set `title` to a label key (or a resolver returning one). The key drives the
- * top app bar title and the document title.
+ * Routes set `title` to a Transloco key (or a resolver returning one). The key drives the top app
+ * bar title (reactively, in `Shell`) and the document title, set here through `selectTranslate()`
+ * rather than an instant `translate()` call: the key's scope may still be loading (it loads
+ * lazily with the route, see `home.routes.ts` and friends), and reacting to it is what lets the
+ * document title catch up once it resolves instead of racing it.
  */
 @Injectable({ providedIn: 'root' })
 export class AppTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
-  private readonly labels = inject(Labels);
+  private readonly transloco = inject(TranslocoService);
   private readonly key = signal('');
 
-  /** Label key of the current page title; empty when the route has none. */
+  /** Translation key of the current page title; empty when the route has none. */
   readonly titleKey = this.key.asReadonly();
 
+  constructor() {
+    super();
+    toObservable(this.key)
+      .pipe(
+        switchMap((key) => this.transloco.selectTranslate(key || 'app.name')),
+        takeUntilDestroyed(),
+      )
+      .subscribe((pageTitle) => {
+        const appName = this.transloco.translate('app.name');
+        this.title.setTitle(this.key() ? `${pageTitle} | ${appName}` : appName);
+      });
+  }
+
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    const key = this.buildTitle(snapshot) ?? '';
-    this.key.set(key);
-    const appName = this.labels.text('app.name');
-    this.title.setTitle(key ? `${this.labels.text(key)} | ${appName}` : appName);
+    this.key.set(this.buildTitle(snapshot) ?? '');
   }
 }

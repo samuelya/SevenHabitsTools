@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
-import { Labels } from '../../../core/i18n/labels';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 /** Public repository this app is developed in. Single source of truth for the URL. */
 export const REPO_URL = 'https://github.com/samuelya/SevenHabitsTools';
@@ -16,7 +16,7 @@ export const REPO_URL = 'https://github.com/samuelya/SevenHabitsTools';
  */
 @Component({
   selector: 'app-github-link',
-  imports: [MatIconModule, MatListModule],
+  imports: [MatIconModule, MatListModule, TranslocoPipe],
   template: `
     <a
       mat-list-item
@@ -24,11 +24,11 @@ export const REPO_URL = 'https://github.com/samuelya/SevenHabitsTools';
       [href]="repoUrl"
       target="_blank"
       rel="noopener noreferrer"
-      [attr.aria-label]="accessibleName"
+      [attr.aria-label]="'nav.githubExternalLabel' | transloco"
     >
       <mat-icon svgIcon="github" matListItemIcon aria-hidden="true" />
       @if (showLabel()) {
-        <span matListItemTitle>{{ labels.text('nav.github') }}</span>
+        <span matListItemTitle>{{ 'nav.github' | transloco }}</span>
       }
       @if (showExternalIcon()) {
         <mat-icon matListItemMeta class="github-link__external" aria-hidden="true"
@@ -41,9 +41,7 @@ export const REPO_URL = 'https://github.com/samuelya/SevenHabitsTools';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GithubLink {
-  protected readonly labels = inject(Labels);
   protected readonly repoUrl = REPO_URL;
-  protected readonly accessibleName = this.labels.text('nav.githubExternalLabel');
 
   /** Shows the visible "GitHub" text label next to the icon. */
   readonly showLabel = input(false);

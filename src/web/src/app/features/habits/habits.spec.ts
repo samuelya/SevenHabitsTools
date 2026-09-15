@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { TranslocoService } from '@jsverse/transloco';
 import { HABITS } from '../../core/habits/habits';
-import { Labels } from '../../core/i18n/labels';
 import { FEATURE_ROUTES, FeatureRoute } from '../../core/routing/feature-route';
 import { configureApp, renderShellAt } from '../../testing/app-test-setup';
 
@@ -23,7 +23,7 @@ describe('Habits feature', () => {
       const fixture = await renderShellAt(`/habits/${id}`);
       const host = fixture.nativeElement as HTMLElement;
 
-      const expected = TestBed.inject(Labels).text(titleKey);
+      const expected = TestBed.inject(TranslocoService).translate(titleKey);
       expect(host.querySelector('app-habit-hub-page h1')?.textContent?.trim()).toBe(expected);
       expect(host.querySelector('app-habit-hub-page')?.textContent).toContain('coming soon');
     },

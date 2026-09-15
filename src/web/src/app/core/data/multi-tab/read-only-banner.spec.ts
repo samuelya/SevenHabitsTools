@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ReadOnlyBanner } from './read-only-banner';
 import { WRITER_LOCK } from './writer-lock';
 import { WriterRole } from './writer-role-state';
@@ -9,7 +10,10 @@ function render(role: ReturnType<typeof signal<WriterRole>>): {
   detectChanges: () => void;
 } {
   TestBed.configureTestingModule({
-    providers: [{ provide: WRITER_LOCK, useValue: { role, isWriter: signal(false) } }],
+    providers: [
+      provideTranslocoTesting(),
+      { provide: WRITER_LOCK, useValue: { role, isWriter: signal(false) } },
+    ],
   });
   const fixture = TestBed.createComponent(ReadOnlyBanner);
   fixture.detectChanges();

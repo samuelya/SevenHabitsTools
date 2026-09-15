@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppSnackbar } from '../../layout/app-snackbar';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { DocumentStore } from '../document.store';
 import { READ_ONLY_EDIT_SNACKBAR_MS, ReadOnlyEditNotifier } from './read-only-edit-notifier';
 import { WRITER_LOCK } from './writer-lock';
@@ -15,6 +16,7 @@ function setUp(role: WriterRole): {
   const open = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: DocumentStore, useValue: { refusedEdits } as unknown as DocumentStore },
       { provide: WRITER_LOCK, useValue: { role: signal(role), isWriter: signal(false) } },
       { provide: AppSnackbar, useValue: { open } },

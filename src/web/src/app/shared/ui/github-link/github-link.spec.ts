@@ -3,12 +3,13 @@ import { By } from '@angular/platform-browser';
 import { MatIconRegistry } from '@angular/material/icon';
 import { MatTooltip } from '@angular/material/tooltip';
 import { DomSanitizer } from '@angular/platform-browser';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { GithubLink, REPO_URL } from './github-link';
 import { registerGithubIcon } from './github-icon';
 
 describe('GithubLink', () => {
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({ providers: [provideTranslocoTesting()] });
     registerGithubIcon(TestBed.inject(MatIconRegistry), TestBed.inject(DomSanitizer));
   });
 

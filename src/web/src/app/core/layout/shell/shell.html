@@ -4,8 +4,8 @@
     [opened]="!handset()"
     [disableClose]="!handset()"
   >
-    <div class="side-nav__brand">{{ labels.text('app.name') }}</div>
-    <nav class="side-nav__main" [attr.aria-label]="labels.text('nav.main')">
+    <div class="side-nav__brand">{{ 'app.name' | transloco }}</div>
+    <nav class="side-nav__main" [attr.aria-label]="'nav.main' | transloco">
       <mat-nav-list>
         @for (item of navItems; track item.path) {
           <a
@@ -19,13 +19,13 @@
             [activated]="rla.isActive"
           >
             <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
-            <span matListItemTitle>{{ labels.text(item.labelKey) }}</span>
+            <span matListItemTitle>{{ item.labelKey | transloco }}</span>
           </a>
         }
       </mat-nav-list>
     </nav>
 
-    <nav class="side-nav__footer" [attr.aria-label]="labels.text('about.title')">
+    <nav class="side-nav__footer" [attr.aria-label]="'nav.about' | transloco">
       <mat-nav-list>
         <a
           mat-list-item
@@ -37,7 +37,7 @@
           [activated]="aboutLink.isActive"
         >
           <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
-          <span matListItemTitle>{{ labels.text('nav.about') }}</span>
+          <span matListItemTitle>{{ 'nav.about' | transloco }}</span>
         </a>
         <app-github-link [showLabel]="true" [showExternalIcon]="true" />
       </mat-nav-list>
@@ -54,12 +54,14 @@
           mat-icon-button
           class="top-bar__back"
           [routerLink]="back"
-          [attr.aria-label]="labels.text('nav.back')"
+          [attr.aria-label]="'nav.back' | transloco"
         >
           <mat-icon class="flip-in-rtl" aria-hidden="true">arrow_back</mat-icon>
         </a>
       }
       <span class="top-bar__title" data-testid="page-title">{{ pageTitle() }}</span>
+      <span class="top-bar__spacer"></span>
+      <app-language-toggle />
     </mat-toolbar>
 
     <main class="page">
@@ -67,7 +69,7 @@
     </main>
 
     @if (handset()) {
-      <nav class="bottom-nav" [attr.aria-label]="labels.text('nav.main')">
+      <nav class="bottom-nav" [attr.aria-label]="'nav.main' | transloco">
         @for (item of navItems; track item.path) {
           <a
             class="bottom-nav__item"
@@ -80,7 +82,7 @@
             <span class="bottom-nav__indicator">
               <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
             </span>
-            <span class="bottom-nav__label">{{ labels.text(item.labelKey) }}</span>
+            <span class="bottom-nav__label">{{ item.labelKey | transloco }}</span>
           </a>
         }
       </nav>

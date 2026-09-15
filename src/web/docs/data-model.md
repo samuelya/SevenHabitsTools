@@ -50,6 +50,12 @@ registerModel({
 - `validateDocument(doc)` runs each registration's `validate()` against its slice of an
   imported document (skipping slices that are absent) and returns a list of issues. It never
   drops or rewrites keys it doesn't recognise — unknown data always survives.
+- The registrations themselves live in a module-level map, so every `<feature>.model.ts` a spec
+  imports (even transitively, e.g. through `app.config.ts`) registers itself for the lifetime of
+  that module graph. `npm test` runs with `isolate: true` (`angular.json`) specifically so each
+  spec file gets its own fresh module graph, and therefore its own empty registry to start from,
+  instead of sharing one — and racing `resetRegistryForTesting()` calls — across every spec file
+  in the run.
 
 This is what lets independent feature PRs land without touching a shared schema file.
 

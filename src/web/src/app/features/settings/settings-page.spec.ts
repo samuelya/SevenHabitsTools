@@ -8,6 +8,8 @@ import {
   StoragePersistenceService,
 } from '../../core/data/storage-persistence.service';
 import { STORAGE_ADAPTER } from '../../core/data/storage-adapter';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import './settings.model';
 import { SettingsPage } from './settings-page';
 
 // Vitest here runs with `isolate: false` (shared module state across spec files): re-assert the
@@ -24,6 +26,7 @@ function text(fixture: { nativeElement: HTMLElement }, selector: string): string
 function setUp(persisted: boolean | null, estimate: StorageEstimateInfo | null) {
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       provideRouter([]),
       // BackupSection (embedded below) resolves DocumentImportExportService, which needs a
       // STORAGE_ADAPTER (the one token in that chain with no safe default) even though this suite

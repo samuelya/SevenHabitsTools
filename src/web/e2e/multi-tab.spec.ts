@@ -16,6 +16,10 @@ import { expect, test } from './fixtures';
 
 const READ_ONLY_BANNER = '.read-only-banner';
 
+/** `data.readOnly.banner`'s opening words, in both languages — the `-ar` projects render Arabic
+ * by default (the browser locale, per `playwright.config.ts`), not just when a spec seeds it. */
+const READ_ONLY_BANNER_TEXT = { en: 'Read-only', ar: 'للقراءة فقط' } as const;
+
 /** Waits until `page` actually holds the Web Lock, so a second tab opened afterwards is
  * deterministically the reader (the lock is requested after bootstrap, some time after `load`). */
 async function waitForWebLockHeld(page: Page): Promise<void> {
@@ -69,7 +73,7 @@ test.describe('multi-tab writer lock', () => {
     page,
     context,
     seedDocument,
-  }) => {
+  }, testInfo) => {
     await seedDocument({});
     await page.goto('/settings');
     await waitForWebLockHeld(page);
@@ -79,7 +83,10 @@ test.describe('multi-tab writer lock', () => {
     await second.goto('/settings');
 
     await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
-    await expect(second.locator(READ_ONLY_BANNER)).toContainText('Read-only');
+    const bannerText = testInfo.project.name.endsWith('-ar')
+      ? READ_ONLY_BANNER_TEXT.ar
+      : READ_ONLY_BANNER_TEXT.en;
+    await expect(second.locator(READ_ONLY_BANNER)).toContainText(bannerText);
   });
 
   test("the reader never overwrites the writer's save", async ({ page, context, seedDocument }) => {

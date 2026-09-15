@@ -11,6 +11,7 @@ import { NoopAdapter } from '../core/data/noop-storage-adapter';
 import { STORAGE_ADAPTER } from '../core/data/storage-adapter';
 import { Shell } from '../core/layout/shell/shell';
 import { registerGithubIcon } from '../shared/ui/github-link/github-icon';
+import { provideTranslocoTesting } from './transloco-testing';
 
 /**
  * Configures the real app providers with a fixed viewport class. `STORAGE_ADAPTER` is swapped back
@@ -39,6 +40,9 @@ export function configureApp(options: {
         provide: BreakpointObserver,
         useValue: { observe: () => of(state), isMatched: () => options.handset },
       },
+      // Real translations without HTTP (`TranslocoTestingModule`), overriding the HTTP loader
+      // `appConfig.providers` set up above — see `transloco-testing.ts`.
+      provideTranslocoTesting(),
       ...(options.providers ?? []),
     ],
   });

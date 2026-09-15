@@ -13,6 +13,13 @@ const REPO_URL = 'https://github.com/samuelya/SevenHabitsTools';
 /** How close the GitHub row's bottom edge must be to the sidenav's bottom edge to call it "pinned". */
 const PIN_TOLERANCE_PX = 24;
 
+/** `nav.githubExternalLabel`, in both languages — the `-ar` projects render Arabic by default
+ * (the browser locale, per `playwright.config.ts`), not just when a spec seeds it. */
+const EXTERNAL_LABEL = {
+  en: 'GitHub, opens in a new tab',
+  ar: 'GitHub، يفتح في تبويب جديد',
+} as const;
+
 test.describe('GitHub link', () => {
   test('desktop: is visible in the side-nav footer with the right attributes', async ({
     page,
@@ -24,7 +31,8 @@ test.describe('GitHub link', () => {
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute('target', '_blank');
     await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    await expect(link).toHaveAttribute('aria-label', 'GitHub, opens in a new tab');
+    const label = testInfo.project.name.endsWith('-ar') ? EXTERNAL_LABEL.ar : EXTERNAL_LABEL.en;
+    await expect(link).toHaveAttribute('aria-label', label);
     await expect(link.locator('svg')).toBeVisible();
   });
 

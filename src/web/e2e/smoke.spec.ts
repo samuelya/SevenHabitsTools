@@ -17,11 +17,40 @@ function mainNav(page: Page, projectName: string) {
   return page.locator(isMobile ? 'nav.bottom-nav' : 'nav.side-nav__main');
 }
 
+/**
+ * Shell copy in both languages, so specs that don't seed a language (and therefore render
+ * whichever language the project's own locale defaults to — see `playwright.config.ts`'s
+ * `mobile-ar`/`desktop-ar` projects) can assert against the right one instead of hardcoding `en`.
+ */
+const SHELL_TEXT = {
+  en: {
+    appName: 'Seven Habits Tools',
+    home: 'Home',
+    habits: 'Habits',
+    plan: 'Plan',
+    journal: 'Journal',
+    settings: 'Settings',
+  },
+  ar: {
+    appName: 'أدوات العادات السبع',
+    home: 'الرئيسية',
+    habits: 'العادات',
+    plan: 'التخطيط',
+    journal: 'المذكرات',
+    settings: 'الإعدادات',
+  },
+} as const;
+
+function localeFor(projectName: string): keyof typeof SHELL_TEXT {
+  return projectName.endsWith('-ar') ? 'ar' : 'en';
+}
+
 test.describe('app shell smoke', () => {
-  test('loads the home page', async ({ page }) => {
+  test('loads the home page', async ({ page }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
-    await expect(page).toHaveTitle('Home | Seven Habits Tools');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(page).toHaveTitle(`${text.home} | ${text.appName}`);
   });
 
   test('applies the global stylesheet under the production CSP', async ({ page }) => {
@@ -69,28 +98,29 @@ test.describe('app shell smoke', () => {
   });
 
   test('navigates between the top-level pages', async ({ page }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
     const nav = mainNav(page, testInfo.project.name);
 
-    await nav.getByRole('link', { name: 'Habits' }).click();
+    await nav.getByRole('link', { name: text.habits }).click();
     await expect(page).toHaveURL(/\/habits$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Habits');
+    await expect(page.getByTestId('page-title')).toHaveText(text.habits);
 
-    await nav.getByRole('link', { name: 'Plan' }).click();
+    await nav.getByRole('link', { name: text.plan }).click();
     await expect(page).toHaveURL(/\/plan$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Plan');
+    await expect(page.getByTestId('page-title')).toHaveText(text.plan);
 
-    await nav.getByRole('link', { name: 'Journal' }).click();
+    await nav.getByRole('link', { name: text.journal }).click();
     await expect(page).toHaveURL(/\/journal$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Journal');
+    await expect(page.getByTestId('page-title')).toHaveText(text.journal);
 
-    await nav.getByRole('link', { name: 'Settings' }).click();
+    await nav.getByRole('link', { name: text.settings }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Settings');
+    await expect(page.getByTestId('page-title')).toHaveText(text.settings);
 
-    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Home');
+    await expect(page.getByTestId('page-title')).toHaveText(text.home);
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {
@@ -99,10 +129,9 @@ test.describe('app shell smoke', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // No feature reads `settings` into the UI yet (#28), so assert against IndexedDB itself
-    // rather than the DOM: the seeded value must still be there, not replaced by a fresh empty
-    // document (which would mean the adapter's `load()` didn't return it, or the bootstrap
-    // treated it as corrupt).
+    // Assert against IndexedDB itself rather than the DOM: the seeded value must still be there,
+    // not replaced by a fresh empty document (which would mean the adapter's `load()` didn't
+    // return it, or the bootstrap treated it as corrupt).
     const stored = await page.evaluate(
       () =>
         new Promise((resolve, reject) => {
@@ -120,14 +149,23 @@ test.describe('app shell smoke', () => {
     expect(stored).toMatchObject({ settings: { language: 'en' } });
   });
 
-  test('switching language mirrors the layout', async ({ page, setLanguage }) => {
-    test.fixme(
-      true,
-      'Needs #28 (i18n + RTL) — there is no language switcher yet and the app always renders en/ltr.',
-    );
+  test('switching language mirrors the layout', async ({ page, setLanguage }, testInfo) => {
     await setLanguage('ar');
-    await page.goto('/settings');
-    // Once #28 lands: assert <html lang="ar" dir="rtl"> and that the shell nav mirrors.
+    await page.goto('/');
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    // The home page's own copy, not just the attributes, actually renders in Arabic.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('أدوات العادات السبع');
+
+    if (testInfo.project.name.startsWith('desktop')) {
+      // The side nav mirrors to the end (right) edge of the viewport instead of the start (left).
+      const box = await page.locator('mat-sidenav').boundingBox();
+      const viewport = page.viewportSize();
+      expect(box).not.toBeNull();
+      expect(viewport).not.toBeNull();
+      expect(box!.x + box!.width).toBeCloseTo(viewport!.width, 0);
+    }
   });
 
   test('works offline after the first load', async ({ page, goOffline }, testInfo) => {

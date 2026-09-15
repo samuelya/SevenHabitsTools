@@ -1,4 +1,5 @@
 import { CanMatchFn, ResolveFn, Routes } from '@angular/router';
+import { provideTranslocoScope } from '@jsverse/transloco';
 import { findHabit, isHabitId } from '../../core/habits/habits';
 import { HabitHubPage } from './habit-hub-page';
 import { HabitsPage } from './habits-page';
@@ -10,6 +11,12 @@ export const habitTitle: ResolveFn<string> = (route) =>
   findHabit(route.paramMap.get('habit'))?.titleKey ?? '';
 
 export default [
-  { path: '', pathMatch: 'full', title: 'nav.habits', component: HabitsPage },
-  { path: ':habit', canMatch: [habitIdMatch], title: habitTitle, component: HabitHubPage },
+  {
+    path: '',
+    providers: [provideTranslocoScope('habits')],
+    children: [
+      { path: '', pathMatch: 'full', title: 'nav.habits', component: HabitsPage },
+      { path: ':habit', canMatch: [habitIdMatch], title: habitTitle, component: HabitHubPage },
+    ],
+  },
 ] satisfies Routes;

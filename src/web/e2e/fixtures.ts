@@ -86,10 +86,6 @@ export interface SevenHabitsFixtures {
    * before the next navigation. Combine with `seedDocument` by passing `{ settings: { language } }`
    * to it directly instead — this fixture always seeds a fresh default document, so calling both
    * against the same page would have the later call's write win.
-   *
-   * Transloco and the language switcher don't exist yet (#28): the app never reads this seed and
-   * always renders `en`. Specs asserting the UI actually changed language are `test.fixme`,
-   * pointing at #28.
    */
   setLanguage(lang: 'en' | 'ar'): Promise<void>;
   /** Disables the browser context's network, simulating the device going offline after first load. */

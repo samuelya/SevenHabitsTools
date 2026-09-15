@@ -29,6 +29,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*/i18n/*.json",
+                "input": "src/app/features",
+                "output": "assets/i18n"
               }
             ],
             "styles": [
@@ -89,7 +94,10 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "isolate": true
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",

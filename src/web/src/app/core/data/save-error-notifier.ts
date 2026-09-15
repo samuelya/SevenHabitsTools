@@ -1,6 +1,6 @@
 import { Injectable, Injector, effect, inject, untracked } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { FileDownloader } from '../browser/file-download';
-import { Labels } from '../i18n/labels';
 import { AppSnackbar } from '../layout/app-snackbar';
 import { DocumentPersistence } from './document-persistence';
 import { RootDocument } from './document.model';
@@ -23,7 +23,7 @@ export class SaveErrorNotifier {
   private readonly store = inject(DocumentStore);
   private readonly snackbar = inject(AppSnackbar);
   private readonly downloader = inject(FileDownloader);
-  private readonly labels = inject(Labels);
+  private readonly transloco = inject(TranslocoService);
   private readonly injector = inject(Injector);
 
   private started = false;
@@ -65,9 +65,9 @@ export class SaveErrorNotifier {
     try {
       const { SaveErrorSnackbar } = await loadSaveErrorSnackbar();
       const data: SaveErrorSnackbarData = {
-        message: this.labels.text('data.saveError.message'),
-        exportLabel: this.labels.text('data.saveError.exportNow'),
-        dismissLabel: this.labels.text('data.snackbar.dismiss'),
+        message: this.transloco.translate('data.saveError.message'),
+        exportLabel: this.transloco.translate('data.saveError.exportNow'),
+        dismissLabel: this.transloco.translate('data.snackbar.dismiss'),
       };
       const ref = await this.snackbar.openFromComponent(SaveErrorSnackbar, { data });
       ref.onAction().subscribe(() => this.exportNow());

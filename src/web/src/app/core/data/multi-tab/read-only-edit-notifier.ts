@@ -1,5 +1,5 @@
 import { Injectable, Injector, effect, inject, untracked } from '@angular/core';
-import { Labels } from '../../i18n/labels';
+import { TranslocoService } from '@jsverse/transloco';
 import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentStore } from '../document.store';
 import { WRITER_LOCK } from './writer-lock';
@@ -18,7 +18,7 @@ export class ReadOnlyEditNotifier {
   private readonly store = inject(DocumentStore);
   private readonly writerLock = inject(WRITER_LOCK);
   private readonly snackbar = inject(AppSnackbar);
-  private readonly labels = inject(Labels);
+  private readonly transloco = inject(TranslocoService);
   private readonly injector = inject(Injector);
 
   private started = false;
@@ -47,8 +47,10 @@ export class ReadOnlyEditNotifier {
       this.writerLock.role() === 'pending'
         ? 'data.readOnly.editPending'
         : 'data.readOnly.editRefused';
-    await this.snackbar.open(this.labels.text(key), this.labels.text('data.snackbar.dismiss'), {
-      duration: READ_ONLY_EDIT_SNACKBAR_MS,
-    });
+    await this.snackbar.open(
+      this.transloco.translate(key),
+      this.transloco.translate('data.snackbar.dismiss'),
+      { duration: READ_ONLY_EDIT_SNACKBAR_MS },
+    );
   }
 }
