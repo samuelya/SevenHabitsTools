@@ -227,6 +227,7 @@ test.describe('app shell smoke', () => {
   });
 
   test('works offline after the first load', async ({ page, goOffline }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
     // The service worker never controls the load that registers it (only future navigations do),
     // so reload once while still online: this second load is fully served — and, for anything not
@@ -236,18 +237,18 @@ test.describe('app shell smoke', () => {
     await page.waitForLoadState('networkidle');
 
     const nav = mainNav(page, testInfo.project.name);
-    await nav.getByRole('link', { name: 'Habits' }).click();
+    await nav.getByRole('link', { name: text.habits }).click();
     await expect(page).toHaveURL(/\/habits$/);
 
     await goOffline();
     await page.reload();
-    await expect(page.getByTestId('page-title')).toHaveText('Habits');
+    await expect(page.getByTestId('page-title')).toHaveText(text.habits);
 
     // Client-side navigation back to an already-loaded route: no network needed either way, but
     // exercises the same offline app instance a user would actually be poking at.
-    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
   });
 
   for (const path of VISITED_PAGES) {

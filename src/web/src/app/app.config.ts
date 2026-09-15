@@ -29,15 +29,11 @@ import { provideAppTransloco } from './core/i18n/provide-app-transloco';
 import { LanguageSync } from './core/i18n/language-sync';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { FEATURE_ROUTES } from './core/routing/feature-route';
-// Side-effect only, and order-sensitive: each runs every `registerModel()` in its file before the
-// document bootstraps below, and `settings.model.ts` (inside `model-registry`) registers the
-// whole `settings` slice, while `pwa.model.ts` registers only `settings.pwa` nested inside it —
-// `createEmptyDocument()`'s composition sets each registration's path in registration order, so
-// the whole-slice one has to run first or it clobbers the nested one written just before it. Not
-// lazy-loaded like a feature route, so an explicit import here — the same reason `STORAGE_ADAPTER`
-// and the other core services are wired directly in this file instead of a route — is what
-// guarantees both have run in time. Cheap (types and a `registerModel()` call), unlike
-// `./core/pwa/pwa-runtime` below, so both stay static imports.
+// Side-effect only: each runs every `registerModel()` in its file before `bootstrapDocument()`
+// below can build or validate a document. Not lazy-loaded like a feature route, so an explicit
+// import here — the same reason `STORAGE_ADAPTER` and the other core services are wired directly
+// in this file instead of a route — is what guarantees both have run in time. Cheap (types and a
+// `registerModel()` call), unlike `./core/pwa/pwa-runtime` below, so both stay static imports.
 import './model-registry';
 import './core/pwa/pwa.model';
 import { ROUTE_REGISTRY } from './route-registry';

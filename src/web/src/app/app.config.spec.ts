@@ -74,11 +74,11 @@ describe('appConfig data providers', () => {
     expect(TestBed.inject(DocumentBootstrapStatus).state()).toBe('ready');
   });
 
-  it('#149: composes the whole settings slice before the nested pwa slice, so neither clobbers the other', () => {
-    // settings.model.ts registers the whole `settings` slice; pwa.model.ts registers only the
-    // nested `settings.pwa` — createEmptyDocument() composes registrations in import order
-    // (app.config.ts), so the whole-slice one has to run first or its `setPath()` call would
-    // overwrite `pwa` right after pwa.model.ts's own `setPath()` call had just written it.
+  it('#149: composes settings.language, settings.numerals and settings.pwa together, regardless of registration order', () => {
+    // settings.model.ts (settings.language, settings.numerals) and pwa.model.ts (settings.pwa)
+    // all register independent leaves under `settings` — createEmptyDocument() composes each
+    // registration's own path directly, so none of them can overwrite a sibling the way a single
+    // whole-`settings`-object registration would.
     const settings = TestBed.inject(DocumentStore).document().settings as Record<string, unknown>;
     expect(settings).toMatchObject({ language: null, numerals: 'western' });
     expect(settings['pwa']).toEqual({ installPromptDismissedAt: null });

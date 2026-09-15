@@ -1,37 +1,32 @@
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
-import { defaultSettings, isSettingsData } from './settings.model';
+import { defaultLanguage, defaultNumerals } from './settings.model';
 
 describe('settings model', () => {
-  it('registers "settings" at the document root', () => {
-    const registration = getRegisteredModels().find((model) => model.key === 'settings');
-    expect(registration?.path).toBe('settings');
+  it('registers "settings.language" and "settings.numerals" as independent leaves', () => {
+    const models = getRegisteredModels();
+    expect(models.find((model) => model.key === 'language')?.path).toBe('settings.language');
+    expect(models.find((model) => model.key === 'numerals')?.path).toBe('settings.numerals');
   });
 
   it('defaults to following the browser language and Western numerals', () => {
-    expect(defaultSettings()).toEqual({ language: null, numerals: 'western' });
+    expect(defaultLanguage()).toBeNull();
+    expect(defaultNumerals()).toBe('western');
   });
 
   it('wires validation through to validateDocument()', () => {
     expect(validateDocument({ settings: { language: 'ar', numerals: 'arabic' } })).toEqual([]);
     expect(validateDocument({ settings: { language: 'fr' } })).not.toEqual([]);
   });
-});
 
-describe('isSettingsData', () => {
-  it('accepts a settings slice with both fields set', () => {
-    expect(isSettingsData({ language: 'ar', numerals: 'arabic' })).toBe(true);
+  it('accepts an empty or partial slice — a missing field falls back to its default on read', () => {
+    expect(validateDocument({ settings: {} })).toEqual([]);
+    expect(validateDocument({ settings: { language: 'en' } })).toEqual([]);
+    expect(validateDocument({ settings: { numerals: 'western' } })).toEqual([]);
+    expect(validateDocument({})).toEqual([]);
   });
 
-  it('accepts an empty or partial slice — missing fields fall back to defaults on read', () => {
-    expect(isSettingsData({})).toBe(true);
-    expect(isSettingsData({ language: 'en' })).toBe(true);
-    expect(isSettingsData({ numerals: 'western' })).toBe(true);
-  });
-
-  it('rejects a present field with the wrong value, or a non-object', () => {
-    expect(isSettingsData({ language: 'fr' })).toBe(false);
-    expect(isSettingsData({ numerals: 'roman' })).toBe(false);
-    expect(isSettingsData('nope')).toBe(false);
-    expect(isSettingsData(null)).toBe(false);
+  it('rejects a present field with the wrong value', () => {
+    expect(validateDocument({ settings: { language: 'fr' } })).not.toEqual([]);
+    expect(validateDocument({ settings: { numerals: 'roman' } })).not.toEqual([]);
   });
 });

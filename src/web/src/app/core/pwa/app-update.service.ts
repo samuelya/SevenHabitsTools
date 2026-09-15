@@ -1,9 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
+import { TranslocoService } from '@jsverse/transloco';
 import { filter } from 'rxjs';
 import { WINDOW } from '../browser/window';
 import { DocumentPersistence } from '../data/document-persistence';
-import { Labels } from '../i18n/labels';
 import { AppSnackbar } from '../layout/app-snackbar';
 
 /**
@@ -20,7 +20,7 @@ export class AppUpdateService {
   private readonly persistence = inject(DocumentPersistence);
   private readonly window = inject(WINDOW);
   private readonly snackbar = inject(AppSnackbar);
-  private readonly labels = inject(Labels);
+  private readonly transloco = inject(TranslocoService);
 
   private started = false;
   private promptOpen = false;
@@ -54,8 +54,8 @@ export class AppUpdateService {
   private async showPrompt(messageKey: string): Promise<void> {
     try {
       const ref = await this.snackbar.open(
-        this.labels.text(messageKey),
-        this.labels.text('data.pwa.reload'),
+        this.transloco.translate(messageKey),
+        this.transloco.translate('data.pwa.reload'),
       );
       ref.onAction().subscribe(() => void this.onReloadClicked(messageKey));
       ref.afterDismissed().subscribe(() => {

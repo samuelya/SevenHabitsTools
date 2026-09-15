@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { SettingsData } from '../../features/settings/settings.model';
 import { featureStore } from '../data/feature-store';
+import { Numerals } from './language';
 import { intlLocaleFor } from './locale.logic';
 
 /**
@@ -13,7 +13,7 @@ import { intlLocaleFor } from './locale.logic';
 @Pipe({ name: 'appDate', standalone: true, pure: false })
 export class AppDatePipe implements PipeTransform {
   private readonly transloco = inject(TranslocoService);
-  private readonly settings = featureStore<SettingsData>('settings');
+  private readonly numerals = featureStore<Numerals>('numerals');
 
   transform(
     value: string | number | Date | null | undefined,
@@ -23,7 +23,7 @@ export class AppDatePipe implements PipeTransform {
     if (!date) {
       return '';
     }
-    const locale = intlLocaleFor(this.transloco.getActiveLang(), this.settings.value().numerals);
+    const locale = intlLocaleFor(this.transloco.getActiveLang(), this.numerals.value());
     return new Intl.DateTimeFormat(locale, options).format(date);
   }
 }
@@ -32,13 +32,13 @@ export class AppDatePipe implements PipeTransform {
 @Pipe({ name: 'appNumber', standalone: true, pure: false })
 export class AppNumberPipe implements PipeTransform {
   private readonly transloco = inject(TranslocoService);
-  private readonly settings = featureStore<SettingsData>('settings');
+  private readonly numerals = featureStore<Numerals>('numerals');
 
   transform(value: number | null | undefined, options?: Intl.NumberFormatOptions): string {
     if (value === null || value === undefined || Number.isNaN(value)) {
       return '';
     }
-    const locale = intlLocaleFor(this.transloco.getActiveLang(), this.settings.value().numerals);
+    const locale = intlLocaleFor(this.transloco.getActiveLang(), this.numerals.value());
     return new Intl.NumberFormat(locale, options).format(value);
   }
 }

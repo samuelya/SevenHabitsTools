@@ -73,6 +73,17 @@
     },
     "validation": {
       "invalidModel": "This section of the saved data has an invalid format."
+    },
+    "pwa": {
+      "offline": "You're offline. Your changes stay saved on this device.",
+      "updateAvailable": "A new version of this app is available.",
+      "updateRequired": "This app needs to reload to keep working.",
+      "reload": "Reload",
+      "install": {
+        "message": "Install Seven Habits Tools for quick, offline access.",
+        "action": "Install",
+        "iosHint": "Install this app: tap the Share icon, then \"Add to Home Screen\"."
+      }
     }
   }
 }
