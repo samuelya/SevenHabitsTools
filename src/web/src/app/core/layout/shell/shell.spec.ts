@@ -64,9 +64,30 @@ describe('Shell', () => {
       expect(github?.getAttribute('href')).toBe('https://github.com/samuelya/SevenHabitsTools');
       expect(github?.getAttribute('target')).toBe('_blank');
       expect(github?.getAttribute('rel')).toBe('noopener noreferrer');
-      expect(github?.getAttribute('aria-label')).toBe('Source code on GitHub');
+      expect(github?.getAttribute('aria-label')).toBe('GitHub, opens in a new tab');
       expect(github?.querySelector('mat-icon svg')).toBeTruthy();
       expect(github?.querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
+      expect(text(github?.querySelector('[matListItemTitle]'))).toBe('GitHub');
+    });
+
+    it('shows a small trailing "opens in a new tab" icon on the GitHub row, hidden from assistive tech', async () => {
+      const fixture = await renderShellAt('/');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const github = [...host.querySelectorAll<HTMLAnchorElement>('.side-nav__footer a')][1];
+      const external = github?.querySelector('[matListItemMeta]');
+      expect(external?.textContent?.trim()).toBe('open_in_new');
+      expect(external?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('is a flex column so the footer never overlaps the scrolling main nav', async () => {
+      const fixture = await renderShellAt('/');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const main = host.querySelector<HTMLElement>('.side-nav__main');
+      const footer = host.querySelector<HTMLElement>('.side-nav__footer');
+      expect(getComputedStyle(main!).overflowY).toBe('auto');
+      expect(getComputedStyle(footer!).flexGrow).toBe('0');
     });
 
     it('shows the page title and hides the back button on top-level pages', async () => {
