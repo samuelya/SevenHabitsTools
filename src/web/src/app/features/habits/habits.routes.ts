@@ -7,23 +7,25 @@ import { HabitsPage } from './habits-page';
 /** Only known habit ids match; anything else falls through to the not-found redirect. */
 export const habitIdMatch: CanMatchFn = (_route, segments) => isHabitId(segments[0]?.path);
 
-export const habitTitle: ResolveFn<string> = (route) =>
-  findHabit(route.paramMap.get('habit'))?.titleKey ?? '';
+/**
+ * The route *title* — unlike the hub page's own `<h1>` (`definition.titleKey`, the `habits`
+ * feature scope) — resolves to a root/shell-scope `titles.<id>` key. Route and page titles are a
+ * shell concern (the tab, the app bar), read by shell-level code (`AppTitleStrategy`,
+ * `Shell.pageTitle`) that runs outside the feature's scoped injector, often before that scope has
+ * loaded; a title living in a lazy feature scope structurally can't resolve reliably there (#149).
+ */
+export const habitTitle: ResolveFn<string> = (route) => {
+  const habit = findHabit(route.paramMap.get('habit'));
+  return habit ? `titles.${habit.id}` : '';
+};
 
 export default [
   {
     path: '',
     providers: [provideTranslocoScope('habits')],
     children: [
-      { path: '', pathMatch: 'full', title: 'nav.habits', component: HabitsPage },
-      {
-        path: ':habit',
-        canMatch: [habitIdMatch],
-        title: habitTitle,
-        // habitTitle resolves to a 'habits.<id>.title' key — see about.routes.ts's data.titleScope.
-        data: { titleScope: 'habits' },
-        component: HabitHubPage,
-      },
+      { path: '', pathMatch: 'full', title: 'titles.habits', component: HabitsPage },
+      { path: ':habit', canMatch: [habitIdMatch], title: habitTitle, component: HabitHubPage },
     ],
   },
 ] satisfies Routes;

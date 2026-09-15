@@ -17,10 +17,6 @@ function mainNav(page: Page, projectName: string) {
   return page.locator(isMobile ? 'nav.bottom-nav' : 'nav.side-nav__main');
 }
 
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 /**
  * Shell copy in both languages, so specs that don't seed a language (and therefore render
  * whichever language the project's own locale defaults to — see `playwright.config.ts`'s
@@ -49,12 +45,27 @@ function localeFor(projectName: string): keyof typeof SHELL_TEXT {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-/** Titles that live in a lazy feature scope (`about`, `habits`) rather than the shell's own root
- * scope — see the "direct deep link" regression test below (#149). */
-const SCOPED_TITLES = {
-  en: { about: 'About', h1: 'Habit 1: Be proactive' },
-  ar: { about: 'حول التطبيق', h1: 'العادة 1: كن مبادرًا' },
-} as const;
+/** Every registered habit hub id (`core/habits/habits.ts`'s `HABIT_IDS`) — kept in sync by hand,
+ * same as `VISITED_PAGES` above, since these routes are generated from it rather than listed in
+ * the route registry. */
+const HABIT_HUB_IDS = [
+  'paradigms',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'h7',
+  'interdependence',
+] as const;
+
+/** Every route this app registers: the six top-level pages plus every habit hub. */
+const ALL_ROUTES = [...VISITED_PAGES, ...HABIT_HUB_IDS.map((id) => `/habits/${id}`)];
+
+/** A route or page title that never resolved — issue #149 — looks exactly like its own Transloco
+ * key (e.g. `titles.about`, `about.title`): a run of dot-separated identifier segments. */
+const RAW_KEY_PATTERN = /^[a-z0-9]+(\.[a-z0-9]+)+$/i;
 
 test.describe('app shell smoke', () => {
   test('loads the home page', async ({ page }, testInfo) => {
@@ -134,24 +145,40 @@ test.describe('app shell smoke', () => {
     await expect(page.getByTestId('page-title')).toHaveText(text.home);
   });
 
-  test('a direct deep link to a lazily-scoped route shows its translated title, not the raw key', async ({
+  for (const lang of ['en', 'ar'] as const) {
+    test(`every route resolves a translated title, not a raw key (${lang})`, async ({
+      page,
+      setLanguage,
+    }) => {
+      // Regression test for #149: a direct deep link — the shell asking for the title before the
+      // routed page's own `transloco` pipe usage has had a chance to warm anything — is what
+      // reproduced it; in-app navigation (the test above) does not. `expect.poll` because the
+      // title is correctly reactive (it resolves once loaded, over the network, same as the
+      // page's own content) rather than necessarily present on the very first paint — #149 was
+      // that it never resolved at all, not that it was merely late.
+      await setLanguage(lang);
+      for (const path of ALL_ROUTES) {
+        await page.goto(path);
+        await expect
+          .poll(() => page.getByTestId('page-title').textContent())
+          .not.toMatch(RAW_KEY_PATTERN);
+        expect(await page.title()).not.toMatch(RAW_KEY_PATTERN);
+      }
+    });
+  }
+
+  test('a live language switch re-translates the current page title, without navigating', async ({
     page,
-  }, testInfo) => {
-    // Regression test for #149: navigating in-app (as the test above does) let the routed page's
-    // own `transloco` pipe usage warm the scope's cache before the shell ever asked for the title,
-    // masking the bug. A fresh direct navigation — the shell asking first — is what reproduced it.
-    // `toHaveText`/`toHaveTitle` retry: the title is correctly reactive (it resolves once its
-    // scope loads, over the network, same as the page's own content), not necessarily present on
-    // the very first paint — #149 was that it never resolved at all, not that it was merely late.
-    const text = SCOPED_TITLES[localeFor(testInfo.project.name)];
+    setLanguage,
+  }) => {
+    await setLanguage('en');
+    await page.goto('/habits/h2');
+    await expect(page.getByTestId('page-title')).toHaveText('Habit 2: Begin with the end in mind');
 
-    await page.goto('/about');
-    await expect(page.getByTestId('page-title')).toHaveText(text.about);
-    await expect(page).toHaveTitle(new RegExp(`^${escapeRegExp(text.about)} \\| `));
+    await page.getByRole('button', { name: 'Switch to Arabic' }).click();
 
-    await page.goto('/habits/h1');
-    await expect(page.getByTestId('page-title')).toHaveText(text.h1);
-    await expect(page).toHaveTitle(new RegExp(`^${escapeRegExp(text.h1)} \\| `));
+    await expect(page.getByTestId('page-title')).toHaveText('العادة 2: ابدأ والغاية في ذهنك');
+    await expect(page).toHaveTitle(/^العادة 2: ابدأ والغاية في ذهنك \| /);
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {

@@ -3,8 +3,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppTitleStrategy } from '../../../core/layout/app-title-strategy';
 
 /** Temporary page for destinations whose feature has not been built yet. Only ever bound to a
- * root-scope title key (`nav.journal`, `nav.plan`), so `'placeholder.comingSoon'` — also root
- * scope — is the only translation it needs. */
+ * root-scope title key (`titles.journal`, `titles.plan`), so `'placeholder.comingSoon'` — also
+ * root scope — is the only translation it needs. */
 @Component({
   selector: 'app-placeholder-page',
   imports: [TranslocoPipe],

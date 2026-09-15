@@ -17,6 +17,23 @@
   "placeholder": {
     "comingSoon": "Coming soon."
   },
+  "titles": {
+    "home": "Home",
+    "habits": "Habits",
+    "plan": "Plan",
+    "journal": "Journal",
+    "settings": "Settings",
+    "about": "About",
+    "paradigms": "Paradigms and principles",
+    "h1": "Habit 1: Be proactive",
+    "h2": "Habit 2: Begin with the end in mind",
+    "h3": "Habit 3: Put first things first",
+    "h4": "Habit 4: Think win-win",
+    "h5": "Habit 5: Seek first to understand, then to be understood",
+    "h6": "Habit 6: Synergize",
+    "h7": "Habit 7: Sharpen the saw",
+    "interdependence": "Paradigms of interdependence"
+  },
   "language": {
     "label": "Language",
     "en": "English",

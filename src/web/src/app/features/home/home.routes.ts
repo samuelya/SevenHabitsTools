@@ -6,7 +6,7 @@ export default [
   {
     path: '',
     pathMatch: 'full',
-    title: 'nav.home',
+    title: 'titles.home',
     component: HomePage,
     providers: [provideTranslocoScope('home')],
   },

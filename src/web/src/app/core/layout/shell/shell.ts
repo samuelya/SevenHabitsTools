@@ -64,8 +64,7 @@ export class Shell {
     { initialValue: this.router.url },
   );
 
-  /** Already resolved, correctly scoped and reactive to a language switch — see
-   * `AppTitleStrategy.pageTitle`. */
+  /** Already translated and reactive to a language switch — see `AppTitleStrategy.pageTitle`. */
   protected readonly pageTitle = this.titles.pageTitle;
 
   /** Parent URL for the back button; `null` on top-level pages. */

@@ -5,10 +5,9 @@ import { AboutPage } from './about-page';
 export default [
   {
     path: '',
-    title: 'about.title',
-    // The title key's scope — `AppTitleStrategy` needs this alongside `provideTranslocoScope()`
-    // above; see its doc comment.
-    data: { titleScope: 'about' },
+    // A root/shell-scope key, not the 'about' feature scope's own 'title' key (used by the page's
+    // own <h1>) — see habits.routes.ts's habitTitle doc comment (#149).
+    title: 'titles.about',
     component: AboutPage,
     providers: [provideTranslocoScope('about')],
   },

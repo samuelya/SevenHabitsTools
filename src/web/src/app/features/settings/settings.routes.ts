@@ -5,7 +5,7 @@ import { SettingsPage } from './settings-page';
 export default [
   {
     path: '',
-    title: 'nav.settings',
+    title: 'titles.settings',
     component: SettingsPage,
     providers: [provideTranslocoScope('settings')],
   },
