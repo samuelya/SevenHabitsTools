@@ -6,6 +6,7 @@ import { WriterPromotionReload } from './multi-tab/writer-promotion-reload';
 import { DocumentPersistence } from './document-persistence';
 import { DocumentSync } from './document-sync';
 import { SaveErrorNotifier } from './save-error-notifier';
+import { UnsavedChangesGuard } from './unsaved-changes-guard';
 
 describe('DocumentSync', () => {
   it('starts every document-dependent service', () => {
@@ -15,6 +16,7 @@ describe('DocumentSync', () => {
     const writerPromotionReload = { start: vi.fn() };
     const saveErrorNotifier = { start: vi.fn() };
     const readOnlyEditNotifier = { start: vi.fn() };
+    const unsavedChangesGuard = { start: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: WriterLockService, useValue: writerLock },
@@ -23,6 +25,7 @@ describe('DocumentSync', () => {
         { provide: WriterPromotionReload, useValue: writerPromotionReload },
         { provide: SaveErrorNotifier, useValue: saveErrorNotifier },
         { provide: ReadOnlyEditNotifier, useValue: readOnlyEditNotifier },
+        { provide: UnsavedChangesGuard, useValue: unsavedChangesGuard },
       ],
     });
 
@@ -34,5 +37,6 @@ describe('DocumentSync', () => {
     expect(writerPromotionReload.start).toHaveBeenCalledTimes(1);
     expect(saveErrorNotifier.start).toHaveBeenCalledTimes(1);
     expect(readOnlyEditNotifier.start).toHaveBeenCalledTimes(1);
+    expect(unsavedChangesGuard.start).toHaveBeenCalledTimes(1);
   });
 });

@@ -155,14 +155,19 @@ overwrite each other, so exactly one tab at a time is allowed to save:
   (the previous writer's tab closed): rather than resuming with a possibly-stale in-memory
   document, a full reload re-runs bootstrap against whatever is actually stored. It uses no timers,
   and a slow initial grant never counts as a promotion.
-- `DocumentSync` (`document-sync.ts`) starts all of the above, plus `SaveErrorNotifier` (a snackbar
-  with "Export now" and "Dismiss", opened once per run of failed saves) and `ReadOnlyEditNotifier`,
+- `DocumentSync` (`document-sync.ts`) starts all of the above, plus `SaveErrorNotifier`, `UnsavedChangesGuard` and `ReadOnlyEditNotifier`,
   once bootstrap resolves
   to `ready`. Called from `app.config.ts` and `DataErrorPage.reset()` — the two places that also
   start `DocumentPersistence` — so a new document-dependent service plugs in by adding one line to
   `DocumentSync`, not by editing either caller.
+- `SaveErrorNotifier` shows a snackbar with "Export now" and "Dismiss" when a save fails. It
+  doesn't reopen for retries of the same unsaved document, but it does reopen when edits made after
+  the user closed it also fail to save (`shouldShowSaveError()`, `save-error-notifier.logic.ts`).
+- `UnsavedChangesGuard` registers a `beforeunload` prompt only while `dirty && saveError`, so closing
+  or reloading the tab asks for confirmation before failed edits are lost.
 - Both notifiers open snackbars through `AppSnackbar` (`core/layout/app-snackbar.ts`). It loads
-  Angular Material's snackbar on first use, keeping it out of the initial bundle, and adds the
+  Angular Material's snackbar outside the initial bundle (preloaded right after startup, so it can
+  still open offline) and adds the
   `app-snackbar` panel class. Under 600 px, `styles.scss` uses that class to lift the snackbar above
   the bottom navigation, including `env(safe-area-inset-bottom)`.
 - `StoragePersistenceService` (`storage-persistence.service.ts`) wraps `navigator.storage`:
