@@ -16,7 +16,14 @@ export default [
     providers: [provideTranslocoScope('habits')],
     children: [
       { path: '', pathMatch: 'full', title: 'nav.habits', component: HabitsPage },
-      { path: ':habit', canMatch: [habitIdMatch], title: habitTitle, component: HabitHubPage },
+      {
+        path: ':habit',
+        canMatch: [habitIdMatch],
+        title: habitTitle,
+        // habitTitle resolves to a 'habits.<id>.title' key — see about.routes.ts's data.titleScope.
+        data: { titleScope: 'habits' },
+        component: HabitHubPage,
+      },
     ],
   },
 ] satisfies Routes;

@@ -17,6 +17,10 @@ function mainNav(page: Page, projectName: string) {
   return page.locator(isMobile ? 'nav.bottom-nav' : 'nav.side-nav__main');
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Shell copy in both languages, so specs that don't seed a language (and therefore render
  * whichever language the project's own locale defaults to — see `playwright.config.ts`'s
@@ -44,6 +48,13 @@ const SHELL_TEXT = {
 function localeFor(projectName: string): keyof typeof SHELL_TEXT {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
+
+/** Titles that live in a lazy feature scope (`about`, `habits`) rather than the shell's own root
+ * scope — see the "direct deep link" regression test below (#149). */
+const SCOPED_TITLES = {
+  en: { about: 'About', h1: 'Habit 1: Be proactive' },
+  ar: { about: 'حول التطبيق', h1: 'العادة 1: كن مبادرًا' },
+} as const;
 
 test.describe('app shell smoke', () => {
   test('loads the home page', async ({ page }, testInfo) => {
@@ -121,6 +132,26 @@ test.describe('app shell smoke', () => {
     await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId('page-title')).toHaveText(text.home);
+  });
+
+  test('a direct deep link to a lazily-scoped route shows its translated title, not the raw key', async ({
+    page,
+  }, testInfo) => {
+    // Regression test for #149: navigating in-app (as the test above does) let the routed page's
+    // own `transloco` pipe usage warm the scope's cache before the shell ever asked for the title,
+    // masking the bug. A fresh direct navigation — the shell asking first — is what reproduced it.
+    // `toHaveText`/`toHaveTitle` retry: the title is correctly reactive (it resolves once its
+    // scope loads, over the network, same as the page's own content), not necessarily present on
+    // the very first paint — #149 was that it never resolved at all, not that it was merely late.
+    const text = SCOPED_TITLES[localeFor(testInfo.project.name)];
+
+    await page.goto('/about');
+    await expect(page.getByTestId('page-title')).toHaveText(text.about);
+    await expect(page).toHaveTitle(new RegExp(`^${escapeRegExp(text.about)} \\| `));
+
+    await page.goto('/habits/h1');
+    await expect(page.getByTestId('page-title')).toHaveText(text.h1);
+    await expect(page).toHaveTitle(new RegExp(`^${escapeRegExp(text.h1)} \\| `));
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {
