@@ -5,11 +5,22 @@ import { getRegisteredModels, registerModel } from '../registry';
 export type ReminderDays = 0 | 1 | 7 | 30;
 
 export interface BackupSettings {
+  /** Wall-clock time of the last successful export or share — the anchor
+   * `export-reminder.logic.ts` measures `reminderDays` from. Never used to detect whether the
+   * document has changed since (`lastExportedDocumentUpdatedAt` does that) — the two can be far
+   * apart when a document is exported long after its last edit (#159). */
   readonly lastExportedAt?: string;
+  /** The exported snapshot's own `meta.updatedAt` as of that same export — used only to detect
+   * whether the document has changed since. */
+  readonly lastExportedDocumentUpdatedAt?: string;
   readonly reminderDays: ReminderDays;
 }
 
 const VALID_REMINDER_DAYS: readonly ReminderDays[] = [0, 1, 7, 30];
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string';
+}
 
 function isBackupSettings(value: unknown): value is BackupSettings {
   if (typeof value !== 'object' || value === null) {
@@ -17,8 +28,8 @@ function isBackupSettings(value: unknown): value is BackupSettings {
   }
   const candidate = value as Record<string, unknown>;
   if (
-    candidate['lastExportedAt'] !== undefined &&
-    typeof candidate['lastExportedAt'] !== 'string'
+    !isOptionalString(candidate['lastExportedAt']) ||
+    !isOptionalString(candidate['lastExportedDocumentUpdatedAt'])
   ) {
     return false;
   }

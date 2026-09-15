@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
 import { FileDownloader } from '../../browser/file-download';
@@ -9,6 +9,7 @@ import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { WRITER_LOCK } from '../multi-tab/writer-lock';
+import { WriterRole } from '../multi-tab/writer-role-state';
 import { STORAGE_ADAPTER, StorageAdapter } from '../storage-adapter';
 import { registerBackupModel } from './backup.model';
 import { DocumentImportExportService } from './document-import-export.service';
@@ -34,7 +35,7 @@ function validDoc(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function setUp(options: { isWriter?: boolean } = {}) {
+function setUp(options: { isWriter?: boolean; roleAfterStart?: WriterRole } = {}) {
   const save = vi.fn().mockResolvedValue(undefined);
   const adapter: StorageAdapter = {
     kind: 'noop',
@@ -48,13 +49,17 @@ function setUp(options: { isWriter?: boolean } = {}) {
   // leaving a heartbeat interval running, matching `data-error-page.spec.ts`'s own reset() test.
   // `WRITER_LOCK` is bound with `useExisting`, exactly like `app.config.ts`, so `canImport()`
   // (`DocumentImportExportService`) and the writer-lock gate inside `DocumentPersistence` both
-  // read the *same* signal this fake's `start()` updates — the corrupt-recovery test below needs
-  // that: `isWriter` starts `false` (the real pre-start state) and only becomes `true` once
-  // `WriterLockService.start()` actually runs, simulating `WebLocksWriterLock`'s uncontended
-  // `ifAvailable: true` fast grant (there is no other writer to contend with right after
-  // recovering from corrupt).
-  const isWriterSignal = signal(options.isWriter ?? true);
-  const writerLockServiceStart = vi.fn(() => isWriterSignal.set(true));
+  // read the *same* signals this fake's `start()` updates — the corrupt-recovery tests below need
+  // that: `role` starts `pending` (the real pre-start state) and only settles once
+  // `WriterLockService.start()` actually runs, simulating the writer lock's genuinely asynchronous
+  // grant (`navigator.locks.request()`). `roleAfterStart` (default `'writer'`, the uncontended
+  // fast-grant case) lets a test simulate this tab instead settling as `'reader'` — another tab
+  // already recovered first (#158).
+  const initialRole: WriterRole = (options.isWriter ?? true) ? 'writer' : 'pending';
+  const roleSignal = signal<WriterRole>(initialRole);
+  const isWriterSignal = computed(() => roleSignal() === 'writer');
+  const roleAfterStart = options.roleAfterStart ?? 'writer';
+  const writerLockServiceStart = vi.fn(() => roleSignal.set(roleAfterStart));
   TestBed.configureTestingModule({
     providers: [
       { provide: STORAGE_ADAPTER, useValue: adapter },
@@ -68,7 +73,7 @@ function setUp(options: { isWriter?: boolean } = {}) {
         useValue: {
           start: writerLockServiceStart,
           stop: vi.fn(),
-          role: signal('writer'),
+          role: roleSignal,
           isWriter: isWriterSignal,
           promoted: signal(false),
         },
@@ -102,26 +107,38 @@ describe('DocumentImportExportService', () => {
       expect(content).toContain('\n'); // pretty-printed, not a single line
     });
 
-    it("records settings.backup.lastExportedAt as the exported snapshot's own meta.updatedAt", async () => {
+    it("records settings.backup.lastExportedDocumentUpdatedAt as the exported snapshot's own meta.updatedAt", async () => {
       const { service, store } = setUp();
       const exportedAsOf = store.document().meta.updatedAt;
 
       await service.exportDocument();
 
       expect(
-        (store.document().settings as { backup: { lastExportedAt: string } }).backup.lastExportedAt,
+        (store.document().settings as { backup: { lastExportedDocumentUpdatedAt: string } }).backup
+          .lastExportedDocumentUpdatedAt,
       ).toBe(exportedAsOf);
     });
 
-    it('#152 regression: never bumps meta.updatedAt beyond lastExportedAt, or the reminder would immediately re-arm', async () => {
+    it('records settings.backup.lastExportedAt as the wall-clock export time (#159)', async () => {
+      const { service, store } = setUp();
+
+      await service.exportDocument();
+
+      expect(
+        (store.document().settings as { backup: { lastExportedAt: string } }).backup.lastExportedAt,
+      ).toBe('2026-02-01T00:00:00.000Z');
+    });
+
+    it('#152 regression: never bumps meta.updatedAt beyond lastExportedDocumentUpdatedAt, or the reminder would immediately re-arm', async () => {
       const { service, store } = setUp();
 
       await service.exportDocument();
 
       const document = store.document();
-      const lastExportedAt = (document.settings as { backup: { lastExportedAt: string } }).backup
-        .lastExportedAt;
-      expect(document.meta.updatedAt).toBe(lastExportedAt);
+      const lastExportedDocumentUpdatedAt = (
+        document.settings as { backup: { lastExportedDocumentUpdatedAt: string } }
+      ).backup.lastExportedDocumentUpdatedAt;
+      expect(document.meta.updatedAt).toBe(lastExportedDocumentUpdatedAt);
     });
 
     it('does not clobber a concurrent edit made while downloading was in flight', async () => {
@@ -288,7 +305,12 @@ describe('DocumentImportExportService', () => {
       expect(persistence.dirty()).toBe(false);
 
       const imported = validDoc({ settings: { recovered: true } });
-      const applied = await service.replaceWithImport(imported as never);
+      const result = service.replaceWithImport(imported as never);
+      // Flushes the effect `applyCorruptRecoveryImport()` uses to await its own writer-lock role
+      // settling — that role already settled synchronously above (the fake's `start()` sets it
+      // directly), so one flush is enough; a real, unfaked settle is genuinely async instead.
+      TestBed.tick();
+      const applied = await result;
 
       expect(applied).toBe(true);
       expect(bootstrapStatus.state()).toBe('ready');
@@ -301,6 +323,37 @@ describe('DocumentImportExportService', () => {
       expect(writerLockServiceStart).toHaveBeenCalledTimes(1);
       expect(save).toHaveBeenCalledTimes(1);
       expect(save.mock.calls[0][0]).toEqual(imported);
+    });
+
+    it("#158 regression: a second corrupt tab that settles as reader does not save its own import over the real writer's", async () => {
+      // Simulates a second tab also stuck on the error page: it reaches the same corrupt-recovery
+      // path, but by the time its own WriterLockService.start() settles, another tab has already
+      // become the writer — so this tab settles as `reader`, not `writer` (`roleAfterStart`).
+      const { service, store, bootstrapStatus, save, persistence, writerLockServiceStart } = setUp({
+        isWriter: false,
+        roleAfterStart: 'reader',
+      });
+      bootstrapStatus.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+      expect(persistence.dirty()).toBe(false);
+
+      const imported = validDoc({ settings: { thisTabsOwnImport: true } });
+      const result = service.replaceWithImport(imported as never);
+      TestBed.tick();
+      const applied = await result;
+
+      // This tab still leaves the error page (its bootstrap resolves `ready` and DocumentSync,
+      // including CrossTabSync, starts — which corrects its view once the real writer saves) —
+      // but it must never call `adapter.save()` with a document only it has, clobbering whatever
+      // the actual writer tab already recovered and saved.
+      expect(applied).toBe(false);
+      expect(bootstrapStatus.state()).toBe('ready');
+      expect(writerLockServiceStart).toHaveBeenCalledTimes(1);
+      expect(save).not.toHaveBeenCalled();
+      // This tab's own store still holds its own import locally (`CrossTabSync`, now running,
+      // corrects it the moment the real writer's next save broadcasts — not asserted here, that's
+      // `CrossTabSync`'s own suite).
+      expect(store.document()).toEqual(imported);
+      expect(persistence.dirty()).toBe(false);
     });
   });
 });

@@ -4,6 +4,7 @@ const BASE = {
   documentCreatedAt: '2026-01-01T00:00:00.000Z',
   documentUpdatedAt: '2026-01-01T00:00:00.000Z',
   lastExportedAt: undefined,
+  lastExportedDocumentUpdatedAt: undefined,
   reminderDays: 7 as const,
   now: new Date('2026-01-01T00:00:00.000Z'),
   dismissedToday: false,
@@ -74,6 +75,7 @@ describe('shouldShowExportReminder', () => {
         ...BASE,
         documentUpdatedAt: '2026-01-02T00:00:00.000Z',
         lastExportedAt: '2026-01-03T00:00:00.000Z',
+        lastExportedDocumentUpdatedAt: '2026-01-02T00:00:00.000Z',
         now: new Date('2026-03-01T00:00:00.000Z'),
       }),
     ).toBe(false);
@@ -85,6 +87,7 @@ describe('shouldShowExportReminder', () => {
         ...BASE,
         documentUpdatedAt: '2026-01-10T00:00:00.000Z',
         lastExportedAt: '2026-01-03T00:00:00.000Z',
+        lastExportedDocumentUpdatedAt: '2026-01-03T00:00:00.000Z',
         now: new Date('2026-01-10T00:00:01.000Z'), // 7 days after the export
       }),
     ).toBe(true);
@@ -96,8 +99,28 @@ describe('shouldShowExportReminder', () => {
         ...BASE,
         documentUpdatedAt: '2026-01-10T00:00:00.000Z',
         lastExportedAt: '2026-01-03T00:00:00.000Z',
+        lastExportedDocumentUpdatedAt: '2026-01-03T00:00:00.000Z',
         now: new Date('2026-01-09T00:00:00.000Z'),
       }),
     ).toBe(false);
+  });
+
+  it("measures reminderDays from the export itself, not from the exported content's own prior edit time (#159)", () => {
+    // Regression for #159: doc last edited 2026-08-01, exported 2026-09-16 (so
+    // `lastExportedDocumentUpdatedAt` — the content watermark — is 2026-08-01, far earlier than the
+    // export itself), then edited again 2026-09-17. The banner must wait `reminderDays` (7) from the
+    // export (2026-09-16), not from the content's own 2026-08-01 timestamp.
+    const dayAfterEdit = {
+      ...BASE,
+      documentUpdatedAt: '2026-09-17T00:00:00.000Z',
+      lastExportedAt: '2026-09-16T00:00:00.000Z',
+      lastExportedDocumentUpdatedAt: '2026-08-01T00:00:00.000Z',
+    };
+    expect(
+      shouldShowExportReminder({ ...dayAfterEdit, now: new Date('2026-09-17T00:00:01.000Z') }),
+    ).toBe(false);
+    expect(
+      shouldShowExportReminder({ ...dayAfterEdit, now: new Date('2026-09-23T00:00:01.000Z') }), // 7 days after the export
+    ).toBe(true);
   });
 });

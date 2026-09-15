@@ -49,6 +49,7 @@ export class HomePage {
       documentCreatedAt: this.meta()?.createdAt ?? '',
       documentUpdatedAt: this.meta()?.updatedAt ?? '',
       lastExportedAt: this.backup.value().lastExportedAt,
+      lastExportedDocumentUpdatedAt: this.backup.value().lastExportedDocumentUpdatedAt,
       reminderDays: this.backup.value().reminderDays,
       now: this.clock.now(),
       dismissedToday: this.dismissal.dismissed(),

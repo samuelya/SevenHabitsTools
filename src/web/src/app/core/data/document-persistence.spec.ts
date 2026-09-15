@@ -392,10 +392,14 @@ describe('DocumentPersistence', () => {
     expect(persistence.dirty()).toBe(false);
   });
 
-  it('#150 regression: retries a saveNow() that could not go through before this tab became the writer', async () => {
-    // Models the corrupt-recovery import: DocumentStore.replaceDocument() + saveNow() run right
-    // after DocumentSync.start(), racing the real (asynchronous) writer-lock grant — isWriter is
-    // still false the instant saveNow() checks it.
+  it('#158 regression: becoming the writer never retries a stuck-dirty saveNow() on its own', async () => {
+    // An earlier version of this fix (#150) had this class itself retry here, on any
+    // `false → true` edge of `isWriter()` — but that fires just the same on a genuine *promotion*
+    // (a confirmed reader whose writer tab closed), racing `WriterPromotionReload`'s reload with a
+    // save of what may be a stale document (#158). Deciding whether a newly-writer tab may trust
+    // its in-memory document enough to save it is the caller's job now: the corrupt-recovery import
+    // (`DocumentImportExportService`) explicitly awaits its own writer-lock role settling before
+    // ever calling `saveNow()`, instead of calling it early and counting on this class to retry.
     const isWriter = signal(false);
     const { persistence, store, save } = setUp({ isWriter });
     persistence.start();
@@ -404,33 +408,13 @@ describe('DocumentPersistence', () => {
     store.replaceDocument({ ...store.document(), settings: { recovered: true } });
     await persistence.saveNow();
     expect(save).not.toHaveBeenCalled();
-    expect(persistence.dirty()).toBe(true); // stays dirty, waiting to be retried
+    expect(persistence.dirty()).toBe(true); // stays dirty; nothing here may assume it's still valid
 
-    isWriter.set(true); // the grant resolves a moment later
+    isWriter.set(true);
     TestBed.tick();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(save).toHaveBeenCalledTimes(1);
-    expect(save.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ settings: { recovered: true } }),
-    );
-    expect(persistence.dirty()).toBe(false);
-  });
-
-  it('does not re-save on every ordinary edit while this tab is already the writer (only on the not-writer -> writer edge)', async () => {
-    const { persistence, store, save } = setUp();
-    persistence.start();
-    TestBed.tick();
-
-    store.update('settings', () => ({ theme: 'dark' }));
-    TestBed.tick();
-
-    // Immediately after the edit, still inside the debounce window: the retry-on-writer-edge
-    // effect must not have fired an out-of-band save just because isWriter() and dirty() both
-    // happen to be true.
     expect(save).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
-    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.dirty()).toBe(true);
   });
 });

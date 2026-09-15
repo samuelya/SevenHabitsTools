@@ -37,6 +37,16 @@ export const SAVE_RETRY_MAX_MS = 60000;
  * read-only tab must never mark the document dirty (`scheduleSave()`) or call `adapter.save()`
  * (`runSaveLoop()`), including when `CrossTabSync` reloads its document out from under it — that
  * reload must not look like a local edit.
+ *
+ * This class never reacts to a tab *becoming* the writer on its own — deciding when a newly-writer
+ * tab may trust its in-memory document enough to save it is the caller's job, not this generic
+ * save loop's: an ordinary promotion (a confirmed reader whose writer tab closed) instead reloads
+ * the page (`WriterPromotionReload`), since its in-memory document may be stale, while the
+ * corrupt-recovery import (`DocumentImportExportService`, #150) explicitly waits for its own
+ * `WRITER_LOCK` role to settle before ever calling `saveNow()`. A version of this class that
+ * itself flushed on every writer-lock grant regressed exactly that distinction (#158): it also
+ * fired on a genuine promotion, racing `WriterPromotionReload`'s reload with a save of a
+ * possibly-stale document.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentPersistence {
@@ -58,7 +68,6 @@ export class DocumentPersistence {
 
   private started = false;
   private isFirstRun = true;
-  private wasWriter = false;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private retryAttempt = 0;
@@ -90,26 +99,6 @@ export class DocumentPersistence {
           return;
         }
         this.scheduleSave();
-      },
-      { injector: this.injector },
-    );
-    // A save attempted while this tab wasn't (yet) the writer stays dirty (`runSaveLoop()`'s
-    // `!isWriter()` gate) with nothing else retrying it once that changes. That's fine for the
-    // ordinary case — the tab starts as `pending`/`reader` and only makes edits once it already
-    // knows it's the writer — but `saveNow()` right after `DocumentSync.start()` (the corrupt-
-    // recovery import, #150) races the real writer-lock grant, which is genuinely asynchronous
-    // (`navigator.locks.request()`): becoming the writer a moment later must not leave the import
-    // stuck dirty until the next unrelated edit. Retries only on the `false → true` edge of
-    // `isWriter()` (`wasWriter`), the same edge-detection `WriterRoleState.promoted` uses — not
-    // whenever `isWriter() && dirty()` both simply happen to be true, which would also fire on
-    // every ordinary edit and save it immediately instead of after the debounce delay.
-    effect(
-      () => {
-        const isWriter = this.writerLock.isWriter();
-        if (isWriter && !this.wasWriter && this.dirtySignal()) {
-          void this.ensureSaving('flush');
-        }
-        this.wasWriter = isWriter;
       },
       { injector: this.injector },
     );

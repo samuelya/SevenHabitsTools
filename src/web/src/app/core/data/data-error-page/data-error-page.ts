@@ -94,9 +94,12 @@ export class DataErrorPage {
       return;
     }
     this.importError.set(null);
-    // Recovers the same way reset() does — DocumentImportExportService.applyImport() detects the
-    // corrupt state itself and reports ready / starts DocumentSync — except this keeps the
-    // imported data instead of discarding it.
+    // Recovers the same way reset() does — DocumentImportExportService detects the corrupt state
+    // itself and reports ready / starts DocumentSync — except this keeps the imported data instead
+    // of discarding it. Its return value doesn't need checking here: either way this tab leaves
+    // the error page with a `ready` document, whether it became the writer (its own import, saved)
+    // or a reader (another tab already recovered first, #158 — CrossTabSync then corrects this
+    // tab's view to that tab's document).
     await this.importExport.replaceWithImport(result.document);
   }
 

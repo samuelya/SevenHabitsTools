@@ -185,12 +185,18 @@ has a unit-testable fallback path and the whole stack degrades gracefully rather
 
 ## JSON export/import (`core/data/backup/`, issue #37)
 
-- `backup.model.ts` registers `settings.backup { lastExportedAt?, reminderDays: 0 | 1 | 7 | 30 }`
-  (`0` turns the reminder off) the same way any other feature model does.
+- `backup.model.ts` registers `settings.backup { lastExportedAt?, lastExportedDocumentUpdatedAt?,
+  reminderDays: 0 | 1 | 7 | 30 }` (`0` turns the reminder off) the same way any other feature model
+  does. The two export timestamps are deliberately separate (#159): `lastExportedAt` is wall-clock
+  time the export happened — the anchor `export-reminder.logic.ts` measures `reminderDays` from;
+  `lastExportedDocumentUpdatedAt` is the exported snapshot's own `meta.updatedAt` — used only to
+  detect whether the document has changed since. They drift apart whenever a document is exported
+  long after its last edit; conflating them (an earlier version of this feature did) anchors the
+  reminder interval to the old edit instead of the export itself.
 - `DocumentImportExportService` (`document-import-export.service.ts`) is the one place that
   touches the document for export/import:
   - `exportDocument()` always downloads the current document as pretty-printed JSON with an added
-    `meta.exportedAt`, and records `settings.backup.lastExportedAt`. `shareDocument()` is a
+    `meta.exportedAt`, and records both `settings.backup` timestamps above. `shareDocument()` is a
     separate, explicit action that shares instead, only where `core/browser/web-share.ts` reports
     a Web Share capability (`canShare`) — it never silently replaces the download (some platforms,
     e.g. desktop Safari, implement `navigator.share`/`canShare` but only open a share sheet, not a
@@ -210,11 +216,13 @@ has a unit-testable fallback path and the whole stack degrades gracefully rather
     "Start fresh". Applying an import while corrupt reports `ready` and calls
     `DocumentSync.start()`, exactly like `DataErrorPage.reset()` — the same two callers that start
     it (`app.config.ts`'s initializer, `DataErrorPage.reset()`) now also include this recovery
-    path. Because the writer lock has never started in that state, `DocumentPersistence` also
-    retries a save that was blocked by `!isWriter()` on the next `false → true` edge of `isWriter()`
-    instead of only on the next unrelated edit — the immediate `saveNow()` right after
-    `DocumentSync.start()` would otherwise race the real (asynchronous) writer-lock grant and leave
-    the recovered document stuck dirty. The same edge case may also affect #140.
+    path. More than one tab can independently be on the error page for the same corrupt document,
+    so this recovery path can't assume it's the only one reaching it (#158): after starting
+    `DocumentSync`, it explicitly waits for its own writer-lock role to settle (`pending → writer`
+    or `pending → reader`, genuinely asynchronous — `navigator.locks.request()`) before deciding
+    whether to save. A tab that settles as `reader` (another tab already recovered first) leaves its
+    own committed-but-unsaved import for `CrossTabSync` to correct once that other tab's next save
+    broadcasts, instead of saving over it.
 - The Settings page's `BackupSection` (`features/settings/backup/`) drives export, the optional
   Share… action, the `.json` file picker and the reminder-days setting; a successful parse opens
   the lazily-loaded `ImportConfirmDialog` (Replace, behind a second confirmation like
@@ -223,4 +231,4 @@ has a unit-testable fallback path and the whole stack degrades gracefully rather
   reminder banner, dismissible for the rest of the local day (`ExportReminderDismissal`,
   `localStorage`-backed) when `export-reminder.logic.ts`'s `shouldShowExportReminder()` says the
   document has changed since the last export (or was never exported) and `reminderDays` have
-  passed — never on a read-only tab.
+  passed since the export itself — never on a read-only tab.

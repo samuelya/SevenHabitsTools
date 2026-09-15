@@ -32,7 +32,11 @@ describe('backup model', () => {
   it('validates a well-formed value', () => {
     expect(registration().validate?.({ reminderDays: 30 })).toBe(true);
     expect(
-      registration().validate?.({ reminderDays: 1, lastExportedAt: '2026-01-01T00:00:00.000Z' }),
+      registration().validate?.({
+        reminderDays: 1,
+        lastExportedAt: '2026-01-01T00:00:00.000Z',
+        lastExportedDocumentUpdatedAt: '2025-12-31T00:00:00.000Z',
+      }),
     ).toBe(true);
     expect(registration().validate?.({ reminderDays: 0 })).toBe(true);
   });
@@ -44,6 +48,12 @@ describe('backup model', () => {
 
   it('rejects a non-string lastExportedAt', () => {
     expect(registration().validate?.({ reminderDays: 7, lastExportedAt: 123 })).toBe(false);
+  });
+
+  it('rejects a non-string lastExportedDocumentUpdatedAt', () => {
+    expect(registration().validate?.({ reminderDays: 7, lastExportedDocumentUpdatedAt: 123 })).toBe(
+      false,
+    );
   });
 
   it('rejects a non-object value', () => {

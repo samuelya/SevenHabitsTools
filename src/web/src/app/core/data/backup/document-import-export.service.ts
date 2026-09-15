@@ -1,4 +1,4 @@
-import { Injectable, Signal, inject } from '@angular/core';
+import { Injectable, Injector, Signal, effect, inject } from '@angular/core';
 import { FileDownloader } from '../../browser/file-download';
 import { WebShareApi, WEB_SHARE } from '../../browser/web-share';
 import { CLOCK } from '../../time/clock';
@@ -9,6 +9,7 @@ import { RootDocument } from '../document.model';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { DocumentSync } from '../document-sync';
+import { WriterRole } from '../multi-tab/writer-role-state';
 import { WRITER_LOCK } from '../multi-tab/writer-lock';
 import { BACKUP_PATH, BackupSettings } from './backup.model';
 import { buildExportFilename } from './export-filename.utils';
@@ -21,8 +22,11 @@ export type ImportParseResult =
 interface ExportContent {
   readonly filename: string;
   readonly content: string;
-  /** The exported snapshot's own `meta.updatedAt` — see `recordLastExportedAt()`. */
+  /** The exported snapshot's own `meta.updatedAt` — the content watermark half of
+   * `recordLastExportedAt()`'s two arguments. */
   readonly exportedAsOf: string;
+  /** Wall-clock time this export happened — the interval-anchor half. */
+  readonly exportedAt: string;
 }
 
 /**
@@ -43,6 +47,7 @@ export class DocumentImportExportService {
   private readonly downloader = inject(FileDownloader);
   private readonly webShare: WebShareApi | null = inject(WEB_SHARE);
   private readonly clock = inject(CLOCK);
+  private readonly injector = inject(Injector);
 
   /** Only the writer tab may import: a read-only tab's whole-document replace could never be
    * saved, the same reason `DocumentStore` refuses edits there (#127). Export doesn't need this —
@@ -57,13 +62,13 @@ export class DocumentImportExportService {
   readonly canShare: boolean = this.webShare !== null;
 
   /** Downloads the current document as pretty-printed JSON with `meta.exportedAt` set, and
-   * records `settings.backup.lastExportedAt`. Returns the filename used, for the caller to
-   * confirm to the user. Always downloads — `shareDocument()` is the separate, explicit action
-   * for sharing instead. */
+   * records the export in `settings.backup` (`recordLastExportedAt()`). Returns the filename used,
+   * for the caller to confirm to the user. Always downloads — `shareDocument()` is the separate,
+   * explicit action for sharing instead. */
   async exportDocument(): Promise<string> {
-    const { filename, content, exportedAsOf } = this.buildExportContent();
+    const { filename, content, exportedAsOf, exportedAt } = this.buildExportContent();
     this.downloader.download(filename, content);
-    this.recordLastExportedAt(exportedAsOf);
+    this.recordLastExportedAt(exportedAsOf, exportedAt);
     return filename;
   }
 
@@ -75,7 +80,7 @@ export class DocumentImportExportService {
     if (!this.webShare) {
       return false;
     }
-    const { filename, content, exportedAsOf } = this.buildExportContent();
+    const { filename, content, exportedAsOf, exportedAt } = this.buildExportContent();
     const file = new File([content], filename, { type: 'application/json' });
     if (!this.webShare.canShareFiles([file])) {
       return false;
@@ -87,7 +92,7 @@ export class DocumentImportExportService {
       // actually have.
       return false;
     }
-    this.recordLastExportedAt(exportedAsOf);
+    this.recordLastExportedAt(exportedAsOf, exportedAt);
     return true;
   }
 
@@ -102,22 +107,34 @@ export class DocumentImportExportService {
         2,
       ),
       exportedAsOf: document.meta.updatedAt,
+      exportedAt: now.toISOString(),
     };
   }
 
   /**
-   * Records `settings.backup.lastExportedAt` as `exportedAsOf` — the exported snapshot's own
-   * `meta.updatedAt`, not the time export was clicked — through `DocumentStore.replaceDocument()`
-   * rather than `update()`. `update()` always re-stamps `meta.updatedAt` to the moment of the
-   * write itself; using it here would make this bookkeeping edit look like a content change and
-   * immediately re-arm the reminder banner (#152). Reads the document fresh rather than reusing
-   * the snapshot `buildExportContent()` captured, so a concurrent edit during the export's
-   * `await` (sharing/downloading) is never clobbered.
+   * Records this export in `settings.backup`, through `DocumentStore.replaceDocument()` rather
+   * than `update()` — `update()` always re-stamps `meta.updatedAt` to the moment of the write
+   * itself, which would make this bookkeeping edit look like a content change and immediately
+   * re-arm the reminder banner (#152). Reads the document fresh rather than reusing the snapshot
+   * `buildExportContent()` captured, so a concurrent edit during the export's `await`
+   * (sharing/downloading) is never clobbered.
+   *
+   * Two separate values, deliberately never conflated (#159): `exportedAt` (wall-clock time this
+   * export happened) is `lastExportedAt`, the anchor `export-reminder.logic.ts` measures
+   * `reminderDays` from; `exportedAsOf` (the exported snapshot's own `meta.updatedAt`) is
+   * `lastExportedDocumentUpdatedAt`, used only to detect whether the document has changed since
+   * that export. A document exported long after its last edit has an `exportedAsOf` far earlier
+   * than `exportedAt` — using one value for both would anchor the reminder interval to the old
+   * edit instead of the export itself.
    */
-  private recordLastExportedAt(exportedAsOf: string): void {
+  private recordLastExportedAt(exportedAsOf: string, exportedAt: string): void {
     const latest = this.store.document() as unknown as Record<string, unknown>;
     const current = getAtPath<BackupSettings>(latest, BACKUP_PATH) ?? { reminderDays: 7 };
-    const updated: BackupSettings = { ...current, lastExportedAt: exportedAsOf };
+    const updated: BackupSettings = {
+      ...current,
+      lastExportedAt: exportedAt,
+      lastExportedDocumentUpdatedAt: exportedAsOf,
+    };
     this.store.replaceDocument(setAtPath(latest, BACKUP_PATH, updated) as unknown as RootDocument);
   }
 
@@ -150,29 +167,67 @@ export class DocumentImportExportService {
 
   /**
    * Commits `document` as the whole document and saves it immediately, so a reload right after
-   * import keeps it rather than depending on the debounce timer or the next edit. If bootstrap had
-   * reported the previous document corrupt, this also recovers exactly the way `DataErrorPage.reset()`
-   * does: report `ready` and start `DocumentSync` (autosave, the writer lock, cross-tab sync, ...),
-   * which never started while the document was corrupt (#37's lead note on this path).
-   *
-   * The `canImport` (writer-lock) gate only applies to that already-`ready` case: while corrupt,
-   * `DocumentSync` — and with it `WriterLockService` — has never started (`app.config.ts` only
-   * starts it once bootstrap resolves to `ready`), so `canImport` is always `false` there. Gating
-   * on it would make the corrupt-recovery import unreachable (#150); there is no legitimate other
-   * writer to defer to in that state either, the same reason `DataErrorPage.reset()` never checks
-   * it.
+   * import keeps it rather than depending on the debounce timer or the next edit. Refuses, leaving
+   * the document untouched, for a read-only tab — the same reason `DocumentStore` refuses edits
+   * there (#127).
    */
   private async applyImport(document: RootDocument): Promise<boolean> {
-    const wasCorrupt = this.bootstrapStatus.state() === 'corrupt';
-    if (!wasCorrupt && !this.canImport()) {
+    if (this.bootstrapStatus.state() === 'corrupt') {
+      return this.applyCorruptRecoveryImport(document);
+    }
+    if (!this.canImport()) {
       return false;
     }
     this.store.replaceDocument(document);
-    if (wasCorrupt) {
-      this.bootstrapStatus.reportReady();
-      this.documentSync.start();
+    await this.persistence.saveNow();
+    return true;
+  }
+
+  /**
+   * Recovers from a corrupt document the same way `DataErrorPage.reset()` does — commits
+   * `document`, reports `ready`, and starts `DocumentSync` (autosave, the writer lock, cross-tab
+   * sync, ...), which never runs while the document is corrupt (`app.config.ts` only starts it
+   * once bootstrap resolves to `ready`) — except this keeps the imported data instead of
+   * discarding it.
+   *
+   * `canImport` (the writer lock) can't gate this the way it gates an already-`ready` import: the
+   * lock system hasn't started yet, so it always reads `false` here, and gating on it would make
+   * this path unreachable (#150). But more than one tab can independently be on the error page —
+   * every open tab that had the same corrupt document is — and each one reaching this method
+   * doesn't mean each one should win: once `DocumentSync.start()` actually starts the writer lock
+   * for this tab, only the tab that settles as `writer` may save (#158). A tab that settles as
+   * `reader` (another tab already recovered first) must not save its own, possibly different,
+   * import over that tab's; it leaves its committed `store.replaceDocument()` as a merely local,
+   * unsaved view, which `CrossTabSync` (now running) corrects with the real writer's document as
+   * soon as that tab's next save broadcasts.
+   */
+  private async applyCorruptRecoveryImport(document: RootDocument): Promise<boolean> {
+    this.store.replaceDocument(document);
+    this.bootstrapStatus.reportReady();
+    this.documentSync.start();
+    const role = await this.waitForWriterRole();
+    if (role !== 'writer') {
+      return false;
     }
     await this.persistence.saveNow();
     return true;
+  }
+
+  /** Resolves once `WRITER_LOCK.role()` leaves `pending` — the lock request settling is genuinely
+   * asynchronous (`navigator.locks.request()`), so a caller that just started it can't just read
+   * `canImport`/`isWriter` synchronously afterwards. */
+  private waitForWriterRole(): Promise<WriterRole> {
+    return new Promise((resolve) => {
+      const ref = effect(
+        () => {
+          const role = this.writerLock.role();
+          if (role !== 'pending') {
+            resolve(role);
+            ref.destroy();
+          }
+        },
+        { injector: this.injector },
+      );
+    });
   }
 }

@@ -223,4 +223,91 @@ test.describe('JSON export/import', () => {
     const current = (await readCurrentDocument(fresh)) as { settings: { marker: string } };
     expect(current.settings.marker).toBe('recovered-from-corrupt');
   });
+
+  // #158: more than one tab can independently be on the error page for the same corrupt document
+  // (every tab open when it happened is). The second tab to import must not clobber the first
+  // tab's already-recovered-and-saved document with its own.
+  test('#158: a second corrupt tab that imports after the first has recovered does not overwrite it', async ({
+    page,
+    context,
+    seedDocument,
+  }) => {
+    await seedDocument({ meta: undefined as never });
+    await page.goto('/');
+    await expect(
+      page.getByRole('heading', { name: "We couldn't read your saved data" }),
+    ).toBeVisible();
+
+    // A second tab, open before either has recovered — reads the same corrupt document from
+    // IndexedDB (shared storage; `second` has no `seedDocument` init script of its own, so it
+    // doesn't re-seed on this navigation — see `#150`'s test above).
+    const second = await context.newPage();
+    await second.goto('/');
+    await expect(
+      second.getByRole('heading', { name: "We couldn't read your saved data" }),
+    ).toBeVisible();
+
+    function backupWithMarker(marker: string) {
+      return {
+        schemaVersion: 1,
+        meta: {
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          appVersion: '0.0.0',
+          deviceId: '22222222-2222-4222-8222-222222222222',
+        },
+        profile: {},
+        settings: { marker },
+        shared: {},
+        habits: {
+          paradigms: {},
+          h1: {},
+          h2: {},
+          h3: {},
+          h4: {},
+          h5: {},
+          h6: {},
+          h7: {},
+          interdependence: {},
+        },
+        extras: {},
+      };
+    }
+
+    // Tab 1 imports and fully recovers first: becomes the writer and saves, exactly like #150's
+    // test above — waiting for that to finish before tab 2 imports is what makes tab 2's own
+    // writer-lock request deterministically see the lock already held.
+    await page.setInputFiles(FILE_INPUT, {
+      name: 'sevenhabits-backup.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(backupWithMarker('tab-1-recovered'))),
+    });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(async () => {
+      const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
+      expect(current.settings.marker).toBe('tab-1-recovered');
+    }).toPass();
+
+    // Tab 2 now imports its own, different backup. It must still leave the error page (its own
+    // bootstrap resolves `ready`), but — settling as a reader, since tab 1 already holds the
+    // writer lock — must never save its own import over tab 1's.
+    await second.setInputFiles(FILE_INPUT, {
+      name: 'sevenhabits-backup-2.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(backupWithMarker('tab-2-import-should-not-win'))),
+    });
+    await expect(second.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+
+    // The stored document — read from a third, freshly-opened page so this doesn't depend on
+    // which tab's in-memory view happens to be checked (`page`'s own `seedDocument` re-seeds on
+    // its next navigation, the same reason `#150`'s test above reads from a fresh page too) —
+    // stays tab 1's, never tab 2's.
+    const fresh = await context.newPage();
+    await fresh.goto('/');
+    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(async () => {
+      const current = (await readCurrentDocument(fresh)) as { settings: { marker: string } };
+      expect(current.settings.marker).toBe('tab-1-recovered');
+    }).toPass();
+  });
 });
