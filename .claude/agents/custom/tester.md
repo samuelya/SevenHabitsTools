@@ -10,7 +10,7 @@ tools: Read, Grep, Glob, Bash, Write, SendMessage
 
 ## Before any task
 1. Read the PR (`gh pr view <pr> --comments`) and its linked issue (`gh issue view <n> --comments`), plus the pinned **"Architecture & conventions (read first)"** issue.
-2. If ruflo memory is available, `memory_search "sevenhabits"`.
+2. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`.
 
 ## Setup — never reuse the coder's worktree
 ```bash
