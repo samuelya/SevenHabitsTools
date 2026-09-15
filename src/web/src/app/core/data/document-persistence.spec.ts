@@ -2,7 +2,12 @@ import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
-import { DocumentPersistence, SAVE_DEBOUNCE_MS, SAVE_RETRY_MS } from './document-persistence';
+import {
+  DocumentPersistence,
+  SAVE_DEBOUNCE_MS,
+  SAVE_RETRY_MAX_MS,
+  SAVE_RETRY_MS,
+} from './document-persistence';
 import { DocumentStore } from './document.store';
 import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
 
@@ -209,6 +214,33 @@ describe('DocumentPersistence', () => {
     expect(persistence.dirty()).toBe(false);
     expect(persistence.saveError()).toBeNull();
     expect(persistence.lastSavedAt()).not.toBeNull();
+  });
+
+  it('doubles the retry delay on consecutive failures, up to SAVE_RETRY_MAX_MS, and resets it after a success', async () => {
+    const { persistence, store, save } = setUp();
+    save.mockRejectedValueOnce(new Error('e1'));
+    save.mockRejectedValueOnce(new Error('e2'));
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    expect(save).toHaveBeenCalledTimes(1); // first attempt fails
+
+    await vi.advanceTimersByTimeAsync(SAVE_RETRY_MS - 1);
+    expect(save).toHaveBeenCalledTimes(1); // not yet retried
+    await vi.advanceTimersByTimeAsync(1);
+    expect(save).toHaveBeenCalledTimes(2); // retry #1 (after SAVE_RETRY_MS) fails too
+
+    await vi.advanceTimersByTimeAsync(SAVE_RETRY_MS * 2 - 1);
+    expect(save).toHaveBeenCalledTimes(2); // retry #2 needs double the delay
+    await vi.advanceTimersByTimeAsync(1);
+    expect(save).toHaveBeenCalledTimes(3); // retry #2 (after 2 x SAVE_RETRY_MS) succeeds
+
+    expect(persistence.dirty()).toBe(false);
+    expect(persistence.saveError()).toBeNull();
+    expect(SAVE_RETRY_MS * 2).toBeLessThan(SAVE_RETRY_MAX_MS);
   });
 
   it('never calls adapter.save while the loaded document is reported corrupt (#111)', async () => {

@@ -90,9 +90,14 @@ that runs it through `migrateDocument()` up to the current version.
   debounced 500 ms after an edit, flushed immediately on `visibilitychange` → hidden and `pagehide`.
   A single save loop is shared by the debounce timer and `flush()`, so an edit made while a save is
   already in flight is saved once that save completes instead of being dropped. A failed save is
-  caught and retried after `SAVE_RETRY_MS`. Saving is disabled while `DocumentBootstrapStatus`
-  reports `corrupt`, so the stored document is never overwritten before the user resolves it.
+  caught and retried with exponential backoff (`SAVE_RETRY_MS` doubling up to `SAVE_RETRY_MAX_MS`).
   `dirty`/`lastSavedAt`/`saveError` are exposed for a UI status indicator.
+  **Two layers guard against overwriting a corrupt document:** `app.config.ts` only calls
+  `persistence.start()` when bootstrap resolves to `ready` (never for `corrupt`), and, in case
+  something calls `start()` anyway, `runSaveLoop()` itself refuses to save while
+  `DocumentBootstrapStatus` reports `corrupt`. `DataErrorPage` calls `persistence.start()` itself
+  once the user resolves the corrupt document (reset); a future JSON-import success path must do
+  the same.
 - `document-bootstrap.ts` loads the document on startup (an app initializer in `app.config.ts`):
   nothing stored → `createEmptyDocument()`; a load failure, a migration failure, or a document at
   the current schema version with an invalid shape (`isRootDocumentShape()`,

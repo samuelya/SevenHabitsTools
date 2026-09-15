@@ -8,8 +8,11 @@ import { SaveReason, STORAGE_ADAPTER } from './storage-adapter';
 /** How long to wait after an edit before saving, so rapid changes coalesce into one write. */
 export const SAVE_DEBOUNCE_MS = 500;
 
-/** How long to wait before retrying after `adapter.save()` rejects. */
+/** How long to wait before the first retry after `adapter.save()` rejects. */
 export const SAVE_RETRY_MS = 5000;
+
+/** The retry delay doubles on each consecutive failure, up to this cap. */
+export const SAVE_RETRY_MAX_MS = 60000;
 
 /**
  * Watches `DocumentStore.document` and saves it through the `StorageAdapter`: debounced after an
@@ -21,7 +24,9 @@ export const SAVE_RETRY_MS = 5000;
  * A single save loop (`runSaveLoop`) is shared by the debounce timer and `flush()`: only one
  * `adapter.save()` call is ever in flight, and if the document changes again while a save is
  * running, the loop saves the newer document before clearing `dirty` — an edit made mid-save is
- * never dropped. A failed save is caught (never an unhandled rejection) and retried.
+ * never dropped. A failed save is caught (never an unhandled rejection) and retried with
+ * exponential backoff (`SAVE_RETRY_MS` doubling up to `SAVE_RETRY_MAX_MS`), reset to the initial
+ * delay after the next successful save; the next edit or an explicit `flush()` also retries early.
  *
  * Saving is disabled while `DocumentBootstrapStatus` reports `corrupt`: the loaded document is
  * known to be invalid, so nothing here may overwrite what is actually stored until the user picks
@@ -48,6 +53,7 @@ export class DocumentPersistence {
   private isFirstRun = true;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
+  private retryAttempt = 0;
   private saveLoop: Promise<void> | null = null;
 
   private readonly onVisibilityChange = (): void => {
@@ -125,10 +131,13 @@ export class DocumentPersistence {
         await this.adapter.save(doc, { reason });
       } catch (error) {
         this.saveErrorSignal.set(error);
+        const delay = Math.min(SAVE_RETRY_MS * 2 ** this.retryAttempt, SAVE_RETRY_MAX_MS);
+        this.retryAttempt++;
         clearTimeout(this.retryTimer);
-        this.retryTimer = setTimeout(() => void this.ensureSaving('debounce'), SAVE_RETRY_MS);
+        this.retryTimer = setTimeout(() => void this.ensureSaving('debounce'), delay);
         return;
       }
+      this.retryAttempt = 0;
       this.saveErrorSignal.set(null);
       this.lastSavedAtSignal.set(new Date());
       if (this.store.document() === doc) {

@@ -14,6 +14,7 @@ import {
 } from '@angular/router';
 import { routes } from './app.routes';
 import { bootstrapDocument } from './core/data/document-bootstrap';
+import { DocumentBootstrapStatus } from './core/data/document-bootstrap-status';
 import { DocumentPersistence } from './core/data/document-persistence';
 import { NoopAdapter } from './core/data/noop-storage-adapter';
 import { STORAGE_ADAPTER } from './core/data/storage-adapter';
@@ -39,7 +40,14 @@ export const appConfig: ApplicationConfig = {
     }),
     provideAppInitializer(() => {
       const persistence = inject(DocumentPersistence);
-      return bootstrapDocument().then(() => persistence.start());
+      const status = inject(DocumentBootstrapStatus);
+      // Never start autosave over a document that failed to load; DataErrorPage starts it once
+      // the user resolves the corrupt state (export/reset) and status returns to `ready`.
+      return bootstrapDocument().then(() => {
+        if (status.state() === 'ready') {
+          persistence.start();
+        }
+      });
     }),
   ],
 };

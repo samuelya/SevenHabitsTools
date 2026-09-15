@@ -13,6 +13,7 @@ import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { Labels } from '../../i18n/labels';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
+import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { createEmptyDocument } from '../registry';
 import { STORAGE_ADAPTER } from '../storage-adapter';
@@ -35,6 +36,7 @@ export class DataErrorPage {
   private readonly deviceIdSource = inject(DEVICE_ID_SOURCE);
   private readonly downloader = inject(FileDownloader);
   private readonly store = inject(DocumentStore);
+  private readonly persistence = inject(DocumentPersistence);
   private readonly window = inject(WINDOW);
   protected readonly status = inject(DocumentBootstrapStatus);
   protected readonly labels = inject(Labels);
@@ -79,5 +81,8 @@ export class DataErrorPage {
     this.store.replaceDocument(createEmptyDocument(this.deviceIdSource.id()));
     this.confirmingReset.set(false);
     this.status.reportReady();
+    // Persistence was never started while the document was corrupt (see `app.config.ts`); start
+    // it now so the fresh document actually gets saved going forward.
+    this.persistence.start();
   }
 }

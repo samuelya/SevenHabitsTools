@@ -3,6 +3,7 @@ import { FileDownloader } from '../../browser/file-download';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
+import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { STORAGE_ADAPTER } from '../storage-adapter';
 import { DataErrorPage } from './data-error-page';
@@ -29,7 +30,14 @@ describe('DataErrorPage', () => {
       providers: [
         { provide: STORAGE_ADAPTER, useValue: adapter },
         { provide: DEVICE_ID_SOURCE, useValue: { id: () => 'device-1' } },
-        { provide: WINDOW, useValue: { location: { reload } } },
+        {
+          provide: WINDOW,
+          useValue: {
+            location: { reload },
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+          },
+        },
       ],
     });
     adapter.clear.mockClear();
@@ -148,5 +156,27 @@ describe('DataErrorPage', () => {
     expect(adapter.clear).toHaveBeenCalledTimes(1);
     expect(store.document().meta.deviceId).toBe('device-1');
     expect(status.state()).toBe('ready');
+  });
+
+  it('starts persistence on reset, since it was never started while corrupt', async () => {
+    TestBed.inject(DocumentBootstrapStatus).reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+    const persistence = TestBed.inject(DocumentPersistence);
+    const store = TestBed.inject(DocumentStore);
+
+    buttons(fixture)
+      .find((button) => button.textContent?.includes('Start fresh'))
+      ?.click();
+    fixture.detectChanges();
+    buttons(fixture)
+      .find((button) => button.textContent?.includes('Yes, start fresh'))
+      ?.click();
+    await fixture.whenStable();
+
+    expect(persistence.dirty()).toBe(false);
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    expect(persistence.dirty()).toBe(true);
   });
 });
