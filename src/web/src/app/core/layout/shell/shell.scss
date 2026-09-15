@@ -19,6 +19,12 @@
   border-block-start: 1px solid var(--mat-sys-outline-variant);
 }
 
+.side-nav__github {
+  display: flex;
+  padding-inline: 12px;
+  padding-block: 4px 12px;
+}
+
 .shell__content {
   display: flex;
   flex-direction: column;
