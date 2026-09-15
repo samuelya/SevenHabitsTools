@@ -6,6 +6,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { appConfig } from '../app.config';
+import { registerBackupModel } from '../core/data/backup/backup.model';
 import { NoopAdapter } from '../core/data/noop-storage-adapter';
 import { STORAGE_ADAPTER } from '../core/data/storage-adapter';
 import { Shell } from '../core/layout/shell/shell';
@@ -17,11 +18,18 @@ import { registerGithubIcon } from '../shared/ui/github-link/github-icon';
  * unit-test environment doesn't implement anyway (`app.config.spec.ts` covers the real adapter).
  * Does not touch `TestBed.inject` itself — some specs call `TestBed.overrideProvider` between this
  * and `renderShellAt`, which TestBed only allows before the testing module has been instantiated.
+ *
+ * Also re-asserts the `backup` model registration (`registerBackupModel()`): navigating to Home or
+ * Settings under `renderShellAt` constructs the real `HomePage`/`BackupSection`, which need it, and
+ * this project's unit tests run with Vitest `isolate: false` (shared module state across spec
+ * files) — an unrelated spec's own `resetRegistryForTesting()` can otherwise leave the registry
+ * empty by the time this one runs.
  */
 export function configureApp(options: {
   handset: boolean;
   providers?: (Provider | EnvironmentProviders)[];
 }): void {
+  registerBackupModel();
   const state: BreakpointState = { matches: options.handset, breakpoints: {} };
   TestBed.configureTestingModule({
     providers: [

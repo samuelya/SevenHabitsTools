@@ -32,7 +32,16 @@ export class WriterLockService implements WriterLockStrategy, OnDestroy {
     this.promoted = this.strategy.promoted;
   }
 
+  private started = false;
+
+  /** Safe to call more than once: the corrupt-recovery import starts the lock on its own, to learn
+   * this tab's role before committing anything, and `DocumentSync.start()` starts it again right
+   * after (#160). A second lock request would see this tab's own lock held and settle as reader. */
   start(): void {
+    if (this.started) {
+      return;
+    }
+    this.started = true;
     this.strategy.start();
   }
 

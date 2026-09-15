@@ -52,6 +52,13 @@ const EN: Readonly<Record<string, string>> = {
   'data.error.title': "We couldn't read your saved data",
   'data.error.retry': 'Try again',
   'data.error.exportRaw': 'Export raw file',
+  'data.error.importBackup': 'Import a backup',
+  'data.error.importRefusedRecoveredElsewhere':
+    "Another tab has already recovered your data, so this import wasn't applied. This tab is " +
+    'read-only and shows the data from that tab.',
+  'data.error.importRefusedRecoveringElsewhere':
+    "Another tab is recovering your data, so this import wasn't applied. Select Try again in a " +
+    'moment to see that data.',
   'data.error.reset': 'Start fresh',
   'data.error.resetConfirm':
     'This will permanently delete the saved data on this device. This cannot be undone.',
@@ -79,12 +86,56 @@ const EN: Readonly<Record<string, string>> = {
   'data.pwa.install.message': 'Install Seven Habits Tools for quick, offline access.',
   'data.pwa.install.action': 'Install',
   'data.pwa.install.iosHint': 'Install this app: tap the Share icon, then "Add to Home Screen".',
+  'settings.backup.title': 'Backup',
+  'settings.backup.export': 'Export data',
+  'settings.backup.exportHint': 'Downloads a JSON file with everything saved on this device.',
+  'settings.backup.exportedSnackbar': 'Exported {filename}.',
+  'settings.backup.share': 'Share…',
+  'settings.backup.sharedSnackbar': 'Shared.',
+  'settings.backup.import': 'Import data',
+  'settings.backup.importHint': 'Restores data from a previously exported JSON file.',
+  'settings.backup.importReadOnly':
+    "This tab is read-only, so it can't import. Import from the tab that isn't showing the " +
+    'read-only banner, or close it.',
+  'settings.backup.reminderLabel': 'Remind me to export data',
+  'settings.backup.reminderOff': 'Never',
+  'settings.backup.reminderDaily': 'Every day',
+  'settings.backup.reminderWeekly': 'Every week',
+  'settings.backup.reminderMonthly': 'Every month',
+  'data.import.errors.notJson': "That file isn't a JSON file this app can read.",
+  'data.import.errors.invalid': "That file's data isn't in a shape this app recognizes.",
+  'data.import.dialogLoadError':
+    "Couldn't load the import dialog. Check your connection and try again.",
+  'data.import.title': 'Import this file?',
+  'data.import.currentUpdatedAt': 'Your current data was last edited',
+  'data.import.fileUpdatedAt': 'The file was last edited',
+  'data.import.exportFirst': 'Export current data first',
+  'data.import.replace': 'Replace…',
+  'data.import.replaceHint': 'Discards everything currently on this device.',
+  'data.import.replaceConfirm':
+    'This will permanently replace all data on this device with the imported file. This cannot ' +
+    'be undone.',
+  'data.import.confirmReplace': 'Yes, replace',
+  'data.import.cancel': 'Cancel',
+  'data.import.importedSnackbar': 'Import complete.',
+  'data.import.noPreviewCounts': 'This file has no feature data to preview yet.',
+  'data.export.reminder':
+    "You've made changes since your last export. Back up your data from time to time.",
 };
 
 @Injectable({ providedIn: 'root' })
 export class Labels {
-  /** Returns the label for `key`, or the key itself when it is unknown. */
-  text(key: string): string {
-    return EN[key] ?? key;
+  /** Returns the label for `key`, or the key itself when it is unknown. `params`, if given,
+   * fills in `{name}` placeholders (e.g. `settings.backup.exportedSnackbar`) — the same
+   * `{name}` syntax Transloco's own `translate(key, params)` uses, so a label that needs one
+   * doesn't have to change shape again once #28 migrates it. */
+  text(key: string, params?: Readonly<Record<string, string | number>>): string {
+    const label = EN[key] ?? key;
+    if (!params) {
+      return label;
+    }
+    return label.replace(/\{(\w+)\}/g, (match, name: string) =>
+      name in params ? String(params[name]) : match,
+    );
   }
 }

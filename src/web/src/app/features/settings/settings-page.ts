@@ -3,12 +3,13 @@ import { RouterLink } from '@angular/router';
 import { Labels } from '../../core/i18n/labels';
 import { formatBytes } from '../../core/data/storage-estimate.utils';
 import { StoragePersistenceService } from '../../core/data/storage-persistence.service';
+import { BackupSection } from './backup/backup-section';
 
-/** Settings placeholder content, the storage persistence/estimate status, and the privacy note
- * that `/about` links to. */
+/** Settings placeholder content, the storage persistence/estimate status, the backup (export/
+ * import) section, and the privacy note that `/about` links to. */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink],
+  imports: [RouterLink, BackupSection],
   template: `
     <h1 class="page-heading">{{ labels.text('nav.settings') }}</h1>
     <p>{{ labels.text('placeholder.comingSoon') }}</p>
@@ -19,6 +20,7 @@ import { StoragePersistenceService } from '../../core/data/storage-persistence.s
         <p>{{ labels.text('settings.storage.usageLabel') }}: {{ usage }}</p>
       }
     </section>
+    <app-backup-section />
     <section id="privacy">
       <h2>{{ labels.text('settings.privacyTitle') }}</h2>
       <p>{{ labels.text('settings.privacyNote') }}</p>

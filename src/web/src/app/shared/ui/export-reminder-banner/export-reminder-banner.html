@@ -1,0 +1,15 @@
+<div class="export-reminder-banner" role="status" aria-live="polite">
+  <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span>
+  <p>{{ message() }}</p>
+  <div class="export-reminder-banner__actions">
+    <button mat-button type="button" (click)="exportNow.emit()">{{ exportLabel() }}</button>
+    <button
+      mat-icon-button
+      type="button"
+      [attr.aria-label]="dismissLabel()"
+      (click)="dismiss.emit()"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+  </div>
+</div>

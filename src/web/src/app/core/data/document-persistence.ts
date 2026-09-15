@@ -37,6 +37,16 @@ export const SAVE_RETRY_MAX_MS = 60000;
  * read-only tab must never mark the document dirty (`scheduleSave()`) or call `adapter.save()`
  * (`runSaveLoop()`), including when `CrossTabSync` reloads its document out from under it — that
  * reload must not look like a local edit.
+ *
+ * This class never reacts to a tab *becoming* the writer on its own — deciding when a newly-writer
+ * tab may trust its in-memory document enough to save it is the caller's job, not this generic
+ * save loop's: an ordinary promotion (a confirmed reader whose writer tab closed) instead reloads
+ * the page (`WriterPromotionReload`), since its in-memory document may be stale, while the
+ * corrupt-recovery import (`DocumentImportExportService`, #150) explicitly waits for its own
+ * `WRITER_LOCK` role to settle before ever calling `saveNow()`. A version of this class that
+ * itself flushed on every writer-lock grant regressed exactly that distinction (#158): it also
+ * fired on a genuine promotion, racing `WriterPromotionReload`'s reload with a save of a
+ * possibly-stale document.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentPersistence {
@@ -113,6 +123,23 @@ export class DocumentPersistence {
     this.debounceTimer = undefined;
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    await this.ensureSaving('flush');
+  }
+
+  /**
+   * Saves the current document immediately, marking it dirty itself rather than waiting for the
+   * `effect()` in `start()` to notice — for a caller that just replaced the whole document through
+   * a non-edit path (`DocumentStore.replaceDocument`, e.g. a JSON import) and needs it durably
+   * saved before returning, without depending on when Angular next runs that effect. Still subject
+   * to the same corrupt/read-only gates as every other save (`runSaveLoop()`), so it is a safe
+   * no-op if called from the wrong state.
+   */
+  async saveNow(): Promise<void> {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = undefined;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.dirtySignal.set(true);
     await this.ensureSaving('flush');
   }
 

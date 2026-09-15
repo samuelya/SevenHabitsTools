@@ -1,0 +1,49 @@
+<section class="backup-section" id="backup">
+  <h2>{{ labels.text('settings.backup.title') }}</h2>
+
+  <div class="backup-section__row">
+    <div class="backup-section__buttons">
+      <button mat-stroked-button type="button" [disabled]="busy()" (click)="onExportClick()">
+        {{ labels.text('settings.backup.export') }}
+      </button>
+      @if (canShare) {
+        <button mat-stroked-button type="button" [disabled]="busy()" (click)="onShareClick()">
+          {{ labels.text('settings.backup.share') }}
+        </button>
+      }
+    </div>
+    <p class="backup-section__hint">{{ labels.text('settings.backup.exportHint') }}</p>
+  </div>
+
+  <div class="backup-section__row">
+    <button mat-stroked-button type="button" [disabled]="busy()" (click)="triggerImport()">
+      {{ labels.text('settings.backup.import') }}
+    </button>
+    <p class="backup-section__hint">{{ labels.text('settings.backup.importHint') }}</p>
+    <input
+      #fileInput
+      type="file"
+      accept=".json,application/json"
+      hidden
+      [attr.aria-label]="labels.text('settings.backup.import')"
+      (change)="onFileSelected($event)"
+    />
+    @if (parseError(); as error) {
+      <p class="backup-section__error" role="alert">{{ error }}</p>
+    }
+  </div>
+
+  <div class="backup-section__row">
+    <label for="backup-reminder-days">{{ labels.text('settings.backup.reminderLabel') }}</label>
+    <select
+      id="backup-reminder-days"
+      [value]="backup.value().reminderDays"
+      (change)="onReminderDaysChange($event)"
+    >
+      <option value="0">{{ labels.text('settings.backup.reminderOff') }}</option>
+      <option value="1">{{ labels.text('settings.backup.reminderDaily') }}</option>
+      <option value="7">{{ labels.text('settings.backup.reminderWeekly') }}</option>
+      <option value="30">{{ labels.text('settings.backup.reminderMonthly') }}</option>
+    </select>
+  </div>
+</section>

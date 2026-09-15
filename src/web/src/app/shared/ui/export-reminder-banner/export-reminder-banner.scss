@@ -1,0 +1,21 @@
+.export-reminder-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  background-color: var(--mat-sys-secondary-container, #e2e8f5);
+  color: var(--mat-sys-on-secondary-container, #1a2333);
+  font-size: 0.875rem;
+
+  p {
+    flex: 1;
+    margin: 0;
+  }
+}
+
+.export-reminder-banner__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}

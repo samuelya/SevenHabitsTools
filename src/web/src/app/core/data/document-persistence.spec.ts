@@ -327,6 +327,51 @@ describe('DocumentPersistence', () => {
     expect(persistence.dirty()).toBe(true); // stays dirty in case this tab ever becomes writer
   });
 
+  it('saveNow() saves the document replaced before start() ever fired its effect', async () => {
+    // Regression for #37: a caller (JSON import) that calls `replaceDocument()` and then
+    // immediately `saveNow()`, in the same synchronous turn, must not depend on `start()`'s
+    // `effect()` having already run — it hasn't, since effects are flushed on the next Angular
+    // tick, not synchronously on a signal write.
+    const { persistence, store, save } = setUp();
+    persistence.start();
+    TestBed.tick();
+
+    store.replaceDocument({ ...store.document(), settings: { imported: true } });
+    await persistence.saveNow();
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ settings: { imported: true } }),
+    );
+    expect(persistence.dirty()).toBe(false);
+  });
+
+  it('saveNow() cancels a pending debounce timer instead of saving twice', async () => {
+    const { persistence, store, save } = setUp();
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await persistence.saveNow();
+
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('saveNow() stays dirty and never saves while this tab is read-only', async () => {
+    const isWriter = signal(false);
+    const { persistence, store, save } = setUp({ isWriter });
+    persistence.start();
+    TestBed.tick();
+
+    store.replaceDocument({ ...store.document(), settings: { imported: true } });
+    await persistence.saveNow();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(persistence.dirty()).toBe(true);
+  });
+
   it('resumes saving once this tab becomes the writer', async () => {
     const isWriter = signal(false);
     const { persistence, store, save } = setUp({ isWriter });
@@ -345,5 +390,31 @@ describe('DocumentPersistence', () => {
 
     expect(save).toHaveBeenCalledTimes(1);
     expect(persistence.dirty()).toBe(false);
+  });
+
+  it('#158 regression: becoming the writer never retries a stuck-dirty saveNow() on its own', async () => {
+    // An earlier version of this fix (#150) had this class itself retry here, on any
+    // `false → true` edge of `isWriter()` — but that fires just the same on a genuine *promotion*
+    // (a confirmed reader whose writer tab closed), racing `WriterPromotionReload`'s reload with a
+    // save of what may be a stale document (#158). Deciding whether a newly-writer tab may trust
+    // its in-memory document enough to save it is the caller's job now: the corrupt-recovery import
+    // (`DocumentImportExportService`) explicitly awaits its own writer-lock role settling before
+    // ever calling `saveNow()`, instead of calling it early and counting on this class to retry.
+    const isWriter = signal(false);
+    const { persistence, store, save } = setUp({ isWriter });
+    persistence.start();
+    TestBed.tick();
+
+    store.replaceDocument({ ...store.document(), settings: { recovered: true } });
+    await persistence.saveNow();
+    expect(save).not.toHaveBeenCalled();
+    expect(persistence.dirty()).toBe(true); // stays dirty; nothing here may assume it's still valid
+
+    isWriter.set(true);
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(persistence.dirty()).toBe(true);
   });
 });
