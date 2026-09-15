@@ -2,6 +2,7 @@ import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { runDocumentBootstrap } from './document-bootstrap';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
+import { registerModel, resetRegistryForTesting } from './registry';
 import { StorageAdapter } from './storage-adapter';
 
 function fakeAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
@@ -100,5 +101,80 @@ describe('runDocumentBootstrap', () => {
 
     expect(store.replaceDocument).not.toHaveBeenCalled();
     expect(status.reportCorrupt).toHaveBeenCalledWith(stored, expect.any(Error));
+  });
+
+  describe('a document at the current schema version with a broken shape', () => {
+    afterEach(() => resetRegistryForTesting());
+
+    it.each([
+      ['missing everything but schemaVersion', { schemaVersion: CURRENT_SCHEMA_VERSION }],
+      [
+        'habits not an object',
+        {
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          meta: { createdAt: 't', updatedAt: 't', appVersion: '0.0.0', deviceId: 'd' },
+          profile: {},
+          settings: {},
+          shared: {},
+          habits: 'oops',
+          extras: {},
+        },
+      ],
+      [
+        'meta is null',
+        {
+          schemaVersion: CURRENT_SCHEMA_VERSION,
+          meta: null,
+          profile: {},
+          settings: {},
+          shared: {},
+          habits: {},
+          extras: {},
+        },
+      ],
+    ])('reports corrupt for %s instead of loading it as ready', async (_label, stored) => {
+      const store = fakeStore();
+      const status = fakeStatus();
+
+      await runDocumentBootstrap({
+        adapter: fakeAdapter({ load: vi.fn().mockResolvedValue(stored) }),
+        deviceIdSource,
+        store,
+        status,
+      });
+
+      expect(store.replaceDocument).not.toHaveBeenCalled();
+      expect(status.reportCorrupt).toHaveBeenCalledWith(stored, expect.any(Error));
+    });
+
+    it('reports corrupt when a registered model fails its own validate()', async () => {
+      registerModel({
+        key: 'mission',
+        path: 'habits.h2.mission',
+        defaults: () => ({ statement: '' }),
+        validate: () => false,
+      });
+      const store = fakeStore();
+      const status = fakeStatus();
+      const stored = {
+        schemaVersion: CURRENT_SCHEMA_VERSION,
+        meta: { createdAt: 't', updatedAt: 't', appVersion: '0.0.0', deviceId: 'd' },
+        profile: {},
+        settings: {},
+        shared: {},
+        habits: { h2: { mission: 'not the right shape' } },
+        extras: {},
+      };
+
+      await runDocumentBootstrap({
+        adapter: fakeAdapter({ load: vi.fn().mockResolvedValue(stored) }),
+        deviceIdSource,
+        store,
+        status,
+      });
+
+      expect(store.replaceDocument).not.toHaveBeenCalled();
+      expect(status.reportCorrupt).toHaveBeenCalledWith(stored, expect.any(Error));
+    });
   });
 });

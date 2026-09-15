@@ -79,6 +79,38 @@ describe('DocumentStore', () => {
       expect(before.settings).toEqual({});
       expect(store.document()).not.toBe(before);
     });
+
+    it('stamps the nearest enclosing record when updating a field inside it', () => {
+      const store = configureStore('2026-01-02T00:00:00.000Z');
+      const record = newRecord({ statement: '' }, new Date('2026-01-01T00:00:00.000Z'));
+      store.replaceDocument({
+        ...store.document(),
+        habits: { ...store.document().habits, h2: { mission: record } },
+      });
+
+      store.update<string>('habits.h2.mission.statement', () => 'Be the change');
+
+      const mission = store.select<typeof record & { statement: string }>('habits.h2.mission')();
+      expect(mission?.statement).toBe('Be the change');
+      expect(mission?.updatedAt).toBe('2026-01-02T00:00:00.000Z');
+      expect(mission?.createdAt).toBe('2026-01-01T00:00:00.000Z');
+    });
+
+    it('stamps only the changed record when update() maps over a whole collection', () => {
+      const store = configureStore('2026-01-02T00:00:00.000Z');
+      const a = newRecord({ name: 'A' }, new Date('2026-01-01T00:00:00.000Z'));
+      const b = newRecord({ name: 'B' }, new Date('2026-01-01T00:00:00.000Z'));
+      store.replaceDocument({ ...store.document(), shared: { roles: [a, b] } });
+
+      store.update<(typeof a)[]>('shared.roles', (roles) =>
+        roles.map((role) => (role.id === a.id ? { ...role, name: 'A2' } : role)),
+      );
+
+      const roles =
+        store.select<{ id: string; name: string; updatedAt: string }[]>('shared.roles')();
+      expect(roles?.find((role) => role.id === a.id)?.updatedAt).toBe('2026-01-02T00:00:00.000Z');
+      expect(roles?.find((role) => role.id === b.id)?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+    });
   });
 
   describe('upsertRecord', () => {

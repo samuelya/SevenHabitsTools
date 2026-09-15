@@ -33,9 +33,21 @@ describe('document-path.utils', () => {
       expect(result.shared).toBe(shared);
     });
 
-    it('replaces a non-object value found along the path instead of throwing', () => {
-      const result = setAtPath({ habits: { h2: 'not an object yet' } }, 'habits.h2.mission', {});
-      expect(result).toEqual({ habits: { h2: { mission: {} } } });
+    it('overwrites the final segment outright, whatever it held before', () => {
+      const result = setAtPath({ shared: { roles: ['a', 'b'] } }, 'shared.roles', ['c']);
+      expect(result).toEqual({ shared: { roles: ['c'] } });
+    });
+
+    it('throws instead of silently replacing an array found along the path', () => {
+      const source = { shared: { roles: [{ id: '1', name: 'A' }] } };
+      expect(() => setAtPath(source, 'shared.roles.0.name', 'Z')).toThrow(/is an array/);
+      expect(source).toEqual({ shared: { roles: [{ id: '1', name: 'A' }] } });
+    });
+
+    it('throws instead of silently replacing a primitive found along the path', () => {
+      const source = { profile: { name: 'Sam' } };
+      expect(() => setAtPath(source, 'profile.name.first', 'X')).toThrow(/is a string/);
+      expect(source).toEqual({ profile: { name: 'Sam' } });
     });
 
     it('rejects an empty path', () => {

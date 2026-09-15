@@ -1,10 +1,10 @@
 import { inject } from '@angular/core';
 import { DeviceIdSource, DEVICE_ID_SOURCE } from '../device/device-id-source';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
-import { RootDocument } from './document.model';
+import { isRootDocumentShape, RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
 import { migrateDocument } from './migrations/migrate-document';
-import { createEmptyDocument } from './registry';
+import { createEmptyDocument, validateDocument } from './registry';
 import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
 
 interface BootstrapDeps {
@@ -41,7 +41,11 @@ export async function runDocumentBootstrap(deps: BootstrapDeps): Promise<void> {
 
   try {
     const migrated = migrateDocument(loaded as unknown as Record<string, unknown>);
-    store.replaceDocument(migrated as unknown as RootDocument);
+    if (!isRootDocumentShape(migrated) || validateDocument(migrated).length > 0) {
+      status.reportCorrupt(loaded, new Error('Loaded document has an invalid shape'));
+      return;
+    }
+    store.replaceDocument(migrated);
     status.reportReady();
   } catch (error) {
     status.reportCorrupt(loaded, error);

@@ -1,7 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
-import { DocumentPersistence, SAVE_DEBOUNCE_MS } from './document-persistence';
+import { DocumentPersistence, SAVE_DEBOUNCE_MS, SAVE_RETRY_MS } from './document-persistence';
 import { DocumentStore } from './document.store';
 import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
 
@@ -155,6 +155,59 @@ describe('DocumentPersistence', () => {
     await Promise.resolve();
 
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it('saves a newer edit that landed while an earlier save was still in flight', async () => {
+    const { persistence, store, save } = setUp();
+    let resolveFirstSave = (): void => undefined;
+    save.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveFirstSave = resolve;
+        }),
+    );
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ v: 'first' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.dirty()).toBe(true); // the first save has not resolved yet
+
+    store.update('settings', () => ({ v: 'second' }));
+    TestBed.tick();
+
+    resolveFirstSave();
+    await persistence.flush();
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1][0]).toEqual(expect.objectContaining({ settings: { v: 'second' } }));
+    expect(persistence.dirty()).toBe(false);
+  });
+
+  it('catches a failed save instead of an unhandled rejection, and retries', async () => {
+    const { persistence, store, save } = setUp();
+    save.mockRejectedValueOnce(new Error('quota'));
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.dirty()).toBe(true);
+    expect(persistence.saveError()).toBeInstanceOf(Error);
+    expect(persistence.lastSavedAt()).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(SAVE_RETRY_MS);
+
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(persistence.dirty()).toBe(false);
+    expect(persistence.saveError()).toBeNull();
+    expect(persistence.lastSavedAt()).not.toBeNull();
   });
 
   it('start() is idempotent', () => {
