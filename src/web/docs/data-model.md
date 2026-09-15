@@ -69,3 +69,38 @@ stored shape. `src/app/core/data/migrations/`:
 
 Add a fixture per schema version under `src/app/testing/fixtures/document-v<n>.json` and a test
 that runs it through `migrateDocument()` up to the current version.
+
+## Store, persistence and bootstrap
+
+- `DocumentStore` (`document.store.ts`) holds the document as a signal. Read through `select(path)`
+  or the typed `featureStore<T>(key)` facade (`feature-store.ts`), resolved from a feature's
+  `registerModel()` registration. Write through `update(path, updater)`, `upsertRecord(path, record)`
+  and `softDeleteRecord(path, id)` — nothing else mutates the document. Timestamps come from the
+  injected `Clock` (`core/time/clock.ts`), not `new Date()` directly, so tests can fix the time.
+  `update()` stamps `updatedAt` on the value at `path` (or, for a collection, on the changed
+  elements) and on the nearest enclosing record, if any — editing `habits.h2.mission.statement`
+  still stamps `mission`, not just `meta`. A path that crosses an existing array or primitive
+  (e.g. `shared.roles.0.name`) throws rather than silently replacing it; go through `upsertRecord`
+  for a single record in a collection instead.
+- `StorageAdapter` (`storage-adapter.ts`) is the persistence seam: `load()`, `save(doc, { reason })`,
+  `clear()`, `kind`. Every implementation — `NoopAdapter` (the in-memory stand-in used by tests and,
+  until #35 lands, the app itself), the IndexedDB adapter, OneDrive and Google Drive later — must
+  pass `describeStorageAdapterContract()` (`storage-adapter.contract.ts`).
+- `DocumentPersistence` (`document-persistence.ts`) watches the store and saves through the adapter:
+  debounced 500 ms after an edit, flushed immediately on `visibilitychange` → hidden and `pagehide`.
+  A single save loop is shared by the debounce timer and `flush()`, so an edit made while a save is
+  already in flight is saved once that save completes instead of being dropped. A failed save is
+  caught and retried with exponential backoff (`SAVE_RETRY_MS` doubling up to `SAVE_RETRY_MAX_MS`).
+  `dirty`/`lastSavedAt`/`saveError` are exposed for a UI status indicator.
+  **Two layers guard against overwriting a corrupt document:** `app.config.ts` only calls
+  `persistence.start()` when bootstrap resolves to `ready` (never for `corrupt`), and, in case
+  something calls `start()` anyway, `runSaveLoop()` itself refuses to save while
+  `DocumentBootstrapStatus` reports `corrupt`. `DataErrorPage` calls `persistence.start()` itself
+  once the user resolves the corrupt document (reset); a future JSON-import success path must do
+  the same.
+- `document-bootstrap.ts` loads the document on startup (an app initializer in `app.config.ts`):
+  nothing stored → `createEmptyDocument()`; a load failure, a migration failure, or a document at
+  the current schema version with an invalid shape (`isRootDocumentShape()`,
+  `document.model.ts`) or a registered model that fails its own `validate()` → `DocumentBootstrapStatus`
+  reports `corrupt` and `App` renders `DataErrorPage` instead of the shell: export the raw file, or
+  reset (behind a confirmation step, since it permanently clears storage).

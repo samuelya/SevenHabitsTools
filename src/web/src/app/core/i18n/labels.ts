@@ -45,6 +45,15 @@ const EN: Readonly<Record<string, string>> = {
   'settings.privacyNote':
     'Your data stays in this browser. Nothing is uploaded or shared unless you choose to ' +
     'export it.',
+  'data.bootstrap.corrupt': 'The saved file is damaged or in a format this app cannot read.',
+  'data.error.title': "We couldn't read your saved data",
+  'data.error.retry': 'Try again',
+  'data.error.exportRaw': 'Export raw file',
+  'data.error.reset': 'Start fresh',
+  'data.error.resetConfirm':
+    'This will permanently delete the saved data on this device. This cannot be undone.',
+  'data.error.cancel': 'Cancel',
+  'data.error.confirmReset': 'Yes, start fresh',
 };
 
 @Injectable({ providedIn: 'root' })

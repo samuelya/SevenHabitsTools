@@ -43,8 +43,12 @@ export function resetRegistryForTesting(): void {
   registrations.clear();
 }
 
-/** Builds a fresh document at the current schema version, composed from every registered model's defaults. */
-export function createEmptyDocument(): RootDocument {
+/**
+ * Builds a fresh document at the current schema version, composed from every registered model's
+ * defaults. `deviceId` defaults to a random UUID; callers with an injected `DeviceIdSource`
+ * (bootstrap, the corrupt-data reset action) pass `deviceIdSource.id()` instead.
+ */
+export function createEmptyDocument(deviceId: string = crypto.randomUUID()): RootDocument {
   const now = new Date().toISOString();
   const doc: Record<string, unknown> = {
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -52,7 +56,7 @@ export function createEmptyDocument(): RootDocument {
       createdAt: now,
       updatedAt: now,
       appVersion: '0.0.0',
-      deviceId: crypto.randomUUID(),
+      deviceId,
     },
     profile: {},
     settings: {},

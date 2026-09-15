@@ -1,0 +1,32 @@
+<div class="data-error-page">
+  <h1 class="page-heading">{{ labels.text('data.error.title') }}</h1>
+  <p>{{ labels.text(status.messageKey() ?? 'data.bootstrap.corrupt') }}</p>
+
+  @if (!confirmingReset()) {
+    <div class="data-error-page__actions">
+      <button mat-flat-button type="button" (click)="retry()">
+        {{ labels.text('data.error.retry') }}
+      </button>
+      @if (canExport()) {
+        <button mat-stroked-button type="button" (click)="exportRaw()">
+          {{ labels.text('data.error.exportRaw') }}
+        </button>
+      }
+      <button mat-button type="button" (click)="confirmReset()">
+        {{ labels.text('data.error.reset') }}
+      </button>
+    </div>
+  } @else {
+    <div class="data-error-page__confirm" aria-live="polite">
+      <p>{{ labels.text('data.error.resetConfirm') }}</p>
+      <div class="data-error-page__actions">
+        <button #cancelButton mat-stroked-button type="button" (click)="cancelReset()">
+          {{ labels.text('data.error.cancel') }}
+        </button>
+        <button mat-flat-button color="warn" type="button" (click)="reset()">
+          {{ labels.text('data.error.confirmReset') }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

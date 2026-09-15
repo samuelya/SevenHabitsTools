@@ -25,3 +25,37 @@ export interface RootDocument {
   habits: Record<HabitId, Record<string, unknown>>;
   extras: Record<string, unknown>;
 }
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Structural check that `value` has the shape of a `RootDocument`: a plain object with a numeric
+ * `schemaVersion`, a `meta` object with its four string fields, and `profile`/`settings`/`shared`/
+ * `habits`/`extras` all plain objects. Used on load (`document-bootstrap.ts`) so a document at the
+ * current schema version with a broken shape — missing `meta`, `habits` not an object, and so on —
+ * is treated as corrupt instead of accepted as-is and then overwritten by the first autosave.
+ */
+export function isRootDocumentShape(value: unknown): value is RootDocument {
+  if (!isPlainObject(value) || typeof value['schemaVersion'] !== 'number') {
+    return false;
+  }
+  const meta = value['meta'];
+  if (
+    !isPlainObject(meta) ||
+    typeof meta['createdAt'] !== 'string' ||
+    typeof meta['updatedAt'] !== 'string' ||
+    typeof meta['appVersion'] !== 'string' ||
+    typeof meta['deviceId'] !== 'string'
+  ) {
+    return false;
+  }
+  return (
+    isPlainObject(value['profile']) &&
+    isPlainObject(value['settings']) &&
+    isPlainObject(value['shared']) &&
+    isPlainObject(value['habits']) &&
+    isPlainObject(value['extras'])
+  );
+}
