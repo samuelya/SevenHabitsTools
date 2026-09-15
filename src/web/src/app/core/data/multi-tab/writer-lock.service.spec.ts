@@ -25,6 +25,23 @@ describe('WriterLockService', () => {
     expect(service.promoted()).toBe(false);
   });
 
+  it('start() is idempotent: a second call does not request the lock again and demote this tab (#160)', async () => {
+    const manager = new FakeLockManager();
+    const requestSpy = vi.spyOn(manager, 'request');
+    TestBed.configureTestingModule({
+      providers: [{ provide: WEB_LOCKS, useValue: manager.asLockManager() }],
+    });
+
+    const service = TestBed.inject(WriterLockService);
+    service.start();
+    await vi.advanceTimersByTimeAsync(0);
+    service.start();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(requestSpy).toHaveBeenCalledTimes(1);
+    expect(service.role()).toBe('writer');
+  });
+
   it('falls back to the localStorage heartbeat when navigator.locks is unavailable', async () => {
     TestBed.configureTestingModule({
       providers: [

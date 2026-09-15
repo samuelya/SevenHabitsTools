@@ -7,6 +7,7 @@ import { INDEXED_DB } from '../../browser/indexed-db';
 import { WEB_SHARE } from '../../browser/web-share';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
+import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from '../document.model';
@@ -138,6 +139,84 @@ describe('DataErrorPage', () => {
 
     expect(status.state()).toBe('ready');
     expect(store.document()).toEqual(backup);
+  });
+
+  function selectBackupFile(fixture: ComponentFixture<DataErrorPage>): void {
+    const backup = {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      meta: { createdAt: 't1', updatedAt: 't2', appVersion: '0.0.0', deviceId: 'this-tab' },
+      profile: {},
+      settings: { thisTabsImport: true },
+      shared: {},
+      habits: {},
+      extras: {},
+    };
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      value: [new File([JSON.stringify(backup)], 'backup.json', { type: 'application/json' })],
+      configurable: true,
+    });
+    input.dispatchEvent(new Event('change'));
+  }
+
+  function settleAsReader(): void {
+    TestBed.overrideProvider(WriterLockService, {
+      useValue: {
+        start: vi.fn(),
+        stop: vi.fn(),
+        role: signal('reader'),
+        isWriter: signal(false),
+        promoted: signal(false),
+      },
+    });
+  }
+
+  it("#160: refuses the import when another tab already recovered, says so, and shows that tab's document", async () => {
+    settleAsReader();
+    const open = vi.fn().mockResolvedValue(undefined);
+    TestBed.overrideProvider(AppSnackbar, { useValue: { open, preload: vi.fn() } });
+    const stored = {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      meta: { createdAt: 't1', updatedAt: 't3', appVersion: '0.0.0', deviceId: 'writer-tab' },
+      profile: {},
+      settings: { recoveredByTheWriterTab: true },
+      shared: {},
+      habits: {},
+      extras: {},
+    };
+    adapter.load.mockResolvedValue(stored);
+    const status = TestBed.inject(DocumentBootstrapStatus);
+    status.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+
+    selectBackupFile(fixture);
+    await fixture.whenStable();
+
+    expect(status.state()).toBe('ready');
+    expect(TestBed.inject(DocumentStore).document()).toEqual(stored);
+    expect(open).toHaveBeenCalledWith(
+      expect.stringContaining('Another tab has already recovered your data'),
+      'Dismiss',
+    );
+  });
+
+  it("#160: stays on the error page with a message when the other tab's document isn't readable yet", async () => {
+    settleAsReader();
+    adapter.load.mockResolvedValue({ schemaVersion: 99 });
+    const status = TestBed.inject(DocumentBootstrapStatus);
+    status.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+
+    selectBackupFile(fixture);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(status.state()).toBe('corrupt');
+    expect(text(fixture, '.data-error-page__error')).toContain(
+      'Another tab is recovering your data',
+    );
   });
 
   it('shows a translated error and stays on the error page when the imported file is invalid', async () => {

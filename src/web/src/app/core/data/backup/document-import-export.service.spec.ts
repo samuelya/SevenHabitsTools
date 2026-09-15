@@ -7,6 +7,7 @@ import { CLOCK } from '../../time/clock';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
+import { DocumentSync } from '../document-sync';
 import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { WRITER_LOCK } from '../multi-tab/writer-lock';
 import { WriterRole } from '../multi-tab/writer-role-state';
@@ -35,11 +36,13 @@ function validDoc(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function setUp(options: { isWriter?: boolean; roleAfterStart?: WriterRole } = {}) {
+function setUp(
+  options: { isWriter?: boolean; roleAfterStart?: WriterRole; stored?: unknown } = {},
+) {
   const save = vi.fn().mockResolvedValue(undefined);
   const adapter: StorageAdapter = {
     kind: 'noop',
-    load: vi.fn().mockResolvedValue(null),
+    load: vi.fn().mockResolvedValue(options.stored ?? null),
     save: save as unknown as StorageAdapter['save'],
     clear: vi.fn().mockResolvedValue(undefined),
   };
@@ -54,12 +57,17 @@ function setUp(options: { isWriter?: boolean; roleAfterStart?: WriterRole } = {}
   // `WriterLockService.start()` actually runs, simulating the writer lock's genuinely asynchronous
   // grant (`navigator.locks.request()`). `roleAfterStart` (default `'writer'`, the uncontended
   // fast-grant case) lets a test simulate this tab instead settling as `'reader'` — another tab
-  // already recovered first (#158).
+  // already recovered first (#158) — or staying `'pending'` until the test settles `roleSignal`
+  // itself (#160). `stored` is what `adapter.load()` returns: the real writer's saved document.
   const initialRole: WriterRole = (options.isWriter ?? true) ? 'writer' : 'pending';
   const roleSignal = signal<WriterRole>(initialRole);
   const isWriterSignal = computed(() => roleSignal() === 'writer');
   const roleAfterStart = options.roleAfterStart ?? 'writer';
-  const writerLockServiceStart = vi.fn(() => roleSignal.set(roleAfterStart));
+  const writerLockServiceStart = vi.fn(() => {
+    if (roleAfterStart !== 'pending') {
+      roleSignal.set(roleAfterStart);
+    }
+  });
   TestBed.configureTestingModule({
     providers: [
       { provide: STORAGE_ADAPTER, useValue: adapter },
@@ -82,12 +90,14 @@ function setUp(options: { isWriter?: boolean; roleAfterStart?: WriterRole } = {}
   });
   return {
     service: TestBed.inject(DocumentImportExportService),
+    documentSyncStart: vi.spyOn(TestBed.inject(DocumentSync), 'start'),
     store: TestBed.inject(DocumentStore),
     persistence: TestBed.inject(DocumentPersistence),
     bootstrapStatus: TestBed.inject(DocumentBootstrapStatus),
     save,
     download,
     writerLockServiceStart,
+    roleSignal,
   };
 }
 
@@ -298,7 +308,7 @@ describe('DocumentImportExportService', () => {
       // corrupt (`app.config.ts` only starts `DocumentSync` once bootstrap is `ready`), so
       // `canImport` would normally be false here. #150: gating the corrupt-recovery import on it
       // made the recovery path unreachable — this proves it is not gated on it.
-      const { service, store, bootstrapStatus, save, persistence, writerLockServiceStart } = setUp({
+      const { service, store, bootstrapStatus, save, persistence, documentSyncStart } = setUp({
         isWriter: false,
       });
       bootstrapStatus.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
@@ -316,44 +326,89 @@ describe('DocumentImportExportService', () => {
       expect(bootstrapStatus.state()).toBe('ready');
       expect(store.document()).toEqual(imported);
       // DocumentSync was never started while corrupt; this must start it — not just leave the
-      // imported document held in memory, unsaved and with no writer lock. Asserted on the real
-      // WriterLockService directly (not just the `save` call below), since the mock-only save
-      // path was satisfied by `saveNow()` alone even with `documentSync.start()` deleted (the
-      // exact gap tester-37 found by mutation testing).
-      expect(writerLockServiceStart).toHaveBeenCalledTimes(1);
+      // imported document held in memory, unsaved. Asserted on DocumentSync directly (not just the
+      // `save` call below), since the mock-only save path was satisfied by `saveNow()` alone even
+      // with `documentSync.start()` deleted (the exact gap tester-37 found by mutation testing).
+      expect(documentSyncStart).toHaveBeenCalledTimes(1);
       expect(save).toHaveBeenCalledTimes(1);
       expect(save.mock.calls[0][0]).toEqual(imported);
     });
 
-    it("#158 regression: a second corrupt tab that settles as reader does not save its own import over the real writer's", async () => {
-      // Simulates a second tab also stuck on the error page: it reaches the same corrupt-recovery
-      // path, but by the time its own WriterLockService.start() settles, another tab has already
-      // become the writer — so this tab settles as `reader`, not `writer` (`roleAfterStart`).
-      const { service, store, bootstrapStatus, save, persistence, writerLockServiceStart } = setUp({
+    it('#160 regression: commits nothing — no replace, no ready — until the writer role settles', async () => {
+      const { service, store, bootstrapStatus, save, roleSignal, writerLockServiceStart } = setUp({
         isWriter: false,
-        roleAfterStart: 'reader',
+        roleAfterStart: 'pending',
       });
       bootstrapStatus.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
-      expect(persistence.dirty()).toBe(false);
+      const before = store.document();
+
+      const imported = validDoc({ settings: { recovered: true } });
+      const result = service.replaceWithImport(imported as never);
+      TestBed.tick();
+      await Promise.resolve();
+
+      // The lock has been asked for, but while its answer is outstanding this tab might still turn
+      // out to be a reader: nothing may be committed yet.
+      expect(writerLockServiceStart).toHaveBeenCalled();
+      expect(bootstrapStatus.state()).toBe('corrupt');
+      expect(store.document()).toBe(before);
+      expect(save).not.toHaveBeenCalled();
+
+      roleSignal.set('writer');
+      TestBed.tick();
+      const applied = await result;
+
+      expect(applied).toBe(true);
+      expect(bootstrapStatus.state()).toBe('ready');
+      expect(store.document()).toEqual(imported);
+      expect(save).toHaveBeenCalledTimes(1);
+    });
+
+    it("#158/#160 regression: a second corrupt tab that settles as reader refuses its import and moves to the real writer's stored document", async () => {
+      // Simulates a second tab also stuck on the error page: it reaches the same corrupt-recovery
+      // path, but another tab has already become the writer and saved its recovered document — so
+      // this tab settles as `reader` (`roleAfterStart`) and `adapter.load()` returns that document.
+      const stored = validDoc({ settings: { recoveredByTheWriterTab: true } });
+      const { service, store, bootstrapStatus, save, persistence, documentSyncStart } = setUp({
+        isWriter: false,
+        roleAfterStart: 'reader',
+        stored,
+      });
+      bootstrapStatus.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
 
       const imported = validDoc({ settings: { thisTabsOwnImport: true } });
       const result = service.replaceWithImport(imported as never);
       TestBed.tick();
       const applied = await result;
 
-      // This tab still leaves the error page (its bootstrap resolves `ready` and DocumentSync,
-      // including CrossTabSync, starts — which corrects its view once the real writer saves) —
-      // but it must never call `adapter.save()` with a document only it has, clobbering whatever
-      // the actual writer tab already recovered and saved.
+      // Refused: never saved over the writer's document, and never shown as if it had applied.
       expect(applied).toBe(false);
-      expect(bootstrapStatus.state()).toBe('ready');
-      expect(writerLockServiceStart).toHaveBeenCalledTimes(1);
       expect(save).not.toHaveBeenCalled();
-      // This tab's own store still holds its own import locally (`CrossTabSync`, now running,
-      // corrects it the moment the real writer's next save broadcasts — not asserted here, that's
-      // `CrossTabSync`'s own suite).
-      expect(store.document()).toEqual(imported);
+      expect(store.document()).toEqual(stored);
+      expect(bootstrapStatus.state()).toBe('ready');
       expect(persistence.dirty()).toBe(false);
+      // A normal reader from here on: CrossTabSync and the promotion reload keep it current.
+      expect(documentSyncStart).toHaveBeenCalledTimes(1);
+    });
+
+    it("#160: a reader tab stays on the error page when the writer's document isn't readable yet", async () => {
+      const { service, store, bootstrapStatus, save, documentSyncStart } = setUp({
+        isWriter: false,
+        roleAfterStart: 'reader',
+        stored: { schemaVersion: 1, meta: undefined },
+      });
+      bootstrapStatus.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+      const before = store.document();
+
+      const result = service.replaceWithImport(validDoc() as never);
+      TestBed.tick();
+      const applied = await result;
+
+      expect(applied).toBe(false);
+      expect(bootstrapStatus.state()).toBe('corrupt');
+      expect(store.document()).toBe(before);
+      expect(save).not.toHaveBeenCalled();
+      expect(documentSyncStart).not.toHaveBeenCalled();
     });
   });
 });

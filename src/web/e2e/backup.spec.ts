@@ -224,31 +224,21 @@ test.describe('JSON export/import', () => {
     expect(current.settings.marker).toBe('recovered-from-corrupt');
   });
 
-  // #158: more than one tab can independently be on the error page for the same corrupt document
-  // (every tab open when it happened is). The second tab to import must not clobber the first
-  // tab's already-recovered-and-saved document with its own.
-  test('#158: a second corrupt tab that imports after the first has recovered does not overwrite it', async ({
+  // #158/#160/#161: every tab open when the document went corrupt is on the error page, and only
+  // the first to import may recover it. The second tab's import is refused with a message (#160),
+  // and — the step that actually lost data in #158 — it must not save that import once the first
+  // tab closes and it takes over as the writer (#161: this test must close tab 1).
+  test("#158: a second corrupt tab's import is refused and never overwrites the first tab's recovery, even after it takes over", async ({
     page,
     context,
     seedDocument,
   }) => {
-    await seedDocument({ meta: undefined as never });
-    await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: "We couldn't read your saved data" }),
-    ).toBeVisible();
+    const ERROR_HEADING = "We couldn't read your saved data";
+    const REMINDER_SELECT = '#backup-reminder-days';
+    const READ_ONLY_BANNER = '.read-only-banner';
 
-    // A second tab, open before either has recovered — reads the same corrupt document from
-    // IndexedDB (shared storage; `second` has no `seedDocument` init script of its own, so it
-    // doesn't re-seed on this navigation — see `#150`'s test above).
-    const second = await context.newPage();
-    await second.goto('/');
-    await expect(
-      second.getByRole('heading', { name: "We couldn't read your saved data" }),
-    ).toBeVisible();
-
-    function backupWithMarker(marker: string) {
-      return {
+    function backupFile(marker: string) {
+      const backup = {
         schemaVersion: 1,
         meta: {
           createdAt: '2026-01-01T00:00:00.000Z',
@@ -272,42 +262,55 @@ test.describe('JSON export/import', () => {
         },
         extras: {},
       };
+      return {
+        name: `${marker}.json`,
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify(backup)),
+      };
     }
 
-    // Tab 1 imports and fully recovers first: becomes the writer and saves, exactly like #150's
-    // test above — waiting for that to finish before tab 2 imports is what makes tab 2's own
-    // writer-lock request deterministically see the lock already held.
-    await page.setInputFiles(FILE_INPUT, {
-      name: 'sevenhabits-backup.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backupWithMarker('tab-1-recovered'))),
-    });
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
-    await expect(async () => {
-      const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
-      expect(current.settings.marker).toBe('tab-1-recovered');
-    }).toPass();
+    async function readStored(from: Page) {
+      const current = (await readCurrentDocument(from)) as {
+        settings: { marker: string; backup?: { reminderDays: number } };
+      };
+      return {
+        marker: current.settings.marker,
+        reminderDays: current.settings.backup?.reminderDays,
+      };
+    }
 
-    // Tab 2 now imports its own, different backup. It must still leave the error page (its own
-    // bootstrap resolves `ready`), but — settling as a reader, since tab 1 already holds the
-    // writer lock — must never save its own import over tab 1's.
-    await second.setInputFiles(FILE_INPUT, {
-      name: 'sevenhabits-backup-2.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(backupWithMarker('tab-2-import-should-not-win'))),
-    });
-    await expect(second.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await seedDocument({ meta: undefined as never });
+    await page.goto('/settings');
+    await expect(page.getByRole('heading', { name: ERROR_HEADING })).toBeVisible();
+    // A second tab, open before either has recovered. It has no `seedDocument` init script of its
+    // own (see #150's test above), so its reload after taking over reads what is really stored.
+    const second = await context.newPage();
+    await second.goto('/settings');
+    await expect(second.getByRole('heading', { name: ERROR_HEADING })).toBeVisible();
 
-    // The stored document — read from a third, freshly-opened page so this doesn't depend on
-    // which tab's in-memory view happens to be checked (`page`'s own `seedDocument` re-seeds on
-    // its next navigation, the same reason `#150`'s test above reads from a fresh page too) —
-    // stays tab 1's, never tab 2's.
-    const fresh = await context.newPage();
-    await fresh.goto('/');
-    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
-    await expect(async () => {
-      const current = (await readCurrentDocument(fresh)) as { settings: { marker: string } };
-      expect(current.settings.marker).toBe('tab-1-recovered');
-    }).toPass();
+    // Tab 1 recovers, becomes the writer, then edits.
+    await page.setInputFiles(FILE_INPUT, backupFile('tab-1-recovered'));
+    await page.locator(REMINDER_SELECT).selectOption('30');
+    await expect
+      .poll(() => readStored(page))
+      .toEqual({ marker: 'tab-1-recovered', reminderDays: 30 });
+
+    // Tab 2, still on the error page, imports an older file: refused, with a message, and it shows
+    // tab 1's stored document rather than its own unsaved import (#160).
+    await second.setInputFiles(FILE_INPUT, backupFile('tab-2-stale'));
+    await expect(second.getByText('Another tab has already recovered your data')).toBeVisible();
+    await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
+    await expect(second.locator(REMINDER_SELECT)).toHaveValue('30');
+
+    // Tab 1 closes: tab 2 is promoted to writer and reloads (`WriterPromotionReload`).
+    const secondReloaded = second.waitForEvent('load');
+    await page.close();
+    await secondReloaded;
+    await expect(second.locator(READ_ONLY_BANNER)).toHaveCount(0, { timeout: 10_000 });
+    await expect(second.locator(REMINDER_SELECT)).toHaveValue('30');
+    // Give any save tab 2 might still attempt after taking over time to land before checking.
+    await second.waitForTimeout(1500);
+    expect(await readStored(second)).toEqual({ marker: 'tab-1-recovered', reminderDays: 30 });
+    await expect(second.locator(REMINDER_SELECT)).toHaveValue('30');
   });
 });

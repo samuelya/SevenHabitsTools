@@ -13,6 +13,7 @@ import { FileDownloader } from '../../browser/file-download';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { Labels } from '../../i18n/labels';
+import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentImportExportService } from '../backup/document-import-export.service';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentStore } from '../document.store';
@@ -43,6 +44,7 @@ export class DataErrorPage {
   private readonly documentSync = inject(DocumentSync);
   private readonly importExport = inject(DocumentImportExportService);
   private readonly window = inject(WINDOW);
+  private readonly snackbar = inject(AppSnackbar);
   protected readonly status = inject(DocumentBootstrapStatus);
   protected readonly labels = inject(Labels);
 
@@ -96,11 +98,20 @@ export class DataErrorPage {
     this.importError.set(null);
     // Recovers the same way reset() does — DocumentImportExportService detects the corrupt state
     // itself and reports ready / starts DocumentSync — except this keeps the imported data instead
-    // of discarding it. Its return value doesn't need checking here: either way this tab leaves
-    // the error page with a `ready` document, whether it became the writer (its own import, saved)
-    // or a reader (another tab already recovered first, #158 — CrossTabSync then corrects this
-    // tab's view to that tab's document).
-    await this.importExport.replaceWithImport(result.document);
+    // of discarding it. `false` means another tab already recovered, so this import was refused
+    // (#160): this tab either moved to that tab's stored document (and this page is going away,
+    // hence the snackbar) or, if that document isn't readable yet, stays here.
+    if (await this.importExport.replaceWithImport(result.document)) {
+      return;
+    }
+    if (this.status.state() === 'corrupt') {
+      this.importError.set(this.labels.text('data.error.importRefusedRecoveringElsewhere'));
+    } else {
+      void this.snackbar.open(
+        this.labels.text('data.error.importRefusedRecoveredElsewhere'),
+        this.labels.text('data.snackbar.dismiss'),
+      );
+    }
   }
 
   protected confirmReset(): void {

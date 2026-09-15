@@ -1,14 +1,16 @@
-import { Injectable, Injector, Signal, effect, inject } from '@angular/core';
+import { Injectable, Injector, Signal, effect, inject, runInInjectionContext } from '@angular/core';
 import { FileDownloader } from '../../browser/file-download';
 import { WebShareApi, WEB_SHARE } from '../../browser/web-share';
 import { CLOCK } from '../../time/clock';
 import { getAtPath, setAtPath } from '../document-path.utils';
+import { bootstrapDocument } from '../document-bootstrap';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { resolveDocument } from '../document-validation';
 import { RootDocument } from '../document.model';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { DocumentSync } from '../document-sync';
+import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { WriterRole } from '../multi-tab/writer-role-state';
 import { WRITER_LOCK } from '../multi-tab/writer-lock';
 import { BACKUP_PATH, BackupSettings } from './backup.model';
@@ -44,6 +46,8 @@ export class DocumentImportExportService {
   private readonly bootstrapStatus = inject(DocumentBootstrapStatus);
   private readonly documentSync = inject(DocumentSync);
   private readonly writerLock = inject(WRITER_LOCK);
+  /** The lock's lifecycle, which only the corrupt-recovery import needs (`WRITER_LOCK` is read-only). */
+  private readonly writerLockService = inject(WriterLockService);
   private readonly downloader = inject(FileDownloader);
   private readonly webShare: WebShareApi | null = inject(WEB_SHARE);
   private readonly clock = inject(CLOCK);
@@ -159,8 +163,8 @@ export class DocumentImportExportService {
     return { ok: true, document: result.document, preview: buildImportPreview(result.document) };
   }
 
-  /** Replaces the whole document with `imported`. Returns `false`, leaving the document untouched,
-   * for a read-only tab. */
+  /** Replaces the whole document with `imported`. Returns `false`, never applying `imported`, for a
+   * read-only tab — including a corrupt-data tab where another tab already recovered (#160). */
   async replaceWithImport(imported: RootDocument): Promise<boolean> {
     return this.applyImport(imported);
   }
@@ -185,42 +189,46 @@ export class DocumentImportExportService {
 
   /**
    * Recovers from a corrupt document the same way `DataErrorPage.reset()` does — commits
-   * `document`, reports `ready`, and starts `DocumentSync` (autosave, the writer lock, cross-tab
-   * sync, ...), which never runs while the document is corrupt (`app.config.ts` only starts it
-   * once bootstrap resolves to `ready`) — except this keeps the imported data instead of
-   * discarding it.
+   * `document`, reports `ready`, and starts `DocumentSync` (autosave, cross-tab sync, ...), which
+   * never runs while the document is corrupt (`app.config.ts` only starts it once bootstrap
+   * resolves to `ready`) — except this keeps the imported data instead of discarding it.
    *
-   * `canImport` (the writer lock) can't gate this the way it gates an already-`ready` import: the
-   * lock system hasn't started yet, so it always reads `false` here, and gating on it would make
-   * this path unreachable (#150). But more than one tab can independently be on the error page —
-   * every open tab that had the same corrupt document is — and each one reaching this method
-   * doesn't mean each one should win: once `DocumentSync.start()` actually starts the writer lock
-   * for this tab, only the tab that settles as `writer` may save (#158). A tab that settles as
-   * `reader` (another tab already recovered first) must not save its own, possibly different,
-   * import over that tab's; it leaves its committed `store.replaceDocument()` as a merely local,
-   * unsaved view, which `CrossTabSync` (now running) corrects with the real writer's document as
-   * soon as that tab's next save broadcasts.
+   * `canImport` can't gate this the way it gates an already-`ready` import: the writer lock hasn't
+   * started yet, so it always reads `false` here (#150). But every tab that had the same corrupt
+   * document is on the error page, and only one of them may recover it (#158). So this starts the
+   * lock on its own and commits nothing until its role settles (#160):
+   * - `writer`: commit, report ready and save immediately.
+   * - `reader`: another tab already recovered. Refuse, and move this tab to that tab's stored
+   *   document by re-running the bootstrap load (migrate + validate), exactly as a tab opened now
+   *   would. Accepting the import in memory would show data that is never saved and silently
+   *   disappears later — the #127 pattern. If the stored document still can't be read (the writer
+   *   hasn't finished saving), the tab stays on the error page; "Try again" reloads it.
    */
   private async applyCorruptRecoveryImport(document: RootDocument): Promise<boolean> {
+    this.writerLockService.start();
+    const role = await this.waitForWriterRole();
+    if (role !== 'writer') {
+      await runInInjectionContext(this.injector, bootstrapDocument);
+      if (this.bootstrapStatus.state() === 'ready') {
+        this.documentSync.start();
+      }
+      return false;
+    }
     this.store.replaceDocument(document);
     this.bootstrapStatus.reportReady();
     this.documentSync.start();
-    const role = await this.waitForWriterRole();
-    if (role !== 'writer') {
-      return false;
-    }
     await this.persistence.saveNow();
     return true;
   }
 
-  /** Resolves once `WRITER_LOCK.role()` leaves `pending` — the lock request settling is genuinely
+  /** Resolves once the lock's role leaves `pending` — the lock request settling is genuinely
    * asynchronous (`navigator.locks.request()`), so a caller that just started it can't just read
    * `canImport`/`isWriter` synchronously afterwards. */
   private waitForWriterRole(): Promise<WriterRole> {
     return new Promise((resolve) => {
       const ref = effect(
         () => {
-          const role = this.writerLock.role();
+          const role = this.writerLockService.role();
           if (role !== 'pending') {
             resolve(role);
             ref.destroy();

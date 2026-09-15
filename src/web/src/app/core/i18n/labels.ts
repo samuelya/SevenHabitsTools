@@ -53,6 +53,12 @@ const EN: Readonly<Record<string, string>> = {
   'data.error.retry': 'Try again',
   'data.error.exportRaw': 'Export raw file',
   'data.error.importBackup': 'Import a backup',
+  'data.error.importRefusedRecoveredElsewhere':
+    "Another tab has already recovered your data, so this import wasn't applied. This tab is " +
+    'read-only and shows the data from that tab.',
+  'data.error.importRefusedRecoveringElsewhere':
+    "Another tab is recovering your data, so this import wasn't applied. Select Try again in a " +
+    'moment to see that data.',
   'data.error.reset': 'Start fresh',
   'data.error.resetConfirm':
     'This will permanently delete the saved data on this device. This cannot be undone.',
