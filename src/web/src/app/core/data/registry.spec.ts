@@ -1,20 +1,25 @@
 import { HABIT_IDS } from '../habits/habits';
 import { CURRENT_SCHEMA_VERSION } from './document.model';
 import {
+  ModelRegistration,
   createEmptyDocument,
-  getRegisteredModels,
   registerModel,
   resetRegistryForTesting,
+  snapshotRegistryForTesting,
   validateDocument,
 } from './registry';
 
 describe('registry', () => {
-  afterEach(() => {
-    resetRegistryForTesting();
+  // Real `<feature>.model.ts` files (e.g. `core/pwa/pwa.model.ts`) register themselves as a side
+  // effect of being imported anywhere in the same test run; restore exactly that baseline after
+  // each test here instead of wiping it, since it won't register itself again (registerModel()`'s
+  // module-level call only ever runs once).
+  let baseline: ReadonlyMap<string, ModelRegistration>;
+  beforeEach(() => {
+    baseline = snapshotRegistryForTesting();
   });
-
-  it('starts with no registered models', () => {
-    expect(getRegisteredModels()).toEqual([]);
+  afterEach(() => {
+    resetRegistryForTesting(baseline);
   });
 
   it('registers a model and rejects a duplicate key', () => {
@@ -34,6 +39,11 @@ describe('registry', () => {
   });
 
   it('creates an empty document with the current schema version and root shape', () => {
+    // This test is about the document's own shape, deliberately in isolation from whatever real
+    // models happen to be registered elsewhere in this test run — not just whatever's in
+    // `baseline` (restored again in the shared `afterEach` above).
+    resetRegistryForTesting();
+
     const doc = createEmptyDocument();
 
     expect(doc.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
