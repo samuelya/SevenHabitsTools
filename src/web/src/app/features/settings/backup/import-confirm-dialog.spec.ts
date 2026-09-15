@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ImportConfirmDialog, ImportConfirmDialogData } from './import-confirm-dialog';
 
 function text(fixture: ComponentFixture<ImportConfirmDialog>, selector: string): string {
@@ -13,6 +14,7 @@ function buttons(fixture: ComponentFixture<ImportConfirmDialog>): HTMLButtonElem
 function setUp(data: ImportConfirmDialogData, close = vi.fn()) {
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: MAT_DIALOG_DATA, useValue: data },
       { provide: MatDialogRef, useValue: { close } },
     ],

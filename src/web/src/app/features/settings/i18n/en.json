@@ -7,5 +7,21 @@
     "notPersisted": "The browser may clear this data under storage pressure. Export a backup from time to time.",
     "unknown": "Storage persistence status is not available in this browser.",
     "usageLabel": "Used"
+  },
+  "backup": {
+    "title": "Backup",
+    "export": "Export data",
+    "exportHint": "Downloads a JSON file with everything saved on this device.",
+    "exportedSnackbar": "Exported {{filename}}.",
+    "share": "Share…",
+    "sharedSnackbar": "Shared.",
+    "import": "Import data",
+    "importHint": "Restores data from a previously exported JSON file.",
+    "importReadOnly": "This tab is read-only, so it can't import. Import from the tab that isn't showing the read-only banner, or close it.",
+    "reminderLabel": "Remind me to export data",
+    "reminderOff": "Never",
+    "reminderDaily": "Every day",
+    "reminderWeekly": "Every week",
+    "reminderMonthly": "Every month"
   }
 }

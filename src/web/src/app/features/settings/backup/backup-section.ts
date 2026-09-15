@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { AppDialog } from '../../../core/layout/app-dialog';
 import { AppSnackbar } from '../../../core/layout/app-snackbar';
@@ -21,7 +22,6 @@ import { ImportPreview } from '../../../core/data/backup/import-preview.logic';
 import { featureStore } from '../../../core/data/feature-store';
 import { RootDocument } from '../../../core/data/document.model';
 import { DocumentStore } from '../../../core/data/document.store';
-import { Labels } from '../../../core/i18n/labels';
 import type { ImportConfirmDialogData, ImportConfirmDialogResult } from './import-confirm-dialog';
 
 type ImportConfirmDialogModule = typeof import('./import-confirm-dialog');
@@ -46,13 +46,13 @@ export const IMPORT_CONFIRM_DIALOG_LOADER = new InjectionToken<
  */
 @Component({
   selector: 'app-backup-section',
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, TranslocoPipe],
   templateUrl: './backup-section.html',
   styleUrl: './backup-section.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BackupSection {
-  protected readonly labels = inject(Labels);
+  private readonly transloco = inject(TranslocoService);
   private readonly importExport = inject(DocumentImportExportService);
   private readonly snackbar = inject(AppSnackbar);
   private readonly dialog = inject(AppDialog);
@@ -72,8 +72,8 @@ export class BackupSection {
     try {
       const filename = await this.importExport.exportDocument();
       await this.snackbar.open(
-        this.labels.text('settings.backup.exportedSnackbar', { filename }),
-        this.labels.text('data.snackbar.dismiss'),
+        this.transloco.translate('settings.backup.exportedSnackbar', { filename }),
+        this.transloco.translate('data.snackbar.dismiss'),
         { duration: 4000 },
       );
     } finally {
@@ -87,8 +87,8 @@ export class BackupSection {
       const shared = await this.importExport.shareDocument();
       if (shared) {
         await this.snackbar.open(
-          this.labels.text('settings.backup.sharedSnackbar'),
-          this.labels.text('data.snackbar.dismiss'),
+          this.transloco.translate('settings.backup.sharedSnackbar'),
+          this.transloco.translate('data.snackbar.dismiss'),
           { duration: 4000 },
         );
       }
@@ -126,7 +126,7 @@ export class BackupSection {
     const raw = await file.text();
     const result = this.importExport.parseImportFile(raw);
     if (!result.ok) {
-      this.parseError.set(this.labels.text(result.messageKey));
+      this.parseError.set(this.transloco.translate(result.messageKey));
       return;
     }
     this.parseError.set(null);
@@ -150,7 +150,7 @@ export class BackupSection {
       } catch {
         // Most likely offline with this chunk not yet cached (or a genuine network failure) —
         // say so plainly rather than the import silently going nowhere.
-        this.parseError.set(this.labels.text('data.import.dialogLoadError'));
+        this.parseError.set(this.transloco.translate('data.import.dialogLoadError'));
         return;
       }
       const { ImportConfirmDialog } = dialogModule;
@@ -192,15 +192,15 @@ export class BackupSection {
 
   private showReadOnlyMessage(): void {
     void this.snackbar.open(
-      this.labels.text('settings.backup.importReadOnly'),
-      this.labels.text('data.snackbar.dismiss'),
+      this.transloco.translate('settings.backup.importReadOnly'),
+      this.transloco.translate('data.snackbar.dismiss'),
     );
   }
 
   private async showImportedSnackbar(): Promise<void> {
     await this.snackbar.open(
-      this.labels.text('data.import.importedSnackbar'),
-      this.labels.text('data.snackbar.dismiss'),
+      this.transloco.translate('data.import.importedSnackbar'),
+      this.transloco.translate('data.snackbar.dismiss'),
       { duration: 4000 },
     );
   }

@@ -1,10 +1,10 @@
-<h2 matDialogTitle>{{ labels.text('data.import.title') }}</h2>
+<h2 matDialogTitle>{{ 'data.import.title' | transloco }}</h2>
 
 <div matDialogContent class="import-confirm-dialog">
   <dl class="import-confirm-dialog__dates">
-    <dt>{{ labels.text('data.import.fileUpdatedAt') }}</dt>
+    <dt>{{ 'data.import.fileUpdatedAt' | transloco }}</dt>
     <dd>{{ data.preview.updatedAt | date: 'medium' }}</dd>
-    <dt>{{ labels.text('data.import.currentUpdatedAt') }}</dt>
+    <dt>{{ 'data.import.currentUpdatedAt' | transloco }}</dt>
     <dd>{{ data.currentUpdatedAt | date: 'medium' }}</dd>
   </dl>
 
@@ -15,31 +15,31 @@
       }
     </ul>
   } @else {
-    <p>{{ labels.text('data.import.noPreviewCounts') }}</p>
+    <p>{{ 'data.import.noPreviewCounts' | transloco }}</p>
   }
 
   @if (!confirmingReplace()) {
     <div matDialogActions class="import-confirm-dialog__actions">
       <button mat-stroked-button type="button" (click)="exportFirst()">
-        {{ labels.text('data.import.exportFirst') }}
+        {{ 'data.import.exportFirst' | transloco }}
       </button>
       <button mat-flat-button color="warn" type="button" (click)="startReplace()">
-        {{ labels.text('data.import.replace') }}
+        {{ 'data.import.replace' | transloco }}
       </button>
       <button mat-button type="button" matDialogClose>
-        {{ labels.text('data.import.cancel') }}
+        {{ 'data.import.cancel' | transloco }}
       </button>
     </div>
-    <p class="import-confirm-dialog__hint">{{ labels.text('data.import.replaceHint') }}</p>
+    <p class="import-confirm-dialog__hint">{{ 'data.import.replaceHint' | transloco }}</p>
   } @else {
     <div class="import-confirm-dialog__confirm" aria-live="polite">
-      <p>{{ labels.text('data.import.replaceConfirm') }}</p>
+      <p>{{ 'data.import.replaceConfirm' | transloco }}</p>
       <div matDialogActions class="import-confirm-dialog__actions">
         <button #cancelButton mat-stroked-button type="button" (click)="cancelReplace()">
-          {{ labels.text('data.import.cancel') }}
+          {{ 'data.import.cancel' | transloco }}
         </button>
         <button mat-flat-button color="warn" type="button" (click)="confirmReplace()">
-          {{ labels.text('data.import.confirmReplace') }}
+          {{ 'data.import.confirmReplace' | transloco }}
         </button>
       </div>
     </div>

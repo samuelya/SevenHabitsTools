@@ -54,6 +54,9 @@
       "title": "We couldn't read your saved data",
       "retry": "Try again",
       "exportRaw": "Export raw file",
+      "importBackup": "Import a backup",
+      "importRefusedRecoveredElsewhere": "Another tab has already recovered your data, so this import wasn't applied. This tab is read-only and shows the data from that tab.",
+      "importRefusedRecoveringElsewhere": "Another tab is recovering your data, so this import wasn't applied. Select Try again in a moment to see that data.",
       "reset": "Start fresh",
       "resetConfirm": "This will permanently delete the saved data on this device. This cannot be undone.",
       "cancel": "Cancel",
@@ -84,6 +87,27 @@
         "action": "Install",
         "iosHint": "Install this app: tap the Share icon, then \"Add to Home Screen\"."
       }
+    },
+    "import": {
+      "errors": {
+        "notJson": "That file isn't a JSON file this app can read.",
+        "invalid": "That file's data isn't in a shape this app recognizes."
+      },
+      "dialogLoadError": "Couldn't load the import dialog. Check your connection and try again.",
+      "title": "Import this file?",
+      "currentUpdatedAt": "Your current data was last edited",
+      "fileUpdatedAt": "The file was last edited",
+      "exportFirst": "Export current data first",
+      "replace": "Replace…",
+      "replaceHint": "Discards everything currently on this device.",
+      "replaceConfirm": "This will permanently replace all data on this device with the imported file. This cannot be undone.",
+      "confirmReplace": "Yes, replace",
+      "cancel": "Cancel",
+      "importedSnackbar": "Import complete.",
+      "noPreviewCounts": "This file has no feature data to preview yet."
+    },
+    "export": {
+      "reminder": "You've made changes since your last export. Back up your data from time to time."
     }
   }
 }

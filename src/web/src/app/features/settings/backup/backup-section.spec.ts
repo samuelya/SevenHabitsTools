@@ -7,6 +7,7 @@ import { registerBackupModel } from '../../../core/data/backup/backup.model';
 import { DocumentImportExportService } from '../../../core/data/backup/document-import-export.service';
 import { RootDocument } from '../../../core/data/document.model';
 import { DocumentStore } from '../../../core/data/document.store';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { BackupSection, IMPORT_CONFIRM_DIALOG_LOADER } from './backup-section';
 
 // Vitest here runs with `isolate: false` (shared module state across spec files): re-assert the
@@ -53,6 +54,7 @@ function setUp(
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       {
         provide: DocumentImportExportService,
         useValue: {

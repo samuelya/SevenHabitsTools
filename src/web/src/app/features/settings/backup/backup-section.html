@@ -1,31 +1,31 @@
 <section class="backup-section" id="backup">
-  <h2>{{ labels.text('settings.backup.title') }}</h2>
+  <h2>{{ 'settings.backup.title' | transloco }}</h2>
 
   <div class="backup-section__row">
     <div class="backup-section__buttons">
       <button mat-stroked-button type="button" [disabled]="busy()" (click)="onExportClick()">
-        {{ labels.text('settings.backup.export') }}
+        {{ 'settings.backup.export' | transloco }}
       </button>
       @if (canShare) {
         <button mat-stroked-button type="button" [disabled]="busy()" (click)="onShareClick()">
-          {{ labels.text('settings.backup.share') }}
+          {{ 'settings.backup.share' | transloco }}
         </button>
       }
     </div>
-    <p class="backup-section__hint">{{ labels.text('settings.backup.exportHint') }}</p>
+    <p class="backup-section__hint">{{ 'settings.backup.exportHint' | transloco }}</p>
   </div>
 
   <div class="backup-section__row">
     <button mat-stroked-button type="button" [disabled]="busy()" (click)="triggerImport()">
-      {{ labels.text('settings.backup.import') }}
+      {{ 'settings.backup.import' | transloco }}
     </button>
-    <p class="backup-section__hint">{{ labels.text('settings.backup.importHint') }}</p>
+    <p class="backup-section__hint">{{ 'settings.backup.importHint' | transloco }}</p>
     <input
       #fileInput
       type="file"
       accept=".json,application/json"
       hidden
-      [attr.aria-label]="labels.text('settings.backup.import')"
+      [attr.aria-label]="'settings.backup.import' | transloco"
       (change)="onFileSelected($event)"
     />
     @if (parseError(); as error) {
@@ -34,16 +34,16 @@
   </div>
 
   <div class="backup-section__row">
-    <label for="backup-reminder-days">{{ labels.text('settings.backup.reminderLabel') }}</label>
+    <label for="backup-reminder-days">{{ 'settings.backup.reminderLabel' | transloco }}</label>
     <select
       id="backup-reminder-days"
       [value]="backup.value().reminderDays"
       (change)="onReminderDaysChange($event)"
     >
-      <option value="0">{{ labels.text('settings.backup.reminderOff') }}</option>
-      <option value="1">{{ labels.text('settings.backup.reminderDaily') }}</option>
-      <option value="7">{{ labels.text('settings.backup.reminderWeekly') }}</option>
-      <option value="30">{{ labels.text('settings.backup.reminderMonthly') }}</option>
+      <option value="0">{{ 'settings.backup.reminderOff' | transloco }}</option>
+      <option value="1">{{ 'settings.backup.reminderDaily' | transloco }}</option>
+      <option value="7">{{ 'settings.backup.reminderWeekly' | transloco }}</option>
+      <option value="30">{{ 'settings.backup.reminderMonthly' | transloco }}</option>
     </select>
   </div>
 </section>
