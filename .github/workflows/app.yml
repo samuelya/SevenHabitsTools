@@ -6,10 +6,9 @@ on:
     paths:
       - src/**
       - .github/workflows/app.yml
+  # No paths filter: every PR must run this workflow so `Detect projects` can report
+  # a check (even if skipped) instead of leaving a required check permanently "expected".
   pull_request:
-    paths:
-      - src/**
-      - .github/workflows/app.yml
   workflow_dispatch:
 
 permissions:
@@ -23,6 +22,8 @@ env:
 
 jobs:
   detect:
+    # Name is referenced by the "Protect main" branch ruleset's required status checks;
+    # renaming this job requires updating the ruleset too.
     name: Detect projects
     runs-on: ubuntu-latest
     outputs:
@@ -30,21 +31,48 @@ jobs:
       web: ${{ steps.detect.outputs.web }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history so `git diff` against the base branch works on pull_request;
+          # push/workflow_dispatch don't need it, but the extra fetch is cheap and this
+          # keeps the step unconditional.
+          fetch-depth: 0
 
       - name: Detect api and web projects
         id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          api=false
-          web=false
+          api_exists=false
+          web_exists=false
           if [[ -d src/api ]] && [[ -n "$(find src/api -name '*.csproj' -print -quit)" ]]; then
-            api=true
+            api_exists=true
           fi
           if [[ -f src/web/package.json ]]; then
-            web=true
+            web_exists=true
           fi
-          if [[ "$api" == false && "$web" == false ]]; then
+          if [[ "$api_exists" == false && "$web_exists" == false ]]; then
             echo "::notice::No api (src/api/**/*.csproj) or web (src/web/package.json) project yet; nothing to build."
           fi
+
+          api="$api_exists"
+          web="$web_exists"
+
+          # pull_request has no paths filter (see the `on:` trigger above), so narrow here:
+          # a project only counts as changed when it exists AND its files, or this workflow
+          # file, changed against the PR base. That keeps docs-only PRs green without
+          # running the .NET/Angular pipelines, while still reporting a (skipped) check.
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            changed="$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD")"
+            api=false
+            web=false
+            if [[ "$api_exists" == true ]] && grep -qE '^(src/api/|\.github/workflows/app\.yml)' <<<"$changed"; then
+              api=true
+            fi
+            if [[ "$web_exists" == true ]] && grep -qE '^(src/web/|\.github/workflows/app\.yml)' <<<"$changed"; then
+              web=true
+            fi
+          fi
+
           echo "api=$api web=$web"
           {
             echo "api=$api"
@@ -52,6 +80,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
   api:
+    # Name is referenced by the "Protect main" branch ruleset's required status checks;
+    # renaming this job requires updating the ruleset too.
     name: API build and test
     needs: detect
     if: needs.detect.outputs.api == 'true'
@@ -91,6 +121,8 @@ jobs:
           cache-from: type=gha,scope=api
 
   web:
+    # Name is referenced by the "Protect main" branch ruleset's required status checks;
+    # renaming this job requires updating the ruleset too.
     name: Web lint, test, build and e2e
     needs: detect
     if: needs.detect.outputs.web == 'true'
