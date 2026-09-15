@@ -1,10 +1,13 @@
+import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
 import { FileDownloader } from '../../browser/file-download';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
+import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { STORAGE_ADAPTER } from '../storage-adapter';
 import { DataErrorPage } from './data-error-page';
 
@@ -37,6 +40,14 @@ describe('DataErrorPage', () => {
             addEventListener: vi.fn(),
             removeEventListener: vi.fn(),
           },
+        },
+        // DocumentSync.start() (called from reset()) starts the whole multi-tab sync stack;
+        // these two keep it from touching a real BroadcastChannel or leaving a real interval
+        // running after the test, neither of which this spec is about.
+        { provide: BROADCAST_CHANNEL_FACTORY, useValue: () => null },
+        {
+          provide: WriterLockService,
+          useValue: { start: vi.fn(), stop: vi.fn(), isWriter: signal(true) },
         },
       ],
     });

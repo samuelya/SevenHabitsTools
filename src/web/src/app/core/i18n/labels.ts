@@ -57,6 +57,16 @@ const EN: Readonly<Record<string, string>> = {
     'This will permanently delete the saved data on this device. This cannot be undone.',
   'data.error.cancel': 'Cancel',
   'data.error.confirmReset': 'Yes, start fresh',
+  'data.readOnly.banner':
+    'Read-only — another tab is editing this data. This tab will refresh once that tab closes.',
+  'data.saveError.message': "We couldn't save your latest changes.",
+  'data.saveError.exportNow': 'Export now',
+  'settings.storage.title': 'Storage',
+  'settings.storage.persisted': 'Your data is protected from automatic clearing by the browser.',
+  'settings.storage.notPersisted':
+    'The browser may clear this data under storage pressure. Export a backup from time to time.',
+  'settings.storage.unknown': 'Storage persistence status is not available in this browser.',
+  'settings.storage.usageLabel': 'Used',
 };
 
 @Injectable({ providedIn: 'root' })

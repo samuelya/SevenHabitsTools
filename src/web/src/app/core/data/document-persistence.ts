@@ -3,6 +3,7 @@ import { Injectable, Injector, Signal, effect, inject, signal } from '@angular/c
 import { WINDOW } from '../browser/window';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { DocumentStore } from './document.store';
+import { WRITER_LOCK } from './multi-tab/writer-lock';
 import { SaveReason, STORAGE_ADAPTER } from './storage-adapter';
 
 /** How long to wait after an edit before saving, so rapid changes coalesce into one write. */
@@ -31,12 +32,18 @@ export const SAVE_RETRY_MAX_MS = 60000;
  * Saving is disabled while `DocumentBootstrapStatus` reports `corrupt`: the loaded document is
  * known to be invalid, so nothing here may overwrite what is actually stored until the user picks
  * export-raw or reset (`DataErrorPage`) and status returns to `ready`.
+ *
+ * Saving is disabled the same way while `WRITER_LOCK` reports this tab is not the writer (#35): a
+ * read-only tab must never mark the document dirty (`scheduleSave()`) or call `adapter.save()`
+ * (`runSaveLoop()`), including when `CrossTabSync` reloads its document out from under it — that
+ * reload must not look like a local edit.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentPersistence {
   private readonly store = inject(DocumentStore);
   private readonly adapter = inject(STORAGE_ADAPTER);
   private readonly bootstrapStatus = inject(DocumentBootstrapStatus);
+  private readonly writerLock = inject(WRITER_LOCK);
   private readonly document = inject(DOCUMENT);
   private readonly window = inject(WINDOW);
   private readonly injector = inject(Injector);
@@ -90,6 +97,11 @@ export class DocumentPersistence {
   }
 
   private scheduleSave(): void {
+    if (!this.writerLock.isWriter()) {
+      // A read-only tab's document only ever changes because CrossTabSync just reloaded it from
+      // the writer's save; that is not a local edit, so it must never be marked dirty.
+      return;
+    }
     this.dirtySignal.set(true);
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => void this.ensureSaving('debounce'), SAVE_DEBOUNCE_MS);
@@ -124,6 +136,11 @@ export class DocumentPersistence {
       if (this.bootstrapStatus.state() !== 'ready') {
         // Stay dirty: once the user resolves the corrupt document (export/reset), the resulting
         // document change re-triggers a save.
+        return;
+      }
+      if (!this.writerLock.isWriter()) {
+        // Defense in depth alongside the `scheduleSave()` gate above: a tab that lost the writer
+        // lock while a save was already in flight must not let this loop save again.
         return;
       }
       const doc = this.store.document();

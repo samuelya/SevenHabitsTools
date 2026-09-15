@@ -9,6 +9,7 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { ReadOnlyBanner } from '../../data/multi-tab/read-only-banner';
 import { Labels } from '../../i18n/labels';
 import { GithubLink } from '../../../shared/ui/github-link/github-link';
 import { AppTitleStrategy } from '../app-title-strategy';
@@ -30,6 +31,7 @@ export const HANDSET_QUERY = '(max-width: 599.98px)';
     MatRippleModule,
     MatSidenavModule,
     MatToolbarModule,
+    ReadOnlyBanner,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
