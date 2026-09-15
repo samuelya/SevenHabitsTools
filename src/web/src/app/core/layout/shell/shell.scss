@@ -7,22 +7,45 @@
   block-size: 100%;
 }
 
+// `mat-sidenav` projects its content into Angular Material's own `.mat-drawer-inner-container`
+// (a separate component's template, styled `height: 100%; overflow: auto` so the whole sidenav
+// scrolled as one block). Turning it into a flex column here is what pins `.side-nav__footer` to
+// the bottom: `.side-nav__main` becomes the sole scrollable region and the footer is a fixed-size
+// item after it, so it can never be scrolled out of view or overlapped.
+mat-sidenav {
+  ::ng-deep .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
 .side-nav__brand {
+  flex: none;
   padding-block: 20px 12px;
   padding-inline: 24px;
   font: var(--mat-sys-title-medium);
   color: var(--mat-sys-primary);
 }
 
+.side-nav__main {
+  flex: 1 1 auto;
+  min-block-size: 0; // lets this flex item shrink so overflow-y actually scrolls
+  overflow-y: auto;
+}
+
 .side-nav__footer {
-  margin-block-start: 8px;
+  flex: none;
   border-block-start: 1px solid var(--mat-sys-outline-variant);
 }
 
-.side-nav__github {
-  display: flex;
-  padding-inline: 12px;
-  padding-block: 4px 12px;
+// `mat-list-item`'s own `.mdc-list-item:focus { outline: 0; }` suppresses the browser's default
+// ring; the app doesn't opt into Angular Material's strong-focus-indicators theme mixin, so every
+// row (main nav and footer) gets an explicit, visible one here instead. The element selector
+// keeps this ahead of the mdc rule on specificity regardless of stylesheet insertion order.
+a.side-nav__row:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -2px;
 }
 
 .shell__content {

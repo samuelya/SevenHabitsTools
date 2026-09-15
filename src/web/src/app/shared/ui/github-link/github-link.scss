@@ -1,36 +1,29 @@
 :host {
-  display: inline-flex;
+  display: block;
 }
 
-.github-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-inline-size: 44px;
-  min-block-size: 44px;
-  padding-inline: 10px;
-  border-radius: 22px;
+// `mat-list-item` already provides the row height, icon column, hover, ripple and (inside a
+// `mat-nav-list`) the pill shape; only the focus ring needs a manual, visible replacement, since
+// the app doesn't opt into Angular Material's strong-focus-indicators theme mixin. The element
+// selector (`a.github-link`) outweighs `.mdc-list-item:focus { outline: 0; }` regardless of the
+// two components' stylesheet insertion order.
+a.github-link:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -2px;
+}
+
+.github-link__external {
+  inline-size: 18px;
+  block-size: 18px;
+  font-size: 18px;
   color: var(--mat-sys-on-surface-variant);
-  text-decoration: none;
-  outline: none;
 
-  &:hover {
-    background: var(--mat-sys-surface-container-high);
+  // `matListItemMeta`'s own CSS (`.mdc-list-item__end`) sets `font-family` to the row's trailing
+  // supporting-text token, for any element in that slot including icons — which overrides the
+  // ligature font `mat-icon` needs to render `open_in_new` as a glyph instead of literal text.
+  // Restated here to match `.material-symbols-outlined` (src/styles.scss); the combined selector
+  // outweighs `.mdc-list-item__end` regardless of stylesheet insertion order.
+  &.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined';
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: 2px;
-  }
-}
-
-.github-link__icon {
-  inline-size: 20px;
-  block-size: 20px;
-}
-
-.github-link__label {
-  font: var(--mat-sys-label-large);
-  white-space: nowrap;
 }

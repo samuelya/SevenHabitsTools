@@ -12,12 +12,18 @@ import { AppVersionService } from './app-version.service';
     <p>{{ labels.text('about.notAffiliated') }}</p>
     <p>{{ labels.text('about.recommendation') }}</p>
     <p>{{ labels.text('about.versionLabel') }}: {{ appVersion.version() ?? unknownVersion }}</p>
-    <p>
-      <app-github-link [showLabel]="true" />
-    </p>
+    <div class="about-page__github">
+      <app-github-link [showLabel]="true" [showExternalIcon]="true" />
+    </div>
     <p>
       <a routerLink="/settings" fragment="privacy">{{ labels.text('about.privacyLink') }}</a>
     </p>
+  `,
+  styles: `
+    .about-page__github {
+      margin-block: 16px;
+      max-inline-size: 320px;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

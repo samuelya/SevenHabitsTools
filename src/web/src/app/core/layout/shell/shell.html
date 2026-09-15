@@ -10,6 +10,7 @@
         @for (item of navItems; track item.path) {
           <a
             mat-list-item
+            class="side-nav__row"
             [routerLink]="item.path"
             routerLinkActive
             #rla="routerLinkActive"
@@ -28,6 +29,7 @@
       <mat-nav-list>
         <a
           mat-list-item
+          class="side-nav__row"
           routerLink="/about"
           routerLinkActive
           #aboutLink="routerLinkActive"
@@ -37,10 +39,8 @@
           <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
           <span matListItemTitle>{{ labels.text('nav.about') }}</span>
         </a>
+        <app-github-link [showLabel]="true" [showExternalIcon]="true" />
       </mat-nav-list>
-      <div class="side-nav__github">
-        <app-github-link />
-      </div>
     </nav>
   </mat-sidenav>
 

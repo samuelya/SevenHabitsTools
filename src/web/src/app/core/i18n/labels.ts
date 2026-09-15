@@ -15,6 +15,9 @@ const EN: Readonly<Record<string, string>> = {
   'nav.settings': 'Settings',
   'nav.about': 'About',
   'nav.github': 'GitHub',
+  // Accessible name for the GitHub row/link: states that it opens in a new tab since the visible
+  // label ("nav.github") and icon alone don't convey that to assistive tech.
+  'nav.githubExternalLabel': 'GitHub, opens in a new tab',
   'home.welcome': 'Work through every exercise of the seven habits, at your own pace.',
   'home.browseHabits': 'Browse habits',
   'habits.intro': 'Pick a habit to see its exercises.',
@@ -40,9 +43,6 @@ const EN: Readonly<Record<string, string>> = {
     'is the best way to get the most from these exercises.',
   'about.versionLabel': 'Version',
   'about.versionUnknown': 'unknown',
-  // Reused as both the side-nav footer link's accessible name/tooltip and the About page link's
-  // accessible name; the short visible label next to the icon is `nav.github`.
-  'about.repoLink': 'Source code on GitHub',
   'about.privacyLink': 'Privacy note',
   'settings.privacyTitle': 'Privacy',
   'settings.privacyNote':
