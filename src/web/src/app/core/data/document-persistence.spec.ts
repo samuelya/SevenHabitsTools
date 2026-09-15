@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
+import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { DocumentPersistence, SAVE_DEBOUNCE_MS, SAVE_RETRY_MS } from './document-persistence';
 import { DocumentStore } from './document.store';
 import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
@@ -208,6 +209,42 @@ describe('DocumentPersistence', () => {
     expect(persistence.dirty()).toBe(false);
     expect(persistence.saveError()).toBeNull();
     expect(persistence.lastSavedAt()).not.toBeNull();
+  });
+
+  it('never calls adapter.save while the loaded document is reported corrupt (#111)', async () => {
+    const { persistence, store, save } = setUp();
+    TestBed.inject(DocumentBootstrapStatus).reportCorrupt({ schemaVersion: 99 }, new Error('bad'));
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    await persistence.flush();
+
+    expect(save).not.toHaveBeenCalled();
+    expect(persistence.dirty()).toBe(true);
+  });
+
+  it('resumes saving once status returns to ready', async () => {
+    const { persistence, store, save } = setUp();
+    const status = TestBed.inject(DocumentBootstrapStatus);
+    status.reportCorrupt({ schemaVersion: 99 }, new Error('bad'));
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    expect(save).not.toHaveBeenCalled();
+
+    status.reportReady();
+    store.update('settings', () => ({ theme: 'darker' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.dirty()).toBe(false);
   });
 
   it('start() is idempotent', () => {

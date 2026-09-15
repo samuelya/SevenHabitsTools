@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, Injector, Signal, effect, inject, signal } from '@angular/core';
 import { WINDOW } from '../browser/window';
+import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { DocumentStore } from './document.store';
 import { SaveReason, STORAGE_ADAPTER } from './storage-adapter';
 
@@ -21,11 +22,16 @@ export const SAVE_RETRY_MS = 5000;
  * `adapter.save()` call is ever in flight, and if the document changes again while a save is
  * running, the loop saves the newer document before clearing `dirty` — an edit made mid-save is
  * never dropped. A failed save is caught (never an unhandled rejection) and retried.
+ *
+ * Saving is disabled while `DocumentBootstrapStatus` reports `corrupt`: the loaded document is
+ * known to be invalid, so nothing here may overwrite what is actually stored until the user picks
+ * export-raw or reset (`DataErrorPage`) and status returns to `ready`.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentPersistence {
   private readonly store = inject(DocumentStore);
   private readonly adapter = inject(STORAGE_ADAPTER);
+  private readonly bootstrapStatus = inject(DocumentBootstrapStatus);
   private readonly document = inject(DOCUMENT);
   private readonly window = inject(WINDOW);
   private readonly injector = inject(Injector);
@@ -109,6 +115,11 @@ export class DocumentPersistence {
    * newer document too — repeating until the saved document is the current one. */
   private async runSaveLoop(reason: SaveReason): Promise<void> {
     for (;;) {
+      if (this.bootstrapStatus.state() !== 'ready') {
+        // Stay dirty: once the user resolves the corrupt document (export/reset), the resulting
+        // document change re-triggers a save.
+        return;
+      }
       const doc = this.store.document();
       try {
         await this.adapter.save(doc, { reason });
