@@ -4,6 +4,7 @@ import {
   provideAppInitializer,
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
 import {
   provideRouter,
@@ -19,6 +20,7 @@ import { ROUTE_REGISTRY } from './route-registry';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    provideHttpClient(),
     provideRouter(
       routes,
       withComponentInputBinding(),

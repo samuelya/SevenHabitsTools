@@ -5,7 +5,7 @@
     [disableClose]="!handset()"
   >
     <div class="side-nav__brand">{{ labels.text('app.name') }}</div>
-    <nav [attr.aria-label]="labels.text('nav.main')">
+    <nav class="side-nav__main" [attr.aria-label]="labels.text('nav.main')">
       <mat-nav-list>
         @for (item of navItems; track item.path) {
           <a
@@ -21,6 +21,22 @@
             <span matListItemTitle>{{ labels.text(item.labelKey) }}</span>
           </a>
         }
+      </mat-nav-list>
+    </nav>
+
+    <nav class="side-nav__footer" [attr.aria-label]="labels.text('about.title')">
+      <mat-nav-list>
+        <a
+          mat-list-item
+          routerLink="/about"
+          routerLinkActive
+          #aboutLink="routerLinkActive"
+          ariaCurrentWhenActive="page"
+          [activated]="aboutLink.isActive"
+        >
+          <mat-icon matListItemIcon aria-hidden="true">info</mat-icon>
+          <span matListItemTitle>{{ labels.text('nav.about') }}</span>
+        </a>
       </mat-nav-list>
     </nav>
   </mat-sidenav>

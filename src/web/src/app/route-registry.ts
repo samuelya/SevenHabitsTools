@@ -11,4 +11,5 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
   { path: 'plan', loadChildren: () => import('./features/plan/plan.routes') },
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },
+  { path: 'about', loadChildren: () => import('./features/about/about.routes') },
 ];

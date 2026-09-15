@@ -1,8 +1,12 @@
 # Seven Habits Tools
 
-A mobile-first personal planning app for working through the exercises in *The 7 Habits of Highly
-Effective People*. See the pinned "Architecture & conventions" GitHub issue for the full design.
-**Not affiliated with, endorsed by or licensed by FranklinCovey.**
+A mobile-first personal planning app that helps you practise the exercises in *The 7 Habits of
+Highly Effective People* by Stephen R. Covey. See the pinned "Architecture & conventions" GitHub
+issue for the full design; content rules for exercise prompts are in [`CONTENT.md`](CONTENT.md).
+
+This is an **independent personal tool**, not affiliated with, endorsed by or licensed by
+FranklinCovey or the book's publisher. It's a practice companion, not a replacement — reading the
+book is the best way to get the most out of these exercises.
 
 ## Run locally
 
