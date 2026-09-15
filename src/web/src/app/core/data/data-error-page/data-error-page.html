@@ -1,0 +1,14 @@
+<div class="data-error-page">
+  <h1 class="page-heading">{{ labels.text('data.error.title') }}</h1>
+  <p>{{ labels.text(status.messageKey() ?? 'data.bootstrap.corrupt') }}</p>
+  <div class="data-error-page__actions">
+    @if (canExport()) {
+      <button mat-stroked-button type="button" (click)="exportRaw()">
+        {{ labels.text('data.error.exportRaw') }}
+      </button>
+    }
+    <button mat-flat-button type="button" (click)="reset()">
+      {{ labels.text('data.error.reset') }}
+    </button>
+  </div>
+</div>

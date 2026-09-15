@@ -6,21 +6,25 @@ export interface BaseRecord {
   deletedAt?: string;
 }
 
-/** Creates a new record with a fresh UUID v4 id and matching `createdAt`/`updatedAt`. */
-export function newRecord<T extends object>(fields: T): T & BaseRecord {
-  const now = new Date().toISOString();
-  return { ...fields, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+/**
+ * Creates a new record with a fresh UUID v4 id and matching `createdAt`/`updatedAt`. `now`
+ * defaults to the real current time; callers with an injected `Clock` (e.g. `DocumentStore`) pass
+ * `clock.now()` so timestamps are testable without racing real time.
+ */
+export function newRecord<T extends object>(fields: T, now: Date = new Date()): T & BaseRecord {
+  const timestamp = now.toISOString();
+  return { ...fields, id: crypto.randomUUID(), createdAt: timestamp, updatedAt: timestamp };
 }
 
-/** Returns a copy of `record` with `updatedAt` refreshed to now. */
-export function touch<T extends BaseRecord>(record: T): T {
-  return { ...record, updatedAt: new Date().toISOString() };
+/** Returns a copy of `record` with `updatedAt` refreshed to `now`. */
+export function touch<T extends BaseRecord>(record: T, now: Date = new Date()): T {
+  return { ...record, updatedAt: now.toISOString() };
 }
 
 /** Returns a copy of `record` tombstoned (`deletedAt` set) rather than removed. */
-export function softDelete<T extends BaseRecord>(record: T): T {
-  const now = new Date().toISOString();
-  return { ...record, updatedAt: now, deletedAt: now };
+export function softDelete<T extends BaseRecord>(record: T, now: Date = new Date()): T {
+  const timestamp = now.toISOString();
+  return { ...record, updatedAt: timestamp, deletedAt: timestamp };
 }
 
 /** True when `record` has not been tombstoned. */

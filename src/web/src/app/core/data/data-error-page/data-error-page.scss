@@ -1,0 +1,20 @@
+:host {
+  display: block;
+  block-size: 100dvh;
+  overflow-y: auto;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+.data-error-page {
+  max-inline-size: 480px;
+  margin-inline: auto;
+  padding: 24px 16px;
+}
+
+.data-error-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 16px;
+}

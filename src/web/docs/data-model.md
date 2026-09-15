@@ -69,3 +69,22 @@ stored shape. `src/app/core/data/migrations/`:
 
 Add a fixture per schema version under `src/app/testing/fixtures/document-v<n>.json` and a test
 that runs it through `migrateDocument()` up to the current version.
+
+## Store, persistence and bootstrap
+
+- `DocumentStore` (`document.store.ts`) holds the document as a signal. Read through `select(path)`
+  or the typed `featureStore<T>(key)` facade (`feature-store.ts`), resolved from a feature's
+  `registerModel()` registration. Write through `update(path, updater)`, `upsertRecord(path, record)`
+  and `softDeleteRecord(path, id)` — nothing else mutates the document. Timestamps come from the
+  injected `Clock` (`core/time/clock.ts`), not `new Date()` directly, so tests can fix the time.
+- `StorageAdapter` (`storage-adapter.ts`) is the persistence seam: `load()`, `save(doc, { reason })`,
+  `clear()`, `kind`. Every implementation — `NoopAdapter` (the in-memory stand-in used by tests and,
+  until #35 lands, the app itself), the IndexedDB adapter, OneDrive and Google Drive later — must
+  pass `describeStorageAdapterContract()` (`storage-adapter.contract.ts`).
+- `DocumentPersistence` (`document-persistence.ts`) watches the store and saves through the adapter:
+  debounced 500 ms after an edit, flushed immediately on `visibilitychange` → hidden and `pagehide`.
+  `dirty`/`lastSavedAt` are exposed for a UI status indicator.
+- `document-bootstrap.ts` loads the document on startup (an app initializer in `app.config.ts`):
+  nothing stored → `createEmptyDocument()`; a load or migration failure → `DocumentBootstrapStatus`
+  reports `corrupt` and `App` renders `DataErrorPage` (export the raw file, or reset) instead of the
+  shell.
