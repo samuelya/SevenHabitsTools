@@ -53,13 +53,13 @@ is exactly how issue #118 (production stylesheet stuck on `media="print"` becaus
 the critical-CSS `onload`) went undetected until it shipped. Running behind the real CSP here means
 the same class of bug fails in this suite instead.
 
-Two `smoke.spec.ts` assertions exist for this: the global stylesheet actually applies (icon font,
-via `document.fonts`) and no `securitypolicyviolation` fires on load (`cspViolations` fixture).
-Both are currently `test.fixme`, pointing at #118 — they fail today because #118 isn't fixed yet
-(verified locally; that's expected). Unskip them once #118 disables
-`optimization.styles.inlineCritical` for the production build configuration in `angular.json`.
-The rest of the suite, including the accessibility scans, already runs behind this CSP and found
-no new violations caused by #118's broken stylesheet.
+Three `smoke.spec.ts` assertions guard against this regressing: the global stylesheet actually
+applies (icon font, via `document.fonts`), no `securitypolicyviolation` fires on load
+(`cspViolations` fixture), and the served `index.html` has no `<link rel="stylesheet">` with
+`media="print"` or an inline `onload` handler. #118 disabled
+`optimization.styles.inlineCritical` for the production build configuration in `angular.json` to
+fix this; the rest of the suite, including the accessibility scans, already ran behind this CSP
+and found no violations caused by #118's broken stylesheet.
 
 ## Fixtures (`e2e/fixtures.ts`)
 
