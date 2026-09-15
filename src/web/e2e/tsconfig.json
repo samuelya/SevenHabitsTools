@@ -1,0 +1,11 @@
+/* Type-checking scope for the Playwright suite, kept separate from tsconfig.app.json/
+   tsconfig.spec.json so e2e code is never bundled into the app or the unit-test build. */
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["**/*.ts", "../playwright.config.ts"]
+}
