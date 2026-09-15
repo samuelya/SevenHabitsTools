@@ -1,0 +1,40 @@
+.import-confirm-dialog {
+  max-inline-size: 420px;
+}
+
+.import-confirm-dialog__dates {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0 0 16px;
+
+  dt {
+    font-weight: 500;
+  }
+
+  dd {
+    margin-inline-start: 0;
+  }
+}
+
+.import-confirm-dialog__counts {
+  margin: 0 0 16px;
+  padding-inline-start: 20px;
+}
+
+.import-confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-inline: 0;
+}
+
+.import-confirm-dialog__hint {
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant);
+  margin-block: 4px;
+}
+
+.import-confirm-dialog__confirm {
+  margin-block-start: 8px;
+}

@@ -1,11 +1,30 @@
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
+import { registerBackupModel } from '../../core/data/backup/backup.model';
+import { NoopAdapter } from '../../core/data/noop-storage-adapter';
+import {
+  ModelRegistration,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+} from '../../core/data/registry';
 import {
   StorageEstimateInfo,
   StoragePersistenceService,
 } from '../../core/data/storage-persistence.service';
+import { STORAGE_ADAPTER } from '../../core/data/storage-adapter';
 import { SettingsPage } from './settings-page';
+
+// Vitest here runs with `isolate: false` (shared module state across spec files): snapshot the
+// baseline and register `backup` before each test (the embedded `BackupSection` calls
+// `featureStore('backup')`), then restore exactly that baseline after — not a blind clear,
+// matching `registry.spec.ts`.
+let registryBaseline: ReadonlyMap<string, ModelRegistration>;
+beforeEach(() => {
+  registryBaseline = snapshotRegistryForTesting();
+  registerBackupModel();
+});
+afterEach(() => resetRegistryForTesting(registryBaseline));
 
 function text(fixture: { nativeElement: HTMLElement }, selector: string): string {
   return fixture.nativeElement.querySelector(selector)?.textContent?.trim() ?? '';
@@ -15,6 +34,10 @@ function setUp(persisted: boolean | null, estimate: StorageEstimateInfo | null) 
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      // BackupSection (embedded below) resolves DocumentImportExportService, which needs a
+      // STORAGE_ADAPTER (the one token in that chain with no safe default) even though this suite
+      // never exercises export/import itself.
+      { provide: STORAGE_ADAPTER, useClass: NoopAdapter },
       {
         provide: StoragePersistenceService,
         useValue: { persisted: signal(persisted), estimate: signal(estimate) },

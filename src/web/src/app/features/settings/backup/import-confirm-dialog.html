@@ -1,0 +1,47 @@
+<h2 matDialogTitle>{{ labels.text('data.import.title') }}</h2>
+
+<div matDialogContent class="import-confirm-dialog">
+  <dl class="import-confirm-dialog__dates">
+    <dt>{{ labels.text('data.import.fileUpdatedAt') }}</dt>
+    <dd>{{ data.preview.updatedAt | date: 'medium' }}</dd>
+    <dt>{{ labels.text('data.import.currentUpdatedAt') }}</dt>
+    <dd>{{ data.currentUpdatedAt | date: 'medium' }}</dd>
+  </dl>
+
+  @if (hasCounts()) {
+    <ul class="import-confirm-dialog__counts">
+      @for (count of data.preview.counts; track count.key) {
+        <li>{{ count.key }}: {{ count.count }}</li>
+      }
+    </ul>
+  } @else {
+    <p>{{ labels.text('data.import.noPreviewCounts') }}</p>
+  }
+
+  @if (!confirmingReplace()) {
+    <div matDialogActions class="import-confirm-dialog__actions">
+      <button mat-stroked-button type="button" (click)="exportFirst()">
+        {{ labels.text('data.import.exportFirst') }}
+      </button>
+      <button mat-flat-button color="warn" type="button" (click)="startReplace()">
+        {{ labels.text('data.import.replace') }}
+      </button>
+      <button mat-button type="button" matDialogClose>
+        {{ labels.text('data.import.cancel') }}
+      </button>
+    </div>
+    <p class="import-confirm-dialog__hint">{{ labels.text('data.import.replaceHint') }}</p>
+  } @else {
+    <div class="import-confirm-dialog__confirm" aria-live="polite">
+      <p>{{ labels.text('data.import.replaceConfirm') }}</p>
+      <div matDialogActions class="import-confirm-dialog__actions">
+        <button #cancelButton mat-stroked-button type="button" (click)="cancelReplace()">
+          {{ labels.text('data.import.cancel') }}
+        </button>
+        <button mat-flat-button color="warn" type="button" (click)="confirmReplace()">
+          {{ labels.text('data.import.confirmReplace') }}
+        </button>
+      </div>
+    </div>
+  }
+</div>

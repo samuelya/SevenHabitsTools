@@ -4,11 +4,12 @@ import { IDBFactory } from 'fake-indexeddb';
 import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
 import { FileDownloader } from '../../browser/file-download';
 import { INDEXED_DB } from '../../browser/indexed-db';
+import { WEB_SHARE } from '../../browser/web-share';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
-import { RootDocument } from '../document.model';
+import { CURRENT_SCHEMA_VERSION, RootDocument } from '../document.model';
 import { DocumentStore } from '../document.store';
 import { IndexedDbAdapter } from '../indexeddb/indexeddb-adapter';
 import { WriterLockService } from '../multi-tab/writer-lock.service';
@@ -37,6 +38,10 @@ describe('DataErrorPage', () => {
       providers: [
         { provide: STORAGE_ADAPTER, useValue: adapter },
         { provide: DEVICE_ID_SOURCE, useValue: { id: () => 'device-1' } },
+        // DocumentImportExportService (the new "Import a backup" control, #150) injects WEB_SHARE;
+        // its default factory reads navigator.userAgent, which the plain WINDOW fake below doesn't
+        // have.
+        { provide: WEB_SHARE, useValue: null },
         {
           provide: WINDOW,
           useValue: {
@@ -75,6 +80,7 @@ describe('DataErrorPage', () => {
     );
     expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual([
       'Try again',
+      'Import a backup',
       'Start fresh',
     ]);
   });
@@ -104,6 +110,53 @@ describe('DataErrorPage', () => {
       'seven-habits-tools-backup.json',
       JSON.stringify({ schemaVersion: 99 }, null, 2),
     );
+  });
+
+  it('#150: "Import a backup" replaces the corrupt document, recovers, and saves it', async () => {
+    const status = TestBed.inject(DocumentBootstrapStatus);
+    status.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+    const store = TestBed.inject(DocumentStore);
+    const backup = {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      meta: { createdAt: 't1', updatedAt: 't2', appVersion: '0.0.0', deviceId: 'recovered-device' },
+      profile: {},
+      settings: {},
+      shared: {},
+      habits: {},
+      extras: {},
+    };
+
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      value: [new File([JSON.stringify(backup)], 'backup.json', { type: 'application/json' })],
+      configurable: true,
+    });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+
+    expect(status.state()).toBe('ready');
+    expect(store.document()).toEqual(backup);
+  });
+
+  it('shows a translated error and stays on the error page when the imported file is invalid', async () => {
+    const status = TestBed.inject(DocumentBootstrapStatus);
+    status.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('input[type="file"]') as HTMLInputElement;
+    Object.defineProperty(input, 'files', {
+      value: [new File(['not json'], 'bad.json', { type: 'application/json' })],
+      configurable: true,
+    });
+    input.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(status.state()).toBe('corrupt');
+    expect(text(fixture, '.data-error-page__error')).toContain("isn't a JSON file");
   });
 
   it('"Start fresh" shows a confirmation instead of clearing storage immediately', () => {
@@ -154,6 +207,7 @@ describe('DataErrorPage', () => {
     expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual([
       'Try again',
       'Export raw file',
+      'Import a backup',
       'Start fresh',
     ]);
   });

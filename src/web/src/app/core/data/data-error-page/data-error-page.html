@@ -12,10 +12,24 @@
           {{ labels.text('data.error.exportRaw') }}
         </button>
       }
+      <button mat-stroked-button type="button" (click)="triggerImport()">
+        {{ labels.text('data.error.importBackup') }}
+      </button>
       <button mat-button type="button" (click)="confirmReset()">
         {{ labels.text('data.error.reset') }}
       </button>
     </div>
+    <input
+      #importInput
+      type="file"
+      accept=".json,application/json"
+      hidden
+      [attr.aria-label]="labels.text('data.error.importBackup')"
+      (change)="onImportFileSelected($event)"
+    />
+    @if (importError(); as error) {
+      <p class="data-error-page__error" role="alert">{{ error }}</p>
+    }
   } @else {
     <div class="data-error-page__confirm" aria-live="polite">
       <p>{{ labels.text('data.error.resetConfirm') }}</p>

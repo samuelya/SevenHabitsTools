@@ -58,6 +58,7 @@ export class DocumentPersistence {
 
   private started = false;
   private isFirstRun = true;
+  private wasWriter = false;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private retryAttempt = 0;
@@ -92,6 +93,26 @@ export class DocumentPersistence {
       },
       { injector: this.injector },
     );
+    // A save attempted while this tab wasn't (yet) the writer stays dirty (`runSaveLoop()`'s
+    // `!isWriter()` gate) with nothing else retrying it once that changes. That's fine for the
+    // ordinary case — the tab starts as `pending`/`reader` and only makes edits once it already
+    // knows it's the writer — but `saveNow()` right after `DocumentSync.start()` (the corrupt-
+    // recovery import, #150) races the real writer-lock grant, which is genuinely asynchronous
+    // (`navigator.locks.request()`): becoming the writer a moment later must not leave the import
+    // stuck dirty until the next unrelated edit. Retries only on the `false → true` edge of
+    // `isWriter()` (`wasWriter`), the same edge-detection `WriterRoleState.promoted` uses — not
+    // whenever `isWriter() && dirty()` both simply happen to be true, which would also fire on
+    // every ordinary edit and save it immediately instead of after the debounce delay.
+    effect(
+      () => {
+        const isWriter = this.writerLock.isWriter();
+        if (isWriter && !this.wasWriter && this.dirtySignal()) {
+          void this.ensureSaving('flush');
+        }
+        this.wasWriter = isWriter;
+      },
+      { injector: this.injector },
+    );
     this.document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.window.addEventListener('pagehide', this.onPageHide);
   }
@@ -113,6 +134,23 @@ export class DocumentPersistence {
     this.debounceTimer = undefined;
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    await this.ensureSaving('flush');
+  }
+
+  /**
+   * Saves the current document immediately, marking it dirty itself rather than waiting for the
+   * `effect()` in `start()` to notice — for a caller that just replaced the whole document through
+   * a non-edit path (`DocumentStore.replaceDocument`, e.g. a JSON import) and needs it durably
+   * saved before returning, without depending on when Angular next runs that effect. Still subject
+   * to the same corrupt/read-only gates as every other save (`runSaveLoop()`), so it is a safe
+   * no-op if called from the wrong state.
+   */
+  async saveNow(): Promise<void> {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = undefined;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.dirtySignal.set(true);
     await this.ensureSaving('flush');
   }
 

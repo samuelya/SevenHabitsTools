@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   effect,
   inject,
@@ -12,6 +13,7 @@ import { FileDownloader } from '../../browser/file-download';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { Labels } from '../../i18n/labels';
+import { DocumentImportExportService } from '../backup/document-import-export.service';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentStore } from '../document.store';
 import { DocumentSync } from '../document-sync';
@@ -21,8 +23,10 @@ import { STORAGE_ADAPTER } from '../storage-adapter';
 /**
  * Shown by `App` instead of the shell when `DocumentBootstrapStatus` reports the stored document
  * could not be loaded. "Try again" (reload) is the primary, non-destructive action; exporting the
- * raw file is offered when there is data to export; "Start fresh" — the only irreversible action —
- * requires a confirmation step (with "Cancel" focused by default) before it clears storage.
+ * raw file is offered when there is data to export; "Import a backup" recovers from a previously
+ * exported JSON file, replacing the unreadable document outright (there is nothing valid here to
+ * merge with); "Start fresh" — the only irreversible action with no way back — requires a
+ * confirmation step (with "Cancel" focused by default) before it clears storage.
  */
 @Component({
   selector: 'app-data-error-page',
@@ -37,14 +41,17 @@ export class DataErrorPage {
   private readonly downloader = inject(FileDownloader);
   private readonly store = inject(DocumentStore);
   private readonly documentSync = inject(DocumentSync);
+  private readonly importExport = inject(DocumentImportExportService);
   private readonly window = inject(WINDOW);
   protected readonly status = inject(DocumentBootstrapStatus);
   protected readonly labels = inject(Labels);
 
   protected readonly canExport = computed(() => this.status.raw() !== null);
   protected readonly confirmingReset = signal(false);
+  protected readonly importError = signal<string | null>(null);
 
   private readonly cancelButton = viewChild<HTMLButtonElement>('cancelButton');
+  private readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
 
   constructor() {
     // Move focus to the safe ("Cancel") option as soon as the confirmation step appears, so a
@@ -66,6 +73,31 @@ export class DataErrorPage {
       return;
     }
     this.downloader.download('seven-habits-tools-backup.json', JSON.stringify(raw, null, 2));
+  }
+
+  protected triggerImport(): void {
+    this.importError.set(null);
+    this.importInput()?.nativeElement.click();
+  }
+
+  protected async onImportFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) {
+      return;
+    }
+    const raw = await file.text();
+    const result = this.importExport.parseImportFile(raw);
+    if (!result.ok) {
+      this.importError.set(this.labels.text(result.messageKey));
+      return;
+    }
+    this.importError.set(null);
+    // Recovers the same way reset() does — DocumentImportExportService.applyImport() detects the
+    // corrupt state itself and reports ready / starts DocumentSync — except this keeps the
+    // imported data instead of discarding it.
+    await this.importExport.replaceWithImport(result.document);
   }
 
   protected confirmReset(): void {
