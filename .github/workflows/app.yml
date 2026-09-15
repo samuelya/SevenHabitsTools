@@ -91,7 +91,7 @@ jobs:
           cache-from: type=gha,scope=api
 
   web:
-    name: Web lint, test and build
+    name: Web lint, test, build and e2e
     needs: detect
     if: needs.detect.outputs.web == 'true'
     runs-on: ubuntu-latest
@@ -113,6 +113,23 @@ jobs:
       - run: npm run lint --if-present
       - run: npm test --if-present
       - run: npm run build
+
+      # Playwright smoke suite (issue #29): served from the production build, no Docker.
+      - run: npx playwright install chromium
+
+      - name: E2E smoke suite
+        run: npm run e2e
+
+      - name: Upload Playwright report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            src/web/playwright-report
+            src/web/test-results
+          retention-days: 7
+          if-no-files-found: ignore
 
   images:
     name: Build and push images
