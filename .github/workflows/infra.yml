@@ -6,10 +6,9 @@ on:
     paths:
       - infra/**
       - .github/workflows/infra.yml
+  # No paths filter: every PR must run this workflow so `Lint and build Bicep` can report
+  # a check (even if skipped) instead of leaving a required check permanently "expected".
   pull_request:
-    paths:
-      - infra/**
-      - .github/workflows/infra.yml
   workflow_dispatch:
 
 permissions:
@@ -23,8 +22,46 @@ env:
   PLACEHOLDER_WEB_IMAGE: mcr.microsoft.com/k8se/quickstart:latest
 
 jobs:
+  detect:
+    name: Detect infra changes
+    runs-on: ubuntu-latest
+    outputs:
+      infra: ${{ steps.detect.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so `git diff` against the base branch works on pull_request;
+          # push/workflow_dispatch don't need it, but the extra fetch is cheap and this
+          # keeps the step unconditional.
+          fetch-depth: 0
+
+      - name: Detect infra changes
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          infra=true
+
+          # pull_request has no paths filter (see the `on:` trigger above), so narrow here:
+          # only require Bicep lint/build when infra files, or this workflow, changed against
+          # the PR base. That keeps non-infra PRs green without running `az bicep`.
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            changed="$(git diff --name-only "origin/$GITHUB_BASE_REF...HEAD")"
+            infra=false
+            if grep -qE '^(infra/|\.github/workflows/infra\.yml)' <<<"$changed"; then
+              infra=true
+            fi
+          fi
+
+          echo "infra=$infra"
+          echo "infra=$infra" >> "$GITHUB_OUTPUT"
+
   validate:
+    # Name is referenced by the "Protect main" branch ruleset's required status checks;
+    # renaming this job requires updating the ruleset too.
     name: Lint and build Bicep
+    needs: detect
+    if: needs.detect.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
