@@ -1,4 +1,4 @@
 import { Routes } from '@angular/router';
-import { PlaceholderPage } from '../../shared/ui/placeholder-page/placeholder-page';
+import { SettingsPage } from './settings-page';
 
-export default [{ path: '', title: 'nav.settings', component: PlaceholderPage }] satisfies Routes;
+export default [{ path: '', title: 'nav.settings', component: SettingsPage }] satisfies Routes;

@@ -41,7 +41,16 @@ describe('Shell', () => {
 
       expect(host.querySelector('.bottom-nav')).toBeNull();
       expect(host.querySelector('mat-sidenav')?.classList).toContain('mat-drawer-opened');
-      expect(host.querySelectorAll('mat-sidenav nav a').length).toBe(5);
+      expect(host.querySelectorAll('mat-sidenav .side-nav__main a').length).toBe(5);
+    });
+
+    it('links to the About page from the side navigation footer', async () => {
+      const fixture = await renderShellAt('/');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const about = host.querySelector<HTMLAnchorElement>('.side-nav__footer a');
+      expect(about?.getAttribute('href')).toBe('/about');
+      expect(text(about?.querySelector('[matListItemTitle]'))).toBe('About');
     });
 
     it('shows the page title and hides the back button on top-level pages', async () => {

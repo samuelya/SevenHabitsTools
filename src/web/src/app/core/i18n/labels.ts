@@ -13,6 +13,7 @@ const EN: Readonly<Record<string, string>> = {
   'nav.plan': 'Plan',
   'nav.journal': 'Journal',
   'nav.settings': 'Settings',
+  'nav.about': 'About',
   'home.welcome': 'Work through every exercise of the seven habits, at your own pace.',
   'home.browseHabits': 'Browse habits',
   'habits.intro': 'Pick a habit to see its exercises.',
@@ -28,6 +29,22 @@ const EN: Readonly<Record<string, string>> = {
   'placeholder.comingSoon': 'Coming soon.',
   'hub.noExercises': 'Exercises for this habit are coming soon.',
   'data.migration.schemaTooNew': 'This file was saved by a newer version of the app.',
+  'about.title': 'About',
+  'about.notAffiliated':
+    'Seven Habits Tools is an independent personal tool. It is not affiliated with, endorsed ' +
+    'by or licensed by FranklinCovey or the publisher of The 7 Habits of Highly Effective ' +
+    'People.',
+  'about.recommendation':
+    'This app is a practice companion, not a replacement — reading Stephen R. Covey’s book ' +
+    'is the best way to get the most from these exercises.',
+  'about.versionLabel': 'Version',
+  'about.versionUnknown': 'unknown',
+  'about.repoLink': 'View the source on GitHub',
+  'about.privacyLink': 'Privacy note',
+  'settings.privacyTitle': 'Privacy',
+  'settings.privacyNote':
+    'Your data stays in this browser. Nothing is uploaded or shared unless you choose to ' +
+    'export it.',
 };
 
 @Injectable({ providedIn: 'root' })
