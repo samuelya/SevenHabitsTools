@@ -22,7 +22,9 @@ export interface StorageAdapter {
   load(): Promise<RootDocument | null>;
   /** Persists `doc`, replacing whatever was stored before. */
   save(doc: RootDocument, options: SaveOptions): Promise<void>;
-  /** Removes the stored document; a subsequent `load()` resolves to `null`. */
+  /** Removes the current document, so a subsequent `load()` resolves to `null`. Any backup copy
+   * the adapter keeps (e.g. IndexedDB's `backup-previous`) is left untouched: this is "Start
+   * fresh", and the backup is how a user's last good data can still be recovered afterwards. */
   clear(): Promise<void>;
 }
 

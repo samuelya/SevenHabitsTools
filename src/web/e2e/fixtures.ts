@@ -44,13 +44,10 @@ function defaultDocument(): SeedDocument {
 
 /**
  * Writes `doc` to IndexedDB (database `sevenhabits`, object store `documents`, key `current`) —
- * the schema issue #35 (IndexedDB adapter) specifies — before the app's own bootstrap gets a
+ * the schema `IndexedDbAdapter` (issue #35) reads from — before the app's own bootstrap gets a
  * chance to read it. Registered as a `page.addInitScript` rather than a plain `page.evaluate` so
  * it runs on the *next* navigation, before any of the page's own scripts: seeding only works if
  * it lands before the app's bootstrap, and the app hasn't navigated yet when a fixture runs.
- *
- * #35 hasn't landed: the app is wired to `NoopAdapter` today (`app.config.ts`) and never reads
- * this. Specs that depend on a seed surviving a reload are `test.fixme`, pointing at #35.
  */
 async function writeDocumentOnNextNavigation(page: Page, doc: SeedDocument): Promise<void> {
   await page.addInitScript(

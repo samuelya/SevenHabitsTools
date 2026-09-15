@@ -94,15 +94,30 @@ test.describe('app shell smoke', () => {
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {
-    test.fixme(
-      true,
-      'Needs #35 (IndexedDB adapter) — the app still runs on the no-op adapter, so a seeded ' +
-        'document has nowhere to be read from yet.',
-    );
     await seedDocument({ settings: { language: 'en' } });
     await page.goto('/settings');
     await page.reload();
-    // Once #35 lands: assert the seeded value is still reflected in the UI/store after reload.
+    await page.waitForLoadState('networkidle');
+
+    // No feature reads `settings` into the UI yet (#28), so assert against IndexedDB itself
+    // rather than the DOM: the seeded value must still be there, not replaced by a fresh empty
+    // document (which would mean the adapter's `load()` didn't return it, or the bootstrap
+    // treated it as corrupt).
+    const stored = await page.evaluate(
+      () =>
+        new Promise((resolve, reject) => {
+          const request = indexedDB.open('sevenhabits');
+          request.onsuccess = () => {
+            const db = request.result;
+            const tx = db.transaction('documents', 'readonly');
+            const getRequest = tx.objectStore('documents').get('current');
+            getRequest.onsuccess = () => resolve(getRequest.result);
+            getRequest.onerror = () => reject(getRequest.error);
+          };
+          request.onerror = () => reject(request.error);
+        }),
+    );
+    expect(stored).toMatchObject({ settings: { language: 'en' } });
   });
 
   test('switching language mirrors the layout', async ({ page, setLanguage }) => {

@@ -2,6 +2,7 @@ import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { CLOCK } from '../time/clock';
 import { getAtPath, setAtPath } from './document-path.utils';
 import { RootDocument } from './document.model';
+import { WRITER_LOCK } from './multi-tab/writer-lock';
 import { BaseRecord, softDelete, touch } from './record';
 import { createEmptyDocument } from './registry';
 
@@ -64,13 +65,24 @@ function touchNearestRecordAncestor(
  * (`DocumentPersistence`), bootstrap loading and the corrupt-data error page
  * (`document-bootstrap.ts`) are separate services that read and replace the document through this
  * store instead of owning state of their own.
+ *
+ * Edits are refused while `WRITER_LOCK` says this tab is not the writer (another tab holds the
+ * lock, or this tab's own lock request hasn't settled yet): an edit accepted in memory there could
+ * never be saved and would be silently lost (#127). A refused edit leaves the document untouched,
+ * returns `false`, and bumps `refusedEdits` so the UI can tell the user (`ReadOnlyEditNotifier`).
+ * `replaceDocument()` is not an edit and is never refused: bootstrap, cross-tab reloads and
+ * "Start fresh" all run before, or regardless of, this tab holding the lock.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentStore {
   private readonly clock = inject(CLOCK);
+  private readonly writerLock = inject(WRITER_LOCK);
   private readonly documentSignal = signal<RootDocument>(createEmptyDocument());
+  private readonly refusedEditsSignal = signal(0);
 
   readonly document: Signal<RootDocument> = this.documentSignal.asReadonly();
+  /** How many edits have been refused because this tab isn't the writer. */
+  readonly refusedEdits: Signal<number> = this.refusedEditsSignal.asReadonly();
 
   /** A read-only view of the value at `path` (e.g. `habits.h2.mission`). */
   select<T>(path: string): Signal<T | undefined> {
@@ -86,10 +98,11 @@ export class DocumentStore {
    * Applies `updater` to the value at `path`. If the result (or, for a collection, one of its
    * elements) looks like a `BaseRecord`, its `updatedAt` is stamped; so is the nearest ancestor
    * record on `path`, if any (e.g. updating `habits.h2.mission.statement` stamps `mission`).
-   * `meta.updatedAt` is always stamped.
+   * `meta.updatedAt` is always stamped. Returns `false`, without applying anything, while this tab
+   * isn't the writer.
    */
-  update<T>(path: string, updater: PathUpdater<T>): void {
-    this.mutate((doc, now) => {
+  update<T>(path: string, updater: PathUpdater<T>): boolean {
+    return this.mutate((doc, now) => {
       const current = getAtPath<T>(doc, path);
       const next = updater(current as T);
       const stamped = stampChangedValue(current, next, now);
@@ -99,8 +112,8 @@ export class DocumentStore {
   }
 
   /** Inserts `record` into the collection at `path`, or replaces the existing record with the same `id`. */
-  upsertRecord<T extends BaseRecord>(path: string, record: T): void {
-    this.mutate((doc, now) => {
+  upsertRecord<T extends BaseRecord>(path: string, record: T): boolean {
+    return this.mutate((doc, now) => {
       const list = getAtPath<readonly T[]>(doc, path) ?? [];
       const stamped = touch(record, now);
       const index = list.findIndex((item) => item.id === stamped.id);
@@ -112,8 +125,8 @@ export class DocumentStore {
   }
 
   /** Tombstones the record with `id` in the collection at `path`; it is never removed from the array. */
-  softDeleteRecord(path: string, id: string): void {
-    this.mutate((doc, now) => {
+  softDeleteRecord(path: string, id: string): boolean {
+    return this.mutate((doc, now) => {
       const list = getAtPath<readonly BaseRecord[]>(doc, path) ?? [];
       const nextList = list.map((item) => (item.id === id ? softDelete(item, now) : item));
       const withList = setAtPath(doc, path, nextList);
@@ -123,7 +136,11 @@ export class DocumentStore {
 
   private mutate(
     apply: (doc: Record<string, unknown>, now: Date) => Record<string, unknown>,
-  ): void {
+  ): boolean {
+    if (!this.writerLock.isWriter()) {
+      this.refusedEditsSignal.update((count) => count + 1);
+      return false;
+    }
     const now = this.clock.now();
     this.documentSignal.update((doc) => {
       const updated = apply(doc as unknown as Record<string, unknown>, now);
@@ -133,5 +150,6 @@ export class DocumentStore {
       };
       return { ...updated, meta } as unknown as RootDocument;
     });
+    return true;
   }
 }

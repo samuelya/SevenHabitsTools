@@ -16,8 +16,11 @@ import {
 import { routes } from './app.routes';
 import { bootstrapDocument } from './core/data/document-bootstrap';
 import { DocumentBootstrapStatus } from './core/data/document-bootstrap-status';
-import { DocumentPersistence } from './core/data/document-persistence';
-import { NoopAdapter } from './core/data/noop-storage-adapter';
+import { DocumentSync } from './core/data/document-sync';
+import { IndexedDbAdapter } from './core/data/indexeddb/indexeddb-adapter';
+import { WriterLockService } from './core/data/multi-tab/writer-lock.service';
+import { WRITER_LOCK } from './core/data/multi-tab/writer-lock';
+import { StoragePersistenceService } from './core/data/storage-persistence.service';
 import { STORAGE_ADAPTER } from './core/data/storage-adapter';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { FEATURE_ROUTES } from './core/routing/feature-route';
@@ -35,21 +38,25 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: FEATURE_ROUTES, useValue: ROUTE_REGISTRY },
-    // Stand-in until the IndexedDB adapter (#35) lands; swap this line, nothing else changes.
-    { provide: STORAGE_ADAPTER, useClass: NoopAdapter },
+    { provide: STORAGE_ADAPTER, useClass: IndexedDbAdapter },
+    { provide: WRITER_LOCK, useExisting: WriterLockService },
     provideAppInitializer(() => {
       const iconRegistry = inject(MatIconRegistry);
       iconRegistry.setDefaultFontSetClass('material-symbols-outlined');
       registerGithubIcon(iconRegistry, inject(DomSanitizer));
     }),
     provideAppInitializer(() => {
-      const persistence = inject(DocumentPersistence);
       const status = inject(DocumentBootstrapStatus);
-      // Never start autosave over a document that failed to load; DataErrorPage starts it once
-      // the user resolves the corrupt state (export/reset) and status returns to `ready`.
+      const documentSync = inject(DocumentSync);
+      // Requesting persistent storage doesn't depend on the document being valid, so it doesn't
+      // wait on bootstrap below.
+      void inject(StoragePersistenceService).requestPersistence();
+      // Never start DocumentSync (autosave, the writer lock, ...) over a document that failed to
+      // load; DataErrorPage starts it once the user resolves the corrupt state (export/reset) and
+      // status returns to `ready`.
       return bootstrapDocument().then(() => {
         if (status.state() === 'ready') {
-          persistence.start();
+          documentSync.start();
         }
       });
     }),

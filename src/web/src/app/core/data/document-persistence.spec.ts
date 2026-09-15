@@ -1,4 +1,5 @@
 import { DOCUMENT } from '@angular/common';
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
@@ -9,6 +10,7 @@ import {
   SAVE_RETRY_MS,
 } from './document-persistence';
 import { DocumentStore } from './document.store';
+import { WRITER_LOCK } from './multi-tab/writer-lock';
 import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
 
 class FakeEventTarget {
@@ -27,7 +29,7 @@ class FakeEventTarget {
   }
 }
 
-function setUp(): {
+function setUp(options: { isWriter?: ReturnType<typeof signal<boolean>> } = {}): {
   persistence: DocumentPersistence;
   store: DocumentStore;
   save: ReturnType<typeof vi.fn>;
@@ -45,12 +47,14 @@ function setUp(): {
     visibilityState: 'visible' as DocumentVisibilityState,
   });
   const fakeWindow = new FakeEventTarget();
+  const isWriter = options.isWriter ?? signal(true);
 
   TestBed.configureTestingModule({
     providers: [
       { provide: DOCUMENT, useValue: fakeDocument },
       { provide: WINDOW, useValue: fakeWindow },
       { provide: STORAGE_ADAPTER, useValue: adapter },
+      { provide: WRITER_LOCK, useValue: { isWriter: isWriter.asReadonly() } },
     ],
   });
   return {
@@ -290,5 +294,56 @@ describe('DocumentPersistence', () => {
 
     expect(persistence.dirty()).toBe(true);
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('never marks the document dirty while this tab is read-only (#35)', async () => {
+    const isWriter = signal(false);
+    const { persistence, store, save } = setUp({ isWriter });
+    persistence.start();
+    TestBed.tick();
+
+    // A read-only tab's document only changes because CrossTabSync reloaded it (DocumentStore
+    // refuses edits there, #127); that reload must not look like a local edit.
+    store.replaceDocument({ ...store.document(), settings: { theme: 'dark' } });
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(persistence.dirty()).toBe(false);
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it('never calls adapter.save while this tab is read-only, even if it loses the lock mid-save (#35)', async () => {
+    const isWriter = signal(true);
+    const { persistence, store, save } = setUp({ isWriter });
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    isWriter.set(false); // lost the lock before the debounced save runs
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(persistence.dirty()).toBe(true); // stays dirty in case this tab ever becomes writer
+  });
+
+  it('resumes saving once this tab becomes the writer', async () => {
+    const isWriter = signal(false);
+    const { persistence, store, save } = setUp({ isWriter });
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+    expect(save).not.toHaveBeenCalled();
+
+    isWriter.set(true);
+    store.update('settings', () => ({ theme: 'darker' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.dirty()).toBe(false);
   });
 });

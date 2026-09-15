@@ -64,10 +64,7 @@ and found no violations caused by #118's broken stylesheet.
 ## Fixtures (`e2e/fixtures.ts`)
 
 - `seedDocument(doc)` — writes `doc` (merged onto a minimal valid document) to IndexedDB
-  (`sevenhabits` / `documents` / `current`), the schema issue #35 (IndexedDB adapter) specifies.
-  **#35 hasn't landed yet**: the app still runs on the no-op storage adapter and never reads this
-  seed. Specs that need a seed to survive a reload are `test.fixme`, pointing at #35; unskip them
-  once #35 merges.
+  (`sevenhabits` / `documents` / `current`), the schema `IndexedDbAdapter` (issue #35) reads from.
 - `setLanguage(lang)` — seeds `settings.language` (`'en' | 'ar'`, per issue #28's data model).
   **#28 hasn't landed yet**: there is no language switcher or Transloco, so the app always renders
   `en`/`ltr` regardless of this seed. Specs asserting the UI actually changed language are

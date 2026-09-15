@@ -6,13 +6,17 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { appConfig } from '../app.config';
+import { NoopAdapter } from '../core/data/noop-storage-adapter';
+import { STORAGE_ADAPTER } from '../core/data/storage-adapter';
 import { Shell } from '../core/layout/shell/shell';
 import { registerGithubIcon } from '../shared/ui/github-link/github-icon';
 
 /**
- * Configures the real app providers with a fixed viewport class. Does not touch `TestBed.inject`
- * itself — some specs call `TestBed.overrideProvider` between this and `renderShellAt`, which
- * TestBed only allows before the testing module has been instantiated.
+ * Configures the real app providers with a fixed viewport class. `STORAGE_ADAPTER` is swapped back
+ * to `NoopAdapter`: these tests exercise routing and layout, not real IndexedDB, which the
+ * unit-test environment doesn't implement anyway (`app.config.spec.ts` covers the real adapter).
+ * Does not touch `TestBed.inject` itself — some specs call `TestBed.overrideProvider` between this
+ * and `renderShellAt`, which TestBed only allows before the testing module has been instantiated.
  */
 export function configureApp(options: {
   handset: boolean;
@@ -22,6 +26,7 @@ export function configureApp(options: {
   TestBed.configureTestingModule({
     providers: [
       ...appConfig.providers,
+      { provide: STORAGE_ADAPTER, useClass: NoopAdapter },
       {
         provide: BreakpointObserver,
         useValue: { observe: () => of(state), isMatched: () => options.handset },
