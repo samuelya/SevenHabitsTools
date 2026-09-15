@@ -1,12 +1,16 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { IDBFactory } from 'fake-indexeddb';
 import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
 import { FileDownloader } from '../../browser/file-download';
+import { INDEXED_DB } from '../../browser/indexed-db';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
+import { RootDocument } from '../document.model';
 import { DocumentStore } from '../document.store';
+import { IndexedDbAdapter } from '../indexeddb/indexeddb-adapter';
 import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { STORAGE_ADAPTER } from '../storage-adapter';
 import { DataErrorPage } from './data-error-page';
@@ -47,7 +51,13 @@ describe('DataErrorPage', () => {
         { provide: BROADCAST_CHANNEL_FACTORY, useValue: () => null },
         {
           provide: WriterLockService,
-          useValue: { start: vi.fn(), stop: vi.fn(), isWriter: signal(true) },
+          useValue: {
+            start: vi.fn(),
+            stop: vi.fn(),
+            role: signal('writer'),
+            isWriter: signal(true),
+            promoted: signal(false),
+          },
         },
       ],
     });
@@ -190,4 +200,43 @@ describe('DataErrorPage', () => {
     TestBed.tick();
     expect(persistence.dirty()).toBe(true);
   });
+
+  it('"Start fresh" removes the current document but keeps backup-previous', async () => {
+    const idb = new IDBFactory();
+    TestBed.overrideProvider(INDEXED_DB, { useValue: idb });
+    TestBed.overrideProvider(STORAGE_ADAPTER, { useFactory: () => new IndexedDbAdapter() });
+    const realAdapter = TestBed.inject(STORAGE_ADAPTER);
+    const older = { schemaVersion: 1, marker: 'older' } as unknown as RootDocument;
+    const corrupt = { schemaVersion: 99, marker: 'corrupt' } as unknown as RootDocument;
+    await realAdapter.save(older, { reason: 'flush' });
+    await realAdapter.save(corrupt, { reason: 'flush' });
+    TestBed.inject(DocumentBootstrapStatus).reportCorrupt(corrupt, new Error('boom'));
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+
+    buttons(fixture)
+      .find((button) => button.textContent?.includes('Start fresh'))
+      ?.click();
+    fixture.detectChanges();
+    buttons(fixture)
+      .find((button) => button.textContent?.includes('Yes, start fresh'))
+      ?.click();
+    await fixture.whenStable();
+
+    await expect(realAdapter.load()).resolves.toBeNull();
+    await expect(readRawKey(idb, 'backup-previous')).resolves.toEqual(older);
+  });
 });
+
+/** Reads `key` straight out of the IndexedDB object store, bypassing the adapter. */
+function readRawKey(idb: IDBFactory, key: string): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const open = idb.open('sevenhabits');
+    open.onsuccess = () => {
+      const request = open.result.transaction('documents').objectStore('documents').get(key);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    };
+    open.onerror = () => reject(open.error);
+  });
+}

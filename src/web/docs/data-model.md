@@ -105,43 +105,66 @@ that runs it through `migrateDocument()` up to the current version.
   the current schema version with an invalid shape (`isRootDocumentShape()`,
   `document.model.ts`) or a registered model that fails its own `validate()` → `DocumentBootstrapStatus`
   reports `corrupt` and `App` renders `DataErrorPage` instead of the shell: export the raw file, or
-  reset (behind a confirmation step, since it permanently clears storage).
+  reset ("Start fresh", behind a confirmation step). Reset calls `adapter.clear()`, which removes
+  only the current document: `IndexedDbAdapter` keeps `backup-previous` (the last good save before
+  the corrupt one). There is no restore UI yet. The first save after a reset leaves the backup alone
+  (there is no `current` to rotate), but the second save rotates the fresh document into
+  `backup-previous`. So the old backup lasts until the user's second save after "Start fresh".
 
 ## Multi-tab (`core/data/multi-tab/`, `core/data/indexeddb/`)
 
 `IndexedDbAdapter` stores the document in IndexedDB (database `sevenhabits`, store `documents`,
 key `current`); each save also copies the previous `current` into `backup-previous` first, in the
 same read-write transaction, so a failed or interrupted write can never leave `current`
-half-written. Every call is queued onto a private promise chain so overlapping calls still run,
-and complete, in call order.
+half-written. `clear()` deletes `current` only and never `backup-previous`. Every call is queued
+onto a private promise chain so overlapping calls still run, and complete, in call order.
 
 Because IndexedDB is per-browser rather than per-tab, two tabs saving independently would
 overwrite each other, so exactly one tab at a time is allowed to save:
 
 - `WriterLockService` is this tab's single cross-tab write lock, bound to the `WRITER_LOCK` token
-  (`writer-lock.ts`) that `DocumentPersistence`, `ReadOnlyBanner` and `CrossTabSync` all read
-  through — a narrow `{ isWriter: Signal<boolean> }` view, not the lock's lifecycle. It picks a
-  `WriterLockStrategy` once, by feature detection: `WebLocksWriterLock` (`navigator.locks.request`,
-  released automatically when the tab closes) when available, else `HeartbeatWriterLock` (a
-  `localStorage` heartbeat, refreshed every `HEARTBEAT_INTERVAL_MS` and claimed by another tab once
-  it goes stale for longer than `HEARTBEAT_STALE_MS`) — `localStorage` has no compare-and-swap, so
-  this fallback is best-effort, not exact.
-- `ReadOnlyBanner` shows a persistent banner while `!isWriter()`; nothing in `DocumentStore` itself
-  knows about tabs.
-- `DocumentPersistence` refuses to mark the document dirty or call `adapter.save()` while
+  (`writer-lock.ts`) that `DocumentStore`, `DocumentPersistence`, `ReadOnlyBanner` and
+  `CrossTabSync` all read through. That token is a narrow `{ role, isWriter }` view, not the lock's
+  lifecycle. `role` is `pending` until the lock request settles, then `reader` or `writer`.
+  `WriterLockService` picks a `WriterLockStrategy` once, by feature detection:
+  - `WebLocksWriterLock` (`navigator.locks`, released automatically when the tab closes) when
+    available. It first asks with `ifAvailable: true`: granted means writer from the start; `null`
+    means a confirmed reader, which then queues a normal waiting request.
+  - Otherwise `HeartbeatWriterLock`, a `localStorage` entry naming the writer's unique tab id. The
+    writer renews it every `HEARTBEAT_INTERVAL_MS`, steps down if the entry names another tab, and
+    removes its own entry on `pagehide`. Any other tab may claim an entry that is missing or older
+    than `HEARTBEAT_STALE_MS` (check and write in one step, then read back after
+    `CLAIM_CONFIRM_DELAY_MS`). `localStorage` has no real compare-and-swap, so this fallback is
+    best-effort, not exact.
+- Both strategies report what their lock did to one `WriterRoleState` (`writer-role-state.ts`),
+  which owns the transition rule: `pending → writer` is an initial grant, and only
+  `reader → writer` latches `promoted`. Neither strategy decides what a promotion is on its own.
+- `DocumentStore` refuses `update`/`upsertRecord`/`softDeleteRecord` while `!isWriter()` (a reader,
+  or a tab whose lock is still pending), so an edit that could never be saved is never accepted in
+  memory. The refused call returns `false` and bumps `refusedEdits`, and `ReadOnlyEditNotifier`
+  shows a snackbar saying why. `replaceDocument()` (bootstrap, cross-tab reload, reset) is not an
+  edit and is never refused.
+- `ReadOnlyBanner` shows a persistent banner while `role() === 'reader'` (not while `pending`).
+- `DocumentPersistence` also refuses to mark the document dirty or call `adapter.save()` while
   `!isWriter()` (the same two-layer pattern used for the corrupt-document gate), so a read-only tab
   can never overwrite what the writer just saved.
 - `CrossTabSync` broadcasts (`BroadcastChannel`) once the writer's save completes, and reloads the
   document via the adapter (`DocumentStore.replaceDocument`) on every other tab that receives it —
   never marking that tab dirty, since the reload goes through the same gate above.
-- `WriterPromotionReload` reloads the page when this tab transitions from read-only to writer
+- `WriterPromotionReload` reloads the page, once, when the lock's `promoted` signal becomes true
   (the previous writer's tab closed): rather than resuming with a possibly-stale in-memory
-  document, a full reload re-runs bootstrap against whatever is actually stored.
+  document, a full reload re-runs bootstrap against whatever is actually stored. It uses no timers,
+  and a slow initial grant never counts as a promotion.
 - `DocumentSync` (`document-sync.ts`) starts all of the above, plus `SaveErrorNotifier` (a snackbar
-  with an "export now" action, watching `DocumentPersistence.saveError`), once bootstrap resolves
+  with "Export now" and "Dismiss", opened once per run of failed saves) and `ReadOnlyEditNotifier`,
+  once bootstrap resolves
   to `ready`. Called from `app.config.ts` and `DataErrorPage.reset()` — the two places that also
   start `DocumentPersistence` — so a new document-dependent service plugs in by adding one line to
   `DocumentSync`, not by editing either caller.
+- Both notifiers open snackbars through `AppSnackbar` (`core/layout/app-snackbar.ts`). It loads
+  Angular Material's snackbar on first use, keeping it out of the initial bundle, and adds the
+  `app-snackbar` panel class. Under 600 px, `styles.scss` uses that class to lift the snackbar above
+  the bottom navigation, including `env(safe-area-inset-bottom)`.
 - `StoragePersistenceService` (`storage-persistence.service.ts`) wraps `navigator.storage`:
   requests persistent storage on startup and exposes the usage/quota estimate shown in Settings.
 

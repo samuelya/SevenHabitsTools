@@ -74,7 +74,7 @@ describe('IndexedDbAdapter', () => {
     await expect(readRawKey(idb, 'backup-previous')).resolves.toBeUndefined();
   });
 
-  it('clears both current and backup-previous', async () => {
+  it('clear() removes current but keeps backup-previous', async () => {
     const idb = new IDBFactory();
     const adapter = createAdapter(idb);
     await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
@@ -83,7 +83,19 @@ describe('IndexedDbAdapter', () => {
     await adapter.clear();
 
     await expect(readRawKey(idb, 'current')).resolves.toBeUndefined();
-    await expect(readRawKey(idb, 'backup-previous')).resolves.toBeUndefined();
+    await expect(readRawKey(idb, 'backup-previous')).resolves.toEqual(sampleDoc('device-1'));
+  });
+
+  it('the first save after clear() does not overwrite backup-previous', async () => {
+    const idb = new IDBFactory();
+    const adapter = createAdapter(idb);
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    await adapter.save(sampleDoc('device-2'), { reason: 'flush' });
+    await adapter.clear();
+
+    await adapter.save(sampleDoc('device-3'), { reason: 'flush' });
+
+    await expect(readRawKey(idb, 'backup-previous')).resolves.toEqual(sampleDoc('device-1'));
   });
 
   it('reuses one database connection across calls instead of reopening it every time', async () => {

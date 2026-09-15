@@ -2,42 +2,47 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ReadOnlyBanner } from './read-only-banner';
 import { WRITER_LOCK } from './writer-lock';
+import { WriterRole } from './writer-role-state';
+
+function render(role: ReturnType<typeof signal<WriterRole>>): {
+  banner: () => HTMLElement | null;
+  detectChanges: () => void;
+} {
+  TestBed.configureTestingModule({
+    providers: [{ provide: WRITER_LOCK, useValue: { role, isWriter: signal(false) } }],
+  });
+  const fixture = TestBed.createComponent(ReadOnlyBanner);
+  fixture.detectChanges();
+  return {
+    banner: () => fixture.nativeElement.querySelector('.read-only-banner'),
+    detectChanges: () => fixture.detectChanges(),
+  };
+}
 
 describe('ReadOnlyBanner', () => {
   it('renders nothing while this tab is the writer', () => {
-    TestBed.configureTestingModule({
-      providers: [{ provide: WRITER_LOCK, useValue: { isWriter: signal(true) } }],
-    });
-    const fixture = TestBed.createComponent(ReadOnlyBanner);
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('.read-only-banner')).toBeNull();
+    expect(render(signal<WriterRole>('writer')).banner()).toBeNull();
   });
 
-  it('shows the read-only message while this tab is not the writer', () => {
-    TestBed.configureTestingModule({
-      providers: [{ provide: WRITER_LOCK, useValue: { isWriter: signal(false) } }],
-    });
-    const fixture = TestBed.createComponent(ReadOnlyBanner);
-    fixture.detectChanges();
+  it('renders nothing while the lock request is still pending', () => {
+    expect(render(signal<WriterRole>('pending')).banner()).toBeNull();
+  });
 
-    const banner = fixture.nativeElement.querySelector('.read-only-banner');
+  it('shows the read-only message while another tab holds the lock', () => {
+    const banner = render(signal<WriterRole>('reader')).banner();
+
     expect(banner?.getAttribute('role')).toBe('status');
     expect(banner?.textContent).toContain('Read-only');
   });
 
   it('hides again once this tab becomes the writer', () => {
-    const isWriter = signal(false);
-    TestBed.configureTestingModule({
-      providers: [{ provide: WRITER_LOCK, useValue: { isWriter } }],
-    });
-    const fixture = TestBed.createComponent(ReadOnlyBanner);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.read-only-banner')).not.toBeNull();
+    const role = signal<WriterRole>('reader');
+    const view = render(role);
+    expect(view.banner()).not.toBeNull();
 
-    isWriter.set(true);
-    fixture.detectChanges();
+    role.set('writer');
+    view.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.read-only-banner')).toBeNull();
+    expect(view.banner()).toBeNull();
   });
 });

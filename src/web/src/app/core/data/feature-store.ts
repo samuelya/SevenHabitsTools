@@ -7,7 +7,8 @@ import { getRegisteredModels } from './registry';
 export interface FeatureStore<T> {
   /** The slice's current value, falling back to the model's `defaults()` while it is unset. */
   readonly value: Signal<T>;
-  update(updater: PathUpdater<T>): void;
+  /** Returns `false` when the edit was refused because this tab is read-only (`DocumentStore`). */
+  update(updater: PathUpdater<T>): boolean;
 }
 
 /**

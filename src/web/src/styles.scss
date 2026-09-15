@@ -87,6 +87,14 @@ body {
   font: var(--mat-sys-headline-small);
 }
 
+// Snackbars (`APP_SNACKBAR_CLASS`) sit above the bottom navigation on handset widths instead of
+// covering it (#128). Matches `HANDSET_QUERY` and the bottom nav's 64px items plus 1px border.
+@media (max-width: 599.98px) {
+  .mat-mdc-snack-bar-container.app-snackbar {
+    margin-block-end: calc(65px + 8px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

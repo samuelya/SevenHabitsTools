@@ -13,7 +13,9 @@ const BACKUP_KEY = 'backup-previous';
  * `StorageAdapter` backed by IndexedDB: database `sevenhabits`, object store `documents`. `save()`
  * writes the previous `current` value to `backup-previous` and the new document to `current` in a
  * single read-write transaction, so a failed or interrupted write can never leave `current`
- * half-written — either the whole transaction commits or none of it does. This is the only thing
+ * half-written — either the whole transaction commits or none of it does. `clear()` ("Start fresh")
+ * removes only `current`: `backup-previous` is the last good copy before a corrupt document and
+ * must survive the reset. This is the only thing
  * this class does; multi-tab coordination is `WriterLockService` and `CrossTabSync`'s job, not
  * this adapter's.
  *
@@ -61,7 +63,6 @@ export class IndexedDbAdapter implements StorageAdapter {
       const db = await this.openDb();
       await this.runTransaction(db, 'readwrite', (store) => {
         store.delete(CURRENT_KEY);
-        store.delete(BACKUP_KEY);
       });
     });
   }

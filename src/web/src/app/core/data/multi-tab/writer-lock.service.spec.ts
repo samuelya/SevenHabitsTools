@@ -1,38 +1,28 @@
 import { TestBed } from '@angular/core/testing';
-import { LOCAL_STORAGE, LocalStorageLike } from '../../browser/local-storage';
+import { LOCAL_STORAGE } from '../../browser/local-storage';
 import { WEB_LOCKS } from '../../browser/web-locks';
+import { FakeLocalStorage, FakeLockManager } from './multi-tab.fakes';
 import { WriterLockService } from './writer-lock.service';
-
-class FakeLocalStorage implements LocalStorageLike {
-  private readonly values = new Map<string, string>();
-  getItem(key: string): string | null {
-    return this.values.get(key) ?? null;
-  }
-  setItem(key: string, value: string): void {
-    this.values.set(key, value);
-  }
-}
 
 describe('WriterLockService', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
   it('uses the Web Locks API when navigator.locks is available', async () => {
-    const request = vi.fn(
-      (_name: string, _options: LockOptions, callback: (lock: Lock | null) => Promise<unknown>) =>
-        callback(null),
-    );
+    const manager = new FakeLockManager();
+    const requestSpy = vi.spyOn(manager, 'request');
     TestBed.configureTestingModule({
-      providers: [{ provide: WEB_LOCKS, useValue: { request } as unknown as LockManager }],
+      providers: [{ provide: WEB_LOCKS, useValue: manager.asLockManager() }],
     });
 
     const service = TestBed.inject(WriterLockService);
     service.start();
-    await Promise.resolve();
-    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(0);
 
-    expect(request).toHaveBeenCalled();
+    expect(requestSpy).toHaveBeenCalled();
     expect(service.isWriter()).toBe(true);
+    expect(service.role()).toBe('writer');
+    expect(service.promoted()).toBe(false);
   });
 
   it('falls back to the localStorage heartbeat when navigator.locks is unavailable', async () => {

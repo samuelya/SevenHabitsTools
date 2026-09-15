@@ -1,6 +1,9 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CLOCK } from '../time/clock';
 import { DocumentStore } from './document.store';
+import { WRITER_LOCK } from './multi-tab/writer-lock';
+import { WriterRole } from './multi-tab/writer-role-state';
 import { newRecord } from './record';
 
 /** Configures a `DocumentStore` whose clock returns `times` in order, one per call, repeating the
@@ -175,6 +178,56 @@ describe('DocumentStore', () => {
       store.replaceDocument(next);
 
       expect(store.document()).toBe(next);
+    });
+  });
+
+  describe('#127: edits while this tab is not the writer', () => {
+    function configureWithRole(role: WriterRole): DocumentStore {
+      const roleSignal = signal(role);
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: WRITER_LOCK,
+            useValue: { role: roleSignal, isWriter: signal(role === 'writer') },
+          },
+        ],
+      });
+      return TestBed.inject(DocumentStore);
+    }
+
+    for (const role of ['reader', 'pending'] as const) {
+      it(`refuses update, upsertRecord and softDeleteRecord while ${role}, leaving the document untouched`, () => {
+        const store = configureWithRole(role);
+        const before = store.document();
+
+        expect(store.update('settings', () => ({ theme: 'dark' }))).toBe(false);
+        expect(store.upsertRecord('shared.roles', newRecord({ name: 'x' }, new Date()))).toBe(
+          false,
+        );
+        expect(store.softDeleteRecord('shared.roles', 'missing')).toBe(false);
+
+        expect(store.document()).toBe(before);
+        expect(store.refusedEdits()).toBe(3);
+      });
+    }
+
+    it('accepts edits, and counts nothing, as the writer', () => {
+      const store = configureWithRole('writer');
+
+      expect(store.update('settings', () => ({ theme: 'dark' }))).toBe(true);
+
+      expect(store.document().settings).toEqual({ theme: 'dark' });
+      expect(store.refusedEdits()).toBe(0);
+    });
+
+    it('still lets replaceDocument through, since it is not an edit', () => {
+      const store = configureWithRole('reader');
+      const next = { ...store.document(), settings: { theme: 'from-writer' } };
+
+      store.replaceDocument(next);
+
+      expect(store.document()).toBe(next);
+      expect(store.refusedEdits()).toBe(0);
     });
   });
 });

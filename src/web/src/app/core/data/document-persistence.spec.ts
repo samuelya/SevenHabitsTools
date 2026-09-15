@@ -302,9 +302,9 @@ describe('DocumentPersistence', () => {
     persistence.start();
     TestBed.tick();
 
-    // A read-only tab's document only changes because CrossTabSync reloaded it; that must not
-    // look like a local edit.
-    store.update('settings', () => ({ theme: 'dark' }));
+    // A read-only tab's document only changes because CrossTabSync reloaded it (DocumentStore
+    // refuses edits there, #127); that reload must not look like a local edit.
+    store.replaceDocument({ ...store.document(), settings: { theme: 'dark' } });
     TestBed.tick();
     await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
 

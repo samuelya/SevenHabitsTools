@@ -1,86 +1,128 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../../browser/window';
-import { PROMOTION_SETTLE_MS, WriterPromotionReload } from './writer-promotion-reload';
-import { WRITER_LOCK } from './writer-lock';
+import {
+  CLAIM_CONFIRM_DELAY_MS,
+  HEARTBEAT_INTERVAL_MS,
+  HEARTBEAT_STALE_MS,
+  HEARTBEAT_STORAGE_KEY,
+  HeartbeatWriterLock,
+} from './heartbeat-writer-lock';
+import { FakeLocalStorage, FakeLockManager, FakeWindowEvents } from './multi-tab.fakes';
+import { WebLocksWriterLock } from './web-locks-writer-lock';
+import { WriterLockStrategy } from './writer-lock-strategy';
+import { WriterLockService } from './writer-lock.service';
+import { WriterPromotionReload } from './writer-promotion-reload';
 
-function setUp(isWriter: ReturnType<typeof signal<boolean>>): {
-  writerPromotionReload: WriterPromotionReload;
-  reload: ReturnType<typeof vi.fn>;
-} {
+/** Starts `WriterPromotionReload` for one tab whose lock is `lock`; returns its reload spy. */
+function startReloadFor(lock: Pick<WriterLockStrategy, 'promoted'>): ReturnType<typeof vi.fn> {
   const reload = vi.fn();
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
-      { provide: WRITER_LOCK, useValue: { isWriter: isWriter.asReadonly() } },
+      { provide: WriterLockService, useValue: lock },
       { provide: WINDOW, useValue: { location: { reload } } },
     ],
   });
-  return { writerPromotionReload: TestBed.inject(WriterPromotionReload), reload };
+  TestBed.inject(WriterPromotionReload).start();
+  TestBed.tick();
+  return reload;
+}
+
+/** Advances fake time, then flushes effects so `WriterPromotionReload` sees the result. */
+async function advance(ms: number): Promise<void> {
+  await vi.advanceTimersByTimeAsync(ms);
+  TestBed.tick();
 }
 
 describe('WriterPromotionReload', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('does not reload when this tab is already the writer when start() is called', () => {
-    const { writerPromotionReload, reload } = setUp(signal(true));
+  it('reloads exactly once when promoted, even if start() is called twice', () => {
+    const promoted = signal(false);
+    const reload = startReloadFor({ promoted });
+    TestBed.inject(WriterPromotionReload).start();
 
-    writerPromotionReload.start();
+    promoted.set(true);
     TestBed.tick();
-
-    expect(reload).not.toHaveBeenCalled();
-  });
-
-  it('does not reload while this tab stays read-only', () => {
-    const isWriter = signal(false);
-    const { writerPromotionReload, reload } = setUp(isWriter);
-
-    writerPromotionReload.start();
-    TestBed.tick();
-
-    expect(reload).not.toHaveBeenCalled();
-  });
-
-  it('does not reload for its own lock grant settling shortly after start() (#35 regression)', () => {
-    // Every tab's `isWriter()` starts `false` and flips `true` once its own (possibly
-    // uncontended) request resolves — including the very first, uncontended writer. Without the
-    // settle window this looked identical to a genuine promotion and reloaded every tab on
-    // startup, which in turn dropped and re-requested the lock, causing a reload loop.
-    const isWriter = signal(false);
-    const { writerPromotionReload, reload } = setUp(isWriter);
-    writerPromotionReload.start();
-    TestBed.tick();
-
-    isWriter.set(true); // the (uncontended) grant resolving almost immediately
-    TestBed.tick();
-
-    expect(reload).not.toHaveBeenCalled();
-  });
-
-  it('reloads once this tab is promoted from read-only to writer after the settle window', () => {
-    const isWriter = signal(false);
-    const { writerPromotionReload, reload } = setUp(isWriter);
-    writerPromotionReload.start();
-    TestBed.tick();
-
-    vi.advanceTimersByTime(PROMOTION_SETTLE_MS);
-    isWriter.set(true);
     TestBed.tick();
 
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('start() is idempotent: only one reload even if called twice', () => {
-    const isWriter = signal(false);
-    const { writerPromotionReload, reload } = setUp(isWriter);
-    writerPromotionReload.start();
-    writerPromotionReload.start();
-    TestBed.tick();
+  describe('with Web Locks', () => {
+    it('#125: an uncontended grant that takes 2 s never reloads', async () => {
+      const lock = new WebLocksWriterLock(new FakeLockManager(2000).asLockManager());
+      const reload = startReloadFor(lock);
 
-    vi.advanceTimersByTime(PROMOTION_SETTLE_MS);
-    isWriter.set(true);
-    TestBed.tick();
+      lock.start();
+      await advance(2000);
+      await advance(10_000);
 
-    expect(reload).toHaveBeenCalledTimes(1);
+      expect(lock.isWriter()).toBe(true);
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('#125: a contended tab reloads exactly once when the writer releases', async () => {
+      const manager = new FakeLockManager();
+      const writer = new WebLocksWriterLock(manager.asLockManager());
+      writer.start();
+      await advance(0);
+      const reader = new WebLocksWriterLock(manager.asLockManager());
+      const reload = startReloadFor(reader);
+      reader.start();
+      await advance(10_000);
+      expect(reload).not.toHaveBeenCalled();
+
+      writer.stop();
+      await advance(10_000);
+
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('with the heartbeat fallback', () => {
+    const takeoverMs = HEARTBEAT_STALE_MS + HEARTBEAT_INTERVAL_MS + CLAIM_CONFIRM_DELAY_MS;
+
+    it('#126: a single tab never reloads', async () => {
+      const lock = new HeartbeatWriterLock(new FakeLocalStorage(), new FakeWindowEvents(), 'a');
+      const reload = startReloadFor(lock);
+
+      lock.start();
+      await advance(HEARTBEAT_STALE_MS * 4);
+
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('#126: while the writer is alive, the reader never reloads', async () => {
+      const storage = new FakeLocalStorage();
+      new HeartbeatWriterLock(storage, new FakeWindowEvents(), 'a').start();
+      await advance(CLAIM_CONFIRM_DELAY_MS);
+      const reader = new HeartbeatWriterLock(storage, new FakeWindowEvents(), 'b');
+      const reload = startReloadFor(reader);
+
+      reader.start();
+      await advance(HEARTBEAT_STALE_MS * 4);
+
+      expect(reload).not.toHaveBeenCalled();
+    });
+
+    it('#126: once the writer is gone, the reader reloads exactly once within the timeout', async () => {
+      const storage = new FakeLocalStorage();
+      // A writer tab that crashed: no pagehide, so its last heartbeat is left behind.
+      storage.setItem(HEARTBEAT_STORAGE_KEY, JSON.stringify({ tabId: 'a', at: Date.now() }));
+      const reader = new HeartbeatWriterLock(storage, new FakeWindowEvents(), 'b');
+      const reload = startReloadFor(reader);
+      reader.start();
+      await advance(0);
+      expect(reader.role()).toBe('reader');
+
+      await advance(takeoverMs);
+
+      expect(reload).toHaveBeenCalledTimes(1);
+      await advance(HEARTBEAT_STALE_MS * 4);
+      expect(reload).toHaveBeenCalledTimes(1);
+    });
   });
 });

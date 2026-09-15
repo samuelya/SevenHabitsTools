@@ -16,6 +16,34 @@ import { expect, test } from './fixtures';
 
 const READ_ONLY_BANNER = '.read-only-banner';
 
+/** Waits until `page` actually holds the Web Lock, so a second tab opened afterwards is
+ * deterministically the reader (the lock is requested after bootstrap, some time after `load`). */
+async function waitForWebLockHeld(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await navigator.locks.query()).held?.some((lock) => lock.name === 'sevenhabits-writer'),
+      ),
+    )
+    .toBe(true);
+}
+
+/** Heartbeat fallback: waits until `page` has written its heartbeat and the claim's read-back
+ * confirmation (100 ms) has passed. */
+async function waitForHeartbeatClaimed(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('sevenhabits-writer-heartbeat')))
+    .not.toBeNull();
+  await page.waitForTimeout(300);
+}
+
+/** Counts full page loads of `page` from now on (a reload fires `load` once). */
+function countLoads(page: Page): () => number {
+  let loads = 0;
+  page.on('load', () => loads++);
+  return () => loads;
+}
+
 /** Reads the `current` document straight out of IndexedDB, bypassing the app. */
 function readIndexedDbKey(page: Page, key: string): Promise<unknown> {
   return page.evaluate(
@@ -44,6 +72,7 @@ test.describe('multi-tab writer lock', () => {
   }) => {
     await seedDocument({});
     await page.goto('/settings');
+    await waitForWebLockHeld(page);
     await expect(page.locator(READ_ONLY_BANNER)).toHaveCount(0);
 
     const second = await context.newPage();
@@ -56,6 +85,7 @@ test.describe('multi-tab writer lock', () => {
   test("the reader never overwrites the writer's save", async ({ page, context, seedDocument }) => {
     await seedDocument({ settings: { e2eMarker: 'initial' } });
     await page.goto('/settings');
+    await waitForWebLockHeld(page);
     const second = await context.newPage();
     await second.goto('/settings');
     await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
@@ -108,15 +138,86 @@ test.describe('multi-tab writer lock', () => {
   }) => {
     await seedDocument({});
     await page.goto('/settings');
+    await waitForWebLockHeld(page);
     const second = await context.newPage();
     await second.goto('/settings');
     await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
 
+    const secondLoads = countLoads(second);
+
     await page.close();
 
-    // WriterPromotionReload reloads `second` once it is promoted (see its doc comment for the
-    // settle delay); wait for the outcome (the banner gone) rather than the reload event itself,
-    // so this doesn't depend on exactly when that reload fires.
+    // WriterPromotionReload reloads `second` once it is promoted; wait for the outcome (the banner
+    // gone), then check it reloaded exactly once and stays settled.
     await expect(second.locator(READ_ONLY_BANNER)).toHaveCount(0, { timeout: 10_000 });
+    await second.waitForTimeout(2000);
+    expect(secondLoads()).toBe(1);
+  });
+
+  test('#125: a single tab becomes the writer without reloading itself', async ({
+    page,
+    seedDocument,
+  }) => {
+    await seedDocument({});
+    const loads = countLoads(page);
+
+    await page.goto('/settings');
+    await page.waitForTimeout(3000);
+
+    expect(loads()).toBe(1);
+    await expect(page.locator(READ_ONLY_BANNER)).toHaveCount(0);
+  });
+});
+
+test.describe('multi-tab writer lock, localStorage heartbeat fallback (no Web Locks)', () => {
+  test.beforeEach(async ({ context }) => {
+    await context.addInitScript(() => {
+      Object.defineProperty(Navigator.prototype, 'locks', {
+        get: () => undefined,
+        configurable: true,
+      });
+    });
+  });
+
+  test('#126: a single tab becomes the writer without reloading itself', async ({
+    page,
+    seedDocument,
+  }) => {
+    await seedDocument({});
+    const loads = countLoads(page);
+
+    await page.goto('/settings');
+    await page.waitForTimeout(8000);
+
+    expect(loads()).toBe(1);
+    await expect(page.locator(READ_ONLY_BANNER)).toHaveCount(0);
+  });
+
+  test('#126: the reader takes over once, and only once, after the writer closes', async ({
+    page,
+    context,
+    seedDocument,
+  }) => {
+    test.slow();
+    await seedDocument({});
+    await page.goto('/settings');
+    await waitForHeartbeatClaimed(page);
+    await expect(page.locator(READ_ONLY_BANNER)).toHaveCount(0);
+    const second = await context.newPage();
+    await second.goto('/settings');
+    await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
+    // While the writer is alive, the reader stays put: no takeover, no reloads.
+    const secondLoads = countLoads(second);
+    await second.waitForTimeout(8000);
+    expect(secondLoads()).toBe(0);
+    await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
+
+    await page.close();
+
+    // Stale threshold (5 s) plus one poll (2 s) at most, with margin.
+    await expect(second.locator(READ_ONLY_BANNER)).toHaveCount(0, { timeout: 12_000 });
+    await second.waitForTimeout(8000);
+    expect(secondLoads()).toBe(1);
+    await expect(second.locator(READ_ONLY_BANNER)).toHaveCount(0);
   });
 });

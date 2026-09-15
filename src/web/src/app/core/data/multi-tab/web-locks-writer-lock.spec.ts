@@ -1,132 +1,107 @@
+import { FakeLockManager } from './multi-tab.fakes';
 import { WebLocksWriterLock, WRITER_LOCK_NAME } from './web-locks-writer-lock';
 
-/** A minimal fake `LockManager`: `request()` grants the lock to whichever caller is currently at
- * the front of a FIFO queue, exactly like the real Web Locks API serializes requests for the same
- * lock name. */
-class FakeLockManager implements Pick<LockManager, 'request'> {
-  private held = false;
-  private readonly queue: (() => void)[] = [];
+function createLock(manager: FakeLockManager): WebLocksWriterLock {
+  return new WebLocksWriterLock(manager.asLockManager());
+}
 
-  request(
-    name: string,
-    optionsOrCallback: LockOptions | ((lock: Lock | null) => Promise<unknown>),
-    maybeCallback?: (lock: Lock | null) => Promise<unknown>,
-  ): Promise<unknown> {
-    const options = typeof optionsOrCallback === 'function' ? {} : optionsOrCallback;
-    const callback = typeof optionsOrCallback === 'function' ? optionsOrCallback : maybeCallback!;
-
-    return new Promise((resolve, reject) => {
-      const signal = options.signal;
-      const grant = (): void => {
-        this.held = true;
-        void callback({ name, mode: 'exclusive' } as Lock).then(
-          (value) => {
-            this.held = false;
-            this.advanceQueue();
-            resolve(value);
-          },
-          (error) => {
-            this.held = false;
-            this.advanceQueue();
-            reject(error);
-          },
-        );
-      };
-
-      if (!this.held) {
-        grant();
-      } else {
-        this.queue.push(grant);
-      }
-
-      signal?.addEventListener('abort', () => {
-        const index = this.queue.indexOf(grant);
-        if (index !== -1) {
-          this.queue.splice(index, 1);
-          reject(new DOMException('Aborted', 'AbortError'));
-        }
-      });
-    });
-  }
-
-  private advanceQueue(): void {
-    this.queue.shift()?.();
-  }
+/** Lets every queued promise callback (lock grants, releases) run. */
+async function settle(): Promise<void> {
+  await vi.advanceTimersByTimeAsync(0);
 }
 
 describe('WebLocksWriterLock', () => {
-  it('is not the writer until the lock is granted', () => {
-    const lock = new WebLocksWriterLock(new FakeLockManager() as unknown as LockManager);
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
+  it('is pending, and not the writer, until the lock request settles', () => {
+    const lock = createLock(new FakeLockManager());
+
+    lock.start();
+
+    expect(lock.role()).toBe('pending');
     expect(lock.isWriter()).toBe(false);
   });
 
-  it('becomes the writer once the lock is granted, uncontended', async () => {
-    const lock = new WebLocksWriterLock(new FakeLockManager() as unknown as LockManager);
-
-    lock.start();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(lock.isWriter()).toBe(true);
-  });
-
-  it('requests the lock by the shared writer lock name', () => {
+  it('first asks for the shared lock name with ifAvailable', () => {
     const manager = new FakeLockManager();
     const requestSpy = vi.spyOn(manager, 'request');
-    const lock = new WebLocksWriterLock(manager as unknown as LockManager);
 
-    lock.start();
+    createLock(manager).start();
 
     expect(requestSpy).toHaveBeenCalledWith(
       WRITER_LOCK_NAME,
-      expect.anything(),
+      { ifAvailable: true },
       expect.any(Function),
     );
   });
 
-  it('stays a reader while another holder has the lock, then becomes writer once it releases', async () => {
-    const manager = new FakeLockManager();
-    const first = new WebLocksWriterLock(manager as unknown as LockManager);
-    const second = new WebLocksWriterLock(manager as unknown as LockManager);
+  it('becomes the writer without a promotion when the lock is free', async () => {
+    const lock = createLock(new FakeLockManager());
 
-    first.start();
-    await Promise.resolve();
-    await Promise.resolve();
-    second.start();
-    await Promise.resolve();
-    await Promise.resolve();
+    lock.start();
+    await settle();
 
-    expect(first.isWriter()).toBe(true);
-    expect(second.isWriter()).toBe(false);
-
-    first.stop();
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(first.isWriter()).toBe(false);
-    expect(second.isWriter()).toBe(true);
+    expect(lock.role()).toBe('writer');
+    expect(lock.promoted()).toBe(false);
   });
 
-  it('stop() before the lock is granted cancels the pending request', async () => {
+  it('#125: a slow but uncontended grant is still an initial grant, never a promotion', async () => {
+    const lock = createLock(new FakeLockManager(2000));
+
+    lock.start();
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(lock.role()).toBe('pending');
+    await vi.advanceTimersByTimeAsync(1);
+
+    expect(lock.role()).toBe('writer');
+    expect(lock.promoted()).toBe(false);
+  });
+
+  it('is a confirmed reader while another tab holds the lock, then is promoted once it releases', async () => {
     const manager = new FakeLockManager();
-    const holder = new WebLocksWriterLock(manager as unknown as LockManager);
-    const waiting = new WebLocksWriterLock(manager as unknown as LockManager);
+    const first = createLock(manager);
+    const second = createLock(manager);
+    first.start();
+    await settle();
+
+    second.start();
+    await settle();
+    expect(second.role()).toBe('reader');
+    expect(second.promoted()).toBe(false);
+
+    first.stop();
+    await settle();
+
+    expect(first.isWriter()).toBe(false);
+    expect(second.role()).toBe('writer');
+    expect(second.promoted()).toBe(true);
+  });
+
+  it('stop() while waiting cancels the queued request, so it never takes over', async () => {
+    const manager = new FakeLockManager();
+    const holder = createLock(manager);
+    const waiting = createLock(manager);
     holder.start();
-    await Promise.resolve();
-    await Promise.resolve();
+    await settle();
     waiting.start();
+    await settle();
 
     waiting.stop();
-    await Promise.resolve();
-    await Promise.resolve();
+    holder.stop();
+    await settle();
 
     expect(waiting.isWriter()).toBe(false);
-    holder.stop();
-    await Promise.resolve();
-    await Promise.resolve();
-    // The cancelled waiter never takes over; the lock simply has no holder afterwards.
-    expect(waiting.isWriter()).toBe(false);
+    expect(waiting.promoted()).toBe(false);
+  });
+
+  it('stop() before the first answer arrives never becomes the writer', async () => {
+    const lock = createLock(new FakeLockManager(50));
+
+    lock.start();
+    lock.stop();
+    await vi.advanceTimersByTimeAsync(50);
+
+    expect(lock.isWriter()).toBe(false);
   });
 });

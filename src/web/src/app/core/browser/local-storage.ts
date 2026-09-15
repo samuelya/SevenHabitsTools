@@ -6,6 +6,7 @@ import { WINDOW } from './window';
 export interface LocalStorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem(key: string): void;
 }
 
 export const LOCAL_STORAGE = new InjectionToken<LocalStorageLike>('LOCAL_STORAGE', {

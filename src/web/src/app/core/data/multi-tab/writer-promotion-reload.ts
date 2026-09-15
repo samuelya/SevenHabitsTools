@@ -1,50 +1,38 @@
 import { Injectable, Injector, effect, inject } from '@angular/core';
 import { WINDOW } from '../../browser/window';
-import { WRITER_LOCK } from './writer-lock';
+import { WriterLockService } from './writer-lock.service';
 
 /**
- * Even an uncontended writer lock grant is asynchronous: every tab's `isWriter()` starts `false`
- * (the strategy's default before its lock request settles) and flips `true` a moment later, so a
- * bare `false → true` transition alone can't tell "just finished starting up as the writer" from
- * "was genuinely read-only, and only now got promoted because the previous writer's tab closed".
- * A transition only counts as a real promotion once this much time has passed since `start()` —
- * comfortably longer than an uncontended grant ever takes, comfortably shorter than a real wait
- * for another tab to close.
- */
-export const PROMOTION_SETTLE_MS = 500;
-
-/**
- * A tab that starts read-only and later acquires the write lock (because the previous writer's
- * tab closed) reloads the page, rather than trying to resume mid-session: it may hold a stale
- * in-memory document from before the other tab's last save, and a full reload re-runs bootstrap
- * against whatever is actually stored instead of risking an overwrite with stale data. A tab that
- * is (or promptly becomes) the writer when this starts does nothing — see `PROMOTION_SETTLE_MS`.
+ * A tab that was confirmed read-only and later acquires the write lock (because the previous
+ * writer's tab closed) reloads the page, rather than trying to resume mid-session: it may hold a
+ * stale in-memory document from before the other tab's last save, and a full reload re-runs
+ * bootstrap against whatever is actually stored instead of risking an overwrite with stale data.
+ *
+ * It reacts only to the lock's latched `promoted` signal, which `WriterRoleState` sets on a
+ * `reader → writer` transition and never on an initial grant, however slow (#125). So there is no
+ * timing guess here, and at most one reload per page load.
  */
 @Injectable({ providedIn: 'root' })
 export class WriterPromotionReload {
-  private readonly writerLock = inject(WRITER_LOCK);
+  private readonly promoted = inject(WriterLockService).promoted;
   private readonly window = inject(WINDOW);
   private readonly injector = inject(Injector);
 
   private started = false;
-  private wasWriter: boolean | null = null;
-  private startedAt = 0;
+  private reloaded = false;
 
   start(): void {
     if (this.started) {
       return;
     }
     this.started = true;
-    this.startedAt = Date.now();
 
     effect(
       () => {
-        const isWriter = this.writerLock.isWriter();
-        const settled = Date.now() - this.startedAt >= PROMOTION_SETTLE_MS;
-        if (this.wasWriter === false && isWriter && settled) {
+        if (this.promoted() && !this.reloaded) {
+          this.reloaded = true;
           this.window.location.reload();
         }
-        this.wasWriter = isWriter;
       },
       { injector: this.injector },
     );

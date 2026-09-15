@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { CrossTabSync } from './multi-tab/cross-tab-sync';
+import { ReadOnlyEditNotifier } from './multi-tab/read-only-edit-notifier';
 import { WriterLockService } from './multi-tab/writer-lock.service';
 import { WriterPromotionReload } from './multi-tab/writer-promotion-reload';
 import { DocumentPersistence } from './document-persistence';
@@ -13,6 +14,7 @@ describe('DocumentSync', () => {
     const crossTabSync = { start: vi.fn() };
     const writerPromotionReload = { start: vi.fn() };
     const saveErrorNotifier = { start: vi.fn() };
+    const readOnlyEditNotifier = { start: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: WriterLockService, useValue: writerLock },
@@ -20,6 +22,7 @@ describe('DocumentSync', () => {
         { provide: CrossTabSync, useValue: crossTabSync },
         { provide: WriterPromotionReload, useValue: writerPromotionReload },
         { provide: SaveErrorNotifier, useValue: saveErrorNotifier },
+        { provide: ReadOnlyEditNotifier, useValue: readOnlyEditNotifier },
       ],
     });
 
@@ -30,5 +33,6 @@ describe('DocumentSync', () => {
     expect(crossTabSync.start).toHaveBeenCalledTimes(1);
     expect(writerPromotionReload.start).toHaveBeenCalledTimes(1);
     expect(saveErrorNotifier.start).toHaveBeenCalledTimes(1);
+    expect(readOnlyEditNotifier.start).toHaveBeenCalledTimes(1);
   });
 });

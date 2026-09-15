@@ -65,6 +65,16 @@ export function describeStorageAdapterContract(createAdapter: () => StorageAdapt
       await expect(adapter.load()).resolves.toBeNull();
     });
 
+    it('saves and loads normally again after clear', async () => {
+      const adapter = createAdapter();
+      await adapter.save(sampleDoc(1), { reason: 'flush' });
+      await adapter.clear();
+
+      await adapter.save(sampleDoc(2), { reason: 'flush' });
+
+      await expect(adapter.load()).resolves.toEqual(sampleDoc(2));
+    });
+
     it('clear() on an adapter with nothing stored does not throw', async () => {
       await expect(createAdapter().clear()).resolves.toBeUndefined();
     });
