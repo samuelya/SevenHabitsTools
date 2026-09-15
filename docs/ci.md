@@ -54,3 +54,8 @@ detection above; it is not itself a required check.
    is false, so it can be marked required without blocking unrelated PRs.
 4. Ask the owner to add the job's `name:` to the "Protect main" ruleset's
    required status checks (an agent cannot change ruleset settings).
+
+
+## Proof
+
+This line is added to prove docs-only PRs skip the api/web/infra jobs (issue #129).
