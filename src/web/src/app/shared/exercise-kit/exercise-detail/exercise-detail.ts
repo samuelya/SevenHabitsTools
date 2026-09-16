@@ -1,5 +1,17 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  effect,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,16 +39,75 @@ import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 })
 export class ExerciseDetail {
   private readonly breakpoints = inject(BreakpointObserver);
+  private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   /** Whether `[detail]` content is currently projected/selected. */
   readonly hasDetail = input.required<boolean>();
   /** Emitted when the drawer should close: the close button, a backdrop tap, or Escape. */
   readonly closed = output<void>();
 
+  private readonly closeButton = viewChild.required<unknown, ElementRef<HTMLButtonElement>>(
+    'closeButton',
+    { read: ElementRef },
+  );
+
   protected readonly handset = toSignal(
     this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
+
+  /** The element focused before this opened the drawer, to restore on close (issue #174). */
+  private triggerElement: HTMLElement | null = null;
+  /** Whether the *combined* handset-and-open state was true last run — not `open` alone, so
+   * crossing the handset breakpoint while already open (a resize or fold/rotate) is treated the
+   * same as opening/closing, instead of silently skipping capture or restoring a never-captured
+   * `null`. */
+  private wasHandsetOpen = false;
+
+  constructor() {
+    // `[opened]` is bound one-way from `hasDetail`, not driven through `drawer.open()`, so
+    // MatDrawer's own autoFocus (gated behind its opening transition actually completing, see
+    // `MatDrawer#_takeFocus`) can miss a reopen. Owning focus here instead makes it independent of
+    // that animation coupling. Only handset mode is a full-screen overlay over the triggering list
+    // item (see `exercise-detail.scss`), so on desktop's persistent side panel this leaves focus
+    // alone, matching `MatDrawer`'s own non-modal `autoFocus` default. Focus is captured here
+    // *before* moving it into the close button and restored explicitly on close rather than left
+    // to `MatDrawer`'s own restore, because that mechanism reads `document.activeElement` only
+    // after this effect has already moved it.
+    effect(() => {
+      const handsetOpen = this.handset() && this.hasDetail();
+      if (handsetOpen === this.wasHandsetOpen) {
+        return;
+      }
+      this.wasHandsetOpen = handsetOpen;
+      // Capture the trigger now, while focus is still on it: `MatDrawerContent` marks the list
+      // pane `inert` shortly after opening, which blurs whatever it holds.
+      if (handsetOpen) {
+        this.triggerElement = this.document.activeElement as HTMLElement | null;
+      }
+      afterNextRender(() => this.moveFocus(handsetOpen), { injector: this.injector });
+    });
+  }
+
+  /**
+   * Deferred to a render hook rather than run inline in the effect, because both targets are
+   * unfocusable at the instant the effect runs (issue #176): `MatDrawer`'s `[opened]` setter, which
+   * synchronously toggles the `mat-drawer-opened`/`mat-drawer-animating` classes gating its
+   * `visibility: hidden` rule, has not run yet, and on close the list pane is still `inert`.
+   * Focusing a hidden or inert element silently no-ops in a real browser (but not in jsdom), which
+   * left focus outside the drawer and made `MatDrawer`'s own Escape handler deaf.
+   */
+  private moveFocus(handsetOpen: boolean): void {
+    if (handsetOpen) {
+      // The drawer is visible but still sliding in; `preventScroll` keeps the container from
+      // jumping to its off-screen position mid-transition.
+      this.closeButton().nativeElement.focus({ preventScroll: true });
+    } else {
+      this.triggerElement?.focus();
+      this.triggerElement = null;
+    }
+  }
 
   protected onOpenedChange(opened: boolean): void {
     if (!opened) {

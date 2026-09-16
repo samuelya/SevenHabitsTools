@@ -7,9 +7,11 @@
     position="end"
     [mode]="handset() ? 'over' : 'side'"
     [opened]="hasDetail()"
+    [autoFocus]="false"
     (openedChange)="onOpenedChange($event)"
   >
     <button
+      #closeButton
       mat-icon-button
       type="button"
       class="close-button"
