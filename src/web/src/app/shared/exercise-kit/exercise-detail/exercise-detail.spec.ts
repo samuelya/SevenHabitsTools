@@ -1,5 +1,5 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatDrawer } from '@angular/material/sidenav';
@@ -12,18 +12,18 @@ import { ExerciseDetail } from './exercise-detail';
   selector: 'app-host',
   imports: [ExerciseDetail],
   template: `
-    <app-exercise-detail [hasDetail]="hasDetail" (closed)="onClosed()">
+    <app-exercise-detail [hasDetail]="hasDetail()" (closed)="onClosed()">
       <div list>The list</div>
       <div detail>The detail</div>
     </app-exercise-detail>
   `,
 })
 class HostComponent {
-  hasDetail = false;
+  readonly hasDetail = signal(false);
   closedCount = 0;
 
   onClosed(): void {
-    this.hasDetail = false;
+    this.hasDetail.set(false);
     this.closedCount++;
   }
 }
@@ -41,7 +41,7 @@ function setUp(handset: boolean, hasDetail: boolean) {
     ],
   });
   const fixture = TestBed.createComponent(HostComponent);
-  fixture.componentInstance.hasDetail = hasDetail;
+  fixture.componentInstance.hasDetail.set(hasDetail);
   fixture.detectChanges();
   return fixture;
 }
@@ -99,5 +99,43 @@ describe('ExerciseDetail', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.closedCount).toBe(1);
+  });
+
+  it('moves focus into the drawer and lets Escape close it on every open, not just the first (#174)', () => {
+    const fixture = setUp(true, false);
+    const host = fixture.nativeElement as HTMLElement;
+    // `document.activeElement` only reflects `.focus()` calls on elements attached to the
+    // document, and this component (unlike CDK-overlay-based dialogs) renders inline.
+    document.body.appendChild(host);
+
+    for (let cycle = 0; cycle < 2; cycle++) {
+      fixture.componentInstance.hasDetail.set(true);
+      fixture.detectChanges();
+
+      const closeButton = host.querySelector('.close-button') as HTMLButtonElement;
+      expect(document.activeElement).toBe(closeButton);
+      expect(host.querySelector('mat-drawer')?.classList).toContain('mat-drawer-opened');
+
+      closeButton.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Escape',
+          code: 'Escape',
+          keyCode: 27,
+          which: 27,
+          bubbles: true,
+        }),
+      );
+      fixture.detectChanges();
+
+      expect(host.querySelector('mat-drawer')?.classList).not.toContain('mat-drawer-opened');
+
+      // `(closed)` only fires once MatDrawer's own opening/closing animation settles, so drive
+      // the selection back to `null` directly here rather than depending on that timing, matching
+      // what the real `(closed)` handler eventually does.
+      fixture.componentInstance.hasDetail.set(false);
+      fixture.detectChanges();
+    }
+
+    host.remove();
   });
 });

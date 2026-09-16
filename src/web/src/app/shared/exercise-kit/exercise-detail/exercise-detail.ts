@@ -1,5 +1,14 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  effect,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,10 +42,27 @@ export class ExerciseDetail {
   /** Emitted when the drawer should close: the close button, a backdrop tap, or Escape. */
   readonly closed = output<void>();
 
+  private readonly closeButton = viewChild.required<unknown, ElementRef<HTMLButtonElement>>(
+    'closeButton',
+    { read: ElementRef },
+  );
+
   protected readonly handset = toSignal(
     this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
+
+  constructor() {
+    // `[opened]` is bound one-way from `hasDetail`, not driven through `drawer.open()`, so
+    // MatDrawer's own autoFocus (gated behind its opening transition actually completing, see
+    // `MatDrawer#_takeFocus`) can miss a reopen (issue #174). Owning focus here instead makes it
+    // independent of that animation coupling, on every `hasDetail` transition to true.
+    effect(() => {
+      if (this.hasDetail()) {
+        this.closeButton().nativeElement.focus();
+      }
+    });
+  }
 
   protected onOpenedChange(opened: boolean): void {
     if (!opened) {
