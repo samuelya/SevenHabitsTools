@@ -86,3 +86,11 @@ All acceptance criteria met, SOLID self-check passed and summarised in the PR's 
 
 ## Identity
 When asked for a readiness check, report your role and the model ID you are actually running on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).
+
+## Cost discipline
+The owner pays per token and has hit a monthly limit. A long-lived agent is expensive: every turn resends its whole history, and after an idle gap the cached copy expires and is re-billed in full.
+- **One round, then stop.** Do your round, hand off, and stop. Don't idle waiting for the next round: the lead starts a fresh agent for it, and GitHub (the issue, its comments, the PR and the tester's checklist) is the shared memory. Write those comments well enough that a fresh agent can continue from them alone.
+- **Messages are short.** Put detail in the issue or PR comment; send the lead and your counterpart **at most 5 lines**: what changed, the SHA, what to check next, and anything that needs a decision. Never paste a report you already posted.
+- **Read narrowly.** Read the files you need, not the tree. Prefer `gh api ... --jq` over full page dumps, and pipe long command output through `tail`/`grep`.
+- **Test at the right time.** Targeted unit tests while iterating; the full suite (and e2e) once, before hand-off.
+- **Ask early.** If the issue is ambiguous, ask in one message before building: a wrong round costs far more than a question.
