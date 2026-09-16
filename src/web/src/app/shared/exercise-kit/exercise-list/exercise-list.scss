@@ -1,0 +1,14 @@
+.exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.search {
+  inline-size: 100%;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant, gray);
+  padding-inline: 1rem;
+}

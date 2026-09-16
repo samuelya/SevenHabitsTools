@@ -1,0 +1,19 @@
+<mat-card class="prompt-card" appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>{{ title() }}</mat-card-title>
+    @if (chapterReference(); as chapterReference) {
+      <mat-card-subtitle>{{ chapterReference }}</mat-card-subtitle>
+    }
+  </mat-card-header>
+  <mat-card-content>
+    <p class="prompt">{{ prompt() }}</p>
+  </mat-card-content>
+  @if (whyItMatters(); as whyItMatters) {
+    <mat-expansion-panel class="why-it-matters">
+      <mat-expansion-panel-header>
+        <mat-panel-title>{{ 'exerciseKit.promptCard.whyItMatters' | transloco }}</mat-panel-title>
+      </mat-expansion-panel-header>
+      <p>{{ whyItMatters }}</p>
+    </mat-expansion-panel>
+  }
+</mat-card>

@@ -11,6 +11,8 @@ import aboutEn from '../features/about/i18n/en.json';
 import aboutAr from '../features/about/i18n/ar.json';
 import settingsEn from '../features/settings/i18n/en.json';
 import settingsAr from '../features/settings/i18n/ar.json';
+import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
+import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
 /**
  * Real translations, loaded synchronously (`TranslocoTestingModule`, no HTTP) instead of a
@@ -38,6 +40,8 @@ export function provideTranslocoTesting(): EnvironmentProviders[] {
           'about/ar': aboutAr,
           'settings/en': settingsEn,
           'settings/ar': settingsAr,
+          'exercise-kit/en': exerciseKitEn,
+          'exercise-kit/ar': exerciseKitAr,
         },
         preloadLangs: true,
         translocoConfig: {

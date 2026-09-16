@@ -16,10 +16,10 @@ import { OfflineIndicator } from '../../pwa/offline-indicator';
 import { PwaInstallBanner } from '../../pwa/pwa-install-banner';
 import { GithubLink } from '../../../shared/ui/github-link/github-link';
 import { AppTitleStrategy } from '../app-title-strategy';
+import { HANDSET_QUERY } from '../breakpoints';
 import { NAV_ITEMS } from '../nav-items';
 
-/** Below this width the shell uses bottom navigation instead of the side navigation. */
-export const HANDSET_QUERY = '(max-width: 599.98px)';
+export { HANDSET_QUERY };
 
 @Component({
   selector: 'app-shell',

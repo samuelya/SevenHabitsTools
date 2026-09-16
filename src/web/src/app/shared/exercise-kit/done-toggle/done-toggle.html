@@ -1,0 +1,22 @@
+<div class="done-toggle">
+  @if (done()) {
+    <button mat-stroked-button type="button" (click)="toggled.emit()">
+      <mat-icon aria-hidden="true">replay</mat-icon>
+      {{ 'exerciseKit.doneToggle.reopen' | transloco }}
+    </button>
+    @if (completedAt(); as completedAt) {
+      <span class="completed-at">
+        {{
+          'exerciseKit.doneToggle.completedAt'
+            | transloco
+              : { time: completedAt | appDate: { dateStyle: 'medium', timeStyle: 'short' } }
+        }}
+      </span>
+    }
+  } @else {
+    <button mat-flat-button type="button" (click)="toggled.emit()">
+      <mat-icon aria-hidden="true">check_circle</mat-icon>
+      {{ 'exerciseKit.doneToggle.markDone' | transloco }}
+    </button>
+  }
+</div>

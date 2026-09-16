@@ -1,3 +1,4 @@
+import { isDevMode } from '@angular/core';
 import { FeatureRoute } from './core/routing/feature-route';
 
 /**
@@ -12,4 +13,13 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },
   { path: 'about', loadChildren: () => import('./features/about/about.routes') },
+  // Demo route for `shared/exercise-kit/` (issue #30) — never registered in a production build.
+  ...(isDevMode()
+    ? [
+        {
+          path: 'dev/kit',
+          loadChildren: () => import('./shared/exercise-kit/dev-kit/dev-kit.routes'),
+        },
+      ]
+    : []),
 ];

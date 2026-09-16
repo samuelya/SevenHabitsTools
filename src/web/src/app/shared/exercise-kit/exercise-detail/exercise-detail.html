@@ -1,0 +1,13 @@
+<mat-drawer-container class="exercise-detail" [class.handset]="handset()" autosize>
+  <mat-drawer-content class="list-pane">
+    <ng-content select="[list]" />
+  </mat-drawer-content>
+  <mat-drawer
+    class="detail-drawer"
+    position="end"
+    [mode]="handset() ? 'over' : 'side'"
+    [opened]="hasDetail()"
+  >
+    <ng-content select="[detail]" />
+  </mat-drawer>
+</mat-drawer-container>

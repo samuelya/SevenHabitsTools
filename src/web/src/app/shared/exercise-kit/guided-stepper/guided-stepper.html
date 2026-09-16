@@ -1,0 +1,21 @@
+<mat-stepper
+  class="guided-stepper"
+  [linear]="linear()"
+  [orientation]="orientation()"
+  [selectedIndex]="selectedIndex()"
+  (selectedIndexChange)="selectedIndexChange.emit($event)"
+>
+  @for (step of steps(); track step.key) {
+    <mat-step [label]="step.label" [completed]="step.done ?? false">
+      <ng-container [ngTemplateOutlet]="templateFor(step.key)" />
+      <div class="step-actions">
+        <button mat-button matStepperPrevious type="button">
+          {{ 'exerciseKit.stepper.back' | transloco }}
+        </button>
+        <button mat-flat-button matStepperNext type="button">
+          {{ 'exerciseKit.stepper.next' | transloco }}
+        </button>
+      </div>
+    </mat-step>
+  }
+</mat-stepper>

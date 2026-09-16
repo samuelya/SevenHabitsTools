@@ -1,0 +1,27 @@
+<div class="reflection-editor">
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ label() }}</mat-label>
+    <textarea
+      matInput
+      rows="6"
+      [value]="draft()"
+      (input)="onInput($event)"
+      [attr.aria-describedby]="'reflection-hint'"
+    ></textarea>
+  </mat-form-field>
+  <p id="reflection-hint" class="hint">
+    <span class="character-count">{{
+      'exerciseKit.reflection.characterCount' | transloco: { count: characterCount() }
+    }}</span>
+    <span class="saved-at">
+      @if (updatedAt(); as updatedAt) {
+        {{
+          'exerciseKit.reflection.savedAt'
+            | transloco: { time: updatedAt | appDate: { dateStyle: 'medium', timeStyle: 'short' } }
+        }}
+      } @else {
+        {{ 'exerciseKit.reflection.notSavedYet' | transloco }}
+      }
+    </span>
+  </p>
+</div>
