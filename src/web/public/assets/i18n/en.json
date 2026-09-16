@@ -68,6 +68,9 @@
       "editRefused": "This tab is read-only, so that change wasn't made. Edit in the other tab, or close it to edit here.",
       "editPending": "Still getting ready to save. Try that change again in a moment."
     },
+    "crossTab": {
+      "reloadBlocked": "Reload this tab to get the latest version."
+    },
     "saveError": {
       "message": "We couldn't save your latest changes.",
       "exportNow": "Export now"

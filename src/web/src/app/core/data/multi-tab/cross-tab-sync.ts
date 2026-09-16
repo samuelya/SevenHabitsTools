@@ -1,5 +1,9 @@
 import { Injectable, Injector, effect, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
+import type { MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
+import { AppSnackbar } from '../../layout/app-snackbar';
+import { resolveDocument } from '../document-validation';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { STORAGE_ADAPTER } from '../storage-adapter';
@@ -13,6 +17,15 @@ const CHANNEL_NAME = 'sevenhabits-sync';
  * writer ever actually saves (`DocumentPersistence` refuses to for a read-only tab), so this class
  * only needs to decide whether an incoming broadcast is for *this* tab to act on — never whether
  * to send one, which follows automatically from watching `DocumentPersistence.lastSavedAt`.
+ *
+ * A reload runs the same `resolveDocument()` migrate-then-validate path bootstrap uses (#141): a
+ * reader on a newer build migrates the writer's older-version document forward, same as
+ * bootstrap would; a reader on an older build can't migrate a document from a newer build
+ * *forward*, so `resolveDocument()` rejects it (`SchemaVersionTooNewError`) same as an invalid
+ * shape would, and this tab keeps showing its last-known-good document rather than an
+ * unrecoverable one — with a snackbar telling the user to reload the tab, mirroring
+ * `AppUpdateService`'s "reload required" prompt. A rejected `adapter.load()` gets the same
+ * treatment: caught, not thrown, same notice.
  */
 @Injectable({ providedIn: 'root' })
 export class CrossTabSync {
@@ -20,11 +33,15 @@ export class CrossTabSync {
   private readonly store = inject(DocumentStore);
   private readonly adapter = inject(STORAGE_ADAPTER);
   private readonly writerLock = inject(WRITER_LOCK);
+  private readonly snackbar = inject(AppSnackbar);
+  private readonly transloco = inject(TranslocoService);
   private readonly createChannel = inject(BROADCAST_CHANNEL_FACTORY);
   private readonly injector = inject(Injector);
 
   private started = false;
   private isFirstRun = true;
+  private reloadNoticeOpen = false;
+  private reloadNoticeRef: MatSnackBarRef<TextOnlySnackBar> | null = null;
 
   start(): void {
     if (this.started) {
@@ -60,9 +77,57 @@ export class CrossTabSync {
   }
 
   private async reloadFromAdapter(): Promise<void> {
-    const doc = await this.adapter.load();
-    if (doc !== null) {
-      this.store.replaceDocument(doc);
+    let raw: unknown;
+    try {
+      raw = await this.adapter.load();
+    } catch {
+      this.notifyReloadBlocked();
+      return;
+    }
+    if (raw === null) {
+      return;
+    }
+
+    const result = resolveDocument(raw);
+    if (!result.ok) {
+      this.notifyReloadBlocked();
+      return;
+    }
+    this.store.replaceDocument(result.document);
+    // A later broadcast reloaded fine: the tab has self-healed, so a stale "reload this tab"
+    // notice from an earlier failure no longer applies and would block a genuinely new one.
+    // Reset the flag directly rather than relying only on the ref: showReloadNotice()'s
+    // snackbar.open() may still be in flight (reloadNoticeRef not set yet), and if this success
+    // is not observed here, the stale-open flag would suppress every later genuine failure too.
+    this.reloadNoticeOpen = false;
+    this.reloadNoticeRef?.dismiss();
+    this.reloadNoticeRef = null;
+  }
+
+  private notifyReloadBlocked(): void {
+    if (this.reloadNoticeOpen) {
+      return;
+    }
+    this.reloadNoticeOpen = true;
+    void this.showReloadNotice();
+  }
+
+  private async showReloadNotice(): Promise<void> {
+    try {
+      const ref = await this.snackbar.open(
+        this.transloco.translate('data.crossTab.reloadBlocked'),
+        this.transloco.translate('data.snackbar.dismiss'),
+      );
+      this.reloadNoticeRef = ref;
+      ref.afterDismissed().subscribe(() => {
+        this.reloadNoticeOpen = false;
+        if (this.reloadNoticeRef === ref) {
+          this.reloadNoticeRef = null;
+        }
+      });
+    } catch {
+      // Couldn't open it (e.g. the snackbar code failed to load): the next failed reload tries again.
+      this.reloadNoticeOpen = false;
     }
   }
 }
