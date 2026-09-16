@@ -34,6 +34,11 @@
                 "glob": "*/i18n/*.json",
                 "input": "src/app/features",
                 "output": "assets/i18n"
+              },
+              {
+                "glob": "*/i18n/*.json",
+                "input": "src/app/shared",
+                "output": "assets/i18n"
               }
             ],
             "styles": [

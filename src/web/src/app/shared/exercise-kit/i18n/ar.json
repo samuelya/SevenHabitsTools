@@ -1,0 +1,29 @@
+{
+  "promptCard": {
+    "whyItMatters": "لماذا يهم هذا"
+  },
+  "stepper": {
+    "back": "السابق",
+    "next": "التالي"
+  },
+  "list": {
+    "searchLabel": "بحث في التمارين",
+    "sortLabel": "ترتيب",
+    "sortByTitle": "حسب العنوان",
+    "sortByStatus": "حسب الحالة",
+    "empty": "لا توجد تمارين مطابقة لبحثك."
+  },
+  "detail": {
+    "close": "العودة إلى القائمة"
+  },
+  "reflection": {
+    "characterCount": "{{count}} حرفًا",
+    "savedAt": "تم الحفظ {{time}}",
+    "notSavedYet": "لم يتم الحفظ بعد"
+  },
+  "doneToggle": {
+    "markDone": "وضع علامة تم",
+    "reopen": "إعادة فتح",
+    "completedAt": "اكتمل في {{time}}"
+  }
+}

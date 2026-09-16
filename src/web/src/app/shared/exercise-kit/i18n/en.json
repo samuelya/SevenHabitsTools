@@ -1,0 +1,29 @@
+{
+  "promptCard": {
+    "whyItMatters": "Why this matters"
+  },
+  "stepper": {
+    "back": "Back",
+    "next": "Next"
+  },
+  "list": {
+    "searchLabel": "Search exercises",
+    "sortLabel": "Sort",
+    "sortByTitle": "By title",
+    "sortByStatus": "By status",
+    "empty": "No exercises match your search."
+  },
+  "detail": {
+    "close": "Back to list"
+  },
+  "reflection": {
+    "characterCount": "{{count}} characters",
+    "savedAt": "Saved {{time}}",
+    "notSavedYet": "Not saved yet"
+  },
+  "doneToggle": {
+    "markDone": "Mark done",
+    "reopen": "Reopen",
+    "completedAt": "Completed {{time}}"
+  }
+}

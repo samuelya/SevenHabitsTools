@@ -1,0 +1,45 @@
+<div class="exercise-list">
+  <mat-form-field class="search" appearance="outline">
+    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+    <mat-label>{{ 'exerciseKit.list.searchLabel' | transloco }}</mat-label>
+    <input matInput [value]="query()" (input)="onQueryInput($event)" type="search" />
+  </mat-form-field>
+
+  <mat-button-toggle-group
+    class="sort"
+    [value]="sort()"
+    [attr.aria-label]="'exerciseKit.list.sortLabel' | transloco"
+    (change)="sort.set($event.value)"
+  >
+    <mat-button-toggle value="title">{{
+      'exerciseKit.list.sortByTitle' | transloco
+    }}</mat-button-toggle>
+    <mat-button-toggle value="status">{{
+      'exerciseKit.list.sortByStatus' | transloco
+    }}</mat-button-toggle>
+  </mat-button-toggle-group>
+
+  @if (visibleItems().length) {
+    <mat-nav-list>
+      @for (item of visibleItems(); track item.id) {
+        <button
+          mat-list-item
+          type="button"
+          [activated]="item.id === selectedId()"
+          [attr.aria-selected]="item.id === selectedId()"
+          (click)="itemSelected.emit(item.id)"
+        >
+          @if (item.done) {
+            <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
+          }
+          <span matListItemTitle>{{ item.title }}</span>
+          @if (item.subtitle; as subtitle) {
+            <span matListItemLine>{{ subtitle }}</span>
+          }
+        </button>
+      }
+    </mat-nav-list>
+  } @else {
+    <p class="empty">{{ 'exerciseKit.list.empty' | transloco }}</p>
+  }
+</div>

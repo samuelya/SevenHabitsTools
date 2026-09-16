@@ -1,0 +1,24 @@
+.exercise-detail {
+  background: transparent;
+}
+
+.list-pane {
+  padding-inline-end: 1rem;
+}
+
+.detail-drawer {
+  inline-size: 28rem;
+  max-inline-size: 100%;
+  padding: 1rem;
+}
+
+.close-button {
+  margin-inline-start: -0.5rem;
+  margin-block-end: 0.5rem;
+}
+
+// Below the handset breakpoint the drawer opens in `over` mode (full width) so it reads as a full
+// page swap, not a side panel sharing space with the list.
+.exercise-detail.handset .detail-drawer {
+  inline-size: 100%;
+}

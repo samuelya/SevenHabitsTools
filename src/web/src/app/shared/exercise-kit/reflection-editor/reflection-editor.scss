@@ -1,0 +1,12 @@
+.field {
+  inline-size: 100%;
+}
+
+.hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-size: 0.75rem;
+  margin-block-start: -0.5rem;
+}

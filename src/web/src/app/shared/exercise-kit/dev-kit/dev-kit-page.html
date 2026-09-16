@@ -1,0 +1,60 @@
+<h1 class="page-heading">Exercise UI kit</h1>
+
+<section>
+  <h2>Prompt card</h2>
+  <app-exercise-prompt-card
+    title="Circle of Influence"
+    prompt="List the things in your life you can directly control, versus the things you can only be concerned about."
+    chapterReference="Habit 1"
+    whyItMatters="Focusing your energy on what you can influence is the core of proactive behavior."
+  />
+</section>
+
+<section>
+  <h2>Guided stepper</h2>
+  <app-guided-stepper
+    [steps]="steps"
+    [selectedIndex]="stepIndex()"
+    (selectedIndexChange)="stepIndex.set($event)"
+  >
+    <ng-template appGuidedStep="identify">
+      <p>Step 1: identify the roles in your life.</p>
+    </ng-template>
+    <ng-template appGuidedStep="reflect">
+      <p>Step 2: reflect on how you want to show up in each one.</p>
+    </ng-template>
+  </app-guided-stepper>
+</section>
+
+<section>
+  <h2>List / detail</h2>
+  <app-exercise-detail [hasDetail]="hasDetail()" (closed)="selectedId.set(null)">
+    <app-exercise-list
+      list
+      [items]="items"
+      [selectedId]="selectedId()"
+      (itemSelected)="select($event)"
+    />
+    @if (selectedId(); as selectedId) {
+      <div detail>
+        <h3>{{ selectedId }}</h3>
+        <p>Detail content for the selected exercise would render here.</p>
+      </div>
+    }
+  </app-exercise-detail>
+</section>
+
+<section>
+  <h2>Reflection editor</h2>
+  <app-reflection-editor
+    [value]="reflection()"
+    label="What did you learn?"
+    [updatedAt]="reflectionUpdatedAt()"
+    (valueChange)="onReflectionChange($event)"
+  />
+</section>
+
+<section>
+  <h2>Done state</h2>
+  <app-done-toggle [done]="done()" [completedAt]="completedAt()" (toggled)="onToggle()" />
+</section>
