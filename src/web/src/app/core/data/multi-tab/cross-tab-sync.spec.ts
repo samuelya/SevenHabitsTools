@@ -1,10 +1,14 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
+import documentV1Fixture from '../../../testing/fixtures/document-v1.json';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import {
   BROADCAST_CHANNEL_FACTORY,
   BroadcastChannelFactory,
 } from '../../browser/broadcast-channel';
-import { RootDocument } from '../document.model';
+import { AppSnackbar } from '../../layout/app-snackbar';
+import { CURRENT_SCHEMA_VERSION, RootDocument } from '../document.model';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
 import { StorageAdapter, STORAGE_ADAPTER } from '../storage-adapter';
@@ -50,11 +54,16 @@ function sampleDoc(): RootDocument {
   };
 }
 
+interface FakeSnackbarRef {
+  readonly dismissed: Subject<void>;
+}
+
 function setUp(
   options: {
     isWriter?: boolean;
     broadcastFactory?: BroadcastChannelFactory;
     initialLastSavedAt?: Date | null;
+    load?: ReturnType<typeof vi.fn>;
   } = {},
 ): {
   crossTabSync: CrossTabSync;
@@ -62,15 +71,29 @@ function setUp(
   replaceDocument: ReturnType<typeof vi.fn>;
   load: ReturnType<typeof vi.fn>;
   bus: FakeBroadcastBus;
+  open: ReturnType<typeof vi.fn>;
+  refs: FakeSnackbarRef[];
 } {
   const bus = new FakeBroadcastBus();
   const lastSavedAt = signal<Date | null>(options.initialLastSavedAt ?? null);
   const replaceDocument = vi.fn();
-  const load = vi.fn().mockResolvedValue(sampleDoc());
-  const adapter: StorageAdapter = { kind: 'noop', load, save: vi.fn(), clear: vi.fn() };
+  const load = options.load ?? vi.fn().mockResolvedValue(sampleDoc());
+  const adapter: StorageAdapter = {
+    kind: 'noop',
+    load: load as StorageAdapter['load'],
+    save: vi.fn(),
+    clear: vi.fn(),
+  };
+  const refs: FakeSnackbarRef[] = [];
+  const open = vi.fn(async () => {
+    const ref: FakeSnackbarRef = { dismissed: new Subject<void>() };
+    refs.push(ref);
+    return { afterDismissed: () => ref.dismissed };
+  });
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: BROADCAST_CHANNEL_FACTORY, useValue: options.broadcastFactory ?? bus.factory },
       {
         provide: DocumentPersistence,
@@ -79,10 +102,19 @@ function setUp(
       { provide: DocumentStore, useValue: { replaceDocument } as unknown as DocumentStore },
       { provide: STORAGE_ADAPTER, useValue: adapter },
       { provide: WRITER_LOCK, useValue: { isWriter: signal(options.isWriter ?? true) } },
+      { provide: AppSnackbar, useValue: { open } },
     ],
   });
 
-  return { crossTabSync: TestBed.inject(CrossTabSync), lastSavedAt, replaceDocument, load, bus };
+  return {
+    crossTabSync: TestBed.inject(CrossTabSync),
+    lastSavedAt,
+    replaceDocument,
+    load,
+    bus,
+    open,
+    refs,
+  };
 }
 
 describe('CrossTabSync', () => {
@@ -158,5 +190,108 @@ describe('CrossTabSync', () => {
     TestBed.tick();
 
     expect(onmessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a reloaded document through the same migrate-then-validate path as bootstrap', async () => {
+    // documentV1Fixture (also used by migrate-document.spec.ts) is already at
+    // CURRENT_SCHEMA_VERSION, since production has no version-bump migration yet — this proves
+    // reloadFromAdapter() routes through the shared resolveDocument() pipeline rather than
+    // bypassing it, matching document-bootstrap.spec.ts's own "migrates and loads" test.
+    const fixture = structuredClone(documentV1Fixture);
+    const load = vi.fn().mockResolvedValue(fixture);
+    const { crossTabSync, replaceDocument, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).toHaveBeenCalledWith(fixture);
+  });
+
+  it('leaves the store unchanged and shows a reload notice for a document from a newer schema version', async () => {
+    const tooNew = { ...sampleDoc(), schemaVersion: CURRENT_SCHEMA_VERSION + 1 };
+    const load = vi.fn().mockResolvedValue(tooNew);
+    const { crossTabSync, replaceDocument, open, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(open.mock.calls[0]![0]).toContain('Reload this tab');
+  });
+
+  it('leaves the store unchanged and shows a reload notice for a document with an invalid shape', async () => {
+    const load = vi.fn().mockResolvedValue({ schemaVersion: CURRENT_SCHEMA_VERSION });
+    const { crossTabSync, replaceDocument, open, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('catches a rejected load() and shows the reload notice once, without throwing', async () => {
+    const load = vi.fn().mockRejectedValue(new Error('connection closed'));
+    const { crossTabSync, replaceDocument, open, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    expect(() => bystander.postMessage({ type: 'saved' })).not.toThrow();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('never stacks a second reload notice while one is already open', async () => {
+    const load = vi.fn().mockRejectedValue(new Error('connection closed'));
+    const { crossTabSync, open, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(open).toHaveBeenCalledTimes(1);
+  });
+
+  it('can show the reload notice again after the previous one was dismissed', async () => {
+    const load = vi.fn().mockRejectedValue(new Error('connection closed'));
+    const { crossTabSync, open, refs, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    refs[0]!.dismissed.next();
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(open).toHaveBeenCalledTimes(2);
   });
 });
