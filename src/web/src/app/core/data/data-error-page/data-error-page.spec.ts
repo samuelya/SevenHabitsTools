@@ -8,6 +8,7 @@ import { WEB_SHARE } from '../../browser/web-share';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
 import { AppSnackbar } from '../../layout/app-snackbar';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
 import { DocumentPersistence } from '../document-persistence';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from '../document.model';
@@ -37,6 +38,7 @@ describe('DataErrorPage', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        provideTranslocoTesting(),
         { provide: STORAGE_ADAPTER, useValue: adapter },
         { provide: DEVICE_ID_SOURCE, useValue: { id: () => 'device-1' } },
         // DocumentImportExportService (the new "Import a backup" control, #150) injects WEB_SHARE;

@@ -8,6 +8,7 @@ import { DocumentMeta } from '../../core/data/document.model';
 import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { HomePage } from './home-page';
 
 const BANNER = 'app-export-reminder-banner';
@@ -40,6 +41,7 @@ function setUp(
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       provideRouter([]),
       // featureStore('backup') and the component's own `select('meta')` both go through this one
       // facade, keyed by path.

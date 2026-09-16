@@ -17,11 +17,62 @@ function mainNav(page: Page, projectName: string) {
   return page.locator(isMobile ? 'nav.bottom-nav' : 'nav.side-nav__main');
 }
 
+/**
+ * Shell copy in both languages, so specs that don't seed a language (and therefore render
+ * whichever language the project's own locale defaults to — see `playwright.config.ts`'s
+ * `mobile-ar`/`desktop-ar` projects) can assert against the right one instead of hardcoding `en`.
+ */
+const SHELL_TEXT = {
+  en: {
+    appName: 'Seven Habits Tools',
+    home: 'Home',
+    habits: 'Habits',
+    plan: 'Plan',
+    journal: 'Journal',
+    settings: 'Settings',
+  },
+  ar: {
+    appName: 'أدوات العادات السبع',
+    home: 'الرئيسية',
+    habits: 'العادات',
+    plan: 'التخطيط',
+    journal: 'المذكرات',
+    settings: 'الإعدادات',
+  },
+} as const;
+
+function localeFor(projectName: string): keyof typeof SHELL_TEXT {
+  return projectName.endsWith('-ar') ? 'ar' : 'en';
+}
+
+/** Every registered habit hub id (`core/habits/habits.ts`'s `HABIT_IDS`) — kept in sync by hand,
+ * same as `VISITED_PAGES` above, since these routes are generated from it rather than listed in
+ * the route registry. */
+const HABIT_HUB_IDS = [
+  'paradigms',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'h7',
+  'interdependence',
+] as const;
+
+/** Every route this app registers: the six top-level pages plus every habit hub. */
+const ALL_ROUTES = [...VISITED_PAGES, ...HABIT_HUB_IDS.map((id) => `/habits/${id}`)];
+
+/** A route or page title that never resolved — issue #149 — looks exactly like its own Transloco
+ * key (e.g. `titles.about`, `about.title`): a run of dot-separated identifier segments. */
+const RAW_KEY_PATTERN = /^[a-z0-9]+(\.[a-z0-9]+)+$/i;
+
 test.describe('app shell smoke', () => {
-  test('loads the home page', async ({ page }) => {
+  test('loads the home page', async ({ page }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
-    await expect(page).toHaveTitle('Home | Seven Habits Tools');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(page).toHaveTitle(`${text.home} | ${text.appName}`);
   });
 
   test('applies the global stylesheet under the production CSP', async ({ page }) => {
@@ -69,28 +120,89 @@ test.describe('app shell smoke', () => {
   });
 
   test('navigates between the top-level pages', async ({ page }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
     const nav = mainNav(page, testInfo.project.name);
 
-    await nav.getByRole('link', { name: 'Habits' }).click();
+    await nav.getByRole('link', { name: text.habits }).click();
     await expect(page).toHaveURL(/\/habits$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Habits');
+    await expect(page.getByTestId('page-title')).toHaveText(text.habits);
 
-    await nav.getByRole('link', { name: 'Plan' }).click();
+    await nav.getByRole('link', { name: text.plan }).click();
     await expect(page).toHaveURL(/\/plan$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Plan');
+    await expect(page.getByTestId('page-title')).toHaveText(text.plan);
 
-    await nav.getByRole('link', { name: 'Journal' }).click();
+    await nav.getByRole('link', { name: text.journal }).click();
     await expect(page).toHaveURL(/\/journal$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Journal');
+    await expect(page.getByTestId('page-title')).toHaveText(text.journal);
 
-    await nav.getByRole('link', { name: 'Settings' }).click();
+    await nav.getByRole('link', { name: text.settings }).click();
     await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Settings');
+    await expect(page.getByTestId('page-title')).toHaveText(text.settings);
 
-    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByTestId('page-title')).toHaveText('Home');
+    await expect(page.getByTestId('page-title')).toHaveText(text.home);
+  });
+
+  for (const lang of ['en', 'ar'] as const) {
+    test(`every route resolves a translated title, not a raw key (${lang})`, async ({
+      page,
+      seedDocument,
+    }) => {
+      // Regression test for #149: a direct deep link — the shell asking for the title before the
+      // routed page's own `transloco` pipe usage has had a chance to warm anything — is what
+      // reproduced it; in-app navigation (the test above) does not. `expect.poll` because the
+      // title is correctly reactive (it resolves once loaded, over the network, same as the
+      // page's own content) rather than necessarily present on the very first paint — #149 was
+      // that it never resolved at all, not that it was merely late.
+      //
+      // #162 was the same class of bug one level down — a shared component (the export-reminder
+      // banner, rendered on Home) using a key from a scope Home never loads. A document created
+      // 30 days ago with the default 7-day reminder makes `shouldShowExportReminder()`
+      // (export-reminder.logic.ts) true, so the banner renders as this walk passes through `/` in
+      // both languages. `seedDocument` and `setLanguage` each seed a whole fresh document on every
+      // navigation (see `fixtures.ts`), so language and the overdue `meta` are set together here
+      // rather than via two competing fixture calls.
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      await seedDocument({
+        settings: { language: lang },
+        meta: {
+          createdAt: new Date(now - 30 * dayMs).toISOString(),
+          updatedAt: new Date(now - 29 * dayMs).toISOString(),
+          appVersion: '0.0.0',
+          deviceId: '11111111-1111-4111-8111-111111111111',
+        },
+      });
+      for (const path of ALL_ROUTES) {
+        await page.goto(path);
+        await expect
+          .poll(() => page.getByTestId('page-title').textContent())
+          .not.toMatch(RAW_KEY_PATTERN);
+        expect(await page.title()).not.toMatch(RAW_KEY_PATTERN);
+
+        if (path === '/') {
+          const exportButton = page.locator('.export-reminder-banner__actions button').first();
+          await expect(exportButton).toBeVisible();
+          await expect(exportButton).not.toHaveText(RAW_KEY_PATTERN);
+        }
+      }
+    });
+  }
+
+  test('a live language switch re-translates the current page title, without navigating', async ({
+    page,
+    setLanguage,
+  }) => {
+    await setLanguage('en');
+    await page.goto('/habits/h2');
+    await expect(page.getByTestId('page-title')).toHaveText('Habit 2: Begin with the end in mind');
+
+    await page.getByRole('button', { name: 'Switch to Arabic' }).click();
+
+    await expect(page.getByTestId('page-title')).toHaveText('العادة 2: ابدأ والغاية في ذهنك');
+    await expect(page).toHaveTitle(/^العادة 2: ابدأ والغاية في ذهنك \| /);
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {
@@ -99,10 +211,9 @@ test.describe('app shell smoke', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // No feature reads `settings` into the UI yet (#28), so assert against IndexedDB itself
-    // rather than the DOM: the seeded value must still be there, not replaced by a fresh empty
-    // document (which would mean the adapter's `load()` didn't return it, or the bootstrap
-    // treated it as corrupt).
+    // Assert against IndexedDB itself rather than the DOM: the seeded value must still be there,
+    // not replaced by a fresh empty document (which would mean the adapter's `load()` didn't
+    // return it, or the bootstrap treated it as corrupt).
     const stored = await page.evaluate(
       () =>
         new Promise((resolve, reject) => {
@@ -120,17 +231,27 @@ test.describe('app shell smoke', () => {
     expect(stored).toMatchObject({ settings: { language: 'en' } });
   });
 
-  test('switching language mirrors the layout', async ({ page, setLanguage }) => {
-    test.fixme(
-      true,
-      'Needs #28 (i18n + RTL) — there is no language switcher yet and the app always renders en/ltr.',
-    );
+  test('switching language mirrors the layout', async ({ page, setLanguage }, testInfo) => {
     await setLanguage('ar');
-    await page.goto('/settings');
-    // Once #28 lands: assert <html lang="ar" dir="rtl"> and that the shell nav mirrors.
+    await page.goto('/');
+
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    // The home page's own copy, not just the attributes, actually renders in Arabic.
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('أدوات العادات السبع');
+
+    if (testInfo.project.name.startsWith('desktop')) {
+      // The side nav mirrors to the end (right) edge of the viewport instead of the start (left).
+      const box = await page.locator('mat-sidenav').boundingBox();
+      const viewport = page.viewportSize();
+      expect(box).not.toBeNull();
+      expect(viewport).not.toBeNull();
+      expect(box!.x + box!.width).toBeCloseTo(viewport!.width, 0);
+    }
   });
 
   test('works offline after the first load', async ({ page, goOffline }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
     // The service worker never controls the load that registers it (only future navigations do),
     // so reload once while still online: this second load is fully served — and, for anything not
@@ -140,18 +261,18 @@ test.describe('app shell smoke', () => {
     await page.waitForLoadState('networkidle');
 
     const nav = mainNav(page, testInfo.project.name);
-    await nav.getByRole('link', { name: 'Habits' }).click();
+    await nav.getByRole('link', { name: text.habits }).click();
     await expect(page).toHaveURL(/\/habits$/);
 
     await goOffline();
     await page.reload();
-    await expect(page.getByTestId('page-title')).toHaveText('Habits');
+    await expect(page.getByTestId('page-title')).toHaveText(text.habits);
 
     // Client-side navigation back to an already-loaded route: no network needed either way, but
     // exercises the same offline app instance a user would actually be poking at.
-    await nav.getByRole('link', { name: 'Home', exact: true }).click();
+    await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
   });
 
   for (const path of VISITED_PAGES) {

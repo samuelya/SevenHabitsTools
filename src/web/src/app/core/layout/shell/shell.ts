@@ -8,9 +8,10 @@ import { MatRippleModule } from '@angular/material/core';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map } from 'rxjs';
 import { ReadOnlyBanner } from '../../data/multi-tab/read-only-banner';
-import { Labels } from '../../i18n/labels';
+import { LanguageToggle } from '../../i18n/language-toggle/language-toggle';
 import { OfflineIndicator } from '../../pwa/offline-indicator';
 import { PwaInstallBanner } from '../../pwa/pwa-install-banner';
 import { GithubLink } from '../../../shared/ui/github-link/github-link';
@@ -27,6 +28,7 @@ export const HANDSET_QUERY = '(max-width: 599.98px)';
     RouterLink,
     RouterLinkActive,
     GithubLink,
+    LanguageToggle,
     MatButtonModule,
     MatIconModule,
     MatListModule,
@@ -36,6 +38,7 @@ export const HANDSET_QUERY = '(max-width: 599.98px)';
     OfflineIndicator,
     PwaInstallBanner,
     ReadOnlyBanner,
+    TranslocoPipe,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -45,7 +48,6 @@ export class Shell {
   private readonly router = inject(Router);
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly titles = inject(AppTitleStrategy);
-  protected readonly labels = inject(Labels);
 
   protected readonly navItems = NAV_ITEMS;
 
@@ -62,10 +64,8 @@ export class Shell {
     { initialValue: this.router.url },
   );
 
-  protected readonly pageTitle = computed(() => {
-    const key = this.titles.titleKey();
-    return key ? this.labels.text(key) : this.labels.text('app.name');
-  });
+  /** Already translated and reactive to a language switch — see `AppTitleStrategy.pageTitle`. */
+  protected readonly pageTitle = this.titles.pageTitle;
 
   /** Parent URL for the back button; `null` on top-level pages. */
   protected readonly backUrl = computed(() => {

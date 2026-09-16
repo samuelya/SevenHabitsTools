@@ -1,19 +1,19 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { Labels } from '../../../core/i18n/labels';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppTitleStrategy } from '../../../core/layout/app-title-strategy';
 
-/** Temporary page for destinations whose feature has not been built yet. */
+/** Temporary page for destinations whose feature has not been built yet. Only ever bound to a
+ * root-scope title key (`titles.journal`, `titles.plan`), so `'placeholder.comingSoon'` — also
+ * root scope — is the only translation it needs. */
 @Component({
   selector: 'app-placeholder-page',
+  imports: [TranslocoPipe],
   template: `
-    <h1 class="page-heading">{{ heading() }}</h1>
-    <p>{{ labels.text('placeholder.comingSoon') }}</p>
+    <h1 class="page-heading">{{ titles.titleKey() | transloco }}</h1>
+    <p>{{ 'placeholder.comingSoon' | transloco }}</p>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PlaceholderPage {
-  private readonly titles = inject(AppTitleStrategy);
-  protected readonly labels = inject(Labels);
-
-  protected readonly heading = computed(() => this.labels.text(this.titles.titleKey()));
+  protected readonly titles = inject(AppTitleStrategy);
 }

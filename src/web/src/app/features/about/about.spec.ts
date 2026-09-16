@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Labels } from '../../core/i18n/labels';
+import { TranslocoService } from '@jsverse/transloco';
 import { configureApp, renderShellAt } from '../../testing/app-test-setup';
 
 describe('About feature', () => {
@@ -20,10 +20,10 @@ describe('About feature', () => {
     await fixture.whenStable();
 
     const host = fixture.nativeElement as HTMLElement;
-    const labels = TestBed.inject(Labels);
+    const transloco = TestBed.inject(TranslocoService);
 
     expect(host.querySelector('app-about-page')?.textContent).toContain(
-      labels.text('about.notAffiliated'),
+      transloco.translate('about.notAffiliated'),
     );
     expect(host.querySelector('app-about-page')?.textContent).toContain('1.2.3');
 
@@ -48,10 +48,10 @@ describe('About feature', () => {
     await fixture.whenStable();
 
     const host = fixture.nativeElement as HTMLElement;
-    const labels = TestBed.inject(Labels);
+    const transloco = TestBed.inject(TranslocoService);
 
     expect(host.querySelector('app-about-page')?.textContent).toContain(
-      labels.text('about.versionUnknown'),
+      transloco.translate('about.versionUnknown'),
     );
   });
 

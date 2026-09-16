@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { Subject } from 'rxjs';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { WINDOW } from '../browser/window';
 import { DocumentPersistence } from '../data/document-persistence';
 import { AppSnackbar } from '../layout/app-snackbar';
@@ -41,6 +42,7 @@ function setUp(options: { isEnabled?: boolean; dirty?: boolean; saveError?: unkn
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: SwUpdate, useValue: swUpdate },
       { provide: DocumentPersistence, useValue: persistence as unknown as DocumentPersistence },
       { provide: WINDOW, useValue: { location: { reload } } },

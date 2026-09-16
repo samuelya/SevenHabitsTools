@@ -1,5 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
+import { TranslocoService } from '@jsverse/transloco';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import '../settings.model';
 import { ImportConfirmDialog, ImportConfirmDialogData } from './import-confirm-dialog';
 
 function text(fixture: ComponentFixture<ImportConfirmDialog>, selector: string): string {
@@ -13,6 +16,7 @@ function buttons(fixture: ComponentFixture<ImportConfirmDialog>): HTMLButtonElem
 function setUp(data: ImportConfirmDialogData, close = vi.fn()) {
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: MAT_DIALOG_DATA, useValue: data },
       { provide: MatDialogRef, useValue: { close } },
     ],
@@ -96,6 +100,22 @@ describe('ImportConfirmDialog', () => {
 
     expect(close).not.toHaveBeenCalled();
     expect(text(fixture, '.import-confirm-dialog')).toContain('Replace…');
+  });
+
+  // Regression test for #163: the dates used Angular's built-in `date` pipe (a fixed LOCALE_ID),
+  // not this issue's own `AppDatePipe` (`core/i18n/locale.pipe.ts`) — so they always rendered in
+  // en-US format regardless of the active language.
+  it('#163: formats the preview dates through Intl for the active language, not a fixed locale', async () => {
+    const { fixture } = setUp(DATA);
+    const before = text(fixture, '.import-confirm-dialog__dates');
+    expect(before).not.toBe('');
+
+    await TestBed.inject(TranslocoService).setActiveLang('ar');
+    fixture.detectChanges();
+
+    const after = text(fixture, '.import-confirm-dialog__dates');
+    expect(after).not.toBe(before);
+    expect(after).toMatch(/[؀-ۿ]/); // contains Arabic script (e.g. a month name)
   });
 
   it('"Yes, replace" closes with "replace"', () => {

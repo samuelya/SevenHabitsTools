@@ -1,22 +1,22 @@
 <div class="data-error-page">
-  <h1 class="page-heading">{{ labels.text('data.error.title') }}</h1>
-  <p>{{ labels.text(status.messageKey() ?? 'data.bootstrap.corrupt') }}</p>
+  <h1 class="page-heading">{{ 'data.error.title' | transloco }}</h1>
+  <p>{{ status.messageKey() ?? 'data.bootstrap.corrupt' | transloco }}</p>
 
   @if (!confirmingReset()) {
     <div class="data-error-page__actions">
       <button mat-flat-button type="button" (click)="retry()">
-        {{ labels.text('data.error.retry') }}
+        {{ 'data.error.retry' | transloco }}
       </button>
       @if (canExport()) {
         <button mat-stroked-button type="button" (click)="exportRaw()">
-          {{ labels.text('data.error.exportRaw') }}
+          {{ 'data.error.exportRaw' | transloco }}
         </button>
       }
       <button mat-stroked-button type="button" (click)="triggerImport()">
-        {{ labels.text('data.error.importBackup') }}
+        {{ 'data.error.importBackup' | transloco }}
       </button>
       <button mat-button type="button" (click)="confirmReset()">
-        {{ labels.text('data.error.reset') }}
+        {{ 'data.error.reset' | transloco }}
       </button>
     </div>
     <input
@@ -24,7 +24,7 @@
       type="file"
       accept=".json,application/json"
       hidden
-      [attr.aria-label]="labels.text('data.error.importBackup')"
+      [attr.aria-label]="'data.error.importBackup' | transloco"
       (change)="onImportFileSelected($event)"
     />
     @if (importError(); as error) {
@@ -32,13 +32,13 @@
     }
   } @else {
     <div class="data-error-page__confirm" aria-live="polite">
-      <p>{{ labels.text('data.error.resetConfirm') }}</p>
+      <p>{{ 'data.error.resetConfirm' | transloco }}</p>
       <div class="data-error-page__actions">
         <button #cancelButton mat-stroked-button type="button" (click)="cancelReset()">
-          {{ labels.text('data.error.cancel') }}
+          {{ 'data.error.cancel' | transloco }}
         </button>
         <button mat-flat-button color="warn" type="button" (click)="reset()">
-          {{ labels.text('data.error.confirmReset') }}
+          {{ 'data.error.confirmReset' | transloco }}
         </button>
       </div>
     </div>

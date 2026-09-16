@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +16,8 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
-import { Labels } from '../../../core/i18n/labels';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { AppDatePipe } from '../../../core/i18n/locale.pipe';
 import { ImportPreview } from '../../../core/data/backup/import-preview.logic';
 
 export interface ImportConfirmDialogData {
@@ -47,14 +47,14 @@ export type ImportConfirmDialogResult = 'replace' | 'export-first' | undefined;
     MatDialogContent,
     MatDialogActions,
     MatDialogClose,
-    DatePipe,
+    AppDatePipe,
+    TranslocoPipe,
   ],
   templateUrl: './import-confirm-dialog.html',
   styleUrl: './import-confirm-dialog.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ImportConfirmDialog {
-  protected readonly labels = inject(Labels);
   protected readonly data = inject<ImportConfirmDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<ImportConfirmDialog, ImportConfirmDialogResult>);
 

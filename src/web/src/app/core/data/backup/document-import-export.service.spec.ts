@@ -12,6 +12,7 @@ import { WriterLockService } from '../multi-tab/writer-lock.service';
 import { WRITER_LOCK } from '../multi-tab/writer-lock';
 import { WriterRole } from '../multi-tab/writer-role-state';
 import { STORAGE_ADAPTER, StorageAdapter } from '../storage-adapter';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { registerBackupModel } from './backup.model';
 import { DocumentImportExportService } from './document-import-export.service';
 import { CURRENT_SCHEMA_VERSION } from '../document.model';
@@ -70,6 +71,7 @@ function setUp(
   });
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: STORAGE_ADAPTER, useValue: adapter },
       { provide: FileDownloader, useValue: { download } },
       { provide: WEB_SHARE, useValue: null },

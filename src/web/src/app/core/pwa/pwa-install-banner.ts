@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../data/feature-store';
 import { CLOCK } from '../time/clock';
 import { WINDOW } from '../browser/window';
-import { Labels } from '../i18n/labels';
 import { isIosSafari, shouldShowInstallBanner } from './install-prompt.logic';
 import { InstallPromptService } from './install-prompt.service';
 import { PWA_MODEL_KEY, PwaSettings } from './pwa.model';
@@ -19,26 +19,25 @@ import { PWA_MODEL_KEY, PwaSettings } from './pwa.model';
  */
 @Component({
   selector: 'app-pwa-install-banner',
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, TranslocoPipe],
   template: `
     @if (visibility(); as visible) {
       <div class="pwa-install-banner" role="status" aria-live="polite">
         <span class="material-symbols-outlined" aria-hidden="true">install_mobile</span>
         <span class="pwa-install-banner__message">
           {{
-            labels.text(
-              visible === 'ios-hint' ? 'data.pwa.install.iosHint' : 'data.pwa.install.message'
-            )
+            (visible === 'ios-hint' ? 'data.pwa.install.iosHint' : 'data.pwa.install.message')
+              | transloco
           }}
         </span>
         <div class="pwa-install-banner__actions">
           @if (visible === 'installable') {
             <button mat-button type="button" (click)="install()">
-              {{ labels.text('data.pwa.install.action') }}
+              {{ 'data.pwa.install.action' | transloco }}
             </button>
           }
           <button mat-button type="button" (click)="dismiss()">
-            {{ labels.text('data.snackbar.dismiss') }}
+            {{ 'data.snackbar.dismiss' | transloco }}
           </button>
         </div>
       </div>
@@ -69,7 +68,6 @@ import { PWA_MODEL_KEY, PwaSettings } from './pwa.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PwaInstallBanner {
-  protected readonly labels = inject(Labels);
   private readonly window = inject(WINDOW);
   private readonly clock = inject(CLOCK);
   private readonly installPrompt = inject(InstallPromptService);

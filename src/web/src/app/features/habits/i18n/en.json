@@ -1,0 +1,13 @@
+{
+  "intro": "Pick a habit to see its exercises.",
+  "paradigms": { "title": "Paradigms and principles" },
+  "h1": { "title": "Habit 1: Be proactive" },
+  "h2": { "title": "Habit 2: Begin with the end in mind" },
+  "h3": { "title": "Habit 3: Put first things first" },
+  "h4": { "title": "Habit 4: Think win-win" },
+  "h5": { "title": "Habit 5: Seek first to understand, then to be understood" },
+  "h6": { "title": "Habit 6: Synergize" },
+  "h7": { "title": "Habit 7: Sharpen the saw" },
+  "interdependence": { "title": "Paradigms of interdependence" },
+  "hub": { "noExercises": "Exercises for this habit are coming soon." }
+}

@@ -1,22 +1,25 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Labels } from '../../core/i18n/labels';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { GithubLink } from '../../shared/ui/github-link/github-link';
 import { AppVersionService } from './app-version.service';
 
 @Component({
   selector: 'app-about-page',
-  imports: [RouterLink, GithubLink],
+  imports: [RouterLink, GithubLink, TranslocoPipe],
   template: `
-    <h1 class="page-heading">{{ labels.text('about.title') }}</h1>
-    <p>{{ labels.text('about.notAffiliated') }}</p>
-    <p>{{ labels.text('about.recommendation') }}</p>
-    <p>{{ labels.text('about.versionLabel') }}: {{ appVersion.version() ?? unknownVersion }}</p>
+    <h1 class="page-heading">{{ 'about.title' | transloco }}</h1>
+    <p>{{ 'about.notAffiliated' | transloco }}</p>
+    <p>{{ 'about.recommendation' | transloco }}</p>
+    <p>
+      {{ 'about.versionLabel' | transloco }}:
+      {{ appVersion.version() ?? ('about.versionUnknown' | transloco) }}
+    </p>
     <div class="about-page__github">
       <app-github-link [showLabel]="true" [showExternalIcon]="true" />
     </div>
     <p>
-      <a routerLink="/settings" fragment="privacy">{{ labels.text('about.privacyLink') }}</a>
+      <a routerLink="/settings" fragment="privacy">{{ 'about.privacyLink' | transloco }}</a>
     </p>
   `,
   styles: `
@@ -28,7 +31,5 @@ import { AppVersionService } from './app-version.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AboutPage {
-  protected readonly labels = inject(Labels);
   protected readonly appVersion = inject(AppVersionService);
-  protected readonly unknownVersion = this.labels.text('about.versionUnknown');
 }

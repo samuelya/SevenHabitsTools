@@ -1,20 +1,21 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ONLINE_STATUS } from '../browser/online-status';
-import { Labels } from '../i18n/labels';
 
 /**
  * Persistent banner telling the user the browser is offline, so a missing network doesn't read as
  * the app being broken (it works fully offline once loaded, per #27). Purely a read of
- * `ONLINE_STATUS` and `Labels`, styled and placed like `ReadOnlyBanner` — no `start()` of its own,
- * the token already keeps itself live.
+ * `ONLINE_STATUS`, styled and placed like `ReadOnlyBanner` — no `start()` of its own, the token
+ * already keeps itself live.
  */
 @Component({
   selector: 'app-offline-indicator',
+  imports: [TranslocoPipe],
   template: `
     @if (!online()) {
       <div class="offline-indicator" role="status" aria-live="polite">
         <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span>
-        {{ labels.text('data.pwa.offline') }}
+        {{ 'data.pwa.offline' | transloco }}
       </div>
     }
   `,
@@ -33,6 +34,5 @@ import { Labels } from '../i18n/labels';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OfflineIndicator {
-  protected readonly labels = inject(Labels);
   protected readonly online = inject(ONLINE_STATUS);
 }

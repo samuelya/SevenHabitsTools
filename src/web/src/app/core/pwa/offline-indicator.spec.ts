@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { ONLINE_STATUS } from '../browser/online-status';
 import { OfflineIndicator } from './offline-indicator';
 
@@ -8,7 +9,10 @@ function render(online: ReturnType<typeof signal<boolean>>): {
   detectChanges: () => void;
 } {
   TestBed.configureTestingModule({
-    providers: [{ provide: ONLINE_STATUS, useValue: online.asReadonly() }],
+    providers: [
+      provideTranslocoTesting(),
+      { provide: ONLINE_STATUS, useValue: online.asReadonly() },
+    ],
   });
   const fixture = TestBed.createComponent(OfflineIndicator);
   fixture.detectChanges();

@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
@@ -8,9 +8,41 @@ import { expect, test } from './fixtures';
  * read-only tab refuses to import.
  */
 
-const EXPORT_BUTTON = 'Export data';
-const IMPORT_BUTTON = 'Import data';
 const FILE_INPUT = 'input[type="file"]';
+
+/** None of these tests seed a language, so they render whichever language the project's own
+ * locale defaults to (`mobile-ar`/`desktop-ar`, per `playwright.config.ts`) — the strings below
+ * let assertions target the right one instead of hardcoding `en`. */
+const BACKUP_TEXT = {
+  en: {
+    appName: 'Seven Habits Tools',
+    exportButton: 'Export data',
+    importButton: 'Import data',
+    replaceButton: 'Replace…',
+    confirmReplaceButton: 'Yes, replace',
+    errorHeading: "We couldn't read your saved data",
+    notJson: /JSON file this app can read/i,
+    invalid: /data isn't in a shape/i,
+    readOnlyImportRefused: /read-only, so it can't import/i,
+    alreadyRecovered: 'Another tab has already recovered your data',
+  },
+  ar: {
+    appName: 'أدوات العادات السبع',
+    exportButton: 'تصدير البيانات',
+    importButton: 'استيراد البيانات',
+    replaceButton: 'استبدال…',
+    confirmReplaceButton: 'نعم، استبدال',
+    errorHeading: 'تعذّرت قراءة بياناتك المحفوظة',
+    notJson: /ملف JSON يمكن لهذا التطبيق قراءته/,
+    invalid: /بصيغة يتعرف عليها هذا التطبيق/,
+    readOnlyImportRefused: /للقراءة فقط، لذلك لا يمكنه الاستيراد/,
+    alreadyRecovered: 'استرجع تبويب آخر بياناتك بالفعل',
+  },
+} as const;
+
+function localeFor(testInfo: TestInfo): keyof typeof BACKUP_TEXT {
+  return testInfo.project.name.endsWith('-ar') ? 'ar' : 'en';
+}
 
 /** Reads the `current` document straight out of IndexedDB, bypassing the app — the same technique
  * `multi-tab.spec.ts` and `smoke.spec.ts` already use. */
@@ -32,22 +64,26 @@ function readCurrentDocument(page: Page): Promise<unknown> {
   );
 }
 
-async function clickReplace(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Replace…' }).click();
-  await page.getByRole('button', { name: 'Yes, replace' }).click();
+async function clickReplace(
+  page: Page,
+  text: (typeof BACKUP_TEXT)[keyof typeof BACKUP_TEXT],
+): Promise<void> {
+  await page.getByRole('button', { name: text.replaceButton }).click();
+  await page.getByRole('button', { name: text.confirmReplaceButton }).click();
 }
 
 test.describe('JSON export/import', () => {
   test('export downloads a pretty-printed JSON file named sevenhabits-<date>.json', async ({
     page,
     seedDocument,
-  }) => {
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     await seedDocument({ settings: { marker: 'export-test' } });
     await page.goto('/settings');
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: EXPORT_BUTTON }).click(),
+      page.getByRole('button', { name: text.exportButton }).click(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(/^sevenhabits-\d{4}-\d{2}-\d{2}\.json$/);
@@ -66,13 +102,14 @@ test.describe('JSON export/import', () => {
   test('export -> wipe -> import round trip restores the document', async ({
     page,
     seedDocument,
-  }) => {
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     await seedDocument({ settings: { marker: 'round-trip' } });
     await page.goto('/settings');
 
     const [download] = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: EXPORT_BUTTON }).click(),
+      page.getByRole('button', { name: text.exportButton }).click(),
     ]);
     const stream = await download.createReadStream();
     const chunks: Buffer[] = [];
@@ -85,15 +122,25 @@ test.describe('JSON export/import', () => {
     // empty document.
     await page.evaluate(() => indexedDB.deleteDatabase('sevenhabits'));
     await page.reload();
-    await page.getByRole('button', { name: IMPORT_BUTTON }).waitFor();
+    await page.getByRole('button', { name: text.importButton }).waitFor();
 
     await page.setInputFiles(FILE_INPUT, {
       name: 'sevenhabits-export.json',
       mimeType: 'application/json',
       buffer: exported,
     });
-    await page.getByRole('button', { name: 'Replace…' }).waitFor();
-    await clickReplace(page);
+    await page.getByRole('button', { name: text.replaceButton }).waitFor();
+
+    if (localeFor(testInfo) === 'ar') {
+      // #163: the dialog's file/current dates are formatted through `AppDatePipe` (Intl) for the
+      // active language, not Angular's built-in `date` pipe pinned to en-US — the unit test
+      // (import-confirm-dialog.spec.ts) covers the formatting itself; this is the real-browser
+      // check that Arabic actually renders that way, not the fixed en-US shape.
+      const dateText = await page.locator('.import-confirm-dialog__dates dd').first().textContent();
+      expect(dateText).toMatch(/[؀-ۿ]/);
+    }
+
+    await clickReplace(page, text);
 
     await expect(async () => {
       const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
@@ -111,7 +158,8 @@ test.describe('JSON export/import', () => {
   test('rejects a file that is not JSON, leaving the current document untouched', async ({
     page,
     seedDocument,
-  }) => {
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     await seedDocument({ settings: { marker: 'stays-put' } });
     await page.goto('/settings');
 
@@ -121,7 +169,7 @@ test.describe('JSON export/import', () => {
       buffer: Buffer.from('this is not json'),
     });
 
-    await expect(page.getByText(/JSON file this app can read/i)).toBeVisible();
+    await expect(page.getByText(text.notJson)).toBeVisible();
     const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
     expect(current.settings.marker).toBe('stays-put');
   });
@@ -129,7 +177,8 @@ test.describe('JSON export/import', () => {
   test('rejects a structurally invalid document, leaving the current document untouched', async ({
     page,
     seedDocument,
-  }) => {
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     await seedDocument({ settings: { marker: 'stays-put-2' } });
     await page.goto('/settings');
 
@@ -139,23 +188,24 @@ test.describe('JSON export/import', () => {
       buffer: Buffer.from(JSON.stringify({ schemaVersion: 1 })),
     });
 
-    await expect(page.getByText(/data isn't in a shape/i)).toBeVisible();
+    await expect(page.getByText(text.invalid)).toBeVisible();
     const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
     expect(current.settings.marker).toBe('stays-put-2');
   });
 
-  test('a read-only tab refuses to import', async ({ page, context, seedDocument }) => {
+  test('a read-only tab refuses to import', async ({ page, context, seedDocument }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     await seedDocument({});
     await page.goto('/settings');
     const second = await context.newPage();
     await second.goto('/settings');
     await expect(second.locator('.read-only-banner')).toBeVisible();
 
-    await second.getByRole('button', { name: IMPORT_BUTTON }).click();
+    await second.getByRole('button', { name: text.importButton }).click();
 
     // The tab already shows the persistent `.read-only-banner`; this snackbar is the distinct,
     // refusal-specific message `triggerImport()` shows.
-    await expect(second.getByText(/read-only, so it can't import/i)).toBeVisible();
+    await expect(second.getByText(text.readOnlyImportRefused)).toBeVisible();
   });
 
   // #150: importing a backup must be reachable from, and recover, the corrupt-data error page —
@@ -165,15 +215,14 @@ test.describe('JSON export/import', () => {
     page,
     context,
     seedDocument,
-  }) => {
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     // meta: undefined breaks isRootDocumentShape() (document.model.ts), the same as any other
     // structurally broken stored document — this always renders DataErrorPage instead of the
     // shell, regardless of route.
     await seedDocument({ meta: undefined as never });
     await page.goto('/');
-    await expect(
-      page.getByRole('heading', { name: "We couldn't read your saved data" }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: text.errorHeading })).toBeVisible();
 
     const backup = {
       schemaVersion: 1,
@@ -206,7 +255,7 @@ test.describe('JSON export/import', () => {
     });
 
     // The error page swaps for the shell once recovery reports ready.
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
     await expect(async () => {
       const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
       expect(current.settings.marker).toBe('recovered-from-corrupt');
@@ -219,7 +268,7 @@ test.describe('JSON export/import', () => {
     // `fixtures.ts` — which would mask a real persistence failure here.)
     const fresh = await context.newPage();
     await fresh.goto('/');
-    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText('Seven Habits Tools');
+    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText(text.appName);
     const current = (await readCurrentDocument(fresh)) as { settings: { marker: string } };
     expect(current.settings.marker).toBe('recovered-from-corrupt');
   });
@@ -232,8 +281,8 @@ test.describe('JSON export/import', () => {
     page,
     context,
     seedDocument,
-  }) => {
-    const ERROR_HEADING = "We couldn't read your saved data";
+  }, testInfo) => {
+    const text = BACKUP_TEXT[localeFor(testInfo)];
     const REMINDER_SELECT = '#backup-reminder-days';
     const READ_ONLY_BANNER = '.read-only-banner';
 
@@ -281,12 +330,12 @@ test.describe('JSON export/import', () => {
 
     await seedDocument({ meta: undefined as never });
     await page.goto('/settings');
-    await expect(page.getByRole('heading', { name: ERROR_HEADING })).toBeVisible();
+    await expect(page.getByRole('heading', { name: text.errorHeading })).toBeVisible();
     // A second tab, open before either has recovered. It has no `seedDocument` init script of its
     // own (see #150's test above), so its reload after taking over reads what is really stored.
     const second = await context.newPage();
     await second.goto('/settings');
-    await expect(second.getByRole('heading', { name: ERROR_HEADING })).toBeVisible();
+    await expect(second.getByRole('heading', { name: text.errorHeading })).toBeVisible();
 
     // Tab 1 recovers, becomes the writer, then edits.
     await page.setInputFiles(FILE_INPUT, backupFile('tab-1-recovered'));
@@ -298,7 +347,7 @@ test.describe('JSON export/import', () => {
     // Tab 2, still on the error page, imports an older file: refused, with a message, and it shows
     // tab 1's stored document rather than its own unsaved import (#160).
     await second.setInputFiles(FILE_INPUT, backupFile('tab-2-stale'));
-    await expect(second.getByText('Another tab has already recovered your data')).toBeVisible();
+    await expect(second.getByText(text.alreadyRecovered)).toBeVisible();
     await expect(second.locator(READ_ONLY_BANNER)).toBeVisible();
     await expect(second.locator(REMINDER_SELECT)).toHaveValue('30');
 

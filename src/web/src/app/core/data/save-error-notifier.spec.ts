@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { FileDownloader } from '../browser/file-download';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AppSnackbar } from '../layout/app-snackbar';
 import { DocumentPersistence } from './document-persistence';
 import { DocumentStore } from './document.store';
@@ -26,6 +27,7 @@ function setUp() {
 
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       {
         provide: DocumentPersistence,
         useValue: { saveError: saveError.asReadonly() } as unknown as DocumentPersistence,

@@ -9,10 +9,10 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { FileDownloader } from '../../browser/file-download';
 import { WINDOW } from '../../browser/window';
 import { DEVICE_ID_SOURCE } from '../../device/device-id-source';
-import { Labels } from '../../i18n/labels';
 import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentImportExportService } from '../backup/document-import-export.service';
 import { DocumentBootstrapStatus } from '../document-bootstrap-status';
@@ -31,7 +31,7 @@ import { STORAGE_ADAPTER } from '../storage-adapter';
  */
 @Component({
   selector: 'app-data-error-page',
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, TranslocoPipe],
   templateUrl: './data-error-page.html',
   styleUrl: './data-error-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,8 +45,8 @@ export class DataErrorPage {
   private readonly importExport = inject(DocumentImportExportService);
   private readonly window = inject(WINDOW);
   private readonly snackbar = inject(AppSnackbar);
+  private readonly transloco = inject(TranslocoService);
   protected readonly status = inject(DocumentBootstrapStatus);
-  protected readonly labels = inject(Labels);
 
   protected readonly canExport = computed(() => this.status.raw() !== null);
   protected readonly confirmingReset = signal(false);
@@ -92,7 +92,7 @@ export class DataErrorPage {
     const raw = await file.text();
     const result = this.importExport.parseImportFile(raw);
     if (!result.ok) {
-      this.importError.set(this.labels.text(result.messageKey));
+      this.importError.set(this.transloco.translate(result.messageKey));
       return;
     }
     this.importError.set(null);
@@ -105,11 +105,11 @@ export class DataErrorPage {
       return;
     }
     if (this.status.state() === 'corrupt') {
-      this.importError.set(this.labels.text('data.error.importRefusedRecoveringElsewhere'));
+      this.importError.set(this.transloco.translate('data.error.importRefusedRecoveringElsewhere'));
     } else {
       void this.snackbar.open(
-        this.labels.text('data.error.importRefusedRecoveredElsewhere'),
-        this.labels.text('data.snackbar.dismiss'),
+        this.transloco.translate('data.error.importRefusedRecoveredElsewhere'),
+        this.transloco.translate('data.snackbar.dismiss'),
       );
     }
   }

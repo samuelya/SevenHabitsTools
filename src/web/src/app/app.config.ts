@@ -25,14 +25,17 @@ import { WriterLockService } from './core/data/multi-tab/writer-lock.service';
 import { WRITER_LOCK } from './core/data/multi-tab/writer-lock';
 import { StoragePersistenceService } from './core/data/storage-persistence.service';
 import { STORAGE_ADAPTER } from './core/data/storage-adapter';
+import { provideAppTransloco } from './core/i18n/provide-app-transloco';
+import { LanguageSync } from './core/i18n/language-sync';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
-// Registers the `settings.pwa` model (`registerModel()`'s side effect) before `bootstrapDocument()`
+import { FEATURE_ROUTES } from './core/routing/feature-route';
+// Side-effect only: each runs every `registerModel()` in its file before `bootstrapDocument()`
 // below can build or validate a document. Not lazy-loaded like a feature route, so an explicit
 // import here — the same reason `STORAGE_ADAPTER` and the other core services are wired directly
-// in this file instead of a route — is what guarantees it has run in time. Cheap (types and a
-// `registerModel()` call), unlike `./core/pwa/pwa-runtime` below, so it stays a static import.
+// in this file instead of a route — is what guarantees both have run in time. Cheap (types and a
+// `registerModel()` call), unlike `./core/pwa/pwa-runtime` below, so both stay static imports.
+import './model-registry';
 import './core/pwa/pwa.model';
-import { FEATURE_ROUTES } from './core/routing/feature-route';
 import { ROUTE_REGISTRY } from './route-registry';
 import { registerGithubIcon } from './shared/ui/github-link/github-icon';
 import { provideServiceWorker } from '@angular/service-worker';
@@ -43,6 +46,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(),
+    provideAppTransloco(),
     provideRouter(
       routes,
       withComponentInputBinding(),
@@ -60,17 +64,26 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const status = inject(DocumentBootstrapStatus);
       const documentSync = inject(DocumentSync);
+      const languageSync = inject(LanguageSync);
       // Requesting persistent storage doesn't depend on the document being valid, so it doesn't
       // wait on bootstrap below.
       void inject(StoragePersistenceService).requestPersistence();
       // Never start DocumentSync (autosave, the writer lock, ...) over a document that failed to
       // load; DataErrorPage starts it once the user resolves the corrupt state (export/reset) and
       // status returns to `ready`.
-      return bootstrapDocument().then(() => {
-        if (status.state() === 'ready') {
-          documentSync.start();
-        }
-      });
+      return bootstrapDocument().then(() =>
+        // `settings.language` is only known once bootstrap resolves (`DocumentStore` holds an
+        // empty document — still a valid `settings` slice, defaulting to the browser language —
+        // even when bootstrap reports `corrupt`, so this runs either way and `DataErrorPage`
+        // renders in the right language too). Awaited here, before Angular renders anything, is
+        // what makes the language "applied before first paint" (issue #28).
+        languageSync.initialize().then(() => {
+          languageSync.start();
+          if (status.state() === 'ready') {
+            documentSync.start();
+          }
+        }),
+      );
     }),
     provideServiceWorker('ngsw-worker.js', {
       enabled: !isDevMode(),

@@ -1,0 +1,114 @@
+{
+  "app": {
+    "name": "Seven Habits Tools"
+  },
+  "nav": {
+    "main": "Main navigation",
+    "back": "Back",
+    "home": "Home",
+    "habits": "Habits",
+    "plan": "Plan",
+    "journal": "Journal",
+    "settings": "Settings",
+    "about": "About",
+    "github": "GitHub",
+    "githubExternalLabel": "GitHub, opens in a new tab"
+  },
+  "placeholder": {
+    "comingSoon": "Coming soon."
+  },
+  "titles": {
+    "home": "Home",
+    "habits": "Habits",
+    "plan": "Plan",
+    "journal": "Journal",
+    "settings": "Settings",
+    "about": "About",
+    "paradigms": "Paradigms and principles",
+    "h1": "Habit 1: Be proactive",
+    "h2": "Habit 2: Begin with the end in mind",
+    "h3": "Habit 3: Put first things first",
+    "h4": "Habit 4: Think win-win",
+    "h5": "Habit 5: Seek first to understand, then to be understood",
+    "h6": "Habit 6: Synergize",
+    "h7": "Habit 7: Sharpen the saw",
+    "interdependence": "Paradigms of interdependence"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ar": "Arabic",
+    "switchTo": "Switch to {{language}}",
+    "numeralsLabel": "Numerals",
+    "numeralsWestern": "Western (0-9)",
+    "numeralsArabic": "Eastern Arabic (٠-٩)"
+  },
+  "data": {
+    "migration": {
+      "schemaTooNew": "This file was saved by a newer version of the app."
+    },
+    "bootstrap": {
+      "corrupt": "The saved file is damaged or in a format this app cannot read."
+    },
+    "error": {
+      "title": "We couldn't read your saved data",
+      "retry": "Try again",
+      "exportRaw": "Export raw file",
+      "importBackup": "Import a backup",
+      "importRefusedRecoveredElsewhere": "Another tab has already recovered your data, so this import wasn't applied. This tab is read-only and shows the data from that tab.",
+      "importRefusedRecoveringElsewhere": "Another tab is recovering your data, so this import wasn't applied. Select Try again in a moment to see that data.",
+      "reset": "Start fresh",
+      "resetConfirm": "This will permanently delete the saved data on this device. This cannot be undone.",
+      "cancel": "Cancel",
+      "confirmReset": "Yes, start fresh"
+    },
+    "readOnly": {
+      "banner": "Read-only — another tab is editing this data. This tab will refresh once that tab closes.",
+      "editRefused": "This tab is read-only, so that change wasn't made. Edit in the other tab, or close it to edit here.",
+      "editPending": "Still getting ready to save. Try that change again in a moment."
+    },
+    "saveError": {
+      "message": "We couldn't save your latest changes.",
+      "exportNow": "Export now"
+    },
+    "snackbar": {
+      "dismiss": "Dismiss"
+    },
+    "validation": {
+      "invalidModel": "This section of the saved data has an invalid format."
+    },
+    "pwa": {
+      "offline": "You're offline. Your changes stay saved on this device.",
+      "updateAvailable": "A new version of this app is available.",
+      "updateRequired": "This app needs to reload to keep working.",
+      "reload": "Reload",
+      "install": {
+        "message": "Install Seven Habits Tools for quick, offline access.",
+        "action": "Install",
+        "iosHint": "Install this app: tap the Share icon, then \"Add to Home Screen\"."
+      }
+    },
+    "import": {
+      "errors": {
+        "notJson": "That file isn't a JSON file this app can read.",
+        "invalid": "That file's data isn't in a shape this app recognizes."
+      },
+      "dialogLoadError": "Couldn't load the import dialog. Check your connection and try again.",
+      "title": "Import this file?",
+      "currentUpdatedAt": "Your current data was last edited",
+      "fileUpdatedAt": "The file was last edited",
+      "exportFirst": "Export current data first",
+      "replace": "Replace…",
+      "replaceHint": "Discards everything currently on this device.",
+      "replaceConfirm": "This will permanently replace all data on this device with the imported file. This cannot be undone.",
+      "confirmReplace": "Yes, replace",
+      "cancel": "Cancel",
+      "importedSnackbar": "Import complete.",
+      "noPreviewCounts": "This file has no feature data to preview yet."
+    },
+    "export": {
+      "reminder": "You've made changes since your last export. Back up your data from time to time.",
+      "action": "Export data"
+    }
+  }
+}

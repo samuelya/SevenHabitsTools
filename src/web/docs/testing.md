@@ -65,10 +65,9 @@ and found no violations caused by #118's broken stylesheet.
 
 - `seedDocument(doc)` — writes `doc` (merged onto a minimal valid document) to IndexedDB
   (`sevenhabits` / `documents` / `current`), the schema `IndexedDbAdapter` (issue #35) reads from.
-- `setLanguage(lang)` — seeds `settings.language` (`'en' | 'ar'`, per issue #28's data model).
-  **#28 hasn't landed yet**: there is no language switcher or Transloco, so the app always renders
-  `en`/`ltr` regardless of this seed. Specs asserting the UI actually changed language are
-  `test.fixme`, pointing at #28.
+- `setLanguage(lang)` — seeds `settings.language` (`'en' | 'ar'`, per issue #28's data model), read
+  by `LanguageStore`/`LanguageSync` on the next load — the app renders `lang`/its direction from
+  first paint, no separate switch step needed in a spec that just wants to start already in `ar`.
 - `goOffline()` — `context.setOffline(true)`. An offline smoke assertion needs issue #27 (PWA) for
   a service worker to cache the lazy feature chunks; `smoke.spec.ts` has a `test.fixme` for this
   pointing at #27.

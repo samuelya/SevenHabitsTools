@@ -1,8 +1,10 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { WINDOW } from '../browser/window';
 import { CLOCK } from '../time/clock';
 import { InstallPromptService } from './install-prompt.service';
+import './pwa.model';
 import { PwaInstallBanner } from './pwa-install-banner';
 
 const CHROME_ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14) Chrome/125.0 Mobile Safari/537.36';
@@ -35,6 +37,7 @@ function render(options: {
 }) {
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: WINDOW, useValue: options.window },
       { provide: InstallPromptService, useValue: options.installPrompt },
       { provide: CLOCK, useValue: { now: () => options.now ?? new Date('2026-06-15T12:00:00Z') } },
