@@ -41,18 +41,23 @@ export class ReflectionEditor implements OnDestroy {
   protected readonly characterCount = computed(() => this.draft().length);
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  private pendingSave = false;
 
   ngOnDestroy(): void {
     clearTimeout(this.debounceTimer);
+    if (this.pendingSave) {
+      this.valueChange.emit(this.draft());
+    }
   }
 
   protected onInput(event: Event): void {
     const text = (event.target as HTMLTextAreaElement).value;
     this.draft.set(text);
     clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(
-      () => this.valueChange.emit(this.draft()),
-      REFLECTION_DEBOUNCE_MS,
-    );
+    this.pendingSave = true;
+    this.debounceTimer = setTimeout(() => {
+      this.pendingSave = false;
+      this.valueChange.emit(this.draft());
+    }, REFLECTION_DEBOUNCE_MS);
   }
 }

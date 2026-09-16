@@ -6,16 +6,32 @@
   (selectedIndexChange)="selectedIndexChange.emit($event)"
 >
   @for (step of steps(); track step.key) {
-    <mat-step [label]="step.label" [completed]="step.done ?? false">
-      <ng-container [ngTemplateOutlet]="templateFor(step.key)" />
-      <div class="step-actions">
-        <button mat-button matStepperPrevious type="button">
-          {{ 'exerciseKit.stepper.back' | transloco }}
-        </button>
-        <button mat-flat-button matStepperNext type="button">
-          {{ 'exerciseKit.stepper.next' | transloco }}
-        </button>
-      </div>
-    </mat-step>
+    @if (step.done === undefined) {
+      <mat-step [label]="step.label">
+        <ng-container
+          [ngTemplateOutlet]="stepBody"
+          [ngTemplateOutletContext]="{ $implicit: step }"
+        />
+      </mat-step>
+    } @else {
+      <mat-step [label]="step.label" [completed]="step.done">
+        <ng-container
+          [ngTemplateOutlet]="stepBody"
+          [ngTemplateOutletContext]="{ $implicit: step }"
+        />
+      </mat-step>
+    }
   }
+
+  <ng-template #stepBody let-step>
+    <ng-container [ngTemplateOutlet]="templateFor(step.key)" />
+    <div class="step-actions">
+      <button mat-button matStepperPrevious type="button">
+        {{ 'exerciseKit.stepper.back' | transloco }}
+      </button>
+      <button mat-flat-button matStepperNext type="button">
+        {{ 'exerciseKit.stepper.next' | transloco }}
+      </button>
+    </div>
+  </ng-template>
 </mat-stepper>

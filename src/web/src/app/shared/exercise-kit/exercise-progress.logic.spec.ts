@@ -96,6 +96,26 @@ describe('isExerciseDone / completedAtFor', () => {
 
     expect(isExerciseDone(redone, 'h2-mission')).toBe(true);
   });
+
+  it('is true again after being marked done a second time in the same instant as the reopen', () => {
+    const redone = upsertDoneCompletion(
+      reopenCompletion(upsertDoneCompletion([], 'h2-mission', NOW), 'h2-mission', NOW),
+      'h2-mission',
+      NOW,
+    );
+
+    expect(isExerciseDone(redone, 'h2-mission')).toBe(true);
+  });
+
+  it('is false after being reopened in the same instant as it was marked done', () => {
+    const reopened = reopenCompletion(
+      upsertDoneCompletion([], 'h2-mission', NOW),
+      'h2-mission',
+      NOW,
+    );
+
+    expect(isExerciseDone(reopened, 'h2-mission')).toBe(false);
+  });
 });
 
 describe('progressForHabit', () => {

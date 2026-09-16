@@ -16,10 +16,15 @@ export interface ExerciseRegistryEntry {
 
 const registrations = new Map<string, ExerciseRegistryEntry>();
 
-/** Registers an exercise. Throws if `exerciseId` was already registered. */
+/** Registers an exercise. Throws if `exerciseId` or `route` was already registered. */
 export function registerExercise(entry: ExerciseRegistryEntry): void {
   if (registrations.has(entry.exerciseId)) {
     throw new Error(`Exercise "${entry.exerciseId}" is already registered`);
+  }
+  for (const existing of registrations.values()) {
+    if (existing.route === entry.route) {
+      throw new Error(`Route "${entry.route}" is already registered by "${existing.exerciseId}"`);
+    }
   }
   registrations.set(entry.exerciseId, entry);
 }

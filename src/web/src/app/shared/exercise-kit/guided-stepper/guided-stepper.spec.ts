@@ -86,4 +86,18 @@ describe('GuidedStepper', () => {
 
     expect(host.selectedIndex).toBe(1);
   });
+
+  it('does not block forward navigation from a step with no done tracking', () => {
+    const fixture = setUp(false);
+    const host = fixture.componentInstance;
+    host.steps[0] = { key: 'first', label: 'First' };
+    fixture.detectChanges();
+
+    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
+    const nextButton = buttons.find((button) => button.textContent?.trim() === 'Next');
+    nextButton?.click();
+    fixture.detectChanges();
+
+    expect(host.selectedIndex).toBe(1);
+  });
 });

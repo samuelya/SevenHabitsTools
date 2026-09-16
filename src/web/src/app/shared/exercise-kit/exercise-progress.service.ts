@@ -25,6 +25,10 @@ export class ExerciseProgress {
   private readonly clock = inject(CLOCK);
   private readonly completions = featureStore<ExerciseCompletion[]>(EXERCISE_COMPLETIONS_MODEL_KEY);
 
+  private readonly isDoneCache = new Map<string, Signal<boolean>>();
+  private readonly completedAtCache = new Map<string, Signal<string | null>>();
+  private readonly progressForCache = new Map<HabitId, Signal<HabitExerciseProgress>>();
+
   markDone(exerciseId: string): void {
     this.completions.update((completions) =>
       upsertDoneCompletion(completions, exerciseId, this.clock.now()),
@@ -37,17 +41,35 @@ export class ExerciseProgress {
     );
   }
 
+  /** One memoized `computed()` per `exerciseId`, reused across calls — callers typically invoke
+   * this inline while rendering a list (e.g. `progress.isDone(item.id)()`), so minting a fresh
+   * `computed()` every call would defeat memoization and allocate a signal node per render. */
   isDone(exerciseId: string): Signal<boolean> {
-    return computed(() => isExerciseDone(this.completions.value(), exerciseId));
+    let signal = this.isDoneCache.get(exerciseId);
+    if (!signal) {
+      signal = computed(() => isExerciseDone(this.completions.value(), exerciseId));
+      this.isDoneCache.set(exerciseId, signal);
+    }
+    return signal;
   }
 
   completedAt(exerciseId: string): Signal<string | null> {
-    return computed(() => completedAtFor(this.completions.value(), exerciseId));
+    let signal = this.completedAtCache.get(exerciseId);
+    if (!signal) {
+      signal = computed(() => completedAtFor(this.completions.value(), exerciseId));
+      this.completedAtCache.set(exerciseId, signal);
+    }
+    return signal;
   }
 
   progressFor(habit: HabitId): Signal<HabitExerciseProgress> {
-    return computed(() =>
-      progressForHabit(this.completions.value(), getRegisteredExercises(), habit),
-    );
+    let signal = this.progressForCache.get(habit);
+    if (!signal) {
+      signal = computed(() =>
+        progressForHabit(this.completions.value(), getRegisteredExercises(), habit),
+      );
+      this.progressForCache.set(habit, signal);
+    }
+    return signal;
   }
 }

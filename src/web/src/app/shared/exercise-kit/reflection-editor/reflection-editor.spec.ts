@@ -91,4 +91,25 @@ describe('ReflectionEditor', () => {
 
     expect(emitted).toEqual(['ab']);
   });
+
+  it('flushes a pending edit on destroy instead of dropping it', () => {
+    const fixture = setUp('');
+    const emitted: string[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+
+    typeInto(fixture, 'edited before navigating away');
+    fixture.destroy();
+
+    expect(emitted).toEqual(['edited before navigating away']);
+  });
+
+  it('does not emit on destroy when there is no pending edit', () => {
+    const fixture = setUp('unchanged');
+    const emitted: string[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+
+    fixture.destroy();
+
+    expect(emitted).toEqual([]);
+  });
 });

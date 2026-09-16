@@ -43,6 +43,14 @@ describe('ExerciseProgress', () => {
     expect(progress.isDone('h2-mission')()).toBe(false);
   });
 
+  it('reuses the same signal instance per key instead of minting one on every call', () => {
+    const progress = setUp();
+
+    expect(progress.isDone('h2-mission')).toBe(progress.isDone('h2-mission'));
+    expect(progress.completedAt('h2-mission')).toBe(progress.completedAt('h2-mission'));
+    expect(progress.progressFor('h2')).toBe(progress.progressFor('h2'));
+  });
+
   describe('progressFor', () => {
     let snapshot: ReturnType<typeof snapshotExerciseRegistryForTesting>;
 

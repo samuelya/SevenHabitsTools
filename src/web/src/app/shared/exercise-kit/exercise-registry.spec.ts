@@ -52,4 +52,23 @@ describe('exercise-registry', () => {
       }),
     ).toThrow('"h2-mission"');
   });
+
+  it('throws when the same route is registered by a different exerciseId', () => {
+    resetExerciseRegistryForTesting();
+    registerExercise({
+      exerciseId: 'h2-mission',
+      habit: 'h2',
+      titleKey: 'mission.title',
+      route: 'habits/h2/mission',
+    });
+
+    expect(() =>
+      registerExercise({
+        exerciseId: 'h2-roles',
+        habit: 'h2',
+        titleKey: 'roles.title',
+        route: 'habits/h2/mission',
+      }),
+    ).toThrow('"habits/h2/mission"');
+  });
 });

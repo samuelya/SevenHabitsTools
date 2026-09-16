@@ -16,18 +16,16 @@ function completionFor(
   return completions.find((completion) => completion.exerciseId === exerciseId);
 }
 
-/** An exercise is done when it has a completion whose `completedAt` is not followed by a later
- * `reopenedAt` — ISO 8601 UTC timestamps sort lexicographically, so a plain string compare is
- * enough. */
+/** An exercise is done when it has a completion that hasn't since been reopened.
+ * `upsertDoneCompletion` clears `reopenedAt` and `reopenCompletion` sets it, so whichever ran last
+ * decides — no timestamp comparison needed, which would otherwise be ambiguous when two calls
+ * land in the same millisecond (a fixed/mocked clock in tests, or two real calls that fast). */
 export function isExerciseDone(
   completions: readonly ExerciseCompletion[],
   exerciseId: string,
 ): boolean {
   const completion = completionFor(completions, exerciseId);
-  if (!completion) {
-    return false;
-  }
-  return !completion.reopenedAt || completion.completedAt > completion.reopenedAt;
+  return !!completion && !completion.reopenedAt;
 }
 
 /** The `completedAt` of the exercise's current done episode, or `null` if it isn't done. */
@@ -41,7 +39,8 @@ export function completedAtFor(
 }
 
 /** Marks `exerciseId` done: upserts its `ExerciseCompletion` with a fresh `completedAt`, creating
- * one the first time. */
+ * one the first time. Clears any prior `reopenedAt` — this "done" event always supersedes an
+ * earlier reopen, however close together the two happened. */
 export function upsertDoneCompletion(
   completions: readonly ExerciseCompletion[],
   exerciseId: string,
@@ -53,7 +52,9 @@ export function upsertDoneCompletion(
     return [...completions, newRecord({ exerciseId, completedAt }, now)];
   }
   return completions.map((completion) =>
-    completion === existing ? touch({ ...completion, completedAt }, now) : completion,
+    completion === existing
+      ? touch({ ...completion, completedAt, reopenedAt: undefined }, now)
+      : completion,
   );
 }
 
