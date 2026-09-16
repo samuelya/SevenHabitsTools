@@ -1,4 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,6 +37,7 @@ import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 })
 export class ExerciseDetail {
   private readonly breakpoints = inject(BreakpointObserver);
+  private readonly document = inject(DOCUMENT);
 
   /** Whether `[detail]` content is currently projected/selected. */
   readonly hasDetail = input.required<boolean>();
@@ -52,15 +54,33 @@ export class ExerciseDetail {
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
 
+  /** The element focused before this opened the drawer, to restore on close (issue #174). */
+  private triggerElement: HTMLElement | null = null;
+  private wasOpen = false;
+
   constructor() {
     // `[opened]` is bound one-way from `hasDetail`, not driven through `drawer.open()`, so
     // MatDrawer's own autoFocus (gated behind its opening transition actually completing, see
-    // `MatDrawer#_takeFocus`) can miss a reopen (issue #174). Owning focus here instead makes it
-    // independent of that animation coupling, on every `hasDetail` transition to true.
+    // `MatDrawer#_takeFocus`) can miss a reopen. Owning focus here instead makes it independent of
+    // that animation coupling. Only handset mode is a full-screen overlay over the triggering list
+    // item (see `exercise-detail.scss`), so on desktop's persistent side panel this leaves focus
+    // alone, matching `MatDrawer`'s own non-modal `autoFocus` default. Focus is captured here
+    // *before* moving it into the close button and restored explicitly on close rather than left
+    // to `MatDrawer`'s own restore, because that mechanism reads `document.activeElement` only
+    // after this effect has already moved it.
     effect(() => {
-      if (this.hasDetail()) {
-        this.closeButton().nativeElement.focus();
+      const handset = this.handset();
+      const open = this.hasDetail();
+      if (handset) {
+        if (open && !this.wasOpen) {
+          this.triggerElement = this.document.activeElement as HTMLElement | null;
+          this.closeButton().nativeElement.focus();
+        } else if (!open && this.wasOpen) {
+          this.triggerElement?.focus();
+          this.triggerElement = null;
+        }
       }
+      this.wasOpen = open;
     });
   }
 

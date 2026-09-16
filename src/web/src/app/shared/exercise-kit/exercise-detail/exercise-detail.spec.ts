@@ -101,14 +101,20 @@ describe('ExerciseDetail', () => {
     expect(fixture.componentInstance.closedCount).toBe(1);
   });
 
-  it('moves focus into the drawer and lets Escape close it on every open, not just the first (#174)', () => {
+  it('moves focus into the drawer and back to the trigger on every open/close, not just the first (#174)', () => {
     const fixture = setUp(true, false);
     const host = fixture.nativeElement as HTMLElement;
     // `document.activeElement` only reflects `.focus()` calls on elements attached to the
     // document, and this component (unlike CDK-overlay-based dialogs) renders inline.
     document.body.appendChild(host);
 
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+
     for (let cycle = 0; cycle < 2; cycle++) {
+      trigger.focus();
+      expect(document.activeElement).toBe(trigger);
+
       fixture.componentInstance.hasDetail.set(true);
       fixture.detectChanges();
 
@@ -134,8 +140,30 @@ describe('ExerciseDetail', () => {
       // what the real `(closed)` handler eventually does.
       fixture.componentInstance.hasDetail.set(false);
       fixture.detectChanges();
+
+      expect(document.activeElement).toBe(trigger);
     }
 
+    trigger.remove();
+    host.remove();
+  });
+
+  it('does not move focus on desktop, where the drawer is a persistent, non-modal side panel (#174)', () => {
+    const fixture = setUp(false, false);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    fixture.componentInstance.hasDetail.set(true);
+    fixture.detectChanges();
+
+    expect(host.querySelector('mat-drawer')?.classList).toContain('mat-drawer-opened');
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.remove();
     host.remove();
   });
 });
