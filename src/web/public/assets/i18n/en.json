@@ -107,7 +107,8 @@
       "noPreviewCounts": "This file has no feature data to preview yet."
     },
     "export": {
-      "reminder": "You've made changes since your last export. Back up your data from time to time."
+      "reminder": "You've made changes since your last export. Back up your data from time to time.",
+      "action": "Export data"
     }
   }
 }

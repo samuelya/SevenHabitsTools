@@ -3,9 +3,9 @@
 <div matDialogContent class="import-confirm-dialog">
   <dl class="import-confirm-dialog__dates">
     <dt>{{ 'data.import.fileUpdatedAt' | transloco }}</dt>
-    <dd>{{ data.preview.updatedAt | date: 'medium' }}</dd>
+    <dd>{{ data.preview.updatedAt | appDate: { dateStyle: 'medium', timeStyle: 'medium' } }}</dd>
     <dt>{{ 'data.import.currentUpdatedAt' | transloco }}</dt>
-    <dd>{{ data.currentUpdatedAt | date: 'medium' }}</dd>
+    <dd>{{ data.currentUpdatedAt | appDate: { dateStyle: 'medium', timeStyle: 'medium' } }}</dd>
   </dl>
 
   @if (hasCounts()) {

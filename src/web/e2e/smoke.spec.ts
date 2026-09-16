@@ -167,6 +167,33 @@ test.describe('app shell smoke', () => {
     });
   }
 
+  test("the export-reminder banner's Export button is translated, not a raw key (#162)", async ({
+    page,
+    seedDocument,
+  }) => {
+    // Regression test for #162: home-page.ts referenced a 'settings'-scope key ('settings.backup.
+    // export') for this button, but home.routes.ts only loads the 'home' scope — a feature-to-
+    // feature version of #149's shell-to-feature bug. A document created 30 days ago with the
+    // default 7-day reminder makes `shouldShowExportReminder()` (export-reminder.logic.ts) true.
+    // seedDocument() shallow-merges onto the default document, so `meta` needs every field
+    // isRootDocumentShape() requires (document.model.ts), not just the two this test cares about.
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    await seedDocument({
+      meta: {
+        createdAt: new Date(now - 30 * dayMs).toISOString(),
+        updatedAt: new Date(now - 29 * dayMs).toISOString(),
+        appVersion: '0.0.0',
+        deviceId: '11111111-1111-4111-8111-111111111111',
+      },
+    });
+    await page.goto('/');
+
+    const exportButton = page.locator('.export-reminder-banner__actions button').first();
+    await expect(exportButton).toBeVisible();
+    await expect(exportButton).not.toHaveText(RAW_KEY_PATTERN);
+  });
+
   test('a live language switch re-translates the current page title, without navigating', async ({
     page,
     setLanguage,

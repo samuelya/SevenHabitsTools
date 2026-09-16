@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,6 +17,7 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppDatePipe } from '../../../core/i18n/locale.pipe';
 import { ImportPreview } from '../../../core/data/backup/import-preview.logic';
 
 export interface ImportConfirmDialogData {
@@ -47,7 +47,7 @@ export type ImportConfirmDialogResult = 'replace' | 'export-first' | undefined;
     MatDialogContent,
     MatDialogActions,
     MatDialogClose,
-    DatePipe,
+    AppDatePipe,
     TranslocoPipe,
   ],
   templateUrl: './import-confirm-dialog.html',

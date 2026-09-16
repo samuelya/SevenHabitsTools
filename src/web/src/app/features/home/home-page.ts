@@ -20,7 +20,7 @@ import { ExportReminderBanner } from '../../shared/ui/export-reminder-banner/exp
     @if (showExportReminder()) {
       <app-export-reminder-banner
         [message]="'data.export.reminder' | transloco"
-        [exportLabel]="'settings.backup.export' | transloco"
+        [exportLabel]="'data.export.action' | transloco"
         [dismissLabel]="'data.snackbar.dismiss' | transloco"
         (exportNow)="exportNow()"
         (dismiss)="dismissReminder()"
