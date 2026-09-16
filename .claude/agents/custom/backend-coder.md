@@ -12,6 +12,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 1. Read the GitHub issue you were given (`gh issue view <n> --comments`) and the pinned **"Architecture & conventions (read first)"** issue.
 2. Read `CLAUDE.md` (Team section).
 3. Check dependencies listed in the issue are closed. If not, stop and report.
+4. **Design check (platform semantics).** If the work depends on how a platform actually behaves — cookie/`__Host-` rules, OAuth and PKCE flows, AES-GCM key handling, YARP routing, container lifecycle, Azure RBAC — post a three-sentence comment on the issue *before* writing code: the approach, and why it still works in the exact failure case the issue describes. Verify the premise against the spec or docs rather than assuming. A wrong premise costs a whole round and an escalation; this comment costs almost nothing.
 
 ## File ownership
 You may only change: `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.github/dependabot.yml`, `docker-compose*.yml`.

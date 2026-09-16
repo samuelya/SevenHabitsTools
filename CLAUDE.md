@@ -26,7 +26,9 @@ Read the pinned GitHub issue "Architecture & conventions (read first)" before an
 
 Agent definitions live in `.claude/agents/custom/`.
 
-Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slug>`) → PR `Closes #n` → `tester` (bugs → failed round) → owner runs `/code-review` and merges.
+Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slug>`) → PR `Closes #n` → owner runs `/code-review` → coder fixes findings → `tester` (bugs → failed round) → owner merges.
+
+**Review before test.** The review runs before the tester, because a rejected review makes the tester's round worthless. Don't spend a full verification matrix on code a review is likely to send back.
 
 **Escalation (lead-run; agents can't change their own model):**
 - **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder comments `Round <n>/3 failed on <model>` on the issue and fixes it on the same branch.
@@ -48,6 +50,10 @@ Token cost is a first-class constraint: the owner pays per token and has hit a m
 - **Cap the rounds.** After two failed rounds on one issue, escalate a tier or split the rest into a follow-up issue instead of iterating.
 - **Model tiers.** Sonnet by default. Opus only for data-integrity or security work, or an escalation.
 - **Test cadence.** Targeted tests while iterating; the full unit and e2e suites once before hand-off, and again only for the delta after a rebase.
+- **Never duplicate CI.** CI already runs lint, unit, build and e2e on every push. The tester relies on it and spends its round on the acceptance criteria and what CI cannot do (RTL, keyboard, offline, two tabs, exploratory). Re-running the same suite locally and then checking `gh pr checks` pays twice for one answer.
+- **Scale review effort to risk.** `/code-review medium` for a small bug fix; `high`/`max` only for data integrity, security, migrations or sync. A re-review targets the delta plus the files it touches, not the whole PR again.
+- **Design check before coding.** Anything touching platform or browser semantics (IndexedDB versioning, Web Locks, storage eviction, service workers) gets a three-sentence "why this works in the failure case the issue describes" comment on the issue *before* implementation. A wrong premise costs a whole round; the comment costs almost nothing.
+- **Bundle disjoint small bugs.** Two or three small bugs on non-overlapping files go in one branch and one PR: one review, one test matrix, one merge.
 - **Work in bursts.** Finish an issue and stop its agents rather than leaving several idle for hours.
 
 ## Working in parallel
