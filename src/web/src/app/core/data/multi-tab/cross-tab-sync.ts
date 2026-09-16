@@ -1,5 +1,6 @@
 import { Injectable, Injector, effect, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
+import type { MatSnackBarRef, TextOnlySnackBar } from '@angular/material/snack-bar';
 import { BROADCAST_CHANNEL_FACTORY } from '../../browser/broadcast-channel';
 import { AppSnackbar } from '../../layout/app-snackbar';
 import { resolveDocument } from '../document-validation';
@@ -40,6 +41,7 @@ export class CrossTabSync {
   private started = false;
   private isFirstRun = true;
   private reloadNoticeOpen = false;
+  private reloadNoticeRef: MatSnackBarRef<TextOnlySnackBar> | null = null;
 
   start(): void {
     if (this.started) {
@@ -92,6 +94,9 @@ export class CrossTabSync {
       return;
     }
     this.store.replaceDocument(result.document);
+    // A later broadcast reloaded fine: the tab has self-healed, so a stale "reload this tab"
+    // notice from an earlier failure no longer applies and would block a genuinely new one.
+    this.reloadNoticeRef?.dismiss();
   }
 
   private notifyReloadBlocked(): void {
@@ -108,8 +113,12 @@ export class CrossTabSync {
         this.transloco.translate('data.crossTab.reloadBlocked'),
         this.transloco.translate('data.snackbar.dismiss'),
       );
+      this.reloadNoticeRef = ref;
       ref.afterDismissed().subscribe(() => {
         this.reloadNoticeOpen = false;
+        if (this.reloadNoticeRef === ref) {
+          this.reloadNoticeRef = null;
+        }
       });
     } catch {
       // Couldn't open it (e.g. the snackbar code failed to load): the next failed reload tries again.

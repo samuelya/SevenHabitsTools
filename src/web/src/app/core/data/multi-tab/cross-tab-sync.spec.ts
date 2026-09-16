@@ -56,6 +56,7 @@ function sampleDoc(): RootDocument {
 
 interface FakeSnackbarRef {
   readonly dismissed: Subject<void>;
+  readonly dismiss: ReturnType<typeof vi.fn>;
 }
 
 function setUp(
@@ -86,9 +87,12 @@ function setUp(
   };
   const refs: FakeSnackbarRef[] = [];
   const open = vi.fn(async () => {
-    const ref: FakeSnackbarRef = { dismissed: new Subject<void>() };
+    const ref: FakeSnackbarRef = {
+      dismissed: new Subject<void>(),
+      dismiss: vi.fn(() => ref.dismissed.next()),
+    };
     refs.push(ref);
-    return { afterDismissed: () => ref.dismissed };
+    return { afterDismissed: () => ref.dismissed, dismiss: ref.dismiss };
   });
 
   TestBed.configureTestingModule({
@@ -293,5 +297,42 @@ describe('CrossTabSync', () => {
     await Promise.resolve();
 
     expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it('dismisses a stale reload notice once a later reload succeeds', async () => {
+    const load = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('connection closed'))
+      .mockResolvedValueOnce(sampleDoc());
+    const { crossTabSync, replaceDocument, refs, bus } = setUp({ isWriter: false, load });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(refs[0]!.dismiss).not.toHaveBeenCalled();
+
+    bystander.postMessage({ type: 'saved' });
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).toHaveBeenCalledTimes(1);
+    expect(refs[0]!.dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not try to dismiss a notice that was never opened when a reload succeeds', async () => {
+    const { crossTabSync, replaceDocument, bus } = setUp({ isWriter: false });
+    crossTabSync.start();
+    const bystander = bus.factory('sevenhabits-sync')!;
+
+    expect(() => bystander.postMessage({ type: 'saved' })).not.toThrow();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(replaceDocument).toHaveBeenCalledTimes(1);
   });
 });
