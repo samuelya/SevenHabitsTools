@@ -12,6 +12,7 @@ import { SaveErrorSnackbar } from './save-error-snackbar';
 interface FakeRef {
   readonly action: Subject<void>;
   readonly dismissed: Subject<void>;
+  readonly dismiss: ReturnType<typeof vi.fn>;
 }
 
 function setUp() {
@@ -20,9 +21,19 @@ function setUp() {
   const download = vi.fn();
   const refs: FakeRef[] = [];
   const openFromComponent = vi.fn(async () => {
-    const ref: FakeRef = { action: new Subject<void>(), dismissed: new Subject<void>() };
+    const dismissed = new Subject<void>();
+    const ref: FakeRef = {
+      action: new Subject<void>(),
+      dismissed,
+      // Real `MatSnackBarRef.dismiss()` closes the panel, which is what emits `afterDismissed`.
+      dismiss: vi.fn(() => dismissed.next()),
+    };
     refs.push(ref);
-    return { onAction: () => ref.action, afterDismissed: () => ref.dismissed };
+    return {
+      onAction: () => ref.action,
+      afterDismissed: () => ref.dismissed,
+      dismiss: ref.dismiss,
+    };
   });
 
   TestBed.configureTestingModule({
@@ -132,6 +143,26 @@ describe('SaveErrorNotifier', () => {
     expect(download).toHaveBeenCalledTimes(1);
 
     edit('unsaved-2-after-export');
+    await failSave();
+
+    expect(openFromComponent).toHaveBeenCalledTimes(2);
+  });
+
+  it('#142: dismisses the open snackbar once a retry succeeds', async () => {
+    const { failSave, succeedSave, refs, openFromComponent } = setUp();
+    await failSave();
+    expect(openFromComponent).toHaveBeenCalledTimes(1);
+
+    succeedSave();
+
+    expect(refs[0]!.dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('#142: reopens for a later failure after a dismiss-on-success', async () => {
+    const { failSave, succeedSave, openFromComponent } = setUp();
+    await failSave();
+    succeedSave();
+
     await failSave();
 
     expect(openFromComponent).toHaveBeenCalledTimes(2);
