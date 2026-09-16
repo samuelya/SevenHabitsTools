@@ -31,18 +31,22 @@ describe('Habits feature', () => {
 
   it('lists exercises registered on the hub', async () => {
     configureApp({ handset: false });
+    // A real root-scope key, not a placeholder string: with `ThrowingMissingHandler` wired in for
+    // tests (#162), any key that isn't in a loaded scope now fails the run instead of rendering
+    // as-is, so the fixture can no longer use an arbitrary literal as a "translation".
     const extra: FeatureRoute = {
       path: 'habits/h2/mission',
       loadChildren: () => Promise.resolve([]),
-      hub: { habit: 'h2', titleKey: 'Mission statement', icon: 'flag' },
+      hub: { habit: 'h2', titleKey: 'titles.paradigms', icon: 'flag' },
     };
     TestBed.overrideProvider(FEATURE_ROUTES, { useValue: [extra] });
 
     const fixture = await renderShellAt('/habits/h2');
     const link = (fixture.nativeElement as HTMLElement).querySelector('app-habit-hub-page a');
+    const expected = TestBed.inject(TranslocoService).translate('titles.paradigms');
 
     expect(link?.getAttribute('href')).toBe('/habits/h2/mission');
-    expect(link?.textContent).toContain('Mission statement');
+    expect(link?.textContent).toContain(expected);
   });
 
   it('does not match unknown habit ids', async () => {

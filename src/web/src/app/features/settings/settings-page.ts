@@ -4,7 +4,8 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageStore } from '../../core/i18n/language-store';
 import { LANGUAGES, Language, Numerals } from '../../core/i18n/language';
-import { formatBytes } from '../../core/data/storage-estimate.utils';
+import { AppNumberPipe } from '../../core/i18n/locale.pipe';
+import { fractionOptionsFor, toByteSize } from '../../core/data/storage-estimate.utils';
 import { StoragePersistenceService } from '../../core/data/storage-persistence.service';
 import { BackupSection } from './backup/backup-section';
 
@@ -14,7 +15,7 @@ const NUMERALS: readonly Numerals[] = ['western', 'arabic'];
  * status, the backup (export/import) section, and the privacy note that `/about` links to. */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink, MatButtonToggleModule, TranslocoPipe, BackupSection],
+  imports: [RouterLink, MatButtonToggleModule, TranslocoPipe, AppNumberPipe, BackupSection],
   template: `
     <h1 class="page-heading">{{ 'nav.settings' | transloco }}</h1>
     <section id="language">
@@ -47,8 +48,13 @@ const NUMERALS: readonly Numerals[] = ['western', 'arabic'];
     <section id="storage">
       <h2>{{ 'settings.storage.title' | transloco }}</h2>
       <p>{{ persistedMessageKey() | transloco }}</p>
-      @if (usageText(); as usage) {
-        <p>{{ 'settings.storage.usageLabel' | transloco }}: {{ usage }}</p>
+      @if (usage(); as usage) {
+        <p>
+          {{ 'settings.storage.usageLabel' | transloco }}:
+          {{ usage.used.value | appNumber: fractionOptionsFor(usage.used) }} {{ usage.used.unit }} /
+          {{ usage.quota.value | appNumber: fractionOptionsFor(usage.quota) }}
+          {{ usage.quota.unit }}
+        </p>
       }
     </section>
     <app-backup-section />
@@ -84,10 +90,14 @@ export class SettingsPage {
     }
   });
 
-  protected readonly usageText = computed(() => {
+  protected readonly usage = computed(() => {
     const estimate = this.storagePersistence.estimate();
     return estimate
-      ? `${formatBytes(estimate.usageBytes)} / ${formatBytes(estimate.quotaBytes)}`
+      ? { used: toByteSize(estimate.usageBytes), quota: toByteSize(estimate.quotaBytes) }
       : null;
   });
+
+  /** Exposed for the template — Angular templates can only call component members, not free
+   * functions, even when imported. */
+  protected readonly fractionOptionsFor = fractionOptionsFor;
 }

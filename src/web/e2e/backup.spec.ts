@@ -130,6 +130,16 @@ test.describe('JSON export/import', () => {
       buffer: exported,
     });
     await page.getByRole('button', { name: text.replaceButton }).waitFor();
+
+    if (localeFor(testInfo) === 'ar') {
+      // #163: the dialog's file/current dates are formatted through `AppDatePipe` (Intl) for the
+      // active language, not Angular's built-in `date` pipe pinned to en-US — the unit test
+      // (import-confirm-dialog.spec.ts) covers the formatting itself; this is the real-browser
+      // check that Arabic actually renders that way, not the fixed en-US shape.
+      const dateText = await page.locator('.import-confirm-dialog__dates dd').first().textContent();
+      expect(dateText).toMatch(/[؀-ۿ]/);
+    }
+
     await clickReplace(page, text);
 
     await expect(async () => {

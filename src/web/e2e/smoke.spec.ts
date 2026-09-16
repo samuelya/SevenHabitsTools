@@ -148,7 +148,7 @@ test.describe('app shell smoke', () => {
   for (const lang of ['en', 'ar'] as const) {
     test(`every route resolves a translated title, not a raw key (${lang})`, async ({
       page,
-      setLanguage,
+      seedDocument,
     }) => {
       // Regression test for #149: a direct deep link — the shell asking for the title before the
       // routed page's own `transloco` pipe usage has had a chance to warm anything — is what
@@ -156,43 +156,40 @@ test.describe('app shell smoke', () => {
       // title is correctly reactive (it resolves once loaded, over the network, same as the
       // page's own content) rather than necessarily present on the very first paint — #149 was
       // that it never resolved at all, not that it was merely late.
-      await setLanguage(lang);
+      //
+      // #162 was the same class of bug one level down — a shared component (the export-reminder
+      // banner, rendered on Home) using a key from a scope Home never loads. A document created
+      // 30 days ago with the default 7-day reminder makes `shouldShowExportReminder()`
+      // (export-reminder.logic.ts) true, so the banner renders as this walk passes through `/` in
+      // both languages. `seedDocument` and `setLanguage` each seed a whole fresh document on every
+      // navigation (see `fixtures.ts`), so language and the overdue `meta` are set together here
+      // rather than via two competing fixture calls.
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      await seedDocument({
+        settings: { language: lang },
+        meta: {
+          createdAt: new Date(now - 30 * dayMs).toISOString(),
+          updatedAt: new Date(now - 29 * dayMs).toISOString(),
+          appVersion: '0.0.0',
+          deviceId: '11111111-1111-4111-8111-111111111111',
+        },
+      });
       for (const path of ALL_ROUTES) {
         await page.goto(path);
         await expect
           .poll(() => page.getByTestId('page-title').textContent())
           .not.toMatch(RAW_KEY_PATTERN);
         expect(await page.title()).not.toMatch(RAW_KEY_PATTERN);
+
+        if (path === '/') {
+          const exportButton = page.locator('.export-reminder-banner__actions button').first();
+          await expect(exportButton).toBeVisible();
+          await expect(exportButton).not.toHaveText(RAW_KEY_PATTERN);
+        }
       }
     });
   }
-
-  test("the export-reminder banner's Export button is translated, not a raw key (#162)", async ({
-    page,
-    seedDocument,
-  }) => {
-    // Regression test for #162: home-page.ts referenced a 'settings'-scope key ('settings.backup.
-    // export') for this button, but home.routes.ts only loads the 'home' scope — a feature-to-
-    // feature version of #149's shell-to-feature bug. A document created 30 days ago with the
-    // default 7-day reminder makes `shouldShowExportReminder()` (export-reminder.logic.ts) true.
-    // seedDocument() shallow-merges onto the default document, so `meta` needs every field
-    // isRootDocumentShape() requires (document.model.ts), not just the two this test cares about.
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    await seedDocument({
-      meta: {
-        createdAt: new Date(now - 30 * dayMs).toISOString(),
-        updatedAt: new Date(now - 29 * dayMs).toISOString(),
-        appVersion: '0.0.0',
-        deviceId: '11111111-1111-4111-8111-111111111111',
-      },
-    });
-    await page.goto('/');
-
-    const exportButton = page.locator('.export-reminder-banner__actions button').first();
-    await expect(exportButton).toBeVisible();
-    await expect(exportButton).not.toHaveText(RAW_KEY_PATTERN);
-  });
 
   test('a live language switch re-translates the current page title, without navigating', async ({
     page,
