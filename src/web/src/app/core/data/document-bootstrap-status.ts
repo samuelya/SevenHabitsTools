@@ -1,7 +1,20 @@
 import { Injectable, Signal, signal } from '@angular/core';
 import { SchemaVersionTooNewError } from './migrations/migrate-document';
+import { StorageBlockedError } from './storage-adapter';
 
 export type DocumentBootstrapState = 'ready' | 'corrupt';
+
+/**
+ * The failure's own message key when it knows why loading failed and that the stored data is not
+ * damaged — a document from a newer build (`SchemaVersionTooNewError`) or storage another tab is
+ * holding (`StorageBlockedError`, #139) — so the error page says what actually happened and points
+ * at "Try again" instead of describing intact data as corrupt.
+ */
+function messageKeyFor(error: unknown): string {
+  return error instanceof SchemaVersionTooNewError || error instanceof StorageBlockedError
+    ? error.message
+    : 'data.bootstrap.corrupt';
+}
 
 /**
  * The outcome of loading the document on startup. `document-bootstrap.ts` writes it; `App`
@@ -29,9 +42,7 @@ export class DocumentBootstrapStatus {
 
   reportCorrupt(raw: unknown, error: unknown): void {
     this.rawSignal.set(raw);
-    this.messageKeySignal.set(
-      error instanceof SchemaVersionTooNewError ? error.message : 'data.bootstrap.corrupt',
-    );
+    this.messageKeySignal.set(messageKeyFor(error));
     this.stateSignal.set('corrupt');
   }
 }

@@ -1,7 +1,7 @@
 import { Injectable, Signal, inject, signal } from '@angular/core';
 import { INDEXED_DB } from '../../browser/indexed-db';
 import { RootDocument } from '../document.model';
-import { StorageAdapter } from '../storage-adapter';
+import { StorageAdapter, StorageBlockedError } from '../storage-adapter';
 
 const DB_NAME = 'sevenhabits';
 const DB_VERSION = 1;
@@ -37,13 +37,14 @@ const BACKUP_KEY = 'backup-previous';
  * the cached `dbPromise` so the next call reopens it, exactly like a failed open already does.
  * `onversionchange` (another tab opened a newer `DB_VERSION`, e.g. after a deploy) additionally
  * closes this connection itself — required so the other tab's open can proceed — and bumps
- * `connectionSuperseded`, since this tab can never reopen at its own, now-stale version;
- * `IndexedDbUpgradeNotifier` is what tells the user to reload for that. `onblocked` on the open
- * request (another tab's connection is still open and did not close in time) rejects with a
- * descriptive error rather than leaving the caller hanging forever, and marks the request so that
- * if the spec later delivers a belated `onsuccess` for it anyway (once the blocking connection
- * elsewhere finally closes), that connection is closed immediately instead of leaking a live,
- * unreferenced `IDBDatabase`.
+ * `connectionSuperseded` (only when it was still the current connection), since this tab can never
+ * reopen at its own, now-stale version; `IndexedDbUpgradeNotifier` is what tells the user to reload
+ * for that. `onblocked` on the open request (another tab's connection is still open and did not
+ * close in time) rejects with `StorageBlockedError` — the contract's "intact data, held by someone
+ * else, retry later", so bootstrap doesn't mistake it for corrupt data — rather than leaving the
+ * caller hanging forever. Any `onsuccess` the spec then still delivers for such an abandoned
+ * request (once the blocking connection elsewhere finally closes) is closed immediately instead of
+ * leaking a live, unreferenced `IDBDatabase`.
  */
 @Injectable()
 export class IndexedDbAdapter implements StorageAdapter {
@@ -98,7 +99,6 @@ export class IndexedDbAdapter implements StorageAdapter {
 
   private openDb(): Promise<IDBDatabase> {
     if (!this.dbPromise) {
-      let blocked = false;
       const opened: Promise<IDBDatabase> = new Promise<IDBDatabase>((resolve, reject) => {
         const request = this.idb.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = () => {
@@ -108,26 +108,27 @@ export class IndexedDbAdapter implements StorageAdapter {
         };
         request.onsuccess = () => {
           const db = request.result;
-          if (blocked) {
-            // This request was already abandoned below (`onblocked` rejected `opened`): the spec
-            // still delivers this success once the blocking connection elsewhere closes, but
-            // nothing may reference `db` anymore — close it instead of leaking a live connection.
+          if (this.dbPromise !== opened) {
+            // This request was already abandoned (`onblocked`/`onerror` rejected `opened`, whose
+            // `catch` below dropped it): the spec still delivers this success once the blocking
+            // connection elsewhere closes, but nothing may reference `db` anymore — close it
+            // instead of leaking a live connection.
             db.close();
             return;
           }
           db.onclose = () => this.dropConnection(opened);
           db.onversionchange = () => {
             db.close();
-            this.dropConnection(opened);
-            this.connectionSupersededSignal.update((count) => count + 1);
+            if (this.dropConnection(opened)) {
+              // Only the connection this class is actually using may raise the alarm: a belated
+              // `onversionchange` for one already dropped would otherwise prompt a second reload.
+              this.connectionSupersededSignal.update((count) => count + 1);
+            }
           };
           resolve(db);
         };
         request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed'));
-        request.onblocked = () => {
-          blocked = true;
-          reject(new Error('IndexedDB open blocked by another open connection'));
-        };
+        request.onblocked = () => reject(new StorageBlockedError());
       }).catch((error: unknown) => {
         // Don't cache a permanent failure: a later call (e.g. DocumentPersistence's retry) should
         // try opening the database again instead of forever replaying today's error.
@@ -140,11 +141,14 @@ export class IndexedDbAdapter implements StorageAdapter {
   }
 
   /** Clears the cached connection, but only if `dbPromise` still refers to it — a connection this
-   * class has already replaced must not clobber the newer one when it belatedly closes. */
-  private dropConnection(opened: Promise<IDBDatabase>): void {
-    if (this.dbPromise === opened) {
-      this.dbPromise = null;
+   * class has already replaced must not clobber the newer one when it belatedly closes. Returns
+   * whether it was this class's current connection that was dropped. */
+  private dropConnection(opened: Promise<IDBDatabase>): boolean {
+    if (this.dbPromise !== opened) {
+      return false;
     }
+    this.dbPromise = null;
+    return true;
   }
 
   private request<T>(run: (store: IDBObjectStore) => IDBRequest<T>, db: IDBDatabase): Promise<T> {

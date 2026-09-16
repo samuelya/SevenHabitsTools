@@ -29,3 +29,18 @@ export interface StorageAdapter {
 }
 
 export const STORAGE_ADAPTER = new InjectionToken<StorageAdapter>('STORAGE_ADAPTER');
+
+/**
+ * Storage is temporarily unavailable because something else holds it — IndexedDB's `onblocked`
+ * (another tab of an older build never closed its connection) today, a locked remote file later.
+ * Part of the adapter contract rather than any one adapter's own error type, because callers have
+ * to tell it apart from a genuinely unreadable document: the stored data is intact and retrying
+ * once the blocker is gone succeeds, so nothing may offer corrupt-data recovery for it (#139).
+ */
+export class StorageBlockedError extends Error {
+  constructor() {
+    // The message is a Labels/Transloco key, not user-facing text, matching SchemaVersionTooNewError.
+    super('data.bootstrap.storageBlocked');
+    this.name = 'StorageBlockedError';
+  }
+}

@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { INDEXED_DB } from '../../browser/indexed-db';
 import { describeStorageAdapterContract } from '../storage-adapter.contract';
 import { RootDocument } from '../document.model';
-import { StorageAdapter } from '../storage-adapter';
+import { StorageAdapter, StorageBlockedError } from '../storage-adapter';
 import { IndexedDbAdapter } from './indexeddb-adapter';
 
 /** Constructs `IndexedDbAdapter` through `TestBed` with `INDEXED_DB` overridden to `idb` — see the
@@ -225,7 +225,9 @@ describe('IndexedDbAdapter', () => {
     } as unknown as IDBFactory;
     const adapter = createAdapter(fakeIdb);
 
-    await expect(adapter.load()).rejects.toThrow(/blocked/i);
+    // A StorageBlockedError, not a generic failure: the stored data is intact, so bootstrap must
+    // not treat this as corrupt.
+    await expect(adapter.load()).rejects.toThrow(StorageBlockedError);
   });
 
   it('#139: closes a belated connection instead of leaking it when onsuccess fires after onblocked', async () => {
@@ -258,10 +260,29 @@ describe('IndexedDbAdapter', () => {
     } as unknown as IDBFactory;
     const adapter = createAdapter(fakeIdb);
 
-    await expect(adapter.load()).rejects.toThrow(/blocked/i);
+    await expect(adapter.load()).rejects.toThrow(StorageBlockedError);
     await Promise.resolve();
     await Promise.resolve();
 
     expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('#139: a belated versionchange on an already-dropped connection reports nothing', async () => {
+    const idb = new IDBFactory();
+    const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
+    const connectionSuperseded = () => (adapter as IndexedDbAdapter).connectionSuperseded();
+
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    const firstDb = (openSpy.mock.results[0]!.value as IDBOpenDBRequest).result;
+    (firstDb.onclose as (() => void) | null)?.();
+    await adapter.load();
+    expect(openSpy).toHaveBeenCalledTimes(2);
+
+    // The replaced connection belatedly hears about the version change too; the connection this
+    // adapter is actually using is unaffected, so there is nothing to tell the user about.
+    (firstDb.onversionchange as (() => void) | null)?.();
+
+    expect(connectionSuperseded()).toBe(0);
   });
 });

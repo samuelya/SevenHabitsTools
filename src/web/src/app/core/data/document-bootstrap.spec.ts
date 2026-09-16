@@ -1,4 +1,5 @@
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
+import { SchemaVersionTooNewError } from './migrations/migrate-document';
 import { runDocumentBootstrap } from './document-bootstrap';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
@@ -8,7 +9,7 @@ import {
   resetRegistryForTesting,
   snapshotRegistryForTesting,
 } from './registry';
-import { StorageAdapter } from './storage-adapter';
+import { StorageAdapter, StorageBlockedError } from './storage-adapter';
 
 function fakeAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
   return {
@@ -189,5 +190,31 @@ describe('runDocumentBootstrap', () => {
       expect(store.replaceDocument).not.toHaveBeenCalled();
       expect(status.reportCorrupt).toHaveBeenCalledWith(stored, expect.any(Error));
     });
+  });
+});
+
+describe('DocumentBootstrapStatus', () => {
+  it('describes an unreadable document as corrupt', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportCorrupt({ broken: true }, new Error('not JSON'));
+
+    expect(status.messageKey()).toBe('data.bootstrap.corrupt');
+  });
+
+  it('#139: describes storage another tab is holding as blocked, not as corrupt', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportCorrupt(null, new StorageBlockedError());
+
+    expect(status.messageKey()).toBe('data.bootstrap.storageBlocked');
+  });
+
+  it('describes a document from a newer build with the migration message', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportCorrupt(null, new SchemaVersionTooNewError(99));
+
+    expect(status.messageKey()).toBe('data.migration.schemaTooNew');
   });
 });

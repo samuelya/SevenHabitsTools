@@ -48,7 +48,8 @@
       "schemaTooNew": "This file was saved by a newer version of the app."
     },
     "bootstrap": {
-      "corrupt": "The saved file is damaged or in a format this app cannot read."
+      "corrupt": "The saved file is damaged or in a format this app cannot read.",
+      "storageBlocked": "Another tab of this app is still holding your data. Close the other tabs, then try again."
     },
     "error": {
       "title": "We couldn't read your saved data",
@@ -72,7 +73,10 @@
       "exportNow": "Export now"
     },
     "indexedDb": {
-      "reloadRequired": "This tab needs to reload to keep saving your data."
+      "reloadRequired": "This tab needs to reload to keep saving your data.",
+      "unsavedBeforeReload": "This tab can no longer save. Export your unsaved changes before reloading.",
+      "exportNow": "Export now",
+      "exported": "Your changes were exported. Reload to continue."
     },
     "snackbar": {
       "dismiss": "Dismiss"
