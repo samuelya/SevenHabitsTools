@@ -5,6 +5,7 @@ import { WINDOW } from '../../browser/window';
 import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
+import { SaveErrorNotifier } from '../save-error-notifier';
 import { IndexedDbAdapter } from './indexeddb-adapter';
 
 /**
@@ -31,6 +32,7 @@ import { IndexedDbAdapter } from './indexeddb-adapter';
 export class IndexedDbUpgradeNotifier {
   private readonly adapter = inject(IndexedDbAdapter, { optional: true });
   private readonly persistence = inject(DocumentPersistence);
+  private readonly saveErrors = inject(SaveErrorNotifier);
   private readonly store = inject(DocumentStore);
   private readonly downloader = inject(FileDownloader);
   private readonly window = inject(WINDOW);
@@ -65,6 +67,10 @@ export class IndexedDbUpgradeNotifier {
   /** Opens the reload prompt unless one of this service's prompts is already on screen — a second
    * superseded connection is the same news about the same tab, not a second thing to tell. */
   private notify(): void {
+    // Every save from here on fails, and `SaveErrorNotifier` would reopen its snackbar over this
+    // flow's — only one shows at a time — leaving the user on a generic save error with no way
+    // back to the reload this tab actually needs.
+    this.saveErrors.suppress();
     if (this.promptOpen) {
       return;
     }

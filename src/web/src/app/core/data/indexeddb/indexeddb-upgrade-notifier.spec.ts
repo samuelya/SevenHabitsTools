@@ -7,6 +7,7 @@ import { WINDOW } from '../../browser/window';
 import { AppSnackbar } from '../../layout/app-snackbar';
 import { DocumentPersistence } from '../document-persistence';
 import { DocumentStore } from '../document.store';
+import { SaveErrorNotifier } from '../save-error-notifier';
 import { IndexedDbAdapter } from './indexeddb-adapter';
 import { IndexedDbUpgradeNotifier } from './indexeddb-upgrade-notifier';
 
@@ -125,6 +126,15 @@ describe('IndexedDbUpgradeNotifier', () => {
     expect(context.open).toHaveBeenCalledTimes(1);
     expect(messageOf(context.open, 0)).toContain('reload');
     expect(actionOf(context.open, 0)).toBe('Reload');
+  });
+
+  it('#139: silences the save-error snackbar, which would otherwise replace the reload prompt', async () => {
+    const context = setUp();
+    const suppress = vi.spyOn(TestBed.inject(SaveErrorNotifier), 'suppress');
+
+    await supersede(context);
+
+    expect(suppress).toHaveBeenCalled();
   });
 
   it('does not report a supersede that happened before it started', () => {
