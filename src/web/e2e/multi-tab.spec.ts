@@ -15,6 +15,10 @@ import { expect, test } from './fixtures';
  */
 
 const READ_ONLY_BANNER = '.read-only-banner';
+const HEARTBEAT_STORAGE_KEY = 'sevenhabits-writer-heartbeat';
+/** Mirrors `HEARTBEAT_INTERVAL_MS` (`heartbeat-writer-lock.ts`) — not imported, since `e2e`
+ * exercises the built app as a black box, the same reason it can't import the app's own types. */
+const HEARTBEAT_INTERVAL_MS = 2000;
 
 /** `data.readOnly.banner`'s opening words, in both languages — the `-ar` projects render Arabic
  * by default (the browser locale, per `playwright.config.ts`), not just when a spec seeds it. */
@@ -36,10 +40,16 @@ async function waitForWebLockHeld(page: Page): Promise<void> {
  * confirmation (100 ms) has passed. */
 async function waitForHeartbeatClaimed(page: Page): Promise<void> {
   await expect
-    .poll(() => page.evaluate(() => localStorage.getItem('sevenhabits-writer-heartbeat')))
+    .poll(() => page.evaluate((key) => localStorage.getItem(key), HEARTBEAT_STORAGE_KEY))
     .not.toBeNull();
   await page.waitForTimeout(300);
 }
+
+/** #143's save-error snackbar text and "Export now" button label, in both languages. */
+const STRANDED_EDITS_TEXT = {
+  en: { message: 'Another tab took over', exportNow: 'Export now' },
+  ar: { message: 'تولّت علامة تبويب أخرى الكتابة', exportNow: 'تصدير الآن' },
+} as const;
 
 /** Counts full page loads of `page` from now on (a reload fires `load` once). */
 function countLoads(page: Page): () => number {
@@ -226,5 +236,57 @@ test.describe('multi-tab writer lock, localStorage heartbeat fallback (no Web Lo
     await second.waitForTimeout(8000);
     expect(secondLoads()).toBe(1);
     await expect(second.locator(READ_ONLY_BANNER)).toHaveCount(0);
+  });
+
+  test('#143: a stranded edit is offered for export instead of being silently lost', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    await seedDocument({});
+    await page.goto('/settings');
+    await page.waitForFunction((key) => localStorage.getItem(key) !== null, HEARTBEAT_STORAGE_KEY);
+    // The entry's own `at` is `tick()`'s first, synchronous call in `start()` — the same instant
+    // every later tick is scheduled from (`setInterval(tick, HEARTBEAT_INTERVAL_MS)` right after
+    // it), so it anchors exactly when the next tick is due.
+    const claimedAt = (
+      JSON.parse(
+        (await page.evaluate((key) => localStorage.getItem(key), HEARTBEAT_STORAGE_KEY))!,
+      ) as { at: number }
+    ).at;
+
+    // Wait until just before the next tick, then edit and overwrite the heartbeat entry (standing
+    // in for another tab's takeover — see the file doc comment for why this isn't done through a
+    // real second tab) close enough together that the edit's still-pending 500 ms save debounce
+    // can't beat the next tick to it: the tick reads the overwritten entry, sees another tab's
+    // name, and steps down before anything saves.
+    await page.waitForTimeout(Math.max(0, claimedAt + HEARTBEAT_INTERVAL_MS - 200 - Date.now()));
+    await page
+      .locator('mat-button-toggle-group')
+      .nth(1)
+      .locator('mat-button-toggle')
+      .nth(1)
+      .click(); // a real edit through the UI (no editable exercise UI yet, #1); marks it dirty
+    await page.evaluate(
+      ({ key, tabId, at }) => localStorage.setItem(key, JSON.stringify({ tabId, at })),
+      { key: HEARTBEAT_STORAGE_KEY, tabId: 'e2e-other-tab', at: Date.now() },
+    );
+
+    const text = testInfo.project.name.endsWith('-ar')
+      ? STRANDED_EDITS_TEXT.ar
+      : STRANDED_EDITS_TEXT.en;
+    await expect(page.getByText(text.message)).toBeVisible();
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: text.exportNow }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe('seven-habits-tools-backup.json');
+
+    // The debounced save was cancelled by the stepdown, never the read-only refusal (#127) that
+    // would apply to an edit made *after* it: the numerals toggle never reaches storage.
+    const stored = (await readIndexedDbKey(page, 'current')) as {
+      settings: Record<string, unknown>;
+    };
+    expect(stored.settings['numerals']).toBeUndefined();
   });
 });

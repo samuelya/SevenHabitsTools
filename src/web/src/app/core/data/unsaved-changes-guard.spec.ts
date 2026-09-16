@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
 import { DocumentPersistence } from './document-persistence';
+import { StrandedEditsError } from './stranded-edits-error';
 import { UnsavedChangesGuard } from './unsaved-changes-guard';
 
 function setUp() {
@@ -51,6 +52,16 @@ describe('UnsavedChangesGuard', () => {
 
     dirty.set(true);
     saveError.set(new Error('quota'));
+    TestBed.tick();
+
+    expect(unload()).toBe(true);
+  });
+
+  it('#143: also arms for edits stranded by a write lock taken over by another tab', () => {
+    const { dirty, saveError, unload } = setUp();
+
+    dirty.set(true);
+    saveError.set(new StrandedEditsError());
     TestBed.tick();
 
     expect(unload()).toBe(true);

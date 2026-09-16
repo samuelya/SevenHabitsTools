@@ -6,6 +6,7 @@ import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { DocumentStore } from './document.store';
 import { WRITER_LOCK } from './multi-tab/writer-lock';
 import { SaveReason, STORAGE_ADAPTER } from './storage-adapter';
+import { StrandedEditsError } from './stranded-edits-error';
 
 /** How long to wait after an edit before saving, so rapid changes coalesce into one write. */
 export const SAVE_DEBOUNCE_MS = 500;
@@ -48,6 +49,17 @@ export const SAVE_RETRY_MAX_MS = 60000;
  * itself flushed on every writer-lock grant regressed exactly that distinction (#158): it also
  * fired on a genuine promotion, racing `WriterPromotionReload`'s reload with a save of a
  * possibly-stale document.
+ *
+ * This class also watches for `WRITER_LOCK.isWriter()` going from `true` to `false` while `dirty`
+ * — the heartbeat fallback stepping down because another tab's entry took over (`localStorage` has
+ * no real compare-and-swap, so a throttled tab can lose the lock without ever choosing to give it
+ * up, #143). With the Web Locks strategy this never fires in practice: a granted lock is never
+ * revoked, only released deliberately (`stop()`, which resets the role to `pending` and only after
+ * this class's own `ngOnDestroy`-driven teardown). Losing the lock while dirty sets `saveError` to
+ * a `StrandedEditsError` instead of leaving the edits dirty with no explanation, so
+ * `SaveErrorNotifier` and `UnsavedChangesGuard` — already wired to `dirty`/`saveError` for a failed
+ * `adapter.save()` — surface it the same way, with no separate "stranded" UI state to maintain. A
+ * clean (not dirty) step-down sets nothing: there is nothing to strand.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentPersistence {
@@ -70,6 +82,7 @@ export class DocumentPersistence {
 
   private started = false;
   private isFirstRun = true;
+  private wasWriter: boolean | null = null;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private retryAttempt = 0;
@@ -106,6 +119,28 @@ export class DocumentPersistence {
     );
     this.document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.window.addEventListener('pagehide', this.onPageHide);
+
+    effect(
+      () => {
+        const isWriter = this.writerLock.isWriter();
+        if (this.wasWriter && !isWriter && this.dirtySignal()) {
+          this.strandEdits();
+        }
+        this.wasWriter = isWriter;
+      },
+      { injector: this.injector },
+    );
+  }
+
+  /** The write lock was lost while there were unsaved edits: stop retrying (defense in depth —
+   * `runSaveLoop()`'s own `isWriter()` check already refuses to save) and surface it the same way
+   * a failed `adapter.save()` is surfaced. */
+  private strandEdits(): void {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = undefined;
+    clearTimeout(this.retryTimer);
+    this.retryTimer = undefined;
+    this.saveErrorSignal.set(new StrandedEditsError());
   }
 
   private scheduleSave(): void {

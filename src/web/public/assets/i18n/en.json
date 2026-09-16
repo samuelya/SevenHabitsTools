@@ -70,6 +70,7 @@
     },
     "saveError": {
       "message": "We couldn't save your latest changes.",
+      "strandedMessage": "Another tab took over; export your unsaved changes.",
       "exportNow": "Export now"
     },
     "indexedDb": {
