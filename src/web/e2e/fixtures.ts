@@ -42,16 +42,35 @@ function defaultDocument(): SeedDocument {
   };
 }
 
+/** Distinguishes each `writeDocumentOnNextNavigation()` call's own marker, so a later call's
+ * script (e.g. `setLanguage` after `seedDocument`) still writes on the next navigation even
+ * though an earlier call's script has already set its own marker. */
+let seedCallCounter = 0;
+
 /**
  * Writes `doc` to IndexedDB (database `sevenhabits`, object store `documents`, key `current`) —
  * the schema `IndexedDbAdapter` (issue #35) reads from — before the app's own bootstrap gets a
  * chance to read it. Registered as a `page.addInitScript` rather than a plain `page.evaluate` so
  * it runs on the *next* navigation, before any of the page's own scripts: seeding only works if
  * it lands before the app's bootstrap, and the app hasn't navigated yet when a fixture runs.
+ *
+ * `page.addInitScript` re-runs this on *every* navigation of the page, including `page.reload()`
+ * (#157): without a guard, a test that seeds, reloads and then asserts the data is still there
+ * would pass even if `IndexedDbAdapter.load()`/`save()` were completely broken, because the
+ * reload's own init script would silently re-plant the exact value being asserted. Each call gets
+ * a unique `sessionStorage` marker (session storage survives a reload of the same tab, but not a
+ * new page/tab or a fresh context) that its script checks before writing and sets after: the
+ * first navigation after a `seedDocument`/`setLanguage` call still seeds, but every later
+ * navigation of that same page — a `reload()` above all — sees the marker already set and skips
+ * the write, leaving IndexedDB to whatever the app itself actually persisted.
  */
 async function writeDocumentOnNextNavigation(page: Page, doc: SeedDocument): Promise<void> {
+  const marker = `sevenhabits-e2e-seed-${++seedCallCounter}`;
   await page.addInitScript(
-    ({ dbName, storeName, key, value }) => {
+    ({ dbName, storeName, key, value, marker }) => {
+      if (sessionStorage.getItem(marker)) {
+        return;
+      }
       const openRequest = indexedDB.open(dbName);
       openRequest.onupgradeneeded = () => {
         if (!openRequest.result.objectStoreNames.contains(storeName)) {
@@ -62,16 +81,25 @@ async function writeDocumentOnNextNavigation(page: Page, doc: SeedDocument): Pro
         const db = openRequest.result;
         const tx = db.transaction(storeName, 'readwrite');
         tx.objectStore(storeName).put(value, key);
-        tx.oncomplete = () => db.close();
+        tx.oncomplete = () => {
+          db.close();
+          sessionStorage.setItem(marker, '1');
+        };
         tx.onerror = () => db.close();
       };
     },
-    { dbName: DB_NAME, storeName: STORE_NAME, key: DOCUMENT_KEY, value: doc },
+    { dbName: DB_NAME, storeName: STORE_NAME, key: DOCUMENT_KEY, value: doc, marker },
   );
 }
 
 export interface SevenHabitsFixtures {
-  /** Seeds IndexedDB with `doc` merged onto `defaultDocument()`, before the next navigation. */
+  /**
+   * Seeds IndexedDB with `doc` merged onto `defaultDocument()`, before the next navigation of
+   * `page`. Seeds once: later navigations of the same `page`, `page.reload()` above all, are left
+   * alone and reflect whatever the app actually persisted (see
+   * `writeDocumentOnNextNavigation()`'s doc comment). Use `context.newPage()` instead when a test
+   * needs a page with no seed init script at all (e.g. a genuinely fresh second tab).
+   */
   seedDocument(doc: SeedDocument): Promise<void>;
   /**
    * Content-Security-Policy violations reported by the page since the fixture was set up (empty
@@ -83,9 +111,10 @@ export interface SevenHabitsFixtures {
   cspViolations: string[];
   /**
    * Seeds `settings.language` (`settings.language: 'en' | 'ar'`, per issue #28's data model)
-   * before the next navigation. Combine with `seedDocument` by passing `{ settings: { language } }`
-   * to it directly instead — this fixture always seeds a fresh default document, so calling both
-   * against the same page would have the later call's write win.
+   * before the next navigation of `page`. Same "seeds once" rule as `seedDocument` above. Combine
+   * with `seedDocument` by passing `{ settings: { language } }` to it directly instead — this
+   * fixture always seeds a fresh default document, so calling both against the same page would
+   * have the later call's write win.
    */
   setLanguage(lang: 'en' | 'ar'): Promise<void>;
   /** Disables the browser context's network, simulating the device going offline after first load. */

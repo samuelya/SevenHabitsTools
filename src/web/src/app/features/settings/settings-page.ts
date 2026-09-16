@@ -4,8 +4,8 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LanguageStore } from '../../core/i18n/language-store';
 import { LANGUAGES, Language, Numerals } from '../../core/i18n/language';
-import { AppNumberPipe } from '../../core/i18n/locale.pipe';
-import { fractionOptionsFor, toByteSize } from '../../core/data/storage-estimate.utils';
+import { intlLocaleFor } from '../../core/i18n/locale.logic';
+import { usageMessageFor } from '../../core/data/storage-estimate.utils';
 import { StoragePersistenceService } from '../../core/data/storage-persistence.service';
 import { BackupSection } from './backup/backup-section';
 
@@ -15,7 +15,7 @@ const NUMERALS: readonly Numerals[] = ['western', 'arabic'];
  * status, the backup (export/import) section, and the privacy note that `/about` links to. */
 @Component({
   selector: 'app-settings-page',
-  imports: [RouterLink, MatButtonToggleModule, TranslocoPipe, AppNumberPipe, BackupSection],
+  imports: [RouterLink, MatButtonToggleModule, TranslocoPipe, BackupSection],
   template: `
     <h1 class="page-heading">{{ 'nav.settings' | transloco }}</h1>
     <section id="language">
@@ -48,13 +48,8 @@ const NUMERALS: readonly Numerals[] = ['western', 'arabic'];
     <section id="storage">
       <h2>{{ 'settings.storage.title' | transloco }}</h2>
       <p>{{ persistedMessageKey() | transloco }}</p>
-      @if (usage(); as usage) {
-        <p>
-          {{ 'settings.storage.usageLabel' | transloco }}:
-          {{ usage.used.value | appNumber: fractionOptionsFor(usage.used) }} {{ usage.used.unit }} /
-          {{ usage.quota.value | appNumber: fractionOptionsFor(usage.quota) }}
-          {{ usage.quota.unit }}
-        </p>
+      @if (usageMessage(); as usage) {
+        <p>{{ usage.key | transloco: usage.params ?? {} }}</p>
       }
     </section>
     <app-backup-section />
@@ -75,6 +70,13 @@ export class SettingsPage {
   protected readonly languages: readonly Language[] = LANGUAGES;
   protected readonly numeralsOptions = NUMERALS;
 
+  constructor() {
+    // The estimate `StoragePersistenceService` captured at startup (`requestPersistence()`) is
+    // already stale by the time a user opens Settings — refresh it so the usage line reflects
+    // what is actually stored now, not the previous page load's figure (#144).
+    void this.storagePersistence.refreshEstimate();
+  }
+
   protected numeralsKey(numerals: Numerals): string {
     return numerals === 'western' ? 'language.numeralsWestern' : 'language.numeralsArabic';
   }
@@ -90,14 +92,12 @@ export class SettingsPage {
     }
   });
 
-  protected readonly usage = computed(() => {
+  protected readonly usageMessage = computed(() => {
     const estimate = this.storagePersistence.estimate();
-    return estimate
-      ? { used: toByteSize(estimate.usageBytes), quota: toByteSize(estimate.quotaBytes) }
-      : null;
+    if (!estimate) {
+      return null;
+    }
+    const locale = intlLocaleFor(this.languageStore.language(), this.languageStore.numerals());
+    return usageMessageFor(estimate.usageBytes, locale);
   });
-
-  /** Exposed for the template — Angular templates can only call component members, not free
-   * functions, even when imported. */
-  protected readonly fractionOptionsFor = fractionOptionsFor;
 }

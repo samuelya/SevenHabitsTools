@@ -32,3 +32,22 @@ export function toByteSize(bytes: number): ByteSize {
 export function fractionOptionsFor(size: ByteSize): Intl.NumberFormatOptions {
   return { minimumFractionDigits: size.fractionDigits, maximumFractionDigits: size.fractionDigits };
 }
+
+/** Which `settings.storage.usage*` transloco key (and, above 1 KB, formatted params) describes a
+ * usage byte count. Collapses anything under 1 KB to the same "less than 1 KB" phrasing rather
+ * than a raw, easily-misread byte count (#144); `locale` is an already-resolved `Intl` locale
+ * (see `intlLocaleFor`) so this stays a pure function the caller can unit test without Angular. */
+export interface UsageMessage {
+  readonly key: 'settings.storage.usageUnderOneKb' | 'settings.storage.usageApprox';
+  /** Set only for `usageApprox`, whose translation interpolates `{{value}} {{unit}}`. */
+  readonly params?: { readonly value: string; readonly unit: ByteUnit };
+}
+
+export function usageMessageFor(bytes: number, locale: string): UsageMessage {
+  const size = toByteSize(bytes);
+  if (size.unit === 'B') {
+    return { key: 'settings.storage.usageUnderOneKb' };
+  }
+  const value = new Intl.NumberFormat(locale, fractionOptionsFor(size)).format(size.value);
+  return { key: 'settings.storage.usageApprox', params: { value, unit: size.unit } };
+}
