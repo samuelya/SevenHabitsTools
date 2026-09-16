@@ -38,6 +38,18 @@ Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slu
 
 Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Shared config (`CLAUDE.md`, `.claude/`, `.gitignore`, root files) is lead-only and changes via PR (`main` is protected: PR required, 5 required CI checks, no bypass).
 
+## Cost discipline (lead-run)
+
+Token cost is a first-class constraint: the owner pays per token and has hit a monthly limit. A long-lived agent is the main cost driver, because every turn resends its whole history and an idle gap expires the cache, re-billing it in full.
+
+- **One issue at a time by default.** Parallel issues cause conflicts, rebases and re-checks; each is an extra round. Run two only when they share no files.
+- **Fresh agent per round.** A coder or tester does one round, hands off and stops. The lead starts a new agent for the next round, pointed at the issue and the tester's PR comment. GitHub is the shared memory, so those comments must be good enough to continue from.
+- **Short messages.** Detail goes in the issue or PR comment; agent-to-agent and agent-to-lead messages are at most 5 lines. The lead reports to the owner only decisions, failures, merge-ready PRs and things needing a choice, not every acknowledgement.
+- **Cap the rounds.** After two failed rounds on one issue, escalate a tier or split the rest into a follow-up issue instead of iterating.
+- **Model tiers.** Sonnet by default. Opus only for data-integrity or security work, or an escalation.
+- **Test cadence.** Targeted tests while iterating; the full unit and e2e suites once before hand-off, and again only for the delta after a rebase.
+- **Work in bursts.** Finish an issue and stop its agents rather than leaving several idle for hours.
+
 ## Working in parallel
 
 - One writer per worktree; every writing agent gets its own worktree and a non-overlapping file scope.
