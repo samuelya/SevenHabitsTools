@@ -148,6 +148,35 @@ describe('ExerciseDetail', () => {
     host.remove();
   });
 
+  it('moves focus only once MatDrawer has applied its opened class, not in the same tick (#176)', () => {
+    const fixture = setUp(true, false);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    // jsdom has no real stylesheet, so it cannot reproduce #176 directly: focusing the still
+    // `visibility: hidden` close button "succeeds" here but silently no-ops in a browser. What
+    // jsdom *can* observe is the ordering that caused it — whether `mat-drawer-opened` (which
+    // gates Material's `visibility: hidden` rule) was already applied when focus moved.
+    let drawerClassesWhenFocused: string | null = null;
+    host.addEventListener('focusin', (event) => {
+      if ((event.target as HTMLElement).classList.contains('close-button')) {
+        drawerClassesWhenFocused = host.querySelector('mat-drawer')?.className ?? '';
+      }
+    });
+
+    fixture.componentInstance.hasDetail.set(true);
+    fixture.detectChanges();
+
+    expect(drawerClassesWhenFocused).toContain('mat-drawer-opened');
+
+    trigger.remove();
+    host.remove();
+  });
+
   it('does not move focus on desktop, where the drawer is a persistent, non-modal side panel (#174)', () => {
     const fixture = setUp(false, false);
     const host = fixture.nativeElement as HTMLElement;

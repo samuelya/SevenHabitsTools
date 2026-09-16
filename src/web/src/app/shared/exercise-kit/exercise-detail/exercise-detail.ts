@@ -4,6 +4,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   effect,
   inject,
   input,
@@ -38,6 +40,7 @@ import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 export class ExerciseDetail {
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly document = inject(DOCUMENT);
+  private readonly injector = inject(Injector);
 
   /** Whether `[detail]` content is currently projected/selected. */
   readonly hasDetail = input.required<boolean>();
@@ -74,15 +77,36 @@ export class ExerciseDetail {
     // after this effect has already moved it.
     effect(() => {
       const handsetOpen = this.handset() && this.hasDetail();
-      if (handsetOpen && !this.wasHandsetOpen) {
-        this.triggerElement = this.document.activeElement as HTMLElement | null;
-        this.closeButton().nativeElement.focus();
-      } else if (!handsetOpen && this.wasHandsetOpen) {
-        this.triggerElement?.focus();
-        this.triggerElement = null;
+      if (handsetOpen === this.wasHandsetOpen) {
+        return;
       }
       this.wasHandsetOpen = handsetOpen;
+      // Capture the trigger now, while focus is still on it: `MatDrawerContent` marks the list
+      // pane `inert` shortly after opening, which blurs whatever it holds.
+      if (handsetOpen) {
+        this.triggerElement = this.document.activeElement as HTMLElement | null;
+      }
+      afterNextRender(() => this.moveFocus(handsetOpen), { injector: this.injector });
     });
+  }
+
+  /**
+   * Deferred to a render hook rather than run inline in the effect, because both targets are
+   * unfocusable at the instant the effect runs (issue #176): `MatDrawer`'s `[opened]` setter, which
+   * synchronously toggles the `mat-drawer-opened`/`mat-drawer-animating` classes gating its
+   * `visibility: hidden` rule, has not run yet, and on close the list pane is still `inert`.
+   * Focusing a hidden or inert element silently no-ops in a real browser (but not in jsdom), which
+   * left focus outside the drawer and made `MatDrawer`'s own Escape handler deaf.
+   */
+  private moveFocus(handsetOpen: boolean): void {
+    if (handsetOpen) {
+      // The drawer is visible but still sliding in; `preventScroll` keeps the container from
+      // jumping to its off-screen position mid-transition.
+      this.closeButton().nativeElement.focus({ preventScroll: true });
+    } else {
+      this.triggerElement?.focus();
+      this.triggerElement = null;
+    }
   }
 
   protected onOpenedChange(opened: boolean): void {
