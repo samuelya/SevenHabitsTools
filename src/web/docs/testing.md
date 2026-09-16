@@ -72,6 +72,16 @@ and found no violations caused by #118's broken stylesheet.
   a service worker to cache the lazy feature chunks; `smoke.spec.ts` has a `test.fixme` for this
   pointing at #27.
 
+`seedDocument`/`setLanguage` write through a `page.addInitScript`, which Playwright reruns on
+*every* navigation of that page, including `page.reload()`. Both fixtures seed only once per call
+(a `sessionStorage` marker their script checks before writing and sets after — #157): the first
+navigation after the call still seeds, but a later reload of the same page is left alone and shows
+whatever the app itself actually persisted, not a re-planted copy of the seed. A spec that seeds,
+reloads and asserts the data is still there is therefore a genuine persistence check. Call
+`seedDocument`/`setLanguage` again for a fresh value instead of relying on a reload to reseed, and
+use `context.newPage()` (not `page.reload()`) when a test wants a page with no seed init script at
+all — e.g. a genuinely fresh second tab in a multi-tab spec (`multi-tab.spec.ts`).
+
 ## Adding a spec for a new feature
 
 Add `e2e/<feature>.spec.ts` importing `test`/`expect` from `./fixtures` instead of

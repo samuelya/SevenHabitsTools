@@ -24,6 +24,7 @@ function text(fixture: { nativeElement: HTMLElement }, selector: string): string
 }
 
 function setUp(persisted: boolean | null, estimate: StorageEstimateInfo | null) {
+  const refreshEstimate = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
     providers: [
       provideTranslocoTesting(),
@@ -34,43 +35,59 @@ function setUp(persisted: boolean | null, estimate: StorageEstimateInfo | null) 
       { provide: STORAGE_ADAPTER, useClass: NoopAdapter },
       {
         provide: StoragePersistenceService,
-        useValue: { persisted: signal(persisted), estimate: signal(estimate) },
+        useValue: { persisted: signal(persisted), estimate: signal(estimate), refreshEstimate },
       },
     ],
   });
   const fixture = TestBed.createComponent(SettingsPage);
   fixture.detectChanges();
-  return fixture;
+  return { fixture, refreshEstimate };
 }
 
 describe('SettingsPage', () => {
-  it('shows the "protected" message and the usage estimate when persisted', () => {
-    const fixture = setUp(true, { usageBytes: 1024 * 1024, quotaBytes: 100 * 1024 * 1024 });
+  it('shows the "protected" message and a friendly usage estimate when persisted', () => {
+    const { fixture } = setUp(true, { usageBytes: 1024 * 1024, quotaBytes: 100 * 1024 * 1024 });
 
     expect(text(fixture, '#storage')).toContain('protected from automatic clearing');
-    expect(text(fixture, '#storage')).toContain('1.0 MB / 100.0 MB');
+    expect(text(fixture, '#storage')).toContain('using about 1.0 MB in this browser');
+    // The quota is the browser's per-origin allowance, not the app's usage — never shown as
+    // "used / quota" (#144).
+    expect(text(fixture, '#storage')).not.toMatch(/\d+(\.\d+)? ?[KMGT]?B \//);
+  });
+
+  it('collapses a usage under 1 KB to a friendly message instead of a raw byte count', () => {
+    const { fixture } = setUp(true, { usageBytes: 25, quotaBytes: 100 * 1024 * 1024 });
+
+    expect(text(fixture, '#storage')).toContain('using less than 1 KB in this browser');
+    expect(text(fixture, '#storage')).not.toContain('25');
   });
 
   it('shows the "may be cleared" message when not persisted', () => {
-    const fixture = setUp(false, null);
+    const { fixture } = setUp(false, null);
 
     expect(text(fixture, '#storage')).toContain('may clear this data');
   });
 
   it('shows the "not available" message when the Storage Manager API is unsupported', () => {
-    const fixture = setUp(null, null);
+    const { fixture } = setUp(null, null);
 
     expect(text(fixture, '#storage')).toContain('not available in this browser');
   });
 
   it('does not show a usage line when there is no estimate yet', () => {
-    const fixture = setUp(null, null);
+    const { fixture } = setUp(null, null);
 
-    expect(text(fixture, '#storage')).not.toContain('Used');
+    expect(text(fixture, '#storage')).not.toContain('using');
+  });
+
+  it('refreshes the storage estimate on open, not just at startup', () => {
+    const { refreshEstimate } = setUp(true, null);
+
+    expect(refreshEstimate).toHaveBeenCalledTimes(1);
   });
 
   it('still shows the privacy note', () => {
-    const fixture = setUp(null, null);
+    const { fixture } = setUp(null, null);
 
     expect(text(fixture, '#privacy')).toContain('Your data stays in this browser');
   });
