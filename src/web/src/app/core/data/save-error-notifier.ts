@@ -99,7 +99,14 @@ export class SaveErrorNotifier {
       }
       this.ref = ref;
       ref.onAction().subscribe(() => this.exportNow());
-      ref.afterDismissed().subscribe(() => this.onClosed());
+      ref.afterDismissed().subscribe(() => {
+        // A dismiss's async exit animation can outlive this ref: a success (onSaveResult) or a
+        // new failure (showSnackbar) may already have replaced `this.ref` by the time this fires.
+        // Only reset state for the ref that's still current, so a stale callback can't clobber it.
+        if (this.ref === ref) {
+          this.onClosed();
+        }
+      });
     } catch {
       // Couldn't open it (e.g. the snackbar code failed to load): let the next failure try again.
       this.open = false;
