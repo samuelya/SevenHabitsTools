@@ -7,7 +7,17 @@
     position="end"
     [mode]="handset() ? 'over' : 'side'"
     [opened]="hasDetail()"
+    (openedChange)="onOpenedChange($event)"
   >
+    <button
+      mat-icon-button
+      type="button"
+      class="close-button"
+      [attr.aria-label]="'exerciseKit.detail.close' | transloco"
+      (click)="closed.emit()"
+    >
+      <mat-icon class="flip-in-rtl" aria-hidden="true">arrow_back</mat-icon>
+    </button>
     <ng-content select="[detail]" />
   </mat-drawer>
 </mat-drawer-container>

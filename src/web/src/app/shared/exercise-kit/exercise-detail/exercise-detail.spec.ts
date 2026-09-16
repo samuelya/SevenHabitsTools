@@ -1,14 +1,18 @@
 import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { MatDrawer } from '@angular/material/sidenav';
+import { provideTranslocoScope } from '@jsverse/transloco';
 import { of } from 'rxjs';
+import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExerciseDetail } from './exercise-detail';
 
 @Component({
   selector: 'app-host',
   imports: [ExerciseDetail],
   template: `
-    <app-exercise-detail [hasDetail]="hasDetail">
+    <app-exercise-detail [hasDetail]="hasDetail" (closed)="onClosed()">
       <div list>The list</div>
       <div detail>The detail</div>
     </app-exercise-detail>
@@ -16,12 +20,20 @@ import { ExerciseDetail } from './exercise-detail';
 })
 class HostComponent {
   hasDetail = false;
+  closedCount = 0;
+
+  onClosed(): void {
+    this.hasDetail = false;
+    this.closedCount++;
+  }
 }
 
 function setUp(handset: boolean, hasDetail: boolean) {
   const state: BreakpointState = { matches: handset, breakpoints: {} };
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
+      provideTranslocoScope('exercise-kit'),
       {
         provide: BreakpointObserver,
         useValue: { observe: () => of(state), isMatched: () => handset },
@@ -65,5 +77,27 @@ describe('ExerciseDetail', () => {
 
     expect(host.querySelector('mat-drawer')?.classList).toContain('mat-drawer-opened');
     expect(host.querySelector('.exercise-detail')?.classList).toContain('handset');
+  });
+
+  it('emits closed and clears the selection when the close button is clicked', () => {
+    const fixture = setUp(true, true);
+    const host = fixture.nativeElement as HTMLElement;
+
+    (host.querySelector('.close-button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.closedCount).toBe(1);
+    expect(host.querySelector('mat-drawer')?.classList).not.toContain('mat-drawer-opened');
+  });
+
+  it('emits closed when the drawer reports it closed itself (backdrop tap or Escape)', async () => {
+    const fixture = setUp(true, true);
+    const drawer = fixture.debugElement.query(By.directive(MatDrawer))
+      .componentInstance as MatDrawer;
+
+    await drawer.close();
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.closedCount).toBe(1);
   });
 });

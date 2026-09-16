@@ -28,7 +28,7 @@
 
 <section>
   <h2>List / detail</h2>
-  <app-exercise-detail [hasDetail]="hasDetail()">
+  <app-exercise-detail [hasDetail]="hasDetail()" (closed)="selectedId.set(null)">
     <app-exercise-list
       list
       [items]="items"

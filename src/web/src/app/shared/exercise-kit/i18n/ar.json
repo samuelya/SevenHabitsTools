@@ -13,6 +13,9 @@
     "sortByStatus": "حسب الحالة",
     "empty": "لا توجد تمارين مطابقة لبحثك."
   },
+  "detail": {
+    "close": "العودة إلى القائمة"
+  },
   "reflection": {
     "characterCount": "{{count}} حرفًا",
     "savedAt": "تم الحفظ {{time}}",

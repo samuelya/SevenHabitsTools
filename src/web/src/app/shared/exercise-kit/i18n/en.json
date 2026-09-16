@@ -13,6 +13,9 @@
     "sortByStatus": "By status",
     "empty": "No exercises match your search."
   },
+  "detail": {
+    "close": "Back to list"
+  },
   "reflection": {
     "characterCount": "{{count}} characters",
     "savedAt": "Saved {{time}}",
