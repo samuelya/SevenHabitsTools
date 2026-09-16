@@ -10,9 +10,10 @@ import { IndexedDbAdapter } from './indexeddb-adapter';
  * (`IndexedDbAdapter.connectionSuperseded`, from `onversionchange`, #139): this tab's connection
  * is already closed and can never reopen at its own, now-stale version, so it would otherwise keep
  * running against a document it can no longer save. Flushes any pending edit through
- * `DocumentPersistence` before reloading — the same guard `AppUpdateService` uses for a
- * service-worker update — a failed flush still surfaces through `SaveErrorNotifier`, so nothing is
- * lost silently.
+ * `DocumentPersistence` before reloading, and only actually reloads once that flush left the
+ * document clean — the same guard `AppUpdateService` uses for a service-worker update — so a save
+ * that is still in flight or failing (`SaveErrorNotifier` already tells the user why) reopens the
+ * prompt instead of the reload silently discarding it.
  *
  * `IndexedDbAdapter` is injected optionally: `DocumentSync` (which starts this alongside every
  * other document-dependent service) must stay usable with any `StorageAdapter`, not just this one,
@@ -64,7 +65,15 @@ export class IndexedDbUpgradeNotifier {
   }
 
   private async onReloadClicked(): Promise<void> {
-    await this.persistence.flush().catch(() => undefined);
+    await this.persistence.flush();
+    if (this.persistence.dirty() || this.persistence.saveError() !== null) {
+      // Still unsafe to reload (a save is in flight or failing — flush() never rejects, it only
+      // records the failure on DocumentPersistence — SaveErrorNotifier already tells the user why):
+      // reopen the prompt instead of silently discarding the pending edit, matching
+      // AppUpdateService's guard for the same hazard.
+      void this.showPrompt();
+      return;
+    }
     this.window.location.reload();
   }
 }

@@ -40,7 +40,10 @@ const BACKUP_KEY = 'backup-previous';
  * `connectionSuperseded`, since this tab can never reopen at its own, now-stale version;
  * `IndexedDbUpgradeNotifier` is what tells the user to reload for that. `onblocked` on the open
  * request (another tab's connection is still open and did not close in time) rejects with a
- * descriptive error rather than leaving the caller hanging forever.
+ * descriptive error rather than leaving the caller hanging forever, and marks the request so that
+ * if the spec later delivers a belated `onsuccess` for it anyway (once the blocking connection
+ * elsewhere finally closes), that connection is closed immediately instead of leaking a live,
+ * unreferenced `IDBDatabase`.
  */
 @Injectable()
 export class IndexedDbAdapter implements StorageAdapter {
@@ -95,6 +98,7 @@ export class IndexedDbAdapter implements StorageAdapter {
 
   private openDb(): Promise<IDBDatabase> {
     if (!this.dbPromise) {
+      let blocked = false;
       const opened: Promise<IDBDatabase> = new Promise<IDBDatabase>((resolve, reject) => {
         const request = this.idb.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = () => {
@@ -104,6 +108,13 @@ export class IndexedDbAdapter implements StorageAdapter {
         };
         request.onsuccess = () => {
           const db = request.result;
+          if (blocked) {
+            // This request was already abandoned below (`onblocked` rejected `opened`): the spec
+            // still delivers this success once the blocking connection elsewhere closes, but
+            // nothing may reference `db` anymore — close it instead of leaking a live connection.
+            db.close();
+            return;
+          }
           db.onclose = () => this.dropConnection(opened);
           db.onversionchange = () => {
             db.close();
@@ -113,8 +124,10 @@ export class IndexedDbAdapter implements StorageAdapter {
           resolve(db);
         };
         request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed'));
-        request.onblocked = () =>
+        request.onblocked = () => {
+          blocked = true;
           reject(new Error('IndexedDB open blocked by another open connection'));
+        };
       }).catch((error: unknown) => {
         // Don't cache a permanent failure: a later call (e.g. DocumentPersistence's retry) should
         // try opening the database again instead of forever replaying today's error.

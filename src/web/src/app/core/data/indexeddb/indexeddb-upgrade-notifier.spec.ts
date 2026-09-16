@@ -12,13 +12,15 @@ interface FakeRef {
   readonly action: Subject<void>;
 }
 
-function setUp(): {
+function setUp(options: { dirty?: boolean; saveError?: unknown } = {}): {
   notifier: IndexedDbUpgradeNotifier;
   connectionSuperseded: ReturnType<typeof signal<number>>;
   open: ReturnType<typeof vi.fn>;
   flush: ReturnType<typeof vi.fn>;
   reload: ReturnType<typeof vi.fn>;
   refs: FakeRef[];
+  setDirty: (value: boolean) => void;
+  setSaveError: (value: unknown) => void;
 } {
   const connectionSuperseded = signal(0);
   const flush = vi.fn().mockResolvedValue(undefined);
@@ -29,6 +31,13 @@ function setUp(): {
     refs.push(ref);
     return { onAction: () => ref.action };
   });
+  let dirty = options.dirty ?? false;
+  let saveError: unknown = options.saveError ?? null;
+  const persistence = {
+    flush,
+    dirty: () => dirty,
+    saveError: () => saveError,
+  };
 
   TestBed.configureTestingModule({
     providers: [
@@ -37,7 +46,7 @@ function setUp(): {
         provide: IndexedDbAdapter,
         useValue: { connectionSuperseded } as unknown as IndexedDbAdapter,
       },
-      { provide: DocumentPersistence, useValue: { flush } as unknown as DocumentPersistence },
+      { provide: DocumentPersistence, useValue: persistence as unknown as DocumentPersistence },
       { provide: WINDOW, useValue: { location: { reload } } },
       { provide: AppSnackbar, useValue: { open } },
     ],
@@ -50,6 +59,12 @@ function setUp(): {
     flush,
     reload,
     refs,
+    setDirty: (value: boolean) => {
+      dirty = value;
+    },
+    setSaveError: (value: unknown) => {
+      saveError = value;
+    },
   };
 }
 
@@ -104,9 +119,9 @@ describe('IndexedDbUpgradeNotifier', () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it('still reloads when the flush fails', async () => {
-    const { notifier, connectionSuperseded, reload, refs, flush } = setUp();
-    flush.mockRejectedValue(new Error('boom'));
+  it('does not reload while an edit is still dirty, and reopens the prompt', async () => {
+    const { notifier, connectionSuperseded, reload, refs, open, setDirty } = setUp();
+    setDirty(true);
     notifier.start();
     TestBed.tick();
     connectionSuperseded.set(1);
@@ -119,7 +134,26 @@ describe('IndexedDbUpgradeNotifier', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(reload).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not reload while the last save is failing', async () => {
+    const { notifier, connectionSuperseded, reload, refs, setSaveError } = setUp();
+    setSaveError(new Error('quota'));
+    notifier.start();
+    TestBed.tick();
+    connectionSuperseded.set(1);
+    TestBed.tick();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    refs[0]!.action.next();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('start() is idempotent', () => {

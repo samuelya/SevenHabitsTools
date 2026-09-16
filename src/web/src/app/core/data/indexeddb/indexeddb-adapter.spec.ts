@@ -227,4 +227,41 @@ describe('IndexedDbAdapter', () => {
 
     await expect(adapter.load()).rejects.toThrow(/blocked/i);
   });
+
+  it('#139: closes a belated connection instead of leaking it when onsuccess fires after onblocked', async () => {
+    const closeSpy = vi.fn();
+    const db = { close: closeSpy, objectStoreNames: { contains: () => true } };
+    interface FakeRequest {
+      onupgradeneeded: (() => void) | null;
+      onsuccess: (() => void) | null;
+      onerror: (() => void) | null;
+      onblocked: (() => void) | null;
+      result: unknown;
+    }
+    const fakeIdb = {
+      open: vi.fn(() => {
+        const request: FakeRequest = {
+          onupgradeneeded: null,
+          onsuccess: null,
+          onerror: null,
+          onblocked: null,
+          result: db,
+        };
+        queueMicrotask(() => {
+          request.onblocked?.();
+          // The blocking connection elsewhere closes afterwards; the spec still delivers a belated
+          // success for this already-abandoned request.
+          queueMicrotask(() => request.onsuccess?.());
+        });
+        return request;
+      }),
+    } as unknown as IDBFactory;
+    const adapter = createAdapter(fakeIdb);
+
+    await expect(adapter.load()).rejects.toThrow(/blocked/i);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
 });
