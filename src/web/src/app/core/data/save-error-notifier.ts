@@ -1,5 +1,6 @@
 import { Injectable, Injector, effect, inject, untracked } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
+import type { MatSnackBarRef } from '@angular/material/snack-bar';
 import { FileDownloader } from '../browser/file-download';
 import { AppSnackbar } from '../layout/app-snackbar';
 import { DocumentPersistence } from './document-persistence';
@@ -30,6 +31,7 @@ export class SaveErrorNotifier {
   private open = false;
   private suppressed = false;
   private acknowledged: RootDocument | null = null;
+  private ref: MatSnackBarRef<unknown> | undefined;
 
   /**
    * Stops this snackbar for good, for a tab that already knows *why* saving is over and is saying
@@ -64,8 +66,14 @@ export class SaveErrorNotifier {
       return;
     }
     if (error === null) {
-      // A save succeeded: this run of failures is over.
+      // A save succeeded: this run of failures is over. Dismiss a snackbar left over from it, so
+      // it stops claiming saves are failing; the next failure opens a fresh one.
       this.acknowledged = null;
+      if (this.open) {
+        this.open = false;
+        this.ref?.dismiss();
+        this.ref = undefined;
+      }
       return;
     }
     const current = this.store.document();
@@ -84,8 +92,21 @@ export class SaveErrorNotifier {
         dismissLabel: this.transloco.translate('data.snackbar.dismiss'),
       };
       const ref = await this.snackbar.openFromComponent(SaveErrorSnackbar, { data });
+      if (!this.open) {
+        // The save succeeded (dismissing this run) while the snackbar code was still loading.
+        ref.dismiss();
+        return;
+      }
+      this.ref = ref;
       ref.onAction().subscribe(() => this.exportNow());
-      ref.afterDismissed().subscribe(() => this.onClosed());
+      ref.afterDismissed().subscribe(() => {
+        // A dismiss's async exit animation can outlive this ref: a success (onSaveResult) or a
+        // new failure (showSnackbar) may already have replaced `this.ref` by the time this fires.
+        // Only reset state for the ref that's still current, so a stale callback can't clobber it.
+        if (this.ref === ref) {
+          this.onClosed();
+        }
+      });
     } catch {
       // Couldn't open it (e.g. the snackbar code failed to load): let the next failure try again.
       this.open = false;
@@ -94,6 +115,7 @@ export class SaveErrorNotifier {
 
   private onClosed(): void {
     this.open = false;
+    this.ref = undefined;
     // Only edits made from here on should reopen it while saves keep failing (#136).
     this.acknowledged = this.persistence.saveError() !== null ? this.store.document() : null;
   }

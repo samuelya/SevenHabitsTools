@@ -12,6 +12,7 @@ import { SaveErrorSnackbar } from './save-error-snackbar';
 interface FakeRef {
   readonly action: Subject<void>;
   readonly dismissed: Subject<void>;
+  readonly dismiss: ReturnType<typeof vi.fn>;
 }
 
 function setUp() {
@@ -20,9 +21,21 @@ function setUp() {
   const download = vi.fn();
   const refs: FakeRef[] = [];
   const openFromComponent = vi.fn(async () => {
-    const ref: FakeRef = { action: new Subject<void>(), dismissed: new Subject<void>() };
+    const dismissed = new Subject<void>();
+    const ref: FakeRef = {
+      action: new Subject<void>(),
+      dismissed,
+      // Real `MatSnackBarRef.dismiss()` starts an exit animation; `afterDismissed` only emits once
+      // it completes, which can be well after `dismiss()` returns (see the #142 race regression
+      // test below) — so this fake does not couple the two synchronously either.
+      dismiss: vi.fn(),
+    };
     refs.push(ref);
-    return { onAction: () => ref.action, afterDismissed: () => ref.dismissed };
+    return {
+      onAction: () => ref.action,
+      afterDismissed: () => ref.dismissed,
+      dismiss: ref.dismiss,
+    };
   });
 
   TestBed.configureTestingModule({
@@ -135,6 +148,51 @@ describe('SaveErrorNotifier', () => {
     await failSave();
 
     expect(openFromComponent).toHaveBeenCalledTimes(2);
+  });
+
+  it('#142: dismisses the open snackbar once a retry succeeds', async () => {
+    const { failSave, succeedSave, refs, openFromComponent } = setUp();
+    await failSave();
+    expect(openFromComponent).toHaveBeenCalledTimes(1);
+
+    succeedSave();
+
+    expect(refs[0]!.dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('#142: reopens for a later failure after a dismiss-on-success', async () => {
+    const { failSave, succeedSave, openFromComponent } = setUp();
+    await failSave();
+    succeedSave();
+
+    await failSave();
+
+    expect(openFromComponent).toHaveBeenCalledTimes(2);
+  });
+
+  it('#142: a stale afterDismissed from a dismissed-on-success snackbar cannot clobber a newer one', async () => {
+    const { failSave, succeedSave, edit, refs, openFromComponent } = setUp();
+    await failSave();
+    const staleRef = refs[0]!;
+
+    // Success dismisses staleRef, but (per the fake's decoupling above) its exit animation hasn't
+    // completed yet: `afterDismissed` has not fired.
+    succeedSave();
+    expect(staleRef.dismiss).toHaveBeenCalledTimes(1);
+
+    // A new failure opens a second, now-current snackbar before staleRef's animation finishes.
+    edit('edit-during-stale-animation');
+    await failSave();
+    expect(openFromComponent).toHaveBeenCalledTimes(2);
+    const currentRef = refs[1]!;
+
+    // staleRef's exit animation finally completes. This must not reset state that belongs to
+    // currentRef (the regression: it would clear `open`/`ref`, so a later success couldn't
+    // dismiss the still-visible currentRef, and/or a later failure could stack a second snackbar).
+    staleRef.dismissed.next();
+
+    succeedSave();
+    expect(currentRef.dismiss).toHaveBeenCalledTimes(1);
   });
 
   it('opens again for a new run of failures after a successful save', async () => {
