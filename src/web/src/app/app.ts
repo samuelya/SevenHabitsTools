@@ -14,7 +14,7 @@ import { Shell } from './core/layout/shell/shell';
   // through DI (overlay positioning, `mat-drawer`'s side, ...).
   template: `
     <div [dir]="languageSync.direction()">
-      @if (bootstrapState() === 'corrupt') {
+      @if (bootstrapState() !== 'ready') {
         <app-data-error-page />
       } @else {
         <app-shell />

@@ -1,4 +1,5 @@
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
+import { SchemaVersionTooNewError } from './migrations/migrate-document';
 import { runDocumentBootstrap } from './document-bootstrap';
 import { CURRENT_SCHEMA_VERSION, RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
@@ -8,7 +9,7 @@ import {
   resetRegistryForTesting,
   snapshotRegistryForTesting,
 } from './registry';
-import { StorageAdapter } from './storage-adapter';
+import { StorageAdapter, StorageBlockedError } from './storage-adapter';
 
 function fakeAdapter(overrides: Partial<StorageAdapter> = {}): StorageAdapter {
   return {
@@ -29,10 +30,16 @@ function fakeStore(): DocumentStore & { replaceDocument: ReturnType<typeof vi.fn
 function fakeStatus(): DocumentBootstrapStatus & {
   reportReady: ReturnType<typeof vi.fn>;
   reportCorrupt: ReturnType<typeof vi.fn>;
+  reportBlocked: ReturnType<typeof vi.fn>;
 } {
-  return { reportReady: vi.fn(), reportCorrupt: vi.fn() } as unknown as DocumentBootstrapStatus & {
+  return {
+    reportReady: vi.fn(),
+    reportCorrupt: vi.fn(),
+    reportBlocked: vi.fn(),
+  } as unknown as DocumentBootstrapStatus & {
     reportReady: ReturnType<typeof vi.fn>;
     reportCorrupt: ReturnType<typeof vi.fn>;
+    reportBlocked: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -90,6 +97,23 @@ describe('runDocumentBootstrap', () => {
 
     expect(store.replaceDocument).not.toHaveBeenCalled();
     expect(status.reportCorrupt).toHaveBeenCalledWith(null, error);
+  });
+
+  it('#139: reports blocked, never corrupt, when storage is held by another tab', async () => {
+    const store = fakeStore();
+    const status = fakeStatus();
+    const error = new StorageBlockedError();
+
+    await runDocumentBootstrap({
+      adapter: fakeAdapter({ load: vi.fn().mockRejectedValue(error) }),
+      deviceIdSource,
+      store,
+      status,
+    });
+
+    expect(store.replaceDocument).not.toHaveBeenCalled();
+    expect(status.reportBlocked).toHaveBeenCalledWith(error);
+    expect(status.reportCorrupt).not.toHaveBeenCalled();
   });
 
   it('reports corrupt (keeping the raw data) when migration fails', async () => {
@@ -189,5 +213,33 @@ describe('runDocumentBootstrap', () => {
       expect(store.replaceDocument).not.toHaveBeenCalled();
       expect(status.reportCorrupt).toHaveBeenCalledWith(stored, expect.any(Error));
     });
+  });
+});
+
+describe('DocumentBootstrapStatus', () => {
+  it('describes an unreadable document as corrupt', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportCorrupt({ broken: true }, new Error('not JSON'));
+
+    expect(status.messageKey()).toBe('data.bootstrap.corrupt');
+  });
+
+  it('#139: keeps storage another tab is holding out of the corrupt state', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportBlocked(new StorageBlockedError());
+
+    expect(status.state()).toBe('blocked');
+    expect(status.messageKey()).toBe('data.bootstrap.storageBlocked');
+    expect(status.raw()).toBeNull();
+  });
+
+  it('describes a document from a newer build with the migration message', () => {
+    const status = new DocumentBootstrapStatus();
+
+    status.reportCorrupt(null, new SchemaVersionTooNewError(99));
+
+    expect(status.messageKey()).toBe('data.migration.schemaTooNew');
   });
 });

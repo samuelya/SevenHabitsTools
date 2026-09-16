@@ -5,7 +5,7 @@ import { resolveDocument } from './document-validation';
 import { RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
 import { createEmptyDocument } from './registry';
-import { StorageAdapter, STORAGE_ADAPTER } from './storage-adapter';
+import { StorageAdapter, StorageBlockedError, STORAGE_ADAPTER } from './storage-adapter';
 
 interface BootstrapDeps {
   readonly adapter: StorageAdapter;
@@ -15,8 +15,10 @@ interface BootstrapDeps {
 }
 
 /**
- * Loads the stored document (or creates an empty one on first run) into `store`, or records a
- * corrupt-data state on `status` for the error page. Takes its collaborators as plain parameters
+ * Loads the stored document (or creates an empty one on first run) into `store`, or records on
+ * `status` why it could not — `blocked` when storage is merely held by something else and will
+ * load once it is free, `corrupt` when the data itself is unreadable, which is what decides
+ * whether the error page may offer destructive recovery. Takes its collaborators as plain parameters
  * — rather than calling `inject()` itself — so it is unit-testable with fakes and has no
  * dependency on Angular's DI beyond the types it reads. `bootstrapDocument()` below wires it to
  * the real services and is registered as an app initializer in `app.config.ts`; Angular waits for
@@ -29,7 +31,11 @@ export async function runDocumentBootstrap(deps: BootstrapDeps): Promise<void> {
   try {
     loaded = await adapter.load();
   } catch (error) {
-    status.reportCorrupt(null, error);
+    if (error instanceof StorageBlockedError) {
+      status.reportBlocked(error);
+    } else {
+      status.reportCorrupt(null, error);
+    }
     return;
   }
 

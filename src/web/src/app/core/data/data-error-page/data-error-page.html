@@ -12,21 +12,25 @@
           {{ 'data.error.exportRaw' | transloco }}
         </button>
       }
-      <button mat-stroked-button type="button" (click)="triggerImport()">
-        {{ 'data.error.importBackup' | transloco }}
-      </button>
-      <button mat-button type="button" (click)="confirmReset()">
-        {{ 'data.error.reset' | transloco }}
-      </button>
+      @if (canRecover()) {
+        <button mat-stroked-button type="button" (click)="triggerImport()">
+          {{ 'data.error.importBackup' | transloco }}
+        </button>
+        <button mat-button type="button" (click)="confirmReset()">
+          {{ 'data.error.reset' | transloco }}
+        </button>
+      }
     </div>
-    <input
-      #importInput
-      type="file"
-      accept=".json,application/json"
-      hidden
-      [attr.aria-label]="'data.error.importBackup' | transloco"
-      (change)="onImportFileSelected($event)"
-    />
+    @if (canRecover()) {
+      <input
+        #importInput
+        type="file"
+        accept=".json,application/json"
+        hidden
+        [attr.aria-label]="'data.error.importBackup' | transloco"
+        (change)="onImportFileSelected($event)"
+      />
+    }
     @if (importError(); as error) {
       <p class="data-error-page__error" role="alert">{{ error }}</p>
     }

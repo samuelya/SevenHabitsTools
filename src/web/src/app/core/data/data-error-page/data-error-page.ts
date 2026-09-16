@@ -23,11 +23,13 @@ import { STORAGE_ADAPTER } from '../storage-adapter';
 
 /**
  * Shown by `App` instead of the shell when `DocumentBootstrapStatus` reports the stored document
- * could not be loaded. "Try again" (reload) is the primary, non-destructive action; exporting the
- * raw file is offered when there is data to export; "Import a backup" recovers from a previously
- * exported JSON file, replacing the unreadable document outright (there is nothing valid here to
- * merge with); "Start fresh" — the only irreversible action with no way back — requires a
- * confirmation step (with "Cancel" focused by default) before it clears storage.
+ * could not be loaded. "Try again" (reload) is the primary, non-destructive action, and the only
+ * one offered for a `blocked` load: that data is intact and comes back once the other tab lets go,
+ * so overwriting it would destroy a good document over a passing condition (#139). The recovery
+ * actions below belong to `corrupt` alone — exporting the raw file when there is data to export;
+ * "Import a backup" replacing the unreadable document outright (there is nothing valid here to
+ * merge with); "Start fresh", the only irreversible action with no way back, behind a confirmation
+ * step (with "Cancel" focused by default) before it clears storage.
  */
 @Component({
   selector: 'app-data-error-page',
@@ -49,6 +51,9 @@ export class DataErrorPage {
   protected readonly status = inject(DocumentBootstrapStatus);
 
   protected readonly canExport = computed(() => this.status.raw() !== null);
+  /** Import and reset replace what is stored, so they are offered only for data that is actually
+   * unreadable — never for a `blocked` load, where the intact document is simply held elsewhere. */
+  protected readonly canRecover = computed(() => this.status.state() === 'corrupt');
   protected readonly confirmingReset = signal(false);
   protected readonly importError = signal<string | null>(null);
 

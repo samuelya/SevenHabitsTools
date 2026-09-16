@@ -102,6 +102,17 @@ describe('SaveErrorNotifier', () => {
     expect(openFromComponent).toHaveBeenCalledTimes(1);
   });
 
+  it('#139: stays quiet once suppressed, so it cannot replace the reload prompt', async () => {
+    const { notifier, failSave, edit, openFromComponent } = setUp();
+
+    notifier.suppress();
+    await failSave();
+    edit('edit-after-suppress');
+    await failSave();
+
+    expect(openFromComponent).not.toHaveBeenCalled();
+  });
+
   it('#136: reopens when edits made after Dismiss also fail to save', async () => {
     const { failSave, close, edit, openFromComponent } = setUp();
     await failSave();

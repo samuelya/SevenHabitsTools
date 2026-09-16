@@ -28,7 +28,18 @@ export class SaveErrorNotifier {
 
   private started = false;
   private open = false;
+  private suppressed = false;
   private acknowledged: RootDocument | null = null;
+
+  /**
+   * Stops this snackbar for good, for a tab that already knows *why* saving is over and is saying
+   * so itself (`IndexedDbUpgradeNotifier`'s reload prompt, #139). Only one snackbar shows at a
+   * time, so a later failed save reopening this one would replace that prompt — the user's only
+   * route out of a tab that can no longer save — with a message offering nothing but an export.
+   */
+  suppress(): void {
+    this.suppressed = true;
+  }
 
   start(): void {
     if (this.started) {
@@ -49,6 +60,9 @@ export class SaveErrorNotifier {
   }
 
   private onSaveResult(error: unknown): void {
+    if (this.suppressed) {
+      return;
+    }
     if (error === null) {
       // A save succeeded: this run of failures is over.
       this.acknowledged = null;

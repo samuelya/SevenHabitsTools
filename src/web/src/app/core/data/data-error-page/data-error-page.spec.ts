@@ -15,7 +15,7 @@ import { CURRENT_SCHEMA_VERSION, RootDocument } from '../document.model';
 import { DocumentStore } from '../document.store';
 import { IndexedDbAdapter } from '../indexeddb/indexeddb-adapter';
 import { WriterLockService } from '../multi-tab/writer-lock.service';
-import { STORAGE_ADAPTER } from '../storage-adapter';
+import { STORAGE_ADAPTER, StorageBlockedError } from '../storage-adapter';
 import { DataErrorPage } from './data-error-page';
 
 function text(fixture: ComponentFixture<DataErrorPage>, selector: string): string {
@@ -86,6 +86,19 @@ describe('DataErrorPage', () => {
       'Import a backup',
       'Start fresh',
     ]);
+  });
+
+  it('#139: offers only "Try again" — no destructive recovery — while storage is blocked', () => {
+    TestBed.inject(DocumentBootstrapStatus).reportBlocked(new StorageBlockedError());
+    const fixture = TestBed.createComponent(DataErrorPage);
+    fixture.detectChanges();
+
+    expect(text(fixture, 'p')).toBe(
+      'Another tab of this app is still holding your data. Close the other tabs, then try again.',
+    );
+    // The intact document comes back once the other tab closes, so nothing here may overwrite it.
+    expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual(['Try again']);
+    expect(fixture.nativeElement.querySelector('input[type="file"]')).toBeNull();
   });
 
   it('retry() reloads the page', () => {

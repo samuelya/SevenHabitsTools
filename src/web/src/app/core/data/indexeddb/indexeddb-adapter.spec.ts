@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { INDEXED_DB } from '../../browser/indexed-db';
 import { describeStorageAdapterContract } from '../storage-adapter.contract';
 import { RootDocument } from '../document.model';
-import { StorageAdapter } from '../storage-adapter';
+import { StorageAdapter, StorageBlockedError } from '../storage-adapter';
 import { IndexedDbAdapter } from './indexeddb-adapter';
 
 /** Constructs `IndexedDbAdapter` through `TestBed` with `INDEXED_DB` overridden to `idb` — see the
@@ -150,5 +150,139 @@ describe('IndexedDbAdapter', () => {
     await expect(adapter.load()).rejects.toBeTruthy();
 
     expect(openSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('#139: reopens the database and succeeds after the connection is closed unexpectedly (onclose)', async () => {
+    const idb = new IDBFactory();
+    const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
+
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    const db = (openSpy.mock.results[0]!.value as IDBOpenDBRequest).result;
+    // Simulate the browser closing the connection on its own (storage evicted under pressure, a
+    // profile-level wipe, ...): fire `close` the same way the real event would.
+    (db.onclose as (() => void) | null)?.();
+
+    await adapter.save(sampleDoc('device-2'), { reason: 'flush' });
+
+    expect(openSpy).toHaveBeenCalledTimes(2);
+    await expect(adapter.load()).resolves.toEqual(sampleDoc('device-2'));
+  });
+
+  it('#139: closes the connection and reports connectionSuperseded on versionchange', async () => {
+    const idb = new IDBFactory();
+    const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
+    const connectionSuperseded = () => (adapter as IndexedDbAdapter).connectionSuperseded();
+
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    const db = (openSpy.mock.results[0]!.value as IDBOpenDBRequest).result;
+    const closeSpy = vi.spyOn(db, 'close');
+
+    expect(connectionSuperseded()).toBe(0);
+    // Simulate another tab opening a newer DB_VERSION: this connection must close so that open
+    // can proceed, and report itself as superseded so the UI can tell the user to reload.
+    (db.onversionchange as (() => void) | null)?.();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+    expect(connectionSuperseded()).toBe(1);
+
+    // A later call reopens rather than reusing the closed connection.
+    await adapter.load();
+    expect(openSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('#139: a connection that closes after already being replaced does not clobber the new one', async () => {
+    const idb = new IDBFactory();
+    const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
+
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    const firstDb = (openSpy.mock.results[0]!.value as IDBOpenDBRequest).result;
+    (firstDb.onclose as (() => void) | null)?.();
+    await adapter.save(sampleDoc('device-2'), { reason: 'flush' });
+    expect(openSpy).toHaveBeenCalledTimes(2);
+
+    // The first (already-replaced) connection belatedly fires its own close handler too.
+    (firstDb.onclose as (() => void) | null)?.();
+
+    await adapter.load();
+    expect(openSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('#139: rejects instead of hanging when the open request is blocked', async () => {
+    const fakeIdb = {
+      open: vi.fn(() => {
+        const request = {
+          onupgradeneeded: null,
+          onsuccess: null,
+          onerror: null,
+          onblocked: null as (() => void) | null,
+        };
+        queueMicrotask(() => request.onblocked?.());
+        return request;
+      }),
+    } as unknown as IDBFactory;
+    const adapter = createAdapter(fakeIdb);
+
+    // A StorageBlockedError, not a generic failure: the stored data is intact, so bootstrap must
+    // not treat this as corrupt.
+    await expect(adapter.load()).rejects.toThrow(StorageBlockedError);
+  });
+
+  it('#139: closes a belated connection instead of leaking it when onsuccess fires after onblocked', async () => {
+    const closeSpy = vi.fn();
+    const db = { close: closeSpy, objectStoreNames: { contains: () => true } };
+    interface FakeRequest {
+      onupgradeneeded: (() => void) | null;
+      onsuccess: (() => void) | null;
+      onerror: (() => void) | null;
+      onblocked: (() => void) | null;
+      result: unknown;
+    }
+    const fakeIdb = {
+      open: vi.fn(() => {
+        const request: FakeRequest = {
+          onupgradeneeded: null,
+          onsuccess: null,
+          onerror: null,
+          onblocked: null,
+          result: db,
+        };
+        queueMicrotask(() => {
+          request.onblocked?.();
+          // The blocking connection elsewhere closes afterwards; the spec still delivers a belated
+          // success for this already-abandoned request.
+          queueMicrotask(() => request.onsuccess?.());
+        });
+        return request;
+      }),
+    } as unknown as IDBFactory;
+    const adapter = createAdapter(fakeIdb);
+
+    await expect(adapter.load()).rejects.toThrow(StorageBlockedError);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(closeSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('#139: a belated versionchange on an already-dropped connection reports nothing', async () => {
+    const idb = new IDBFactory();
+    const openSpy = vi.spyOn(idb, 'open');
+    const adapter = createAdapter(idb);
+    const connectionSuperseded = () => (adapter as IndexedDbAdapter).connectionSuperseded();
+
+    await adapter.save(sampleDoc('device-1'), { reason: 'flush' });
+    const firstDb = (openSpy.mock.results[0]!.value as IDBOpenDBRequest).result;
+    (firstDb.onclose as (() => void) | null)?.();
+    await adapter.load();
+    expect(openSpy).toHaveBeenCalledTimes(2);
+
+    // The replaced connection belatedly hears about the version change too; the connection this
+    // adapter is actually using is unaffected, so there is nothing to tell the user about.
+    (firstDb.onversionchange as (() => void) | null)?.();
+
+    expect(connectionSuperseded()).toBe(0);
   });
 });
