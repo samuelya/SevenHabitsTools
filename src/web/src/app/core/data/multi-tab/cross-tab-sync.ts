@@ -18,7 +18,7 @@ const CHANNEL_NAME = 'sevenhabits-sync';
  * to send one, which follows automatically from watching `DocumentPersistence.lastSavedAt`.
  *
  * A reload runs the same `resolveDocument()` migrate-then-validate path bootstrap uses (#141): a
- * writer on an older build migrates the reader's newer-version document forward, same as
+ * reader on a newer build migrates the writer's older-version document forward, same as
  * bootstrap would; a reader on an older build can't migrate a document from a newer build
  * *forward*, so `resolveDocument()` rejects it (`SchemaVersionTooNewError`) same as an invalid
  * shape would, and this tab keeps showing its last-known-good document rather than an
