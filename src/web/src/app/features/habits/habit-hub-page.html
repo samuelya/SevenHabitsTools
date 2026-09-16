@@ -5,7 +5,7 @@
 
 @if (continueRoute(); as route) {
   <a mat-flat-button class="hub-continue" [routerLink]="'/' + route">
-    <mat-icon aria-hidden="true">play_arrow</mat-icon>
+    <mat-icon class="flip-in-rtl" aria-hidden="true">play_arrow</mat-icon>
     {{ 'habits.hub.continue' | transloco }}
   </a>
 }
@@ -36,7 +36,7 @@
         }
       </a>
     }
-    @for (entry of comingSoon(); track entry.titleKey) {
+    @for (entry of comingSoon(); track entry.titleKey + '-' + $index) {
       <div mat-list-item class="hub-coming-soon">
         <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
         <span matListItemTitle>{{ entry.titleKey | transloco }}</span>
