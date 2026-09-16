@@ -40,4 +40,14 @@ describe('record', () => {
     expect(isLive(original)).toBe(true);
     expect(isLive(deleted)).toBe(false);
   });
+
+  it('softDelete on an already-tombstoned record is a no-op, keeping the original tombstone time', () => {
+    const deleted = softDelete(newRecord({}), new Date('2026-01-01T00:00:00.000Z'));
+
+    const deletedAgain = softDelete(deleted, new Date('2026-01-02T00:00:00.000Z'));
+
+    expect(deletedAgain).toBe(deleted);
+    expect(deletedAgain.deletedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(deletedAgain.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+  });
 });

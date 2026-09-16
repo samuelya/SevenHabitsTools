@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, Injector, Signal, effect, inject, signal } from '@angular/core';
 import { WINDOW } from '../browser/window';
+import { CLOCK } from '../time/clock';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import { DocumentStore } from './document.store';
 import { WRITER_LOCK } from './multi-tab/writer-lock';
@@ -57,6 +58,7 @@ export class DocumentPersistence {
   private readonly document = inject(DOCUMENT);
   private readonly window = inject(WINDOW);
   private readonly injector = inject(Injector);
+  private readonly clock = inject(CLOCK);
 
   private readonly dirtySignal = signal(false);
   private readonly lastSavedAtSignal = signal<Date | null>(null);
@@ -183,7 +185,7 @@ export class DocumentPersistence {
       }
       this.retryAttempt = 0;
       this.saveErrorSignal.set(null);
-      this.lastSavedAtSignal.set(new Date());
+      this.lastSavedAtSignal.set(this.clock.now());
       if (this.store.document() === doc) {
         this.dirtySignal.set(false);
         return;

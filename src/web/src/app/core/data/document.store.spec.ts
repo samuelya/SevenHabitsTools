@@ -117,6 +117,18 @@ describe('DocumentStore', () => {
       expect(roles?.find((role) => role.id === a.id)?.updatedAt).toBe('2026-01-02T00:00:00.000Z');
       expect(roles?.find((role) => role.id === b.id)?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
     });
+
+    it('is a no-op, touching neither the document nor meta.updatedAt, when the updater returns the same value', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z');
+      store.update<Record<string, unknown>>('settings', () => ({ theme: 'dark' }));
+      const before = store.document();
+
+      const result = store.update<Record<string, unknown>>('settings', (current) => current);
+
+      expect(result).toBe(true);
+      expect(store.document()).toBe(before);
+      expect(store.document().meta.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+    });
   });
 
   describe('upsertRecord', () => {
@@ -144,6 +156,41 @@ describe('DocumentStore', () => {
       expect(roles?.[0]?.name).toBe('Guardian');
       expect(roles?.[0]?.updatedAt).toBe('2026-01-02T00:00:00.000Z');
     });
+
+    it('keeps the stored createdAt, ignoring a caller-supplied one', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z');
+      const record = newRecord({ name: 'Parent' }, new Date('2026-01-01T00:00:00.000Z'));
+      store.upsertRecord('shared.roles', record);
+
+      store.upsertRecord('shared.roles', {
+        ...record,
+        name: 'Guardian',
+        createdAt: '2099-01-01T00:00:00.000Z',
+      });
+
+      const roles = store.select<{ id: string; createdAt: string }[]>('shared.roles')();
+      expect(roles?.[0]?.createdAt).toBe('2026-01-01T00:00:00.000Z');
+    });
+
+    it('throws instead of reviving a tombstoned record', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z');
+      const record = newRecord({ name: 'Parent' });
+      store.upsertRecord('shared.roles', record);
+      store.softDeleteRecord('shared.roles', record.id);
+
+      expect(() => store.upsertRecord('shared.roles', { ...record, name: 'Revived' })).toThrow(
+        /tombstoned/,
+      );
+    });
+
+    it('throws a descriptive error instead of a raw TypeError when the path is not an array', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z');
+      store.update<Record<string, unknown>>('settings', () => ({ theme: 'dark' }));
+
+      expect(() => store.upsertRecord('settings', newRecord({ name: 'x' }))).toThrow(
+        /"settings".*not an array/,
+      );
+    });
   });
 
   describe('softDeleteRecord', () => {
@@ -170,6 +217,50 @@ describe('DocumentStore', () => {
 
       const roles = store.select<{ id: string; deletedAt?: string }[]>('shared.roles')();
       expect(roles?.find((role) => role.id === b.id)?.deletedAt).toBeUndefined();
+    });
+
+    it('is a no-op, keeping the original tombstone time, on an already-tombstoned record', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z', '2026-01-02T00:00:00.000Z');
+      const record = newRecord({ name: 'Parent' });
+      store.upsertRecord('shared.roles', record);
+      store.softDeleteRecord('shared.roles', record.id);
+      const before = store.document();
+
+      const result = store.softDeleteRecord('shared.roles', record.id);
+
+      expect(result).toBe(true);
+      expect(store.document()).toBe(before);
+      const roles = store.select<{ id: string; deletedAt?: string }[]>('shared.roles')();
+      expect(roles?.[0]?.deletedAt).toBe('2026-01-02T00:00:00.000Z');
+    });
+
+    it('is a no-op when the id is not in the collection', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z');
+      store.upsertRecord('shared.roles', newRecord({ name: 'Parent' }));
+      const before = store.document();
+
+      const result = store.softDeleteRecord('shared.roles', 'missing-id');
+
+      expect(result).toBe(true);
+      expect(store.document()).toBe(before);
+    });
+
+    it('throws a descriptive error instead of silently creating a collection when the path holds no array', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z');
+
+      expect(() => store.softDeleteRecord('shared.roles', 'any-id')).toThrow(
+        /"shared\.roles".*not an array/,
+      );
+      expect(store.document().shared).toEqual({});
+    });
+
+    it('throws a descriptive error instead of a raw TypeError when the path is not an array', () => {
+      const store = configureStore('2026-01-01T00:00:00.000Z');
+      store.update<Record<string, unknown>>('settings', () => ({ theme: 'dark' }));
+
+      expect(() => store.softDeleteRecord('settings', 'any-id')).toThrow(
+        /"settings".*not an array/,
+      );
     });
   });
 

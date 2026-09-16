@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { WINDOW } from '../browser/window';
+import { CLOCK } from '../time/clock';
 import { DocumentBootstrapStatus } from './document-bootstrap-status';
 import {
   DocumentPersistence,
@@ -29,7 +30,19 @@ class FakeEventTarget {
   }
 }
 
-function setUp(options: { isWriter?: ReturnType<typeof signal<boolean>> } = {}): {
+/** A `Clock` that returns `times` in order, one per call, repeating the last one once exhausted —
+ * matches the pattern in `document.store.spec.ts`'s `configureStore`. */
+function fakeClock(...times: readonly string[]): { now: () => Date } {
+  const queue = [...times];
+  return { now: () => new Date(queue.shift() ?? times[times.length - 1]) };
+}
+
+function setUp(
+  options: {
+    isWriter?: ReturnType<typeof signal<boolean>>;
+    clockTimes?: readonly string[];
+  } = {},
+): {
   persistence: DocumentPersistence;
   store: DocumentStore;
   save: ReturnType<typeof vi.fn>;
@@ -55,6 +68,9 @@ function setUp(options: { isWriter?: ReturnType<typeof signal<boolean>> } = {}):
       { provide: WINDOW, useValue: fakeWindow },
       { provide: STORAGE_ADAPTER, useValue: adapter },
       { provide: WRITER_LOCK, useValue: { isWriter: isWriter.asReadonly() } },
+      ...(options.clockTimes
+        ? [{ provide: CLOCK, useValue: fakeClock(...options.clockTimes) }]
+        : []),
     ],
   });
   return {
@@ -96,6 +112,19 @@ describe('DocumentPersistence', () => {
     expect(save.mock.calls[0][1]).toEqual({ reason: 'debounce' });
     expect(persistence.dirty()).toBe(false);
     expect(persistence.lastSavedAt()).not.toBeNull();
+  });
+
+  it('sets lastSavedAt from the injected Clock, not the real current time', async () => {
+    const { persistence, store, save } = setUp({ clockTimes: ['2026-01-01T00:00:00.000Z'] });
+    persistence.start();
+    TestBed.tick();
+
+    store.update('settings', () => ({ theme: 'dark' }));
+    TestBed.tick();
+    await vi.advanceTimersByTimeAsync(SAVE_DEBOUNCE_MS);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(persistence.lastSavedAt()).toEqual(new Date('2026-01-01T00:00:00.000Z'));
   });
 
   it('coalesces rapid changes into a single debounced save', async () => {
