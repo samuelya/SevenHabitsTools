@@ -96,7 +96,12 @@ export class CrossTabSync {
     this.store.replaceDocument(result.document);
     // A later broadcast reloaded fine: the tab has self-healed, so a stale "reload this tab"
     // notice from an earlier failure no longer applies and would block a genuinely new one.
+    // Reset the flag directly rather than relying only on the ref: showReloadNotice()'s
+    // snackbar.open() may still be in flight (reloadNoticeRef not set yet), and if this success
+    // is not observed here, the stale-open flag would suppress every later genuine failure too.
+    this.reloadNoticeOpen = false;
     this.reloadNoticeRef?.dismiss();
+    this.reloadNoticeRef = null;
   }
 
   private notifyReloadBlocked(): void {
