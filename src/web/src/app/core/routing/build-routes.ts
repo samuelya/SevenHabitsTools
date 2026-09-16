@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
-import { HabitId } from '../habits/habits';
-import { FeatureRoute, HubLink } from './feature-route';
+import { FeatureRoute } from './feature-route';
 
 const VALID_PATH = /^$|^[a-z0-9-]+(\/[a-z0-9-]+)*$/;
 
@@ -27,13 +26,6 @@ export function buildRoutes(registry: readonly FeatureRoute[]): Routes {
     ...ordered.map(({ path, loadChildren }) => ({ path, loadChildren })),
     { path: '**', redirectTo: '' },
   ];
-}
-
-/** Hub entries contributed to a habit, in registry order. */
-export function hubEntriesFor(registry: readonly FeatureRoute[], habit: HabitId): HubLink[] {
-  return registry.flatMap((feature) =>
-    feature.hub?.habit === habit ? [{ ...feature.hub, path: feature.path }] : [],
-  );
 }
 
 function segmentCount(path: string): number {

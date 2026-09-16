@@ -61,12 +61,16 @@ describe('ExerciseProgress', () => {
         exerciseId: 'h2-mission',
         habit: 'h2',
         titleKey: 'mission.title',
+        summaryKey: 'mission.summary',
+        icon: 'flag',
         route: 'habits/h2/mission',
       });
       registerExercise({
         exerciseId: 'h2-roles',
         habit: 'h2',
         titleKey: 'roles.title',
+        summaryKey: 'roles.summary',
+        icon: 'flag',
         route: 'habits/h2/roles',
       });
     });

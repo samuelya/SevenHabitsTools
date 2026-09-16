@@ -29,6 +29,7 @@ import { provideAppTransloco } from './core/i18n/provide-app-transloco';
 import { LanguageSync } from './core/i18n/language-sync';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { FEATURE_ROUTES } from './core/routing/feature-route';
+import { HABIT_HUB_COMING_SOON } from './features/habits/habit-hub-coming-soon';
 // Side-effect only: each runs every `registerModel()` in its file before `bootstrapDocument()`
 // below can build or validate a document. Not lazy-loaded like a feature route, so an explicit
 // import here — the same reason `STORAGE_ADAPTER` and the other core services are wired directly
@@ -54,6 +55,7 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: FEATURE_ROUTES, useValue: ROUTE_REGISTRY },
+    { provide: HABIT_HUB_COMING_SOON, useValue: [] },
     IndexedDbAdapter,
     { provide: STORAGE_ADAPTER, useExisting: IndexedDbAdapter },
     { provide: WRITER_LOCK, useExisting: WriterLockService },
