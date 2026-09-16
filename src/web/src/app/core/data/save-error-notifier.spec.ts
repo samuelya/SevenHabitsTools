@@ -8,6 +8,7 @@ import { DocumentPersistence } from './document-persistence';
 import { DocumentStore } from './document.store';
 import { SaveErrorNotifier } from './save-error-notifier';
 import { SaveErrorSnackbar } from './save-error-snackbar';
+import { StrandedEditsError } from './stranded-edits-error';
 
 interface FakeRef {
   readonly action: Subject<void>;
@@ -65,13 +66,29 @@ function setUp() {
     saveError.set(null);
     TestBed.tick();
   };
+  /** The write lock was taken over by another tab while edits were unsaved (#143). */
+  const strandEdits = async (): Promise<void> => {
+    saveError.set(new StrandedEditsError());
+    TestBed.tick();
+    await vi.dynamicImportSettled();
+  };
   /** Closes the most recent snackbar, the way Dismiss (or Export now) does. */
   const close = (): void => {
     refs.at(-1)!.dismissed.next();
   };
   const edit = (v: string): void => document.set({ schemaVersion: 1, v });
 
-  return { notifier, download, openFromComponent, refs, failSave, succeedSave, close, edit };
+  return {
+    notifier,
+    download,
+    openFromComponent,
+    refs,
+    failSave,
+    succeedSave,
+    strandEdits,
+    close,
+    edit,
+  };
 }
 
 describe('SaveErrorNotifier', () => {
@@ -101,6 +118,20 @@ describe('SaveErrorNotifier', () => {
     expect(component).toBe(SaveErrorSnackbar);
     expect(config.data.message).toContain("couldn't save");
     expect(config.data.dismissLabel).toBe('Dismiss');
+  });
+
+  it('#143: shows a distinct message when the write lock was lost while there were unsaved edits', async () => {
+    const { strandEdits, openFromComponent } = setUp();
+
+    await strandEdits();
+
+    expect(openFromComponent).toHaveBeenCalledTimes(1);
+    const [, config] = openFromComponent.mock.calls[0]! as unknown as [
+      unknown,
+      { data: { message: string; exportLabel: string } },
+    ];
+    expect(config.data.message).toContain('Another tab took over');
+    expect(config.data.exportLabel).toBe('Export now');
   });
 
   it('#128: neither stacks nor reopens for retries of the same unsaved document', async () => {

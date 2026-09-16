@@ -37,7 +37,9 @@ function fakeClock(...times: readonly string[]): { now: () => Date } {
   return { now: () => new Date(queue.shift() ?? times[times.length - 1]) };
 }
 
-function setUp(
+/** Exported for `document-persistence-heartbeat.spec.ts` (#143), split out to keep this file
+ * under CLAUDE.md's 500-line limit. */
+export function setUp(
   options: {
     isWriter?: ReturnType<typeof signal<boolean>>;
     clockTimes?: readonly string[];

@@ -8,6 +8,7 @@ import { RootDocument } from './document.model';
 import { DocumentStore } from './document.store';
 import { shouldShowSaveError } from './save-error-notifier.logic';
 import type { SaveErrorSnackbarData } from './save-error-snackbar';
+import { StrandedEditsError } from './stranded-edits-error';
 
 const loadSaveErrorSnackbar = () => import('./save-error-snackbar');
 
@@ -78,16 +79,20 @@ export class SaveErrorNotifier {
     }
     const current = this.store.document();
     if (shouldShowSaveError({ open: this.open, acknowledged: this.acknowledged, current })) {
-      void this.showSnackbar();
+      void this.showSnackbar(error);
     }
   }
 
-  private async showSnackbar(): Promise<void> {
+  private async showSnackbar(error: unknown): Promise<void> {
     this.open = true;
     try {
       const { SaveErrorSnackbar } = await loadSaveErrorSnackbar();
+      const messageKey =
+        error instanceof StrandedEditsError
+          ? 'data.saveError.strandedMessage'
+          : 'data.saveError.message';
       const data: SaveErrorSnackbarData = {
-        message: this.transloco.translate('data.saveError.message'),
+        message: this.transloco.translate(messageKey),
         exportLabel: this.transloco.translate('data.saveError.exportNow'),
         dismissLabel: this.transloco.translate('data.snackbar.dismiss'),
       };

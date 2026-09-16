@@ -166,6 +166,16 @@ overwrite each other, so exactly one tab at a time is allowed to save:
 - `DocumentPersistence` also refuses to mark the document dirty or call `adapter.save()` while
   `!isWriter()` (the same two-layer pattern used for the corrupt-document gate), so a read-only tab
   can never overwrite what the writer just saved.
+- **Known limit, mitigated (#143):** `localStorage` has no real compare-and-swap, so a heartbeat
+  writer whose tab was throttled (e.g. backgrounded) for more than `HEARTBEAT_STALE_MS` can lose the
+  lock to another tab without ever choosing to give it up, stranding any unsaved edit. `DocumentPersistence`
+  watches for `isWriter()` going from `true` to `false` while `dirty`, and if so sets `saveError` to a
+  `StrandedEditsError` — surfaced the same way a failed `adapter.save()` is, via `SaveErrorNotifier`'s
+  "Export now" snackbar and `UnsavedChangesGuard`'s `beforeunload` prompt — instead of leaving the
+  edits dirty with no explanation. This surfaces the loss; it doesn't prevent it, and `CrossTabSync`
+  reloading this tab's document once the new writer next saves would still discard the in-memory
+  edit if the user hasn't exported by then. With the Web Locks strategy this path never fires in
+  practice: the browser never revokes a granted lock.
 - `CrossTabSync` broadcasts (`BroadcastChannel`) once the writer's save completes, and reloads the
   document via the adapter (`DocumentStore.replaceDocument`) on every other tab that receives it —
   never marking that tab dirty, since the reload goes through the same gate above.
