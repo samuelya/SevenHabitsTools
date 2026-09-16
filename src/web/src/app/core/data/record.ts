@@ -21,8 +21,14 @@ export function touch<T extends BaseRecord>(record: T, now: Date = new Date()): 
   return { ...record, updatedAt: now.toISOString() };
 }
 
-/** Returns a copy of `record` tombstoned (`deletedAt` set) rather than removed. */
+/** Returns a copy of `record` tombstoned (`deletedAt` set) rather than removed. A record that is
+ * already tombstoned is returned unchanged (same reference) instead of moving `deletedAt` and
+ * `updatedAt` forward, so deleting an already-deleted record twice — e.g. from two devices — keeps
+ * the original tombstone time for latest-wins merges. */
 export function softDelete<T extends BaseRecord>(record: T, now: Date = new Date()): T {
+  if (record.deletedAt !== undefined) {
+    return record;
+  }
   const timestamp = now.toISOString();
   return { ...record, updatedAt: timestamp, deletedAt: timestamp };
 }

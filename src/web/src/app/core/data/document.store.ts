@@ -17,6 +17,14 @@ function isBaseRecord(value: unknown): value is BaseRecord {
   );
 }
 
+/** Names what `value` actually is, for an error naming a path expected to hold an array. */
+function describeKind(value: unknown): string {
+  if (value === undefined) {
+    return 'nothing';
+  }
+  return Array.isArray(value) ? 'an array' : `a ${typeof value}`;
+}
+
 /** Stamps `next` if it is itself a record, or, when it is an array, stamps any element that looks
  * like a record and whose reference changed from the matching (by `id`) element in `current` —
  * covers calling `update()` on a whole collection instead of `upsertRecord()`. */
@@ -99,35 +107,73 @@ export class DocumentStore {
    * elements) looks like a `BaseRecord`, its `updatedAt` is stamped; so is the nearest ancestor
    * record on `path`, if any (e.g. updating `habits.h2.mission.statement` stamps `mission`).
    * `meta.updatedAt` is always stamped. Returns `false`, without applying anything, while this tab
-   * isn't the writer.
+   * isn't the writer. When `updater` returns the value it was given (`Object.is`), the document,
+   * `meta.updatedAt` and `dirty` are left untouched and nothing is scheduled to save — a no-op
+   * update should not look like an edit to a future sync merge.
    */
   update<T>(path: string, updater: PathUpdater<T>): boolean {
     return this.mutate((doc, now) => {
       const current = getAtPath<T>(doc, path);
       const next = updater(current as T);
+      if (Object.is(current, next)) {
+        return doc;
+      }
       const stamped = stampChangedValue(current, next, now);
       const withValue = setAtPath(doc, path, stamped);
       return touchNearestRecordAncestor(withValue, path, now);
     });
   }
 
-  /** Inserts `record` into the collection at `path`, or replaces the existing record with the same `id`. */
+  /**
+   * Inserts `record` into the collection at `path`, or updates the existing record with the same
+   * `id`. The stored `createdAt` always wins over a caller-supplied one (`createdAt` is immutable,
+   * architecture §6). Upserting an id that is currently tombstoned throws instead of silently
+   * reviving it: this store has no supported way to undelete a record, so a caller that hits this
+   * has a bug to fix, not a record to restore. Throws a descriptive error, naming `path`, when
+   * `path` holds something other than an array or nothing.
+   */
   upsertRecord<T extends BaseRecord>(path: string, record: T): boolean {
     return this.mutate((doc, now) => {
-      const list = getAtPath<readonly T[]>(doc, path) ?? [];
-      const stamped = touch(record, now);
-      const index = list.findIndex((item) => item.id === stamped.id);
-      const nextList =
-        index === -1 ? [...list, stamped] : list.map((item, i) => (i === index ? stamped : item));
+      const listValue = getAtPath<unknown>(doc, path);
+      if (listValue !== undefined && !Array.isArray(listValue)) {
+        throw new Error(
+          `Cannot upsert into "${path}": it holds ${describeKind(listValue)}, not an array`,
+        );
+      }
+      const list = (listValue as readonly T[] | undefined) ?? [];
+      const existing = list.find((item) => item.id === record.id);
+      if (existing?.deletedAt !== undefined) {
+        throw new Error(`Cannot upsert record "${record.id}" at "${path}": it is tombstoned`);
+      }
+      const stamped = touch({ ...record, createdAt: existing?.createdAt ?? record.createdAt }, now);
+      const nextList = existing
+        ? list.map((item) => (item.id === record.id ? stamped : item))
+        : [...list, stamped];
       const withList = setAtPath(doc, path, nextList);
       return touchNearestRecordAncestor(withList, path, now);
     });
   }
 
-  /** Tombstones the record with `id` in the collection at `path`; it is never removed from the array. */
+  /**
+   * Tombstones the record with `id` in the collection at `path`; it is never removed from the
+   * array. A no-op — the document, including `meta.updatedAt`, is left untouched — when the record
+   * is already tombstoned or is not present in the collection, so deleting the same record twice
+   * (e.g. from two devices) never moves the tombstone time forward. Throws a descriptive error,
+   * naming `path`, when `path` does not hold an array at all, instead of silently creating one.
+   */
   softDeleteRecord(path: string, id: string): boolean {
     return this.mutate((doc, now) => {
-      const list = getAtPath<readonly BaseRecord[]>(doc, path) ?? [];
+      const listValue = getAtPath<unknown>(doc, path);
+      if (!Array.isArray(listValue)) {
+        throw new Error(
+          `Cannot soft-delete from "${path}": it holds ${describeKind(listValue)}, not an array`,
+        );
+      }
+      const list = listValue as readonly BaseRecord[];
+      const target = list.find((item) => item.id === id);
+      if (target === undefined || target.deletedAt !== undefined) {
+        return doc;
+      }
       const nextList = list.map((item) => (item.id === id ? softDelete(item, now) : item));
       const withList = setAtPath(doc, path, nextList);
       return touchNearestRecordAncestor(withList, path, now);
@@ -143,7 +189,11 @@ export class DocumentStore {
     }
     const now = this.clock.now();
     this.documentSignal.update((doc) => {
-      const updated = apply(doc as unknown as Record<string, unknown>, now);
+      const current = doc as unknown as Record<string, unknown>;
+      const updated = apply(current, now);
+      if (updated === current) {
+        return doc;
+      }
       const meta = {
         ...(updated['meta'] as Record<string, unknown>),
         updatedAt: now.toISOString(),
