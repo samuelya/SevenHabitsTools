@@ -15,7 +15,7 @@
 } @else {
   <mat-nav-list>
     @for (exercise of exercises(); track exercise.exerciseId) {
-      @let done = isDone(exercise.exerciseId)();
+      @let done = progress.isDone(exercise.exerciseId)();
       <a mat-list-item [routerLink]="'/' + exercise.route">
         <mat-icon matListItemIcon aria-hidden="true">{{ exercise.icon }}</mat-icon>
         <span matListItemTitle>{{ exercise.titleKey | transloco }}</span>
@@ -26,7 +26,11 @@
             {{
               'habits.hub.completedAt'
                 | transloco
-                  : { time: completedAt(exercise.exerciseId)() | appDate: { dateStyle: 'medium' } }
+                  : {
+                      time:
+                        progress.completedAt(exercise.exerciseId)()
+                        | appDate: { dateStyle: 'medium' },
+                    }
             }}
           </span>
         }

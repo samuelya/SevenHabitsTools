@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, Routes } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { buildRoutes, hubEntriesFor } from './build-routes';
+import { buildRoutes } from './build-routes';
 import { FeatureRoute } from './feature-route';
 
 @Component({ template: 'stub', changeDetection: ChangeDetectionStrategy.OnPush })
@@ -66,28 +66,5 @@ describe('buildRoutes', () => {
 
     await harness.navigateByUrl('/does-not-exist');
     expect(router.url).toBe('/');
-  });
-});
-
-describe('hubEntriesFor', () => {
-  it('returns the entries registered for a habit with their paths', () => {
-    const registry: FeatureRoute[] = [
-      { path: 'plan', loadChildren: childRoutes },
-      {
-        path: 'habits/h1/circle',
-        loadChildren: childRoutes,
-        hub: { habit: 'h1', titleKey: 'circle.title', icon: 'target' },
-      },
-      {
-        path: 'habits/h2/mission',
-        loadChildren: childRoutes,
-        hub: { habit: 'h2', titleKey: 'mission.title', icon: 'flag' },
-      },
-    ];
-
-    expect(hubEntriesFor(registry, 'h1')).toEqual([
-      { habit: 'h1', titleKey: 'circle.title', icon: 'target', path: 'habits/h1/circle' },
-    ]);
-    expect(hubEntriesFor(registry, 'h7')).toEqual([]);
   });
 });

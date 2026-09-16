@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Signal, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -9,6 +9,7 @@ import { findHabit, isHabitId } from '../../core/habits/habits';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
   ExerciseRegistryEntry,
+  exercisesForHabit,
   getRegisteredExercises,
 } from '../../shared/exercise-kit/exercise-registry';
 import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
@@ -25,7 +26,7 @@ import { nextExerciseRoute } from './habit-hub.logic';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HabitHubPage {
-  private readonly progress = inject(ExerciseProgress);
+  protected readonly progress = inject(ExerciseProgress);
   private readonly comingSoonRegistry = inject(HABIT_HUB_COMING_SOON);
 
   /** Route parameter, bound through `withComponentInputBinding`. */
@@ -35,9 +36,7 @@ export class HabitHubPage {
 
   protected readonly exercises = computed<readonly ExerciseRegistryEntry[]>(() => {
     const habit = this.habit();
-    return isHabitId(habit)
-      ? getRegisteredExercises().filter((exercise) => exercise.habit === habit)
-      : [];
+    return isHabitId(habit) ? exercisesForHabit(getRegisteredExercises(), habit) : [];
   });
 
   protected readonly comingSoon = computed<readonly ComingSoonExercise[]>(() => {
@@ -52,12 +51,4 @@ export class HabitHubPage {
   protected readonly continueRoute = computed(() =>
     nextExerciseRoute(this.exercises(), (exerciseId) => this.progress.isDone(exerciseId)()),
   );
-
-  protected isDone(exerciseId: string): Signal<boolean> {
-    return this.progress.isDone(exerciseId);
-  }
-
-  protected completedAt(exerciseId: string): Signal<string | null> {
-    return this.progress.completedAt(exerciseId);
-  }
 }

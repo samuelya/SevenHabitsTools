@@ -5,7 +5,7 @@ import { FeatureRoute } from './core/routing/feature-route';
  * Feature registry: one line per feature. Feature PRs add their line here and never edit
  * `app.routes.ts`. An exercise feature also calls `registerExercise()`
  * (`shared/exercise-kit/exercise-registry.ts`) with a matching `route`, which is what makes it
- * appear on its habit hub page (issue #31) — this registry's own `hub` metadata is unused today.
+ * appear on its habit hub page (issue #31).
  */
 export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
   { path: '', loadChildren: () => import('./features/home/home.routes') },

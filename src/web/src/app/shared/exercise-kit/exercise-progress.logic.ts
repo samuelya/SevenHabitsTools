@@ -1,7 +1,7 @@
 import { HabitId } from '../../core/habits/habits';
 import { newRecord, touch } from '../../core/data/record';
 import { ExerciseCompletion } from './exercise-kit.model';
-import { ExerciseRegistryEntry } from './exercise-registry';
+import { ExerciseRegistryEntry, exercisesForHabit } from './exercise-registry';
 
 /** `done`/`total` exercises a habit has, per its registered `ExerciseRegistryEntry`s. */
 export interface HabitExerciseProgress {
@@ -81,9 +81,7 @@ export function progressForHabit(
   registry: readonly ExerciseRegistryEntry[],
   habit: HabitId,
 ): HabitExerciseProgress {
-  const exerciseIds = registry
-    .filter((entry) => entry.habit === habit)
-    .map((entry) => entry.exerciseId);
+  const exerciseIds = exercisesForHabit(registry, habit).map((entry) => entry.exerciseId);
   const done = exerciseIds.filter((exerciseId) => isExerciseDone(completions, exerciseId)).length;
   return { done, total: exerciseIds.length };
 }

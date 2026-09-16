@@ -5,8 +5,8 @@ import { HabitId } from '../../core/habits/habits';
  * model) — the open/closed extension point both `ExerciseProgress.progressFor()` (a habit's
  * done/total count) and the habit hub page (issue #31, `features/habits/habit-hub-page.ts`) read.
  * A feature also adds its own `FEATURE_ROUTES` entry (`core/routing/feature-route.ts`) so its
- * `route` resolves, but does not need a `hub` entry there — the hub page lists exercises from this
- * registry directly, not from `FEATURE_ROUTES`.
+ * `route` resolves — the hub page lists exercises from this registry directly, not from
+ * `FEATURE_ROUTES`.
  */
 export interface ExerciseRegistryEntry {
   readonly exerciseId: string;
@@ -36,6 +36,14 @@ export function registerExercise(entry: ExerciseRegistryEntry): void {
 /** The registered exercises, in registration order. */
 export function getRegisteredExercises(): readonly ExerciseRegistryEntry[] {
   return [...registrations.values()];
+}
+
+/** The registered exercises for one habit, in registration order. */
+export function exercisesForHabit(
+  registry: readonly ExerciseRegistryEntry[],
+  habit: HabitId,
+): readonly ExerciseRegistryEntry[] {
+  return registry.filter((entry) => entry.habit === habit);
 }
 
 /** Test-only: see `snapshotRegistryForTesting()` in `core/data/registry.ts` — same purpose, for
