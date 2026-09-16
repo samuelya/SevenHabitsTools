@@ -12,6 +12,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 1. Read the GitHub issue you were given (`gh issue view <n> --comments`) and the pinned **"Architecture & conventions (read first)"** issue.
 2. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`.
 3. Check dependencies listed in the issue are closed. If not, stop and report.
+4. **Design check (platform semantics).** If the work depends on how a browser API actually behaves — IndexedDB versioning, Web Locks, storage eviction, service workers, `BroadcastChannel` — post a three-sentence comment on the issue *before* writing code: the approach, and why it still works in the exact failure case the issue describes. Verify the premise against the spec or docs rather than assuming. A wrong premise costs a whole round and an escalation; this comment costs almost nothing. (#139 shipped a fix that could never work, because a tab cannot reopen IndexedDB at its own now-stale `DB_VERSION`.)
 
 ## File ownership
 You may only change `src/web/**` (including its `package.json` / lockfile).

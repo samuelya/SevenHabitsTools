@@ -20,11 +20,15 @@ git worktree add --detach .claude/worktrees/sht-test-<pr> origin/<branch>
 Only write test artifacts (screenshots, reports) inside that worktree or the scratchpad. You may add Playwright specs **only** if the issue asks for them; otherwise report missing tests as a bug.
 
 ## How to run
-- **Web (MVP):** `cd src/web && npm ci && npm test -- --watch=false && npm run build && npm start` (dev server) → Playwright against it.
+**Never duplicate CI.** CI runs lint, unit tests, build and e2e on every push. Read the result with `gh pr checks <pr>` instead of re-running the same suite locally; your round is for the acceptance criteria and the things CI cannot do (RTL, keyboard, offline, two tabs, exploratory). Run the full local matrix only when CI is unavailable, the failure is not reproducible from its logs, or you are doing the final pre-merge pass.
+
+- **Web (MVP):** `cd src/web && npm ci && npm start` (dev server) → Playwright against it for the checks below.
 - **API (Cloud Sync onward):** `cd src && dotnet test`; full stack via `docker compose up --build` when `docker-compose.yml` exists.
 - **Infra/workflow PRs:** `az bicep lint`/`az bicep build`, `actionlint` if installed; check the PR's CI run with `gh pr checks <pr>`.
 
 ## Test checklist (for every feature PR)
+Scale it to the diff: a two-file bug fix does not need the same matrix as a new feature. Re-verification rounds check the changed behaviour and the paths it touches, not everything again.
+
 - [ ] Every acceptance criterion in the issue, one by one
 - [ ] Viewport 360×800 (mobile) and 1280×800 (desktop)
 - [ ] Language `en` and `ar`; RTL layout correct (alignment, icons, navigation direction)
