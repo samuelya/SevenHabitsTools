@@ -218,6 +218,13 @@ export class DocumentPersistence {
         this.retryTimer = setTimeout(() => void this.ensureSaving('debounce'), delay);
         return;
       }
+      if (!this.writerLock.isWriter()) {
+        // Lost the writer lock while this save was in flight (defense in depth alongside the
+        // top-of-loop check above): the save itself succeeded, but strandEdits() may have already
+        // set saveError to a StrandedEditsError — an in-flight save's belated success must not
+        // clear it and silently hide that this tab could strand a later edit.
+        return;
+      }
       this.retryAttempt = 0;
       this.saveErrorSignal.set(null);
       this.lastSavedAtSignal.set(this.clock.now());
