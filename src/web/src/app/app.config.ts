@@ -54,7 +54,8 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: FEATURE_ROUTES, useValue: ROUTE_REGISTRY },
-    { provide: STORAGE_ADAPTER, useClass: IndexedDbAdapter },
+    IndexedDbAdapter,
+    { provide: STORAGE_ADAPTER, useExisting: IndexedDbAdapter },
     { provide: WRITER_LOCK, useExisting: WriterLockService },
     provideAppInitializer(() => {
       const iconRegistry = inject(MatIconRegistry);

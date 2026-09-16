@@ -71,6 +71,9 @@
       "message": "We couldn't save your latest changes.",
       "exportNow": "Export now"
     },
+    "indexedDb": {
+      "reloadRequired": "This tab needs to reload to keep saving your data."
+    },
     "snackbar": {
       "dismiss": "Dismiss"
     },

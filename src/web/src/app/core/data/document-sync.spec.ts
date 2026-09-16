@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { IndexedDbUpgradeNotifier } from './indexeddb/indexeddb-upgrade-notifier';
 import { CrossTabSync } from './multi-tab/cross-tab-sync';
 import { ReadOnlyEditNotifier } from './multi-tab/read-only-edit-notifier';
 import { WriterLockService } from './multi-tab/writer-lock.service';
@@ -17,6 +18,7 @@ describe('DocumentSync', () => {
     const saveErrorNotifier = { start: vi.fn() };
     const readOnlyEditNotifier = { start: vi.fn() };
     const unsavedChangesGuard = { start: vi.fn() };
+    const indexedDbUpgradeNotifier = { start: vi.fn() };
     TestBed.configureTestingModule({
       providers: [
         { provide: WriterLockService, useValue: writerLock },
@@ -26,6 +28,7 @@ describe('DocumentSync', () => {
         { provide: SaveErrorNotifier, useValue: saveErrorNotifier },
         { provide: ReadOnlyEditNotifier, useValue: readOnlyEditNotifier },
         { provide: UnsavedChangesGuard, useValue: unsavedChangesGuard },
+        { provide: IndexedDbUpgradeNotifier, useValue: indexedDbUpgradeNotifier },
       ],
     });
 
@@ -38,5 +41,6 @@ describe('DocumentSync', () => {
     expect(saveErrorNotifier.start).toHaveBeenCalledTimes(1);
     expect(readOnlyEditNotifier.start).toHaveBeenCalledTimes(1);
     expect(unsavedChangesGuard.start).toHaveBeenCalledTimes(1);
+    expect(indexedDbUpgradeNotifier.start).toHaveBeenCalledTimes(1);
   });
 });

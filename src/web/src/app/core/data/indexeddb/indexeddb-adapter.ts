@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Signal, inject, signal } from '@angular/core';
 import { INDEXED_DB } from '../../browser/indexed-db';
 import { RootDocument } from '../document.model';
 import { StorageAdapter } from '../storage-adapter';
@@ -31,6 +31,16 @@ const BACKUP_KEY = 'backup-previous';
  * or, worse, silently at runtime (`NG0201: No provider found for IDBFactory`, with one). Tests
  * construct this through `TestBed` with `INDEXED_DB` overridden, the same way every other adapter
  * or service in this codebase is tested, rather than `new`-ing it directly.
+ *
+ * `openDb()` also reacts to the opened `IDBDatabase` outliving its own usefulness (#139): `onclose`
+ * (the connection was closed from outside this class, e.g. storage evicted under pressure) drops
+ * the cached `dbPromise` so the next call reopens it, exactly like a failed open already does.
+ * `onversionchange` (another tab opened a newer `DB_VERSION`, e.g. after a deploy) additionally
+ * closes this connection itself — required so the other tab's open can proceed — and bumps
+ * `connectionSuperseded`, since this tab can never reopen at its own, now-stale version;
+ * `IndexedDbUpgradeNotifier` is what tells the user to reload for that. `onblocked` on the open
+ * request (another tab's connection is still open and did not close in time) rejects with a
+ * descriptive error rather than leaving the caller hanging forever.
  */
 @Injectable()
 export class IndexedDbAdapter implements StorageAdapter {
@@ -39,6 +49,11 @@ export class IndexedDbAdapter implements StorageAdapter {
   private readonly idb = inject(INDEXED_DB) as IDBFactory;
   private dbPromise: Promise<IDBDatabase> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
+  private readonly connectionSupersededSignal = signal(0);
+
+  /** Increments each time this tab's connection closes because another tab opened a newer
+   * `DB_VERSION` (`onversionchange`); this tab cannot reopen it and must reload to recover. */
+  readonly connectionSuperseded: Signal<number> = this.connectionSupersededSignal.asReadonly();
 
   async load(): Promise<RootDocument | null> {
     return this.enqueue(async () => {
@@ -80,23 +95,43 @@ export class IndexedDbAdapter implements StorageAdapter {
 
   private openDb(): Promise<IDBDatabase> {
     if (!this.dbPromise) {
-      this.dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+      const opened: Promise<IDBDatabase> = new Promise<IDBDatabase>((resolve, reject) => {
         const request = this.idb.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = () => {
           if (!request.result.objectStoreNames.contains(STORE_NAME)) {
             request.result.createObjectStore(STORE_NAME);
           }
         };
-        request.onsuccess = () => resolve(request.result);
+        request.onsuccess = () => {
+          const db = request.result;
+          db.onclose = () => this.dropConnection(opened);
+          db.onversionchange = () => {
+            db.close();
+            this.dropConnection(opened);
+            this.connectionSupersededSignal.update((count) => count + 1);
+          };
+          resolve(db);
+        };
         request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed'));
+        request.onblocked = () =>
+          reject(new Error('IndexedDB open blocked by another open connection'));
       }).catch((error: unknown) => {
         // Don't cache a permanent failure: a later call (e.g. DocumentPersistence's retry) should
         // try opening the database again instead of forever replaying today's error.
-        this.dbPromise = null;
+        this.dropConnection(opened);
         throw error;
       });
+      this.dbPromise = opened;
     }
     return this.dbPromise;
+  }
+
+  /** Clears the cached connection, but only if `dbPromise` still refers to it — a connection this
+   * class has already replaced must not clobber the newer one when it belatedly closes. */
+  private dropConnection(opened: Promise<IDBDatabase>): void {
+    if (this.dbPromise === opened) {
+      this.dbPromise = null;
+    }
   }
 
   private request<T>(run: (store: IDBObjectStore) => IDBRequest<T>, db: IDBDatabase): Promise<T> {
