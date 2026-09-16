@@ -56,7 +56,11 @@ export class ExerciseDetail {
 
   /** The element focused before this opened the drawer, to restore on close (issue #174). */
   private triggerElement: HTMLElement | null = null;
-  private wasOpen = false;
+  /** Whether the *combined* handset-and-open state was true last run — not `open` alone, so
+   * crossing the handset breakpoint while already open (a resize or fold/rotate) is treated the
+   * same as opening/closing, instead of silently skipping capture or restoring a never-captured
+   * `null`. */
+  private wasHandsetOpen = false;
 
   constructor() {
     // `[opened]` is bound one-way from `hasDetail`, not driven through `drawer.open()`, so
@@ -69,18 +73,15 @@ export class ExerciseDetail {
     // to `MatDrawer`'s own restore, because that mechanism reads `document.activeElement` only
     // after this effect has already moved it.
     effect(() => {
-      const handset = this.handset();
-      const open = this.hasDetail();
-      if (handset) {
-        if (open && !this.wasOpen) {
-          this.triggerElement = this.document.activeElement as HTMLElement | null;
-          this.closeButton().nativeElement.focus();
-        } else if (!open && this.wasOpen) {
-          this.triggerElement?.focus();
-          this.triggerElement = null;
-        }
+      const handsetOpen = this.handset() && this.hasDetail();
+      if (handsetOpen && !this.wasHandsetOpen) {
+        this.triggerElement = this.document.activeElement as HTMLElement | null;
+        this.closeButton().nativeElement.focus();
+      } else if (!handsetOpen && this.wasHandsetOpen) {
+        this.triggerElement?.focus();
+        this.triggerElement = null;
       }
-      this.wasOpen = open;
+      this.wasHandsetOpen = handsetOpen;
     });
   }
 

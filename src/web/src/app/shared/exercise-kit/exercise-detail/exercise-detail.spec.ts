@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MatDrawer } from '@angular/material/sidenav';
 import { provideTranslocoScope } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExerciseDetail } from './exercise-detail';
 
@@ -161,6 +161,53 @@ describe('ExerciseDetail', () => {
     fixture.detectChanges();
 
     expect(host.querySelector('mat-drawer')?.classList).toContain('mat-drawer-opened');
+    expect(document.activeElement).toBe(trigger);
+
+    trigger.remove();
+    host.remove();
+  });
+
+  it('captures and restores focus correctly when the handset breakpoint is crossed while open (#174)', () => {
+    let matchesHandset = false;
+    const state$ = new BehaviorSubject<BreakpointState>({ matches: false, breakpoints: {} });
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => state$.asObservable(), isMatched: () => matchesHandset },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(HostComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    // Opens on desktop: a persistent side panel, so (per the sibling test above) nothing moves
+    // focus away from the trigger yet.
+    fixture.componentInstance.hasDetail.set(true);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(trigger);
+
+    // The window narrows below the handset breakpoint while the drawer is still open (a resize,
+    // fold or rotation) — this is the #174 follow-up regression: a `wasOpen` flag not scoped to
+    // handset entry skipped capture here, so `triggerElement` stayed `null` and restore on close
+    // silently no-opped.
+    matchesHandset = true;
+    state$.next({ matches: true, breakpoints: {} });
+    fixture.detectChanges();
+
+    const closeButton = host.querySelector('.close-button') as HTMLButtonElement;
+    expect(document.activeElement).toBe(closeButton);
+
+    fixture.componentInstance.hasDetail.set(false);
+    fixture.detectChanges();
+
     expect(document.activeElement).toBe(trigger);
 
     trigger.remove();
