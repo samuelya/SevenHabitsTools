@@ -2,15 +2,19 @@ import { HabitId } from '../../core/habits/habits';
 
 /**
  * One exercise contributed to the kit by a feature's own `<feature>.model.ts` (issue #30's data
- * model) — the open/closed extension point `ExerciseProgress.progressFor()` reads to know a
- * habit's total exercise count, mirroring how `FEATURE_ROUTES` (`core/routing/feature-route.ts`)
- * is the routing equivalent. A feature typically registers both: this entry for progress
- * counting, and a `FEATURE_ROUTES` `hub` entry (same `titleKey`) for the habit hub page link.
+ * model) — the open/closed extension point both `ExerciseProgress.progressFor()` (a habit's
+ * done/total count) and the habit hub page (issue #31, `features/habits/habit-hub-page.ts`) read.
+ * A feature also adds its own `FEATURE_ROUTES` entry (`core/routing/feature-route.ts`) so its
+ * `route` resolves, but does not need a `hub` entry there — the hub page lists exercises from this
+ * registry directly, not from `FEATURE_ROUTES`.
  */
 export interface ExerciseRegistryEntry {
   readonly exerciseId: string;
   readonly habit: HabitId;
   readonly titleKey: string;
+  /** One-line paraphrased summary shown under the title on the habit hub page (issue #31). */
+  readonly summaryKey: string;
+  readonly icon: string;
   readonly route: string;
 }
 

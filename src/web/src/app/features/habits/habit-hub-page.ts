@@ -1,45 +1,63 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Signal, computed, inject, input } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppDatePipe } from '../../core/i18n/locale.pipe';
 import { findHabit, isHabitId } from '../../core/habits/habits';
-import { hubEntriesFor } from '../../core/routing/build-routes';
-import { FEATURE_ROUTES } from '../../core/routing/feature-route';
+import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
+import {
+  ExerciseRegistryEntry,
+  getRegisteredExercises,
+} from '../../shared/exercise-kit/exercise-registry';
+import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
+import { nextExerciseRoute } from './habit-hub.logic';
 
-/** Placeholder hub for one habit; lists the exercises registered with `hub.habit`. */
+/** Hub for one habit: lists its registered exercises with progress, an unregistered "coming soon"
+ * preview when the feature flag (`HABIT_HUB_COMING_SOON`) lists any, and a 'Continue' action to
+ * the first not-done exercise. */
 @Component({
   selector: 'app-habit-hub-page',
-  imports: [MatIconModule, MatListModule, RouterLink, TranslocoPipe],
-  template: `
-    @if (habitDefinition(); as definition) {
-      <h1 class="page-heading">{{ definition.titleKey | transloco }}</h1>
-    }
-    @if (entries().length) {
-      <mat-nav-list>
-        @for (entry of entries(); track entry.path) {
-          <a mat-list-item [routerLink]="'/' + entry.path">
-            <mat-icon matListItemIcon aria-hidden="true">{{ entry.icon }}</mat-icon>
-            <span matListItemTitle>{{ entry.titleKey | transloco }}</span>
-          </a>
-        }
-      </mat-nav-list>
-    } @else {
-      <p>{{ 'habits.hub.noExercises' | transloco }}</p>
-    }
-  `,
+  imports: [MatButtonModule, MatIconModule, MatListModule, RouterLink, TranslocoPipe, AppDatePipe],
+  templateUrl: './habit-hub-page.html',
+  styleUrl: './habit-hub-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HabitHubPage {
-  private readonly registry = inject(FEATURE_ROUTES);
+  private readonly progress = inject(ExerciseProgress);
+  private readonly comingSoonRegistry = inject(HABIT_HUB_COMING_SOON);
 
   /** Route parameter, bound through `withComponentInputBinding`. */
   readonly habit = input.required<string>();
 
   protected readonly habitDefinition = computed(() => findHabit(this.habit()));
 
-  protected readonly entries = computed(() => {
+  protected readonly exercises = computed<readonly ExerciseRegistryEntry[]>(() => {
     const habit = this.habit();
-    return isHabitId(habit) ? hubEntriesFor(this.registry, habit) : [];
+    return isHabitId(habit)
+      ? getRegisteredExercises().filter((exercise) => exercise.habit === habit)
+      : [];
   });
+
+  protected readonly comingSoon = computed<readonly ComingSoonExercise[]>(() => {
+    const habit = this.habit();
+    return isHabitId(habit) ? this.comingSoonRegistry.filter((entry) => entry.habit === habit) : [];
+  });
+
+  protected readonly isEmpty = computed(
+    () => this.exercises().length === 0 && this.comingSoon().length === 0,
+  );
+
+  protected readonly continueRoute = computed(() =>
+    nextExerciseRoute(this.exercises(), (exerciseId) => this.progress.isDone(exerciseId)()),
+  );
+
+  protected isDone(exerciseId: string): Signal<boolean> {
+    return this.progress.isDone(exerciseId);
+  }
+
+  protected completedAt(exerciseId: string): Signal<string | null> {
+    return this.progress.completedAt(exerciseId);
+  }
 }

@@ -1,0 +1,26 @@
+<h1 class="page-heading">{{ 'nav.habits' | transloco }}</h1>
+<p>{{ 'habits.intro' | transloco }}</p>
+<mat-nav-list>
+  @for (habit of habits; track habit.id) {
+    @let progress = progressFor(habit.id)();
+    <a mat-list-item [routerLink]="habit.id">
+      <mat-icon matListItemIcon aria-hidden="true">{{ habit.icon }}</mat-icon>
+      <span matListItemTitle>{{ habit.titleKey | transloco }}</span>
+      @if (progress.total > 0) {
+        <span matListItemMeta class="habit-progress">
+          <mat-progress-spinner
+            class="habit-progress-ring"
+            mode="determinate"
+            diameter="32"
+            strokeWidth="3"
+            [value]="progressPercentage(progress.done, progress.total)"
+            aria-hidden="true"
+          />
+          <span class="habit-progress-count">
+            {{ 'habits.progress' | transloco: { done: progress.done, total: progress.total } }}
+          </span>
+        </span>
+      }
+    </a>
+  }
+</mat-nav-list>

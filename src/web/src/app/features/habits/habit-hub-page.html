@@ -1,0 +1,43 @@
+@if (habitDefinition(); as definition) {
+  <h1 class="page-heading">{{ definition.titleKey | transloco }}</h1>
+  <p class="hub-intro">{{ 'habits.hub.intro.' + definition.id | transloco }}</p>
+}
+
+@if (continueRoute(); as route) {
+  <a mat-flat-button class="hub-continue" [routerLink]="'/' + route">
+    <mat-icon aria-hidden="true">play_arrow</mat-icon>
+    {{ 'habits.hub.continue' | transloco }}
+  </a>
+}
+
+@if (isEmpty()) {
+  <p>{{ 'habits.hub.noExercises' | transloco }}</p>
+} @else {
+  <mat-nav-list>
+    @for (exercise of exercises(); track exercise.exerciseId) {
+      @let done = isDone(exercise.exerciseId)();
+      <a mat-list-item [routerLink]="'/' + exercise.route">
+        <mat-icon matListItemIcon aria-hidden="true">{{ exercise.icon }}</mat-icon>
+        <span matListItemTitle>{{ exercise.titleKey | transloco }}</span>
+        <span matListItemLine>{{ exercise.summaryKey | transloco }}</span>
+        @if (done) {
+          <span matListItemMeta class="hub-status">
+            <mat-icon aria-hidden="true">check_circle</mat-icon>
+            {{
+              'habits.hub.completedAt'
+                | transloco
+                  : { time: completedAt(exercise.exerciseId)() | appDate: { dateStyle: 'medium' } }
+            }}
+          </span>
+        }
+      </a>
+    }
+    @for (entry of comingSoon(); track entry.titleKey) {
+      <div mat-list-item class="hub-coming-soon">
+        <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
+        <span matListItemTitle>{{ entry.titleKey | transloco }}</span>
+        <span matListItemLine>{{ 'habits.hub.comingSoon' | transloco }}</span>
+      </div>
+    }
+  </mat-nav-list>
+}

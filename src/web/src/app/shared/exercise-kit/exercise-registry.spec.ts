@@ -22,12 +22,16 @@ describe('exercise-registry', () => {
       exerciseId: 'h2-mission',
       habit: 'h2',
       titleKey: 'mission.title',
+      summaryKey: 'mission.summary',
+      icon: 'flag',
       route: 'habits/h2/mission',
     });
     registerExercise({
       exerciseId: 'h2-roles',
       habit: 'h2',
       titleKey: 'roles.title',
+      summaryKey: 'roles.summary',
+      icon: 'flag',
       route: 'habits/h2/roles',
     });
 
@@ -40,6 +44,8 @@ describe('exercise-registry', () => {
       exerciseId: 'h2-mission',
       habit: 'h2',
       titleKey: 'mission.title',
+      summaryKey: 'mission.summary',
+      icon: 'flag',
       route: 'habits/h2/mission',
     });
 
@@ -48,6 +54,8 @@ describe('exercise-registry', () => {
         exerciseId: 'h2-mission',
         habit: 'h2',
         titleKey: 'other',
+        summaryKey: 'other.summary',
+        icon: 'flag',
         route: 'other',
       }),
     ).toThrow('"h2-mission"');
@@ -59,6 +67,8 @@ describe('exercise-registry', () => {
       exerciseId: 'h2-mission',
       habit: 'h2',
       titleKey: 'mission.title',
+      summaryKey: 'mission.summary',
+      icon: 'flag',
       route: 'habits/h2/mission',
     });
 
@@ -67,6 +77,8 @@ describe('exercise-registry', () => {
         exerciseId: 'h2-roles',
         habit: 'h2',
         titleKey: 'roles.title',
+        summaryKey: 'roles.summary',
+        icon: 'flag',
         route: 'habits/h2/mission',
       }),
     ).toThrow('"habits/h2/mission"');
