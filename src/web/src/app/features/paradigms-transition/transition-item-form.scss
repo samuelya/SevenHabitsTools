@@ -22,9 +22,11 @@
   flex-direction: column;
   gap: 0.375rem;
 
-  // Scoped here, not globally: the default toggle height is below the 44 px touch target, the
-  // same fix `ExerciseList` applies to its own sort toggle (#186, #187).
-  --mat-standard-button-toggle-height: 44px;
+  // Scoped here, not globally: the default toggle height (40 px) is below the 44 px touch
+  // target, the same fix `ExerciseList` applies to its own sort toggle (#186, #187). The token is
+  // `--mat-button-toggle-height`; Material 2's `--mat-standard-button-toggle-height` no longer
+  // exists, so setting it is silently inert (issue #194).
+  --mat-button-toggle-height: 44px;
 }
 
 .option-group legend {

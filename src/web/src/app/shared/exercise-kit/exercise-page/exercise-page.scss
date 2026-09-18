@@ -1,10 +1,15 @@
 :host {
-  display: block;
-  // Lets a short list's footer still reach the bottom of `.page` (the shell's own scroll
-  // container, see `shell.scss`) instead of floating right under the last row — the pinned
-  // footer below relies on this. A routed page's own host also needs to stretch to `.page`'s
-  // full height for this to reach the true viewport edge; #187 wires that for the reference page.
-  min-block-size: 100%;
+  // Fills the routed page host, so a short list's footer still reaches the bottom of `.page` (the
+  // shell's own scroll container, see `shell.scss`) instead of floating right under the last row.
+  // `flex: 1 1 auto`, not `min-block-size: 100%`: a percentage resolves against the parent's
+  // `height` *property*, which is `auto` for a host that is merely stretched, so it silently
+  // computes to `auto` and the whole chain collapses to content height (issue #193, measured).
+  // **A page using this scaffold must make its own host a flex column that fills `.page`** —
+  // `:host { display: flex; flex-direction: column; min-block-size: 100%; }`, see
+  // `transition-page.scss` and the playbook's "Page layout" section.
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
 }
 
 .visually-hidden {
@@ -21,7 +26,7 @@
 .scaffold {
   display: flex;
   flex-direction: column;
-  min-block-size: 100%;
+  flex: 1 1 auto;
 }
 
 .body {
@@ -32,9 +37,13 @@
 
 // Full-width bar across the content area, at the bottom edge of the viewport even when the list
 // is short, and staying visible while the page scrolls or in focus mode (owner decision on #184).
+// The two halves of that: `margin-block-start: auto` takes up the free space of a short page, and
+// `position: sticky` pins the bar to the viewport edge once the page is long enough to scroll
+// (sticky alone does nothing while the container doesn't scroll — issue #193).
 .footer-slot {
   position: sticky;
   inset-block-end: 0;
+  margin-block-start: auto;
   border-block-start: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface);
   padding: 1rem;
@@ -61,7 +70,9 @@
 .scaffold.editing:not(.handset) {
   display: grid;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
-  grid-template-rows: auto auto;
+  // `1fr auto`, not `auto auto`: row 1 takes the free space of a short page so the footer row sits
+  // at the bottom edge (`margin-block-start: auto` does nothing to a grid item — issue #193).
+  grid-template-rows: 1fr auto;
   align-items: start;
   gap: 1rem;
 }

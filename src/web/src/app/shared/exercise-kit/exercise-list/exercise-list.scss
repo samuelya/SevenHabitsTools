@@ -3,9 +3,11 @@
   flex-direction: column;
   gap: 0.5rem;
 
-  // Scoped here, not globally: the sort toggle's default height is below the 44 px touch target
-  // (#186).
-  --mat-standard-button-toggle-height: 44px;
+  // Scoped here, not globally: the sort toggle's default height (40 px) is below the 44 px touch
+  // target (#186). The token is `--mat-button-toggle-height`; Material 2's
+  // `--mat-standard-button-toggle-height` no longer exists, so setting it is silently inert
+  // (issue #194).
+  --mat-button-toggle-height: 44px;
 }
 
 .search {

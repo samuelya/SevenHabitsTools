@@ -114,6 +114,46 @@ test.describe('paradigms transition reflection', () => {
     await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
   });
 
+  test('layout: touch targets and a footer at the bottom edge of a short page', async ({
+    page,
+  }, testInfo) => {
+    // Geometry the unit suite can't see: all three were shipped as "fixed" and measured wrong on
+    // the real build (issues #193, #194, #195).
+    const isMobile = testInfo.project.name.startsWith('mobile');
+    await page.goto('/habits/paradigms/transition');
+
+    if (isMobile) {
+      // Full width below the handset breakpoint, not a left-aligned pill (#195).
+      const addButton = await page.locator('.add-button').boundingBox();
+      const contentSlot = await page.locator('app-exercise-page .content-slot').boundingBox();
+      expect(addButton!.width).toBeGreaterThanOrEqual(contentSlot!.width - 1);
+    }
+
+    await page.locator('.add-button').click();
+    const form = page.locator('app-transition-item-form');
+    await expect(form).toBeVisible();
+
+    // Every toggle meets the 44 px touch target (#194).
+    const toggleHeights = await form
+      .locator('mat-button-toggle')
+      .evaluateAll((toggles) => toggles.map((toggle) => toggle.getBoundingClientRect().height));
+    expect(toggleHeights.length).toBeGreaterThan(0);
+    expect(Math.min(...toggleHeights)).toBeGreaterThanOrEqual(44);
+
+    if (isMobile) {
+      await page.goBack();
+    } else {
+      await page.locator('app-exercise-page .editor-close').click();
+    }
+    await expect(form).not.toBeVisible();
+
+    // One script and a collapsed intro: the shortest the page ever gets, and the case where a
+    // sticky footer alone stays in flow because nothing scrolls (#193).
+    const footer = await page.locator('.footer-slot').boundingBox();
+    const pageArea = await page.locator('main.page').boundingBox();
+    expect(pageArea!.y + pageArea!.height - (footer!.y + footer!.height)).toBeLessThanOrEqual(24);
+  });
+
   test('accessibility: the exercise page has no serious or critical violations', async ({
     page,
   }) => {

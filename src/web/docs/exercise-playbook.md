@@ -146,9 +146,26 @@ ad hoc markup:
   pending-write state to report (none does yet).
 - **The footer slot** holds the summary and `app-done-toggle`, always. On handset it's not
   rendered at all while `editing()` (`showFooter`, the kit's own computed) — never conditionally
-  hide it yourself. On desktop it's a bar pinned to the bottom of the viewport; for that to reach
-  the _true_ viewport edge (not just this component's own content height), give the page's own
-  `:host` `min-block-size: 100%` too (`transition-page.scss`), matching `ExercisePage`'s own host.
+  hide it yourself. On desktop it's a bar at the bottom edge of the page area, and that needs one
+  line of SCSS from the page itself:
+
+  ```scss
+  // <slug>-page.scss
+  :host {
+    display: flex;
+    flex-direction: column;
+    min-block-size: 100%;
+  }
+  ```
+
+  The kit fills that host (`flex: 1 1 auto`) and takes up a short page's free space with
+  `margin-block-start: auto` on the footer; `position: sticky` only pins it once the page is long
+  enough to scroll. A percentage `min-block-size` cannot carry the height down the chain on its
+  own — it resolves against the parent's `height` _property_, which is `auto` for a host that is
+  merely stretched, so it silently computes to `auto` and every level below collapses to content
+  height (issue #193: the footer floated under the last row on any short page). The shell's
+  `.page` is a flex item with a definite used height, which is why `min-block-size: 100%` still
+  works on the page's _own_ host.
 - **Worksheet pages** use the same scaffold for the intro/body/footer slots but never bind
   `editing` (it stays `false`) and never project anything into `[editor]` — the stepper body _is_
   the editing surface, with no separate focus mode. Nothing else in this section applies to them.
@@ -171,6 +188,11 @@ Keys: `list.searchLabel`, `list.empty` (shown with zero items), `list.noMatch` (
 search matches nothing — falls back to `list.empty` if omitted). Search and sort only render once
 the list has `LIST_TOOLS_MIN_ITEMS` (6) items (`exercise-list.logic.ts`) — a short list starts
 straight with rows, no empty toolbar above them.
+
+The "add" button sits above the list, is ≥ 44 px tall, and goes full width below 600 px with
+`inline-size: 100%` — **not** `align-self: stretch`: everything projected into the body lands in
+the scaffold's `.content-slot`, a plain block, where every `align-self` is inert (issue #195 —
+the button shipped as a 142 px pill inside a 328 px column).
 
 **Selection is a route param, not a page signal — on _one_ route, not a sibling pair.** The
 editor is an optional trailing URL segment, matched by `optionalParamMatcher`
@@ -306,9 +328,13 @@ _why_ "Mark done" is unavailable instead of finding a silently inert button:
 **Forms.** `cdkTextareaAutosize` (`@angular/cdk/text-field`) on every free-text `<textarea>`, with
 `cdkAutosizeMinRows="3" cdkAutosizeMaxRows="10"` — a fixed two-row box makes writing feel cramped;
 growing with the text doesn't. Every interactive control (toggle groups included) needs a ≥ 44 px
-touch target; a `mat-button-toggle-group`'s default height is below that, fixed the same way
-`ExerciseList` fixes its own sort toggle: `--mat-standard-button-toggle-height: 44px;` scoped to
-the group's own container, not set globally. A toggle group whose choice reveals more fields
+touch target; a `mat-button-toggle-group`'s default height is 40 px, fixed the same way
+`ExerciseList` fixes its own sort toggle: `--mat-button-toggle-height: 44px;` scoped to the
+group's own container, not set globally. **That exact token** — Material 2's
+`--mat-standard-button-toggle-height` doesn't exist in the installed Material and setting it is
+silently inert, which is how both this form and the kit's list shipped at 40 px (issue #194).
+Measure a touch-target fix in the running app; a custom property that no longer exists fails
+quietly. A toggle group whose choice reveals more fields
 (Rewrite/Stop revealing the new-script sentence, say) gets a one-line hint under the group stating
 what each choice does, and moves focus into the first revealed field the same way the delete
 button above is deferred — an `afterNextRender` triggered by an `effect()` tracking the
