@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(scripts/gh/issue-context.sh:*)",
+      "Bash(scripts/gh/pr-context.sh:*)"
+    ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)"

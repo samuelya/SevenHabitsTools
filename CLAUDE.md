@@ -31,14 +31,15 @@ Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slu
 **Review before test.** The review runs before the tester, because a rejected review makes the tester's round worthless. Don't spend a full verification matrix on code a review is likely to send back.
 
 **Escalation (lead-run; agents can't change their own model):**
-- **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder comments `Round <n>/3 failed on <model>` on the issue and fixes it on the same branch.
-- **3 attempts per tier.** Ladder: Sonnet ×3 → **Opus** ×3 (label `escalated:opus`) → **Fable** ×3 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 3rd failure, the coder comments `Escalation: 3/3 rounds failed…`, messages `team-lead` and stops. The lead starts a fresh agent with `model` set to the next tier, on the same branch and worktree, pointing it at those comments.
-- **Early escalation:** the owner may escalate before the 3rd round when a coder is clearly struggling or burning tokens. The lead stops the agent and records the round history on the issue.
-- **Tester:** Sonnet by default. Opus when the issue is `escalated:*`, the PR touches security or data integrity, or a Sonnet run was inconclusive.
+- **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder comments `Round <n>/2 failed on <model>` on the issue and fixes it on the same branch.
+- **2 attempts per tier.** Ladder: Sonnet ×2 → **Opus** ×2 (label `escalated:opus`) → **Fable** ×2 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 2nd failure, the coder comments `Escalation: 2/2 rounds failed…`, messages `team-lead` and stops. The lead starts a fresh agent with `model` set to the next tier, on the same branch and worktree, pointing it at those comments.
+- **Skip round 2 when round 1 failed on a clear scope/approach miss** rather than a fixable bug — a retry on the same tier will likely repeat the mistake, so escalate straight away instead of paying for a doomed round 2.
+- **Early escalation:** the owner may also cut a round short, before it even finishes, when a coder is clearly struggling or burning tokens. The lead stops the agent and records the round history on the issue.
+- **Tester:** Sonnet by default. Opus when the issue is `escalated:*`, the PR touches security or data integrity, or a Sonnet run was inconclusive. Rounds belong to the coder: the tester verifies each attempt once, and a clear failure (red unit test, build, reproducible bug) is recorded once and sent back, never re-run or re-tested on Opus.
 - **Owner escalation (`needs-owner`)** for permission-blocked actions (Azure roles, deploys, secrets, global toolchain), changes to approved decisions, and scope or cost changes.
 - **Record of rounds:** the round and escalation comments on the issue, plus the tester's checklist on the PR, are the record.
 
-Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Shared config (`CLAUDE.md`, `.claude/`, `.gitignore`, root files) is lead-only and changes via PR (`main` is protected: PR required, 5 required CI checks, no bypass).
+Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Reading GitHub: `scripts/gh/issue-context.sh <n>` and `scripts/gh/pr-context.sh <pr>` (one call each, nothing truncated); sub-issues: `scripts/gh/link-sub-issue.sh <parent> <child>`. Agents use these instead of hand-built `gh` commands. Shared config (`CLAUDE.md`, `.claude/`, `.gitignore`, root files) is lead-only and changes via PR (`main` is protected: PR required, 5 required CI checks, no bypass).
 
 ## Cost discipline (lead-run)
 
@@ -47,10 +48,10 @@ Token cost is a first-class constraint: the owner pays per token and has hit a m
 - **One issue at a time by default.** Parallel issues cause conflicts, rebases and re-checks; each is an extra round. Run two only when they share no files.
 - **Fresh agent per round.** A coder or tester does one round, hands off and stops. The lead starts a new agent for the next round, pointed at the issue and the tester's PR comment. GitHub is the shared memory, so those comments must be good enough to continue from.
 - **Short messages.** Detail goes in the issue or PR comment; agent-to-agent and agent-to-lead messages are at most 5 lines. The lead reports to the owner only decisions, failures, merge-ready PRs and things needing a choice, not every acknowledgement.
-- **Cap the rounds.** After two failed rounds on one issue, escalate a tier or split the rest into a follow-up issue instead of iterating.
+- **Cap the rounds.** Two attempts per tier is the ceiling — skip straight to escalation after round 1 if it was a clear scope/approach miss, not a fixable bug. Escalate a tier or split the rest into a follow-up issue instead of iterating further.
 - **Model tiers.** Sonnet by default. Opus only for data-integrity or security work, or an escalation.
 - **Test cadence.** Targeted tests while iterating; the full unit and e2e suites once before hand-off, and again only for the delta after a rebase.
-- **Never duplicate CI.** CI already runs lint, unit, build and e2e on every push. The tester relies on it and spends its round on the acceptance criteria and what CI cannot do (RTL, keyboard, offline, two tabs, exploratory). Re-running the same suite locally and then checking `gh pr checks` pays twice for one answer.
+- **Never duplicate CI.** CI already runs lint, unit, build and e2e on every push. The tester relies on it and spends its round on the acceptance criteria and what CI cannot do (RTL, keyboard, offline, two tabs, exploratory). Re-running the same suite locally and then checking CI pays twice for one answer. If CI is already red, the tester doesn't start: the round has failed.
 - **Scale review effort to risk.** `/code-review medium` for a small bug fix; `high`/`max` only for data integrity, security, migrations or sync. A re-review targets the delta plus the files it touches, not the whole PR again.
 - **Design check before coding.** Anything touching platform or browser semantics (IndexedDB versioning, Web Locks, storage eviction, service workers) gets a three-sentence "why this works in the failure case the issue describes" comment on the issue *before* implementation. A wrong premise costs a whole round; the comment costs almost nothing.
 - **Bundle disjoint small bugs.** Two or three small bugs on non-overlapping files go in one branch and one PR: one review, one test matrix, one merge.
