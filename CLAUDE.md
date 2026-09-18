@@ -30,6 +30,8 @@ Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slu
 
 **Review before test.** The review runs before the tester, because a rejected review makes the tester's round worthless. Don't spend a full verification matrix on code a review is likely to send back.
 
+**Tester start gate.** Start the tester only once the coder's round is actually closed on the exact PR head it will verify — not on the first "done"/idle report. If the lead sent that coder anything after its "done" report (a missed review finding, a follow-up question), the coder may still be about to push another commit: wait for its next report (or poll `gh pr view <pr> --json headRefOid` for a new SHA + green CI) before spawning the tester, rather than racing it. If the tester is started too early and the PR head moves mid-run, stop the tester (`TaskStop`) and restart it once CI is green on the real final SHA — don't let it finish and post a verdict against a stale commit.
+
 **Escalation (lead-run; agents can't change their own model):**
 - **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder comments `Round <n>/2 failed on <model>` on the issue and fixes it on the same branch.
 - **2 attempts per tier.** Ladder: Sonnet ×2 → **Opus** ×2 (label `escalated:opus`) → **Fable** ×2 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 2nd failure, the coder comments `Escalation: 2/2 rounds failed…`, messages `team-lead` and stops. The lead starts a fresh agent with `model` set to the next tier, on the same branch and worktree, pointing it at those comments.
