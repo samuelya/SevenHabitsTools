@@ -20,4 +20,6 @@ Pipeline reminder:
 - `tester` verifies the PR; bugs count as a failed round.
 - The owner runs `/code-review` and merges.
 
-Escalation is 3 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`). `business-analyst` curates the backlog independently.
+Escalation is 2 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`).
+
+Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (options: `Backlog`, `Ready`, `In progress`, `In review`, `Done`). `business-analyst` curates the backlog independently.
