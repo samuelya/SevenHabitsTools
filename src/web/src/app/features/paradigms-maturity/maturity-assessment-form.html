@@ -1,0 +1,85 @@
+<form class="maturity-assessment-form">
+  @for (area of assessment().areas; track area.id; let first = $first) {
+    <fieldset class="area-row">
+      <mat-form-field appearance="outline" class="area-name">
+        <mat-label>{{ 'paradigmsMaturity.form.areaNameLabel' | transloco }}</mat-label>
+        @if (first) {
+          <input
+            matInput
+            type="text"
+            appEditorInitialFocus
+            [value]="displayValue(area)"
+            (input)="onAreaNameInput(area.id, $event)"
+          />
+        } @else {
+          <input
+            matInput
+            type="text"
+            [value]="displayValue(area)"
+            (input)="onAreaNameInput(area.id, $event)"
+          />
+        }
+      </mat-form-field>
+
+      <div class="level-group">
+        <span [id]="'level-label-' + area.id" class="level-group-label">{{
+          'paradigmsMaturity.form.levelLabel' | transloco
+        }}</span>
+        <mat-radio-group
+          [value]="area.level ?? null"
+          [attr.aria-labelledby]="'level-label-' + area.id"
+          (change)="onLevelChanged(area.id, $event.value)"
+        >
+          @for (level of levels; track level) {
+            <mat-radio-button [value]="level" class="level-option">
+              <span class="level-title">{{
+                'paradigmsMaturity.level.' + level + '.title' | transloco
+              }}</span>
+              <span class="level-description">{{
+                'paradigmsMaturity.level.' + level + '.description' | transloco
+              }}</span>
+            </mat-radio-button>
+          }
+        </mat-radio-group>
+      </div>
+
+      <mat-form-field appearance="outline" class="area-note">
+        <mat-label>{{ 'paradigmsMaturity.form.noteLabel' | transloco }}</mat-label>
+        <textarea
+          matInput
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="2"
+          cdkAutosizeMaxRows="6"
+          [value]="area.note ?? ''"
+          (input)="onNoteInput(area.id, $event)"
+        ></textarea>
+      </mat-form-field>
+
+      <button mat-stroked-button type="button" class="remove-area" (click)="onRemoveArea(area.id)">
+        <mat-icon aria-hidden="true">delete</mat-icon>
+        {{ 'paradigmsMaturity.form.removeArea' | transloco }}
+      </button>
+    </fieldset>
+  }
+
+  <div class="add-area-row">
+    <mat-form-field appearance="outline" class="area-name">
+      <mat-label>{{ 'paradigmsMaturity.form.newAreaLabel' | transloco }}</mat-label>
+      @if (hasAreas()) {
+        <input matInput type="text" [value]="newAreaName()" (input)="onNewAreaNameInput($event)" />
+      } @else {
+        <input
+          matInput
+          type="text"
+          appEditorInitialFocus
+          [value]="newAreaName()"
+          (input)="onNewAreaNameInput($event)"
+        />
+      }
+    </mat-form-field>
+    <button mat-stroked-button type="button" (click)="onAddArea()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      {{ 'paradigmsMaturity.form.addArea' | transloco }}
+    </button>
+  </div>
+</form>

@@ -14,6 +14,14 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     path: 'habits/paradigms/transition',
     loadChildren: () => import('./features/paradigms-transition/transition.routes'),
   },
+  {
+    path: 'habits/paradigms/pc-balance',
+    loadChildren: () => import('./features/paradigms-pc-balance/pc-balance.routes'),
+  },
+  {
+    path: 'habits/paradigms/maturity',
+    loadChildren: () => import('./features/paradigms-maturity/maturity.routes'),
+  },
   { path: 'plan', loadChildren: () => import('./features/plan/plan.routes') },
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },

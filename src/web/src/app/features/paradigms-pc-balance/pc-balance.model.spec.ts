@@ -1,0 +1,90 @@
+import { getRegisteredModels, validateDocument } from '../../core/data/registry';
+import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
+import {
+  PC_BALANCE_MODEL_KEY,
+  PC_BALANCE_PATH,
+  PcAudit,
+  registerPcBalanceModel,
+} from './pc-balance.model';
+
+// Vitest here runs with `isolate: false` (shared module state) — see `backup.model.spec.ts` for
+// why this re-asserts the registration instead of resetting it.
+beforeEach(() => registerPcBalanceModel());
+
+function registration() {
+  const found = getRegisteredModels().find((model) => model.key === PC_BALANCE_MODEL_KEY);
+  if (!found) {
+    throw new Error('paradigms-pc-balance model was not registered');
+  }
+  return found;
+}
+
+const FULL_AUDIT: PcAudit = {
+  id: 'aud1',
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  date: '2026-01-01',
+  assets: [
+    { key: 'k1', name: 'Sleep', group: 'physical', p: 5, pc: 1, action: 'Sleep by 10pm' },
+    { key: 'k2', name: 'Savings', group: 'financial', p: 3, pc: 3 },
+  ],
+  reflection: 'Noticing I burn out on weekdays.',
+};
+
+describe('paradigms-pc-balance model', () => {
+  it('registers at habits.paradigms.pcAudits', () => {
+    expect(registration().path).toBe(PC_BALANCE_PATH);
+  });
+
+  it('defaults to an empty array', () => {
+    expect(registration().defaults()).toEqual([]);
+  });
+
+  it('registers the exercise for the paradigms habit at its route', () => {
+    const entry = getRegisteredExercises().find(
+      (exercise) => exercise.exerciseId === PC_BALANCE_MODEL_KEY,
+    );
+    expect(entry).toEqual({
+      exerciseId: PC_BALANCE_MODEL_KEY,
+      habit: 'paradigms',
+      titleKey: 'habits.exercises.paradigms-pc-balance.title',
+      summaryKey: 'habits.exercises.paradigms-pc-balance.summary',
+      icon: 'balance',
+      route: 'habits/paradigms/pc-balance',
+    });
+  });
+
+  it('validates an empty array', () => {
+    expect(registration().validate?.([])).toBe(true);
+  });
+
+  it('validates a fully filled audit, including an asset with no action', () => {
+    expect(registration().validate?.([FULL_AUDIT])).toBe(true);
+  });
+
+  it('rejects an audit missing a required base or domain field', () => {
+    const withoutReflection: Record<string, unknown> = { ...FULL_AUDIT };
+    delete withoutReflection['reflection'];
+    expect(registration().validate?.([withoutReflection])).toBe(false);
+  });
+
+  it('rejects an asset with an unknown group or a non-numeric slider value', () => {
+    expect(
+      registration().validate?.([
+        { ...FULL_AUDIT, assets: [{ ...FULL_AUDIT.assets[0], group: 'social' }] },
+      ]),
+    ).toBe(false);
+    expect(
+      registration().validate?.([{ ...FULL_AUDIT, assets: [{ ...FULL_AUDIT.assets[0], p: '5' }] }]),
+    ).toBe(false);
+  });
+
+  it('rejects a non-array value', () => {
+    expect(registration().validate?.({})).toBe(false);
+  });
+
+  it('passes validateDocument() when the document contains this slice (export/import guarantee)', () => {
+    const issues = validateDocument({ habits: { paradigms: { pcAudits: [FULL_AUDIT] } } });
+    expect(issues.filter((issue) => issue.path === PC_BALANCE_PATH)).toEqual([]);
+  });
+});

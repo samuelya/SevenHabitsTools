@@ -13,6 +13,10 @@ import settingsEn from '../features/settings/i18n/en.json';
 import settingsAr from '../features/settings/i18n/ar.json';
 import transitionEn from '../features/paradigms-transition/i18n/en.json';
 import transitionAr from '../features/paradigms-transition/i18n/ar.json';
+import pcBalanceEn from '../features/paradigms-pc-balance/i18n/en.json';
+import pcBalanceAr from '../features/paradigms-pc-balance/i18n/ar.json';
+import maturityEn from '../features/paradigms-maturity/i18n/en.json';
+import maturityAr from '../features/paradigms-maturity/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
@@ -44,6 +48,10 @@ export function provideTranslocoTesting(): EnvironmentProviders[] {
           'settings/ar': settingsAr,
           'paradigms-transition/en': transitionEn,
           'paradigms-transition/ar': transitionAr,
+          'paradigms-pc-balance/en': pcBalanceEn,
+          'paradigms-pc-balance/ar': pcBalanceAr,
+          'paradigms-maturity/en': maturityEn,
+          'paradigms-maturity/ar': maturityAr,
           'exercise-kit/en': exerciseKitEn,
           'exercise-kit/ar': exerciseKitAr,
         },

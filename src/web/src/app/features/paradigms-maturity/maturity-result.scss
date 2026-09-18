@@ -1,0 +1,43 @@
+.maturity-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant, lightgray);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.profile,
+.profile-pending {
+  margin: 0;
+  font-weight: 600;
+}
+
+.suggestions {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+}
+
+.deltas-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.deltas ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.deltas li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.delta-value {
+  font-weight: 600;
+}

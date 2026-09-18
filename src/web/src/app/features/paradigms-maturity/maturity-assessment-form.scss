@@ -1,0 +1,67 @@
+.maturity-assessment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.area-row {
+  border: none;
+  margin: 0;
+  padding: 0;
+  padding-block-end: 1rem;
+  border-block-end: 1px solid var(--mat-sys-outline-variant, lightgray);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.area-name,
+.area-note {
+  inline-size: 100%;
+}
+
+.level-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.level-group-label {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.level-group mat-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.level-option {
+  // `mat-radio-button` already ships a 48 px invisible touch target around its smaller visible
+  // icon (`--mat-radio-touch-target-size`), unlike `mat-button-toggle`'s own 40 px default (issue
+  // #194) — no override needed here.
+  padding-block: 0.25rem;
+}
+
+.level-title {
+  display: block;
+  font-weight: 600;
+}
+
+.level-description {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.remove-area {
+  align-self: flex-start;
+}
+
+.add-area-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}

@@ -1,0 +1,61 @@
+{
+  "prompt": {
+    "title": "See where you stand on the growth continuum",
+    "chapterReference": "Paradigms and principles",
+    "text": "Growth runs from depending on others, through relying on yourself, to choosing to work with others on purpose. Rate a few life areas on where you sit right now, and revisit it later to see how you're moving.",
+    "whyItMatters": "Knowing where you stand in each area points you to the habits worth focusing on next — the ones that build self-reliance where you're still leaning on others, or that build real partnership once you're already standing on your own."
+  },
+  "editor": {
+    "title": "Assessment"
+  },
+  "history": {
+    "newAssessment": "New assessment",
+    "empty": "No assessments yet. Start your first one."
+  },
+  "area": {
+    "work": "Work",
+    "family": "Family",
+    "money": "Money",
+    "health": "Health",
+    "learning": "Learning",
+    "community": "Community"
+  },
+  "level": {
+    "1": {
+      "title": "Dependence",
+      "description": "You look to other people or outside circumstances for the outcome here."
+    },
+    "2": {
+      "title": "Independence",
+      "description": "You rely on your own effort and judgement to get results here."
+    },
+    "3": {
+      "title": "Interdependence",
+      "description": "You choose to combine your effort with others' here, and both sides gain from it."
+    }
+  },
+  "form": {
+    "areaNameLabel": "Area",
+    "levelLabel": "Where you stand",
+    "noteLabel": "Note (optional)",
+    "removeArea": "Remove this area",
+    "newAreaLabel": "New area name",
+    "addArea": "Add area"
+  },
+  "result": {
+    "profileLabel": "Overall profile",
+    "profilePending": "Rate at least one area to see your overall profile.",
+    "habitLink": "Habit {{number}} exercises",
+    "deltaTitle": "Change since {{date}}",
+    "newArea": "New",
+    "removedArea": "Removed"
+  },
+  "summary": {
+    "totalAssessments": {
+      "one": "1 assessment taken",
+      "other": "{{count}} assessments taken"
+    },
+    "latestProfile": "Latest profile: {{profile}}",
+    "doneHint": "Complete at least one assessment first: every area needs a rating."
+  }
+}

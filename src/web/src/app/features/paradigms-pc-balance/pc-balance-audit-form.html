@@ -1,0 +1,155 @@
+<form class="pc-balance-audit-form">
+  <p class="audit-date">
+    {{ 'paradigmsPcBalance.editor.dateLabel' | transloco }}:
+    {{ localDate() | appDate: { dateStyle: 'medium' } }}
+  </p>
+
+  <div class="group-summary">
+    @for (group of groupSummary(); track group.group) {
+      <div class="group-summary__item">
+        <span class="group-summary__label">{{
+          'paradigmsPcBalance.group.' + group.group | transloco
+        }}</span>
+        @if (group.averageBalance === null) {
+          <span class="group-summary__avg">{{
+            'paradigmsPcBalance.groupSummary.noAssets' | transloco
+          }}</span>
+        } @else {
+          <span class="group-summary__avg">{{
+            'paradigmsPcBalance.groupSummary.average' | transloco: { value: group.averageBalance }
+          }}</span>
+        }
+        <span class="group-summary__counts">{{
+          'paradigmsPcBalance.groupSummary.counts'
+            | transloco: { over: group.overUsed, balanced: group.balanced, under: group.underUsed }
+        }}</span>
+      </div>
+    }
+  </div>
+
+  @for (section of groupSections(); track section.group; let first = $first) {
+    <fieldset class="group-section">
+      <legend>{{ 'paradigmsPcBalance.group.' + section.group | transloco }}</legend>
+
+      @for (asset of section.assets; track asset.key) {
+        <div class="asset-row">
+          <mat-form-field appearance="outline" class="asset-name">
+            <mat-label>{{ 'paradigmsPcBalance.form.nameLabel' | transloco }}</mat-label>
+            <input
+              matInput
+              type="text"
+              [value]="asset.name"
+              (input)="onAssetNameChanged(asset.key, $event)"
+            />
+          </mat-form-field>
+
+          <div class="slider-field">
+            <!-- A `<span>`, not `<label>`: this text is the slider's `aria-labelledby` target,
+                 not a `<label for>` association with a control (`@angular-eslint/template/
+                 label-has-associated-control`) — a `mat-slider`'s native range input has no
+                 stable id of its own to associate a `for` with. -->
+            <span [id]="'p-label-' + asset.key">
+              {{ 'paradigmsPcBalance.form.pLabel' | transloco }}: {{ asset.p }}
+            </span>
+            <mat-slider [min]="sliderMin" [max]="sliderMax" step="1" discrete>
+              <input
+                matSliderThumb
+                [value]="asset.p"
+                [attr.aria-labelledby]="'p-label-' + asset.key"
+                (valueChange)="onSliderChanged(asset.key, 'p', $event)"
+              />
+            </mat-slider>
+          </div>
+
+          <div class="slider-field">
+            <span [id]="'pc-label-' + asset.key">
+              {{ 'paradigmsPcBalance.form.pcLabel' | transloco }}: {{ asset.pc }}
+            </span>
+            <mat-slider [min]="sliderMin" [max]="sliderMax" step="1" discrete>
+              <input
+                matSliderThumb
+                [value]="asset.pc"
+                [attr.aria-labelledby]="'pc-label-' + asset.key"
+                (valueChange)="onSliderChanged(asset.key, 'pc', $event)"
+              />
+            </mat-slider>
+          </div>
+
+          <p class="balance-indicator" [class]="'balance-indicator--' + statusOf(balanceOf(asset))">
+            {{ 'paradigmsPcBalance.status.' + statusOf(balanceOf(asset)) | transloco }}
+            ({{ balanceOf(asset) }})
+          </p>
+
+          @if (isOverUsed(asset)) {
+            <mat-form-field appearance="outline" class="asset-action">
+              <mat-label>{{ 'paradigmsPcBalance.form.actionLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                required
+                [value]="asset.action ?? ''"
+                [attr.aria-describedby]="
+                  isActionTouched(asset.key) && !asset.action?.trim()
+                    ? 'action-error-' + asset.key
+                    : null
+                "
+                (input)="onAssetActionChanged(asset.key, $event)"
+                (blur)="touchAction(asset.key)"
+              ></textarea>
+            </mat-form-field>
+            @if (isActionTouched(asset.key) && !asset.action?.trim()) {
+              <p [id]="'action-error-' + asset.key" class="field-error" role="alert">
+                {{ 'paradigmsPcBalance.form.actionRequired' | transloco }}
+              </p>
+            }
+          }
+
+          <button
+            mat-stroked-button
+            type="button"
+            class="remove-asset"
+            (click)="onRemoveAsset(asset.key)"
+          >
+            <mat-icon aria-hidden="true">delete</mat-icon>
+            {{ 'paradigmsPcBalance.form.removeAsset' | transloco }}
+          </button>
+        </div>
+      }
+
+      <div class="add-asset-row">
+        <mat-form-field appearance="outline" class="asset-name">
+          <mat-label>{{ 'paradigmsPcBalance.form.newAssetLabel' | transloco }}</mat-label>
+          @if (first) {
+            <input
+              matInput
+              type="text"
+              appEditorInitialFocus
+              [value]="draftName(section.group)"
+              (input)="onDraftNameInput(section.group, $event)"
+            />
+          } @else {
+            <input
+              matInput
+              type="text"
+              [value]="draftName(section.group)"
+              (input)="onDraftNameInput(section.group, $event)"
+            />
+          }
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="onAddAsset(section.group)">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          {{ 'paradigmsPcBalance.form.addAsset' | transloco }}
+        </button>
+      </div>
+    </fieldset>
+  }
+
+  <app-reflection-editor
+    [value]="audit().reflection"
+    [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
+    [updatedAt]="audit().updatedAt"
+    (valueChange)="onReflectionChanged($event)"
+  />
+</form>

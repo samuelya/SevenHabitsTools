@@ -1,0 +1,32 @@
+.maturity-summary mat-card-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.maturity-summary .count {
+  margin: 0;
+  padding-inline-end: 1.5rem;
+  border-inline-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.maturity-summary .count:last-child {
+  padding-inline-end: 0;
+  border-inline-end: none;
+}
+
+.maturity-summary .total {
+  font-weight: 600;
+}
+
+@media (max-width: 599.98px) {
+  .maturity-summary mat-card-content {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .maturity-summary .count {
+    padding-inline-end: 0;
+    border-inline-end: none;
+  }
+}

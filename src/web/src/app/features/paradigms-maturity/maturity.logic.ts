@@ -1,0 +1,214 @@
+import { newRecord, isLive } from '../../core/data/record';
+import { HabitId } from '../../core/habits/habits';
+import { liveAssessments } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  MATURITY_AREA_KEYS,
+  MATURITY_LEVELS,
+  MaturityArea,
+  MaturityAssessment,
+  MaturityAssessmentFields,
+  MaturityLevel,
+} from './maturity.model';
+
+/** Live assessments only (architecture issue #1 §6: tombstoned records are never shown). */
+export function liveAssessmentsOf(
+  assessments: readonly MaturityAssessment[],
+): MaturityAssessment[] {
+  return liveAssessments(assessments);
+}
+
+export function isAreaRated(area: Pick<MaturityArea, 'level'>): boolean {
+  return area.level !== undefined;
+}
+
+/** An assessment is complete once it has at least one area and every area has a level (issue
+ * #50's implementation notes). */
+export function isAssessmentComplete(assessment: Pick<MaturityAssessment, 'areas'>): boolean {
+  return assessment.areas.length > 0 && assessment.areas.every(isAreaRated);
+}
+
+/** Whether `DoneToggle` should be enabled: at least one live assessment is fully rated. */
+export function canMarkDone(assessments: readonly MaturityAssessment[]): boolean {
+  return liveAssessments(assessments).some(isAssessmentComplete);
+}
+
+/** Already-translated display name: a custom or renamed name if set, otherwise the built-in
+ * area's translated label — never both, never neither (issue #50's implementation notes:
+ * "Displayed name = name ?? t(key)"). */
+export function displayName(
+  area: Pick<MaturityArea, 'key' | 'name'>,
+  builtInLabels: Readonly<Record<string, string>>,
+): string {
+  return area.name ?? (area.key ? (builtInLabels[area.key] ?? '') : '');
+}
+
+/** The level held by the most rated areas; a tie goes to the lower level (issue #50's
+ * implementation notes) — `null` with no rated areas. */
+export function overallProfile(areas: readonly MaturityArea[]): MaturityLevel | null {
+  const rated = areas.filter(isAreaRated);
+  if (rated.length === 0) {
+    return null;
+  }
+  const counts = new Map<MaturityLevel, number>();
+  for (const area of rated) {
+    const level = area.level as MaturityLevel;
+    counts.set(level, (counts.get(level) ?? 0) + 1);
+  }
+  let best: MaturityLevel | null = null;
+  let bestCount = -1;
+  // Ascending order plus a strict `>` comparison: the first level reached with the highest count
+  // wins, so a tie always resolves to the lower level.
+  for (const level of MATURITY_LEVELS) {
+    const count = counts.get(level) ?? 0;
+    if (count > bestCount) {
+      bestCount = count;
+      best = level;
+    }
+  }
+  return best;
+}
+
+/** Habits 1–3 for a dependence-dominant profile, 4–6 for independence, 7 for interdependence
+ * (issue #50's implementation notes) — empty with no profile yet. */
+export function suggestedHabits(profile: MaturityLevel | null): readonly HabitId[] {
+  switch (profile) {
+    case 1:
+      return ['h1', 'h2', 'h3'];
+    case 2:
+      return ['h4', 'h5', 'h6'];
+    case 3:
+      return ['h7'];
+    default:
+      return [];
+  }
+}
+
+function matches(
+  a: Pick<MaturityArea, 'key' | 'name'>,
+  b: Pick<MaturityArea, 'key' | 'name'>,
+): boolean {
+  return a.key !== undefined ? a.key === b.key : a.name === b.name;
+}
+
+/** One area's change since `previous` — a level difference, `'new'` if it has no match in
+ * `previous`, or `null` when either side isn't rated yet (issue #50's implementation notes: "Delta
+ * per area against the previous assessment: level difference, or 'new'/'removed'"). Areas match by
+ * `key`, else by `name`. */
+export type AreaDelta =
+  { readonly kind: 'diff'; readonly value: number } | { readonly kind: 'new' };
+
+export function deltaFor(
+  area: MaturityArea,
+  previous: readonly MaturityArea[] | null,
+): AreaDelta | null {
+  if (!previous) {
+    return null;
+  }
+  const match = previous.find((candidate) => matches(candidate, area));
+  if (!match) {
+    return { kind: 'new' };
+  }
+  if (area.level === undefined || match.level === undefined) {
+    return null;
+  }
+  return { kind: 'diff', value: area.level - match.level };
+}
+
+/** Areas present in `previous` with no match in `current` — the "removed" half of issue #50's
+ * delta requirement. */
+export function removedAreas(
+  current: readonly MaturityArea[],
+  previous: readonly MaturityArea[] | null,
+): MaturityArea[] {
+  if (!previous) {
+    return [];
+  }
+  return previous.filter((area) => !current.some((candidate) => matches(candidate, area)));
+}
+
+/** The footer's summary card: how many assessments exist and the most recent one's profile. */
+export interface MaturitySummaryData {
+  readonly totalAssessments: number;
+  readonly latestProfile: MaturityLevel | null;
+}
+
+export function summarize(assessments: readonly MaturityAssessment[]): MaturitySummaryData {
+  const live = liveAssessments(assessments);
+  const sorted = [...live].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  const latest = sorted[0] ?? null;
+  return {
+    totalAssessments: live.length,
+    latestProfile: latest ? overallProfile(latest.areas) : null,
+  };
+}
+
+/** A new assessment dated today, pre-filling the area list (names/keys only) from the latest
+ * assessment with every level unset — the six built-in areas when there is no previous assessment
+ * (issue #50's implementation notes). */
+export function newAssessmentFields(
+  latest: MaturityAssessment | null,
+  today: string,
+): MaturityAssessmentFields {
+  const areas: MaturityArea[] = latest
+    ? latest.areas.map((area) => ({ id: crypto.randomUUID(), key: area.key, name: area.name }))
+    : MATURITY_AREA_KEYS.map((key) => ({ id: crypto.randomUUID(), key }));
+  return { date: today, areas };
+}
+
+/** Appends a new custom area with no level. */
+export function addArea(areas: readonly MaturityArea[], name: string): MaturityArea[] {
+  return [...areas, { id: crypto.randomUUID(), name }];
+}
+
+/** Renames the area `id`: stores `name`, and — for a built-in area — keeps `key` (issue #50's
+ * implementation notes). A no-op copy if `id` is not found. */
+export function renameArea(
+  areas: readonly MaturityArea[],
+  id: string,
+  name: string,
+): MaturityArea[] {
+  return areas.map((area) => (area.id === id ? { ...area, name } : area));
+}
+
+export function setAreaLevel(
+  areas: readonly MaturityArea[],
+  id: string,
+  level: MaturityLevel,
+): MaturityArea[] {
+  return areas.map((area) => (area.id === id ? { ...area, level } : area));
+}
+
+export function setAreaNote(
+  areas: readonly MaturityArea[],
+  id: string,
+  note: string,
+): MaturityArea[] {
+  return areas.map((area) => (area.id === id ? { ...area, note } : area));
+}
+
+/** Removes the area `id`. Areas have no tombstone (architecture issue #1 §6 applies to records; an
+ * area is a nested value object of its assessment, not a record). */
+export function removeArea(areas: readonly MaturityArea[], id: string): MaturityArea[] {
+  return areas.filter((area) => area.id !== id);
+}
+
+/** Appends a new assessment created from `fields`, stamped with a fresh id and `now`. */
+export function addAssessment(
+  assessments: readonly MaturityAssessment[],
+  fields: MaturityAssessmentFields,
+  now: Date,
+): MaturityAssessment[] {
+  return [...assessments, newRecord(fields, now)];
+}
+
+/** Replaces the fields of the live assessment `id` with `fields`, leaving every other assessment
+ * alone; a no-op copy if `id` is not found or already tombstoned. */
+export function editAssessment(
+  assessments: readonly MaturityAssessment[],
+  id: string,
+  fields: Partial<MaturityAssessmentFields>,
+): MaturityAssessment[] {
+  return assessments.map((assessment) =>
+    assessment.id === id && isLive(assessment) ? { ...assessment, ...fields } : assessment,
+  );
+}

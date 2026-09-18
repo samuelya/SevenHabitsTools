@@ -1,0 +1,15 @@
+<mat-card class="pc-balance-summary" appearance="outlined">
+  <mat-card-content>
+    <p class="count total">
+      {{ 'paradigmsPcBalance.summary.totalAudits' | appPlural: summary().totalAudits }}
+    </p>
+    @if (summary().latestAverageBalance !== null) {
+      <p class="count">
+        {{
+          'paradigmsPcBalance.summary.latestBalance'
+            | transloco: { value: summary().latestAverageBalance }
+        }}
+      </p>
+    }
+  </mat-card-content>
+</mat-card>
