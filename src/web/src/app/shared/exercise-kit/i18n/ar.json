@@ -8,11 +8,9 @@
     "next": "التالي"
   },
   "list": {
-    "searchLabel": "بحث في التمارين",
     "sortLabel": "ترتيب",
     "sortByTitle": "حسب العنوان",
-    "sortByStatus": "حسب الحالة",
-    "empty": "لا توجد تمارين مطابقة لبحثك."
+    "sortByStatus": "حسب الحالة"
   },
   "detail": {
     "close": "العودة إلى القائمة"

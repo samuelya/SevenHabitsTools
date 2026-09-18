@@ -1,10 +1,21 @@
-import { ExerciseListItem, filterExerciseItems, sortExerciseItems } from './exercise-list.logic';
+import {
+  ExerciseListItem,
+  filterExerciseItems,
+  LIST_TOOLS_MIN_ITEMS,
+  sortExerciseItems,
+} from './exercise-list.logic';
 
 const ITEMS: ExerciseListItem[] = [
   { id: 'b', title: 'Begin with the end', subtitle: 'Mission statement', done: false },
   { id: 'a', title: 'Be proactive', subtitle: 'Circle of influence', done: true },
   { id: 'c', title: 'Circle of concern', done: false },
 ];
+
+describe('LIST_TOOLS_MIN_ITEMS', () => {
+  it('is 6', () => {
+    expect(LIST_TOOLS_MIN_ITEMS).toBe(6);
+  });
+});
 
 describe('filterExerciseItems', () => {
   it('returns every item for a blank query', () => {

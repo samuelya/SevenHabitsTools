@@ -6,7 +6,9 @@
     "whyItMatters": "A 'transition person' is someone who stops a pattern instead of passing it on. Naming a script on purpose is what makes it possible to choose differently the next time it shows up."
   },
   "list": {
-    "addButton": "Add a script"
+    "addButton": "Add a script",
+    "searchLabel": "Search scripts",
+    "empty": "No scripts yet."
   },
   "form": {
     "textLabel": "The script (what you say, do or expect)",

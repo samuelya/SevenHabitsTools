@@ -9,6 +9,10 @@ export interface ExerciseListItem {
 
 export type ExerciseListSort = 'title' | 'status';
 
+/** Search and sort only earn their keep once there's enough to search/sort through (#186); below
+ * this the list starts directly with the rows. */
+export const LIST_TOOLS_MIN_ITEMS = 6;
+
 /** Case-insensitive substring match on `title` and `subtitle`. */
 export function filterExerciseItems<T extends ExerciseListItem>(
   items: readonly T[],
