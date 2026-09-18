@@ -17,9 +17,10 @@ Run this at the start of an implementation session.
 Pipeline reminder:
 - The owner picks an issue.
 - `backend-coder` or `frontend-coder` implements it in its own worktree and opens a PR.
-- `tester` verifies the PR; bugs count as a failed round.
-- The owner runs `/code-review` and merges.
+- The owner runs `/code-review` (effort scaled to risk); the coder fixes the findings.
+- `tester` verifies the reviewed PR; bugs count as a failed round.
+- The owner merges.
 
-Escalation is 2 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`).
+Escalation is 2 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`). `business-analyst` curates the backlog independently.
 
-Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (options: `Backlog`, `Ready`, `In progress`, `In review`, `Done`). `business-analyst` curates the backlog independently.
+Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (options: `Backlog`, `Ready`, `In progress`, `In review`, `Done`).
