@@ -6,6 +6,22 @@
   margin-block-end: 1rem;
 }
 
+.hub-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+}
+
+.hub-action {
+  min-block-size: 44px;
+}
+
+.hub-exercise-status {
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-size: 0.75rem;
+}
+
 .hub-status {
   display: inline-flex;
   align-items: center;

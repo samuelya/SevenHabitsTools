@@ -1,0 +1,56 @@
+{
+  "prompt": {
+    "title": "Teach it to learn it",
+    "chapterReference": "Inside-Out and the seven habits",
+    "text": "Pick each chapter's one idea you most want to keep, put it in your own words, and plan to explain it to someone within the next two days. Teaching it back is what turns a good idea you read into one you actually own.",
+    "whyItMatters": "Explaining something out loud, to a real person, exposes what you actually understood versus what you only recognised. A short commitment with a deadline is what makes that happen instead of staying a good intention."
+  },
+  "list": {
+    "searchLabel": "Search chapters",
+    "empty": "No chapters yet.",
+    "noMatch": "No chapters match your search.",
+    "overdue": "Overdue"
+  },
+  "editor": {
+    "newTitle": "New commitment",
+    "editTitle": "Edit commitment"
+  },
+  "form": {
+    "keyIdeaLabel": "The key idea, in your own words",
+    "keyIdeaCount": "{{count}}/{{max}} characters",
+    "keyIdeaRequired": "Write the key idea before moving on.",
+    "personLabel": "Who you'll teach it to",
+    "plannedAtLabel": "When you plan to share it",
+    "statusLabel": "Status",
+    "sharedAt": "Shared {{date}}",
+    "learnedLabel": "What you learned by teaching it"
+  },
+  "chapter": {
+    "paradigms": "Paradigms and principles",
+    "h1": "Habit 1: Be proactive",
+    "h2": "Habit 2: Begin with the end in mind",
+    "h3": "Habit 3: Put first things first",
+    "h4": "Habit 4: Think win-win",
+    "h5": "Habit 5: Seek first to understand, then to be understood",
+    "h6": "Habit 6: Synergize",
+    "h7": "Habit 7: Sharpen the saw",
+    "interdependence": "Paradigms of interdependence",
+    "insideOutAgain": "Inside-Out again"
+  },
+  "status": {
+    "planned": "Planned",
+    "shared": "Shared",
+    "skipped": "Skipped"
+  },
+  "summary": {
+    "shared": {
+      "one": "1 of {{total}} chapters shared",
+      "other": "{{count}} of {{total}} chapters shared"
+    },
+    "overdue": {
+      "one": "1 overdue",
+      "other": "{{count}} overdue"
+    },
+    "doneHint": "Share at least one chapter's key idea with someone first."
+  }
+}

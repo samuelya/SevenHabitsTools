@@ -5,9 +5,17 @@ export interface ExerciseListItem {
   readonly title: string;
   readonly subtitle?: string;
   readonly done?: boolean;
+  /** Visually highlights the row (issue #52's overdue teach-it commitments) — generic across any
+   * future exercise with a row that needs the user's attention, not specific to what makes it so. */
+  readonly warning?: boolean;
 }
 
-export type ExerciseListSort = 'title' | 'status';
+/** `'none'` (issue #52): the caller's own `items()` order, untouched — for a fixed, meaningfully
+ * ordered list (the ten book chapters, in book order) where an alphabetical default would scramble
+ * that order. Not offered as a toggle choice (`ExerciseList`'s sort control only ever shows
+ * "Title"/"Status"); a caller opts in through `initialSort`, and the user can still switch away
+ * from it like any other starting sort. */
+export type ExerciseListSort = 'title' | 'status' | 'none';
 
 /** Search and sort only earn their keep once there's enough to search/sort through (#186); below
  * this the list starts directly with the rows. */
@@ -29,11 +37,15 @@ export function filterExerciseItems<T extends ExerciseListItem>(
   );
 }
 
-/** `'title'`: alphabetical. `'status'`: not-done first, then alphabetical within each group. */
+/** `'none'`: the given order, unchanged. `'title'`: alphabetical. `'status'`: not-done first, then
+ * alphabetical within each group. */
 export function sortExerciseItems<T extends ExerciseListItem>(
   items: readonly T[],
   sort: ExerciseListSort,
 ): T[] {
+  if (sort === 'none') {
+    return [...items];
+  }
   const sorted = [...items].sort((a, b) => a.title.localeCompare(b.title));
   if (sort === 'title') {
     return sorted;

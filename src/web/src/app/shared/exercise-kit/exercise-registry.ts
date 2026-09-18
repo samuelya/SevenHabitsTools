@@ -1,4 +1,15 @@
+import { Signal } from '@angular/core';
 import { HabitId } from '../../core/habits/habits';
+
+/** An extra status line the habit hub page renders under a registered exercise, beyond the done
+ * badge every exercise already gets for free (issue #52's "count of shared chapters" on the
+ * Paradigms hub) — `key` is a plural-correct key (`AppPluralPipe`) in the `habits` scope, `count`
+ * the number it's about. Generic across any future exercise that wants a count-style status; the
+ * hub renders it without knowing which exercise supplied it. */
+export interface ExerciseHubStatus {
+  readonly key: string;
+  readonly count: number;
+}
 
 /**
  * One exercise contributed to the kit by a feature's own `<feature>.model.ts` (issue #30's data
@@ -16,6 +27,10 @@ export interface ExerciseRegistryEntry {
   readonly summaryKey: string;
   readonly icon: string;
   readonly route: string;
+  /** Optional extra status line (issue #52). Called once by the hub page through
+   * `runInInjectionContext()`, so it may `inject()` (e.g. its own `featureStore`) the same way a
+   * component field initializer would. Returns `null` while there's nothing to show. */
+  readonly statusFactory?: () => Signal<ExerciseHubStatus | null>;
 }
 
 const registrations = new Map<string, ExerciseRegistryEntry>();

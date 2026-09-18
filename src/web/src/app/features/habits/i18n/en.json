@@ -39,6 +39,15 @@
     "paradigms-maturity": {
       "title": "See where you stand on the growth continuum",
       "summary": "Rate a few life areas from dependence to interdependence and see which habits to focus on."
+    },
+    "paradigms-teach": {
+      "title": "Teach it to learn it",
+      "summary": "Put each chapter's key idea in your own words and share it with someone within two days.",
+      "hubActionLabel": "Teach this",
+      "sharedCount": {
+        "one": "1 chapter shared",
+        "other": "{{count}} chapters shared"
+      }
     }
   }
 }

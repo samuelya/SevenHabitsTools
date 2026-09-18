@@ -9,4 +9,5 @@ import './features/settings/settings.model';
 import './features/paradigms-transition/transition.model';
 import './features/paradigms-pc-balance/pc-balance.model';
 import './features/paradigms-maturity/maturity.model';
+import './features/paradigms-teach/teach.model';
 import './shared/exercise-kit/exercise-kit.model';

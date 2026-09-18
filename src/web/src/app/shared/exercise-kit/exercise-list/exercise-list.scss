@@ -43,6 +43,24 @@
   background: var(--mat-sys-primary, currentColor);
 }
 
+.exercise-list__item--warning .exercise-list__item-accent {
+  background: var(--mat-sys-error, darkred);
+}
+
+// A selected *and* warning row (both classes) needs the accent bar back to "selected": #186 added
+// it specifically so the current row is recognisable without relying on colour alone, and the
+// warning icon in the title row already carries the warning without relying on colour either — so
+// this bar can stay reserved for its one job. Two classes outrank the single-class rules above
+// regardless of source order (issue #52's PR review: with equal specificity, the `--warning` rule
+// happened to come second and silently won for every selected+overdue row).
+.exercise-list__item--selected.exercise-list__item--warning .exercise-list__item-accent {
+  background: var(--mat-sys-primary, currentColor);
+}
+
+.exercise-list__item-warning-icon {
+  color: var(--mat-sys-error, darkred);
+}
+
 // `text-align: start` on the row is inherited by its projected content, but the title still needs
 // its own overflow handling: 2 lines with an ellipsis, the subtitle 1 line (#186).
 ::ng-deep .exercise-list__item [matListItemTitle] {

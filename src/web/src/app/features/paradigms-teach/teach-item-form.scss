@@ -1,0 +1,50 @@
+.teach-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.field-hint {
+  margin: -0.5rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.field-error {
+  color: var(--mat-sys-error, darkred);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 0;
+}
+
+.option-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+
+  // Scoped here, not globally: the default toggle height (40 px) is below the 44 px touch target
+  // (issue #194's fix, copied by every form since — see `transition-item-form.scss`).
+  --mat-button-toggle-height: 44px;
+}
+
+.option-group legend {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  padding: 0;
+}
+
+.option-group mat-button-toggle-group {
+  flex-wrap: wrap;
+}
+
+.shared-at-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}

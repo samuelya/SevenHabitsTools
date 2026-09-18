@@ -17,7 +17,7 @@
       class="sort"
       [value]="sort()"
       [attr.aria-label]="'exerciseKit.list.sortLabel' | transloco"
-      (change)="sort.set($event.value)"
+      (change)="onSortChange($event.value)"
     >
       <mat-button-toggle value="title">{{
         'exerciseKit.list.sortByTitle' | transloco
@@ -41,6 +41,7 @@
           type="button"
           class="exercise-list__item"
           [class.exercise-list__item--selected]="item.id === selectedId()"
+          [class.exercise-list__item--warning]="item.warning"
           [activated]="item.id === selectedId()"
           [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
           (click)="itemSelected.emit(item.id)"
@@ -49,9 +50,14 @@
                owns a `::before` sized to the full row, which would otherwise win the cascade over
                a narrow accent bar (#186). -->
           <span class="exercise-list__item-accent" aria-hidden="true"></span>
-          <!-- The icon slot is always reserved (an empty span when not done), so titles align
-               whether or not the item is done (#186). -->
-          @if (item.done) {
+          <!-- The icon slot is always reserved (an empty span when neither done nor warning), so
+               titles align across every row (#186). `warning` wins when both are somehow true —
+               it's the one that needs the user to notice something, `done` is just status. -->
+          @if (item.warning) {
+            <mat-icon matListItemIcon class="exercise-list__item-warning-icon" aria-hidden="true"
+              >warning</mat-icon
+            >
+          } @else if (item.done) {
             <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
           } @else {
             <span matListItemIcon aria-hidden="true"></span>
