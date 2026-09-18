@@ -2,20 +2,36 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExerciseList } from './exercise-list';
-import { ExerciseListItem } from './exercise-list.logic';
+import { ExerciseListItem, LIST_TOOLS_MIN_ITEMS } from './exercise-list.logic';
 
 const ITEMS: ExerciseListItem[] = [
   { id: 'b', title: 'Begin with the end', subtitle: 'Mission statement', done: false },
   { id: 'a', title: 'Be proactive', done: true },
 ];
 
-function setUp(selectedId: string | null = null) {
+// One more item per letter than `LIST_TOOLS_MIN_ITEMS` requires, so the threshold test can grow
+// or shrink the list by slicing it.
+const MANY_ITEMS: ExerciseListItem[] = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id) => ({
+  id,
+  title: `Item ${id}`,
+}));
+
+function setUp(
+  items: readonly ExerciseListItem[] = ITEMS,
+  selectedId: string | null = null,
+  noMatchMessage?: string,
+) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
   });
   const fixture = TestBed.createComponent(ExerciseList);
-  fixture.componentRef.setInput('items', ITEMS);
+  fixture.componentRef.setInput('items', items);
   fixture.componentRef.setInput('selectedId', selectedId);
+  fixture.componentRef.setInput('searchLabel', 'Search items');
+  fixture.componentRef.setInput('emptyMessage', 'No items yet.');
+  if (noMatchMessage !== undefined) {
+    fixture.componentRef.setInput('noMatchMessage', noMatchMessage);
+  }
   fixture.detectChanges();
   return fixture;
 }
@@ -45,10 +61,11 @@ describe('ExerciseList', () => {
   });
 
   it('marks the selected item current', () => {
-    const fixture = setUp('a');
+    const fixture = setUp(ITEMS, 'a');
 
     const current = fixture.nativeElement.querySelector('button[aria-pressed="true"]');
     expect(current?.textContent).toContain('Be proactive');
+    expect(current?.classList).toContain('exercise-list__item--selected');
   });
 
   it('filters as the search query changes', () => {
@@ -61,12 +78,46 @@ describe('ExerciseList', () => {
     expect(titles[0]).toContain('Be proactive');
   });
 
-  it('shows the empty state when nothing matches', () => {
-    const fixture = setUp();
+  it('renders the emptyMessage input when there are no items', () => {
+    const fixture = setUp([]);
+
+    expect(fixture.nativeElement.querySelector('.empty')?.textContent?.trim()).toBe(
+      'No items yet.',
+    );
+  });
+
+  it('renders the noMatchMessage input when items exist but none match the query', () => {
+    const fixture = setUp(ITEMS, null, 'Nothing found.');
     fixture.componentInstance['query'].set('zzz');
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.querySelector('.empty')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.empty')?.textContent?.trim()).toBe(
+      'Nothing found.',
+    );
     expect(fixture.nativeElement.querySelectorAll('mat-nav-list button')).toHaveLength(0);
+  });
+
+  it('falls back to emptyMessage when no noMatchMessage is given', () => {
+    const fixture = setUp(ITEMS);
+    fixture.componentInstance['query'].set('zzz');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.empty')?.textContent?.trim()).toBe(
+      'No items yet.',
+    );
+  });
+
+  it('hides search and sort below LIST_TOOLS_MIN_ITEMS', () => {
+    const fixture = setUp(MANY_ITEMS.slice(0, LIST_TOOLS_MIN_ITEMS - 1));
+
+    expect(fixture.nativeElement.querySelector('.search')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.sort')).toBeNull();
+  });
+
+  it('shows search and sort at LIST_TOOLS_MIN_ITEMS', () => {
+    const fixture = setUp(MANY_ITEMS.slice(0, LIST_TOOLS_MIN_ITEMS));
+
+    expect(fixture.nativeElement.querySelector('.search')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.sort')).not.toBeNull();
   });
 });

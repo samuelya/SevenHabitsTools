@@ -15,6 +15,8 @@
     <app-exercise-list
       [items]="items()"
       [selectedId]="selectedId()"
+      [searchLabel]="'paradigmsTransition.list.searchLabel' | transloco"
+      [emptyMessage]="'paradigmsTransition.list.empty' | transloco"
       (itemSelected)="select($event)"
     />
   </div>

@@ -1,23 +1,32 @@
 <div class="exercise-list">
-  <mat-form-field class="search" appearance="outline">
-    <mat-icon matPrefix aria-hidden="true">search</mat-icon>
-    <mat-label>{{ 'exerciseKit.list.searchLabel' | transloco }}</mat-label>
-    <input matInput [value]="query()" (input)="onQueryInput($event)" type="search" />
-  </mat-form-field>
+  @if (showTools()) {
+    <mat-form-field class="search" appearance="outline">
+      <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+      <mat-label>{{ searchLabel() }}</mat-label>
+      <input
+        matInput
+        [value]="query()"
+        (input)="onQueryInput($event)"
+        type="search"
+        autocomplete="off"
+        enterkeyhint="search"
+      />
+    </mat-form-field>
 
-  <mat-button-toggle-group
-    class="sort"
-    [value]="sort()"
-    [attr.aria-label]="'exerciseKit.list.sortLabel' | transloco"
-    (change)="sort.set($event.value)"
-  >
-    <mat-button-toggle value="title">{{
-      'exerciseKit.list.sortByTitle' | transloco
-    }}</mat-button-toggle>
-    <mat-button-toggle value="status">{{
-      'exerciseKit.list.sortByStatus' | transloco
-    }}</mat-button-toggle>
-  </mat-button-toggle-group>
+    <mat-button-toggle-group
+      class="sort"
+      [value]="sort()"
+      [attr.aria-label]="'exerciseKit.list.sortLabel' | transloco"
+      (change)="sort.set($event.value)"
+    >
+      <mat-button-toggle value="title">{{
+        'exerciseKit.list.sortByTitle' | transloco
+      }}</mat-button-toggle>
+      <mat-button-toggle value="status">{{
+        'exerciseKit.list.sortByStatus' | transloco
+      }}</mat-button-toggle>
+    </mat-button-toggle-group>
+  }
 
   @if (visibleItems().length) {
     <mat-nav-list>
@@ -30,12 +39,22 @@
         <button
           mat-list-item
           type="button"
+          class="exercise-list__item"
+          [class.exercise-list__item--selected]="item.id === selectedId()"
           [activated]="item.id === selectedId()"
           [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
           (click)="itemSelected.emit(item.id)"
         >
+          <!-- A real element, not `::before`: `MatListItem`'s own ripple/state-layer already
+               owns a `::before` sized to the full row, which would otherwise win the cascade over
+               a narrow accent bar (#186). -->
+          <span class="exercise-list__item-accent" aria-hidden="true"></span>
+          <!-- The icon slot is always reserved (an empty span when not done), so titles align
+               whether or not the item is done (#186). -->
           @if (item.done) {
             <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
+          } @else {
+            <span matListItemIcon aria-hidden="true"></span>
           }
           <span matListItemTitle>{{ item.title }}</span>
           @if (item.subtitle; as subtitle) {
@@ -45,6 +64,6 @@
       }
     </mat-nav-list>
   } @else {
-    <p class="empty">{{ 'exerciseKit.list.empty' | transloco }}</p>
+    <p class="empty">{{ emptyText() }}</p>
   }
 </div>

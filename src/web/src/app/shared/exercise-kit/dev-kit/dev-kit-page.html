@@ -45,7 +45,13 @@
       <mat-icon aria-hidden="true">add</mat-icon>
       Add item
     </button>
-    <app-exercise-list [items]="items" [selectedId]="editingId()" (itemSelected)="edit($event)" />
+    <app-exercise-list
+      [items]="items"
+      [selectedId]="editingId()"
+      searchLabel="Search items"
+      emptyMessage="No items yet."
+      (itemSelected)="edit($event)"
+    />
 
     <div editor>
       <p appEditorInitialFocus tabindex="-1">

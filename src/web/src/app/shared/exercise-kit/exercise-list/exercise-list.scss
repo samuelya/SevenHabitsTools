@@ -2,6 +2,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+
+  // Scoped here, not globally: the sort toggle's default height is below the 44 px touch target
+  // (#186).
+  --mat-standard-button-toggle-height: 44px;
 }
 
 .search {
@@ -10,5 +14,44 @@
 
 .empty {
   color: var(--mat-sys-on-surface-variant, gray);
-  padding-inline: 1rem;
+  padding: 1rem;
+}
+
+// A `<button mat-list-item>` inherits the browser's default `text-align: center` for `<button>`;
+// override it so titles read like a list, not a row of centred pills (#186).
+.exercise-list__item {
+  position: relative;
+  text-align: start;
+  min-block-size: 48px;
+}
+
+// A 3 px inline-start accent bar in addition to `aria-pressed`/the `activated` background, so the
+// current row is recognisable without relying on colour alone (#186). A real element, not
+// `::before`: `MatListItem`'s own ripple/state-layer already owns a `::before` sized to the full
+// row, which would otherwise win the cascade over a narrow bar sharing that pseudo-element.
+.exercise-list__item-accent {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  background: transparent;
+}
+
+.exercise-list__item--selected .exercise-list__item-accent {
+  background: var(--mat-sys-primary, currentColor);
+}
+
+// `text-align: start` on the row is inherited by its projected content, but the title still needs
+// its own overflow handling: 2 lines with an ellipsis, the subtitle 1 line (#186).
+::ng-deep .exercise-list__item [matListItemTitle] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+::ng-deep .exercise-list__item [matListItemLine] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
