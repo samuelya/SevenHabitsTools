@@ -8,7 +8,14 @@
   "list": {
     "addButton": "Add a script",
     "searchLabel": "Search scripts",
-    "empty": "No scripts yet."
+    "empty": "No scripts yet. Add the first pattern you noticed you inherited.",
+    "noMatch": "No scripts match your search.",
+    "deleted": "Script deleted",
+    "undo": "Undo"
+  },
+  "editor": {
+    "newTitle": "New script",
+    "editTitle": "Edit script"
   },
   "form": {
     "textLabel": "The script (what you say, do or expect)",
@@ -16,6 +23,7 @@
     "sourceLabel": "Where it comes from",
     "effectLabel": "Its effect",
     "decisionLabel": "Your decision",
+    "decisionHint": "Keep: no further fields. Rewrite or Stop: write the new script and a situation this week.",
     "newScriptLabel": "The new script you want instead",
     "newScriptRequired": "Write the new script when you're rewriting or stopping this one.",
     "situationLabel": "A situation this week where it applies",
@@ -39,8 +47,18 @@
     "stop": "Stop"
   },
   "summary": {
-    "total": "{{count}} scripts named",
-    "stopped": "{{count}} stopped",
-    "rewritten": "{{count}} rewritten"
+    "total": {
+      "one": "1 script named",
+      "other": "{{count}} scripts named"
+    },
+    "stopped": {
+      "one": "1 stopped",
+      "other": "{{count}} stopped"
+    },
+    "rewritten": {
+      "one": "1 rewritten",
+      "other": "{{count}} rewritten"
+    },
+    "doneHint": "Complete at least one script first: the script text, and for Rewrite or Stop also the new script and a situation."
   }
 }

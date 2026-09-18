@@ -7,6 +7,7 @@ import {
   labelsFrom,
   removeScript,
   requiresNewScript,
+  restoreScript,
   summarize,
   toListItem,
 } from './transition.logic';
@@ -199,6 +200,34 @@ describe('removeScript', () => {
     const result = removeScript([target, other], 's1', NOW);
 
     expect(result.find((s) => s.id === 's2')?.deletedAt).toBeUndefined();
+  });
+});
+
+describe('restoreScript', () => {
+  const RESTORE_AT = new Date('2026-01-02T00:00:00.000Z');
+
+  it('clears the tombstone and bumps updatedAt', () => {
+    const deleted = script({ id: 's1', deletedAt: NOW.toISOString() });
+
+    const result = restoreScript([deleted], 's1', RESTORE_AT);
+
+    expect(result[0].deletedAt).toBeUndefined();
+    expect(result[0].updatedAt).toBe(RESTORE_AT.toISOString());
+  });
+
+  it('leaves other scripts alone', () => {
+    const deleted = script({ id: 's1', deletedAt: NOW.toISOString() });
+    const other = script({ id: 's2' });
+
+    const result = restoreScript([deleted, other], 's1', RESTORE_AT);
+
+    expect(result.find((s) => s.id === 's2')).toEqual(other);
+  });
+
+  it('is a no-op copy when the id is not found or was never deleted', () => {
+    const live = script({ id: 's1' });
+    expect(restoreScript([live], 's1', RESTORE_AT)).toEqual([live]);
+    expect(restoreScript([live], 'missing', RESTORE_AT)).toEqual([live]);
   });
 });
 

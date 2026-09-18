@@ -1,3 +1,4 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { DOCUMENT } from '@angular/common';
 import {
@@ -9,9 +10,11 @@ import {
   computed,
   contentChild,
   effect,
+  forwardRef,
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -21,7 +24,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
-import { EditorInitialFocus } from './editor-initial-focus.directive';
+import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.directive';
 
 /**
  * The one page scaffold every exercise page uses (issue #185, parent #184): a single visually
@@ -38,12 +41,13 @@ import { EditorInitialFocus } from './editor-initial-focus.directive';
  */
 @Component({
   selector: 'app-exercise-page',
-  imports: [MatButtonModule, MatIconModule, TranslocoPipe],
+  imports: [CdkTrapFocus, MatButtonModule, MatIconModule, TranslocoPipe],
   templateUrl: './exercise-page.html',
   styleUrl: './exercise-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [{ provide: EDITOR_FOCUS_HOST, useExisting: forwardRef(() => ExercisePage) }],
 })
-export class ExercisePage {
+export class ExercisePage implements EditorFocusHost {
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
@@ -59,7 +63,10 @@ export class ExercisePage {
   readonly editorClosed = output<void>();
 
   private readonly editorHeading = viewChild<ElementRef<HTMLElement>>('editorHeading');
-  private readonly initialFocusTarget = contentChild(EditorInitialFocus, { read: ElementRef });
+  /** Set by whichever `[appEditorInitialFocus]` marker is alive inside the open editor, wherever
+   * it sits in the projected tree (see that directive on why this is a registration, not a
+   * `contentChild` query). */
+  private readonly initialFocusTarget = signal<ElementRef<HTMLElement> | null>(null);
   /** Used to collapse the intro on entering focus mode (below) — not to render it: that stays a
    * plain `<ng-content>` projection, so the page is free to project something else in `[intro]`. */
   private readonly introCard = contentChild(ExercisePromptCard);
@@ -129,6 +136,16 @@ export class ExercisePage {
     } else {
       this.triggerElement?.focus();
       this.triggerElement = null;
+    }
+  }
+
+  registerInitialFocus(element: ElementRef<HTMLElement>): void {
+    this.initialFocusTarget.set(element);
+  }
+
+  unregisterInitialFocus(element: ElementRef<HTMLElement>): void {
+    if (this.initialFocusTarget() === element) {
+      this.initialFocusTarget.set(null);
     }
   }
 

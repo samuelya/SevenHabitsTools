@@ -3,7 +3,11 @@
     <mat-label>{{ 'paradigmsTransition.form.textLabel' | transloco }}</mat-label>
     <textarea
       matInput
-      rows="2"
+      #scriptField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
       required
       [value]="script().text"
       [attr.aria-describedby]="isTouched('text') && !script().text.trim() ? 'text-error' : null"
@@ -63,6 +67,7 @@
         }}</mat-button-toggle>
       }
     </mat-button-toggle-group>
+    <p class="decision-hint">{{ 'paradigmsTransition.form.decisionHint' | transloco }}</p>
   </fieldset>
 
   @if (needsNewScript()) {
@@ -70,7 +75,10 @@
       <mat-label>{{ 'paradigmsTransition.form.newScriptLabel' | transloco }}</mat-label>
       <textarea
         matInput
-        rows="2"
+        #newScriptField
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="3"
+        cdkAutosizeMaxRows="10"
         required
         [value]="script().newScript ?? ''"
         [attr.aria-describedby]="

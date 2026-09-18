@@ -13,7 +13,12 @@
   @if (editing()) {
     <!-- `tabindex="-1"`: not a tab stop, just enough for `interactive-supports-focus` since
          `(keydown.escape)` here only ever needs a focused *descendant* (a field) to bubble up. -->
-    <div class="editor-panel" tabindex="-1" (keydown.escape)="close()">
+    <!-- The trap is the handset panel's replacement for what the old drawer layout got from
+         `MatDrawer` for free: the panel covers the app's toolbar and bottom navigation instead of
+         containing them, and `bodyInert` only takes this page's own body out of the tab order, so
+         without it Tab reaches the shell's controls hidden underneath. On desktop the list column
+         beside the editor is meant to stay reachable, so the trap is off there. -->
+    <div class="editor-panel" tabindex="-1" [cdkTrapFocus]="bodyInert()" (keydown.escape)="close()">
       <header class="editor-header">
         @if (handset()) {
           <button
