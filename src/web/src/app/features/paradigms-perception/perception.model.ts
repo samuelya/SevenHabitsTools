@@ -1,5 +1,5 @@
 import { BaseRecord } from '../../core/data/record';
-import { isBaseRecord, isOneOf } from '../../core/data/record-validators';
+import { isArrayOf, isBaseRecord, isOneOf } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
 
@@ -25,15 +25,26 @@ export interface PerceptionChain {
   readonly get: string;
 }
 
+/** The valid range of `switchDifficulty` once the user has actually rated it — `null` is "not yet
+ * rated", the `number | null` convention used elsewhere in this codebase (e.g.
+ * `pc-balance.logic.ts`'s `averageOf`) rather than an in-band sentinel a slider could be
+ * mistaken for a real answer. */
+export const SWITCH_DIFFICULTY_MIN = 1;
+export const SWITCH_DIFFICULTY_MAX = 5;
+
 /**
  * The single worksheet record for this exercise (issue #48, the playbook's **worksheet** type):
- * created on the first edit, never a list the user adds to. `switchDifficulty` uses `0` as "not
- * yet rated" — outside the 1–5 range a slider bound to those limits can ever report, so a record
- * just created by editing a different field still reads as unanswered here.
+ * created on the first edit, never a list the user adds to. `viewBRevealed` persists step 1's
+ * "show the alternative" moment as part of the record itself, not page-local UI state: a plain
+ * component signal would desync from what the user has actually seen once Angular destroys and
+ * recreates `PerceptionPage` on navigating away and back (no custom `RouteReuseStrategy` for this
+ * route), resetting to `false` even though `firstView` was already saved (review finding on this
+ * PR).
  */
 export interface PerceptionExercise extends BaseRecord {
   readonly firstView: string;
-  readonly switchDifficulty: number;
+  readonly viewBRevealed: boolean;
+  readonly switchDifficulty: number | null;
   /** Exactly 3 (`perception.logic.ts`'s `blankChangeAttempts()`); `validate()` checks the count. */
   readonly changeAttempts: readonly ChangeAttempt[];
   readonly difference: string;
@@ -63,6 +74,15 @@ function isChangeAttempt(value: unknown): value is ChangeAttempt {
   return typeof candidate['text'] === 'string' && isChangeAttemptKind(candidate['kind']);
 }
 
+const isChangeAttemptArray = isArrayOf(isChangeAttempt);
+
+function isSwitchDifficulty(value: unknown): value is number | null {
+  return (
+    value === null ||
+    (typeof value === 'number' && value >= SWITCH_DIFFICULTY_MIN && value <= SWITCH_DIFFICULTY_MAX)
+  );
+}
+
 function isPerceptionChain(value: unknown): value is PerceptionChain {
   if (typeof value !== 'object' || value === null) {
     return false;
@@ -82,10 +102,10 @@ function isPerceptionExercise(value: unknown): value is PerceptionExercise {
   const candidate = value as unknown as Record<string, unknown>;
   return (
     typeof candidate['firstView'] === 'string' &&
-    typeof candidate['switchDifficulty'] === 'number' &&
-    Array.isArray(candidate['changeAttempts']) &&
+    typeof candidate['viewBRevealed'] === 'boolean' &&
+    isSwitchDifficulty(candidate['switchDifficulty']) &&
+    isChangeAttemptArray(candidate['changeAttempts']) &&
     candidate['changeAttempts'].length === 3 &&
-    candidate['changeAttempts'].every(isChangeAttempt) &&
     typeof candidate['difference'] === 'string' &&
     isPerceptionChain(candidate['chain']) &&
     isPerceptionChain(candidate['chainAlt']) &&

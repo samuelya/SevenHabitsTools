@@ -6,13 +6,13 @@ import {
   isStepThreeComplete,
   isStepTwoComplete,
   summarize,
-  withChain,
-  withChainAlt,
+  withChainField,
   withChangeAttempt,
   withDifference,
   withFirstView,
   withReflection,
   withSwitchDifficulty,
+  withViewBRevealed,
 } from './perception.logic';
 import { PerceptionExercise } from './perception.model';
 
@@ -21,6 +21,7 @@ const NOW = new Date('2026-01-10T00:00:00.000Z');
 function completeExercise(): PerceptionExercise {
   let exercise = ensureExercise(null, NOW);
   exercise = withFirstView(exercise, 'They must be upset with me', NOW);
+  exercise = withViewBRevealed(exercise, NOW);
   exercise = withSwitchDifficulty(exercise, 4, NOW);
   exercise = withChangeAttempt(exercise, 0, { text: 'Tried a new routine' }, NOW);
   exercise = withChangeAttempt(
@@ -31,8 +32,8 @@ function completeExercise(): PerceptionExercise {
   );
   exercise = withChangeAttempt(exercise, 2, { text: 'Set a strict schedule' }, NOW);
   exercise = withDifference(exercise, 'One fades, the other sticks.', NOW);
-  exercise = withChain(exercise, { see: 'A', do: 'B', get: 'C' }, NOW);
-  exercise = withChainAlt(exercise, { see: 'D', do: 'E', get: 'F' }, NOW);
+  exercise = withChainField(exercise, 'chain', { see: 'A', do: 'B', get: 'C' }, NOW);
+  exercise = withChainField(exercise, 'chainAlt', { see: 'D', do: 'E', get: 'F' }, NOW);
   return exercise;
 }
 
@@ -41,7 +42,8 @@ describe('perception.logic', () => {
     it('creates a blank record with 3 blank change attempts when there is none yet', () => {
       const exercise = ensureExercise(null, NOW);
       expect(exercise.changeAttempts).toEqual(blankChangeAttempts());
-      expect(exercise.switchDifficulty).toBe(0);
+      expect(exercise.switchDifficulty).toBeNull();
+      expect(exercise.viewBRevealed).toBe(false);
       expect(exercise.createdAt).toBe(NOW.toISOString());
     });
 
@@ -68,9 +70,9 @@ describe('perception.logic', () => {
       expect(updated.changeAttempts[2]).toEqual(blankChangeAttempts()[2]);
     });
 
-    it('withChain and withChainAlt merge into their own chain only', () => {
+    it('withChainField merges into only the targeted chain', () => {
       const exercise = ensureExercise(null, NOW);
-      const updated = withChain(exercise, { see: 'A' }, NOW);
+      const updated = withChainField(exercise, 'chain', { see: 'A' }, NOW);
       expect(updated.chain).toEqual({ see: 'A', do: '', get: '' });
       expect(updated.chainAlt).toEqual({ see: '', do: '', get: '' });
     });
@@ -79,6 +81,13 @@ describe('perception.logic', () => {
       const exercise = ensureExercise(null, NOW);
       const updated = withReflection(exercise, 'A note', NOW);
       expect(updated.reflection).toBe('A note');
+    });
+
+    it('withViewBRevealed only ever moves false to true', () => {
+      const exercise = ensureExercise(null, NOW);
+      expect(exercise.viewBRevealed).toBe(false);
+      const updated = withViewBRevealed(exercise, NOW);
+      expect(updated.viewBRevealed).toBe(true);
     });
   });
 
@@ -106,9 +115,9 @@ describe('perception.logic', () => {
 
     it('isStepThreeComplete requires every field of both chains', () => {
       let exercise = ensureExercise(null, NOW);
-      exercise = withChain(exercise, { see: 'A', do: 'B', get: 'C' }, NOW);
+      exercise = withChainField(exercise, 'chain', { see: 'A', do: 'B', get: 'C' }, NOW);
       expect(isStepThreeComplete(exercise)).toBe(false);
-      exercise = withChainAlt(exercise, { see: 'D', do: 'E', get: 'F' }, NOW);
+      exercise = withChainField(exercise, 'chainAlt', { see: 'D', do: 'E', get: 'F' }, NOW);
       expect(isStepThreeComplete(exercise)).toBe(true);
     });
   });

@@ -103,6 +103,31 @@ describe('PerceptionPage', () => {
     expect(record()?.firstView).toBe('They must be upset with me');
   });
 
+  it('keeps the alternative view revealed after the page is destroyed and recreated, even without a switch-difficulty rating yet', async () => {
+    // Regression test for a review finding: `revealed` used to be a page-local signal seeded
+    // once from `isStepOneComplete()`, so navigating away and back (Angular destroys and
+    // recreates this component; there is no custom `RouteReuseStrategy` for this route) reset it
+    // to `false` whenever the user had revealed view B but not yet rated the slider.
+    const fixture = await setUp();
+    const host = fixture.nativeElement as HTMLElement;
+    setText(textareas(fixture)[0], 'They must be upset with me');
+    fixture.detectChanges();
+    (
+      [...host.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === 'Show what was really going on',
+      ) as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    expect(record()?.viewBRevealed).toBe(true);
+    expect(record()?.switchDifficulty).toBeNull();
+
+    fixture.destroy();
+    const recreated = TestBed.createComponent(PerceptionPage);
+    recreated.detectChanges();
+
+    expect((recreated.nativeElement as HTMLElement).textContent).toContain('The rest of the story');
+  });
+
   it('persists the switch-difficulty slider once revealed', async () => {
     const fixture = await setUp();
     const host = fixture.nativeElement as HTMLElement;

@@ -24,6 +24,7 @@ const FULL_EXERCISE: PerceptionExercise = {
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
   firstView: 'They must be upset with me',
+  viewBRevealed: true,
   switchDifficulty: 4,
   changeAttempts: [
     { text: 'Tried a new morning routine', kind: 'technique' },
@@ -67,10 +68,23 @@ describe('paradigms-perception model', () => {
     expect(registration().validate?.(FULL_EXERCISE)).toBe(true);
   });
 
+  it('validates an exercise whose switchDifficulty is not yet rated (null)', () => {
+    expect(registration().validate?.({ ...FULL_EXERCISE, switchDifficulty: null })).toBe(true);
+  });
+
+  it('rejects a switchDifficulty outside the 1-5 range', () => {
+    expect(registration().validate?.({ ...FULL_EXERCISE, switchDifficulty: 0 })).toBe(false);
+    expect(registration().validate?.({ ...FULL_EXERCISE, switchDifficulty: 6 })).toBe(false);
+  });
+
   it('rejects an exercise missing a required base or domain field', () => {
     const withoutFirstView: Record<string, unknown> = { ...FULL_EXERCISE };
     delete withoutFirstView['firstView'];
     expect(registration().validate?.(withoutFirstView)).toBe(false);
+  });
+
+  it('rejects an exercise with a non-boolean viewBRevealed', () => {
+    expect(registration().validate?.({ ...FULL_EXERCISE, viewBRevealed: 'yes' })).toBe(false);
   });
 
   it('rejects an exercise with a change attempt of the wrong kind or count', () => {

@@ -13,7 +13,8 @@
     "revealButton": "Show what was really going on",
     "viewBLabel": "The rest of the story",
     "viewB": "That coworker had just gotten a message that their child's school was calling. They were reading it as they walked, already typing a reply, and never registered anyone else in the hallway at all.",
-    "switchDifficultyLabel": "How hard was it to let go of your first interpretation?"
+    "switchDifficultyLabel": "How hard was it to let go of your first interpretation?",
+    "switchDifficultyUnrated": "Not yet rated"
   },
   "step2": {
     "stepLabel": "Character or technique",

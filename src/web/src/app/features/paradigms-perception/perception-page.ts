@@ -1,12 +1,5 @@
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
@@ -28,28 +21,34 @@ import {
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
 import { PerceptionSummary } from './perception-summary';
 import {
+  blankChain,
   blankChangeAttempts,
+  ChainKey,
   ensureExercise,
   isComplete,
-  isStepOneComplete,
-  SWITCH_DIFFICULTY_MAX,
-  SWITCH_DIFFICULTY_MIN,
   summarize,
-  withChain,
-  withChainAlt,
+  withChainField,
   withChangeAttempt,
   withDifference,
   withFirstView,
   withReflection,
   withSwitchDifficulty,
+  withViewBRevealed,
 } from './perception.logic';
 import {
   CHANGE_ATTEMPT_KINDS,
   ChangeAttemptKind,
   PERCEPTION_MODEL_KEY,
-  PerceptionChain,
   PerceptionExercise,
+  SWITCH_DIFFICULTY_MAX,
+  SWITCH_DIFFICULTY_MIN,
 } from './perception.model';
+
+/** The two chain sections step 3 renders, in display order, each with its own fixed legend key. */
+const CHAIN_SECTIONS: readonly { key: ChainKey; legendKey: string }[] = [
+  { key: 'chain', legendKey: 'currentLegend' },
+  { key: 'chainAlt', legendKey: 'altLegend' },
+];
 
 /** `[0]` is the `appGuidedStep` key the template's `<ng-template>`s use; `[1]` is the i18n
  * namespace (`step1`/`step2`/`step3`) their content and this page's own step label live under. */
@@ -105,20 +104,26 @@ export class PerceptionPage {
     () => this.exercise()?.changeAttempts ?? blankChangeAttempts(),
   );
   protected readonly hasFirstView = computed(() => Boolean(this.exercise()?.firstView.trim()));
-  /** The slider's own displayed/bound value: `switchDifficulty`'s `0` ("not yet rated") isn't a
-   * value a slider bound to `[min]="sliderMin"` (1) can ever show, so this is what both the
-   * caption and the slider itself read — never the raw field. */
-  protected readonly switchDifficultyDisplay = computed(
-    () => this.exercise()?.switchDifficulty || SWITCH_DIFFICULTY_MIN,
+  /** Step 1's "show the alternative view" moment: read straight off the record
+   * (`viewBRevealed`), not page-local UI state — a plain signal here would desync from what the
+   * user actually saw once Angular destroys and recreates this page on navigating away and back
+   * (review finding on this PR). */
+  protected readonly revealed = computed(() => this.exercise()?.viewBRevealed ?? false);
+  /** `switchDifficulty` is `null` until the user actually rates it — never a number the slider
+   * could be mistaken for a real answer (its own doc comment in `perception.model.ts`). The
+   * slider itself still needs *some* value to draw its thumb at, so this is only for that; the
+   * template shows an "unrated" caption instead of a number until `exercise()?.switchDifficulty`
+   * is set. */
+  protected readonly switchDifficultySliderValue = computed(
+    () => this.exercise()?.switchDifficulty ?? SWITCH_DIFFICULTY_MIN,
   );
-
-  // Step 1's "reveal the alternative view" moment (issue #48's acceptance criteria): a plain
-  // local signal, not derived from `exercise()` — every field edit produces a new exercise object
-  // (the document store's own immutability), so a `computed`/`linkedSignal` reading the whole
-  // record would flip this back to `false` on the very next keystroke in a *later* step, hiding a
-  // view the user already revealed. Initialised once below from whatever was already answered on
-  // load (a reload or deep link after the user got this far), then only ever set forward.
-  protected readonly revealed = signal(false);
+  protected readonly chainSections = computed(() => {
+    const exercise = this.exercise();
+    return CHAIN_SECTIONS.map((section) => ({
+      ...section,
+      chain: exercise?.[section.key] ?? blankChain(),
+    }));
+  });
 
   protected readonly selectedIndex = signal(0);
 
@@ -139,20 +144,13 @@ export class PerceptionPage {
   protected readonly done = this.progress.isDone(PERCEPTION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(PERCEPTION_MODEL_KEY);
 
-  constructor() {
-    const initial = untracked(this.exercise);
-    if (initial && isStepOneComplete(initial)) {
-      this.revealed.set(true);
-    }
-  }
-
   protected onFirstViewChanged(event: Event): void {
     const firstView = (event.target as HTMLTextAreaElement).value;
     this.updateExercise((exercise) => withFirstView(exercise, firstView, this.clock.now()));
   }
 
   protected onReveal(): void {
-    this.revealed.set(true);
+    this.updateExercise((exercise) => withViewBRevealed(exercise, this.clock.now()));
   }
 
   protected onSwitchDifficultyChanged(value: number): void {
@@ -177,14 +175,15 @@ export class PerceptionPage {
     this.updateExercise((exercise) => withDifference(exercise, difference, this.clock.now()));
   }
 
-  protected onChainFieldChanged(field: keyof PerceptionChain, event: Event): void {
+  protected onChainFieldChanged(
+    chainKey: ChainKey,
+    field: 'see' | 'do' | 'get',
+    event: Event,
+  ): void {
     const value = (event.target as HTMLTextAreaElement).value;
-    this.updateExercise((exercise) => withChain(exercise, { [field]: value }, this.clock.now()));
-  }
-
-  protected onChainAltFieldChanged(field: keyof PerceptionChain, event: Event): void {
-    const value = (event.target as HTMLTextAreaElement).value;
-    this.updateExercise((exercise) => withChainAlt(exercise, { [field]: value }, this.clock.now()));
+    this.updateExercise((exercise) =>
+      withChainField(exercise, chainKey, { [field]: value }, this.clock.now()),
+    );
   }
 
   protected onReflectionChanged(reflection: string): void {

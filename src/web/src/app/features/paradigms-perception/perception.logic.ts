@@ -1,13 +1,18 @@
 import { newRecord, touch } from '../../core/data/record';
-import { ChangeAttempt, PerceptionChain, PerceptionExercise } from './perception.model';
+import {
+  ChangeAttempt,
+  PerceptionChain,
+  PerceptionExercise,
+  SWITCH_DIFFICULTY_MAX,
+  SWITCH_DIFFICULTY_MIN,
+} from './perception.model';
 
-/** The valid range of `switchDifficulty` once the user has actually rated it — `0` is "not yet
- * rated" (see `PerceptionExercise`'s own doc comment). */
-export const SWITCH_DIFFICULTY_MIN = 1;
-export const SWITCH_DIFFICULTY_MAX = 5;
-const SWITCH_DIFFICULTY_UNSET = 0;
+/** The two chains this exercise tracks (step 3): the user's current paradigm and the
+ * alternative one, kept as sibling fields rather than an array since there are always exactly
+ * these two, each with its own fixed legend. */
+export type ChainKey = 'chain' | 'chainAlt';
 
-function blankChain(): PerceptionChain {
+export function blankChain(): PerceptionChain {
   return { see: '', do: '', get: '' };
 }
 
@@ -25,7 +30,8 @@ function blankExercise(now: Date): PerceptionExercise {
   return newRecord(
     {
       firstView: '',
-      switchDifficulty: SWITCH_DIFFICULTY_UNSET,
+      viewBRevealed: false,
+      switchDifficulty: null,
       changeAttempts: blankChangeAttempts(),
       difference: '',
       chain: blankChain(),
@@ -48,6 +54,14 @@ export function withFirstView(
   now: Date,
 ): PerceptionExercise {
   return touch({ ...exercise, firstView }, now);
+}
+
+/** Step 1's "show the alternative view" moment (review finding on this PR): persisted on the
+ * record itself, not page-local UI state, so it survives `PerceptionPage` being destroyed and
+ * recreated on navigating away and back (no custom `RouteReuseStrategy` for this route) as well
+ * as a reload. Only ever moves `false` → `true`; there is no "hide it again". */
+export function withViewBRevealed(exercise: PerceptionExercise, now: Date): PerceptionExercise {
+  return touch({ ...exercise, viewBRevealed: true }, now);
 }
 
 export function withSwitchDifficulty(
@@ -78,20 +92,16 @@ export function withDifference(
   return touch({ ...exercise, difference }, now);
 }
 
-export function withChain(
+/** Parameterized over which of the two chains changed (review finding on this PR: `withChain`/
+ * `withChainAlt` were copy-paste duplicates), the same shape `withChangeAttempt`'s `index` already
+ * uses for its own fixed-count list. */
+export function withChainField(
   exercise: PerceptionExercise,
+  chainKey: ChainKey,
   fields: Partial<PerceptionChain>,
   now: Date,
 ): PerceptionExercise {
-  return touch({ ...exercise, chain: { ...exercise.chain, ...fields } }, now);
-}
-
-export function withChainAlt(
-  exercise: PerceptionExercise,
-  fields: Partial<PerceptionChain>,
-  now: Date,
-): PerceptionExercise {
-  return touch({ ...exercise, chainAlt: { ...exercise.chainAlt, ...fields } }, now);
+  return touch({ ...exercise, [chainKey]: { ...exercise[chainKey], ...fields } }, now);
 }
 
 export function withReflection(
@@ -105,6 +115,7 @@ export function withReflection(
 export function isStepOneComplete(exercise: PerceptionExercise): boolean {
   return (
     Boolean(exercise.firstView.trim()) &&
+    exercise.switchDifficulty !== null &&
     exercise.switchDifficulty >= SWITCH_DIFFICULTY_MIN &&
     exercise.switchDifficulty <= SWITCH_DIFFICULTY_MAX
   );

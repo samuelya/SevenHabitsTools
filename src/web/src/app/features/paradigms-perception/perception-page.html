@@ -57,12 +57,16 @@
           <div class="slider-field">
             <span id="switch-difficulty-label">
               {{ 'paradigmsPerception.step1.switchDifficultyLabel' | transloco }}:
-              {{ switchDifficultyDisplay() }}
+              @if (exercise()?.switchDifficulty; as rated) {
+                {{ rated }}
+              } @else {
+                {{ 'paradigmsPerception.step1.switchDifficultyUnrated' | transloco }}
+              }
             </span>
             <mat-slider [min]="sliderMin" [max]="sliderMax" step="1" discrete>
               <input
                 matSliderThumb
-                [value]="switchDifficultyDisplay()"
+                [value]="switchDifficultySliderValue()"
                 aria-labelledby="switch-difficulty-label"
                 (valueChange)="onSwitchDifficultyChanged($event)"
               />
@@ -123,85 +127,47 @@
 
     <ng-template appGuidedStep="seeDoGet">
       <div class="step-see-do-get">
-        <fieldset class="chain-fieldset">
-          <legend>{{ 'paradigmsPerception.step3.currentLegend' | transloco }}</legend>
+        @for (section of chainSections(); track section.key) {
+          <fieldset class="chain-fieldset">
+            <legend>{{ 'paradigmsPerception.step3.' + section.legendKey | transloco }}</legend>
 
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.seeLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chain?.see ?? ''"
-              (input)="onChainFieldChanged('see', $event)"
-            ></textarea>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.seeLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.see"
+                (input)="onChainFieldChanged(section.key, 'see', $event)"
+              ></textarea>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.doLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chain?.do ?? ''"
-              (input)="onChainFieldChanged('do', $event)"
-            ></textarea>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.doLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.do"
+                (input)="onChainFieldChanged(section.key, 'do', $event)"
+              ></textarea>
+            </mat-form-field>
 
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.getLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chain?.get ?? ''"
-              (input)="onChainFieldChanged('get', $event)"
-            ></textarea>
-          </mat-form-field>
-        </fieldset>
-
-        <fieldset class="chain-fieldset">
-          <legend>{{ 'paradigmsPerception.step3.altLegend' | transloco }}</legend>
-
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.seeLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chainAlt?.see ?? ''"
-              (input)="onChainAltFieldChanged('see', $event)"
-            ></textarea>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.doLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chainAlt?.do ?? ''"
-              (input)="onChainAltFieldChanged('do', $event)"
-            ></textarea>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>{{ 'paradigmsPerception.step3.getLabel' | transloco }}</mat-label>
-            <textarea
-              matInput
-              cdkTextareaAutosize
-              cdkAutosizeMinRows="2"
-              cdkAutosizeMaxRows="6"
-              [value]="exercise()?.chainAlt?.get ?? ''"
-              (input)="onChainAltFieldChanged('get', $event)"
-            ></textarea>
-          </mat-form-field>
-        </fieldset>
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.getLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.get"
+                (input)="onChainFieldChanged(section.key, 'get', $event)"
+              ></textarea>
+            </mat-form-field>
+          </fieldset>
+        }
       </div>
     </ng-template>
   </app-guided-stepper>
