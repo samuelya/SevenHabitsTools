@@ -1,7 +1,35 @@
+.transition-summary mat-card-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
 .transition-summary .count {
   margin: 0;
+  padding-inline-end: 1.5rem;
+  border-inline-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.transition-summary .count:last-child {
+  padding-inline-end: 0;
+  border-inline-end: none;
 }
 
 .transition-summary .total {
   font-weight: 600;
+}
+
+// Stacked below the handset breakpoint (`HANDSET_QUERY`, `core/layout/breakpoints.ts`): the
+// divider between counts reads as a column rule rather than a separator once there's no room for
+// a row.
+@media (max-width: 599.98px) {
+  .transition-summary mat-card-content {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .transition-summary .count {
+    padding-inline-end: 0;
+    border-inline-end: none;
+  }
 }
