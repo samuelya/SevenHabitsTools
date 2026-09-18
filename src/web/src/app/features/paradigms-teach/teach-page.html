@@ -1,0 +1,47 @@
+<app-exercise-page
+  [title]="'paradigmsTeach.prompt.title' | transloco"
+  [editing]="hasDetail()"
+  [editorTitle]="
+    (isNewEntry() ? 'paradigmsTeach.editor.newTitle' : 'paradigmsTeach.editor.editTitle')
+      | transloco
+  "
+  [editorStatus]="editorStatus()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [prompt]="'paradigmsTeach.prompt.text' | transloco"
+    [chapterReference]="'paradigmsTeach.prompt.chapterReference' | transloco"
+    [whyItMatters]="'paradigmsTeach.prompt.whyItMatters' | transloco"
+  />
+
+  <app-exercise-list
+    [items]="items()"
+    [selectedId]="itemId()"
+    [searchLabel]="'paradigmsTeach.list.searchLabel' | transloco"
+    [emptyMessage]="'paradigmsTeach.list.empty' | transloco"
+    [noMatchMessage]="'paradigmsTeach.list.noMatch' | transloco"
+    (itemSelected)="select($event)"
+  />
+
+  <div editor>
+    @if (draft(); as draft) {
+      <app-teach-item-form
+        [entry]="draft"
+        [sharedAt]="selectedEntry()?.sharedAt ?? null"
+        (changed)="onItemChanged($event)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    <app-teach-summary [summary]="summary()" />
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [disabledHint]="'paradigmsTeach.summary.doneHint' | transloco"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

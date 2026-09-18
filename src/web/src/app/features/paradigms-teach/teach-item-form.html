@@ -1,0 +1,79 @@
+<form class="teach-item-form">
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'paradigmsTeach.form.keyIdeaLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #keyIdeaField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
+      required
+      [attr.maxlength]="maxKeyIdeaLength"
+      [value]="entry().keyIdea"
+      [attr.aria-describedby]="
+        isTouched('keyIdea') && keyIdeaInvalid() ? 'key-idea-error' : 'key-idea-count'
+      "
+      (input)="onKeyIdeaInput($event)"
+      (blur)="touch('keyIdea')"
+    ></textarea>
+  </mat-form-field>
+  <p id="key-idea-count" class="field-hint">
+    {{
+      'paradigmsTeach.form.keyIdeaCount'
+        | transloco: { count: entry().keyIdea.length, max: maxKeyIdeaLength }
+    }}
+  </p>
+  <!-- Not `<mat-error>`: this simple signal-driven form has no `NgControl` for `mat-form-field` to
+       report an `errorState` from — see the playbook's "Component and logic split" section. -->
+  @if (isTouched('keyIdea') && keyIdeaInvalid()) {
+    <p id="key-idea-error" class="field-error" role="alert">
+      {{ 'paradigmsTeach.form.keyIdeaRequired' | transloco }}
+    </p>
+  }
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'paradigmsTeach.form.personLabel' | transloco }}</mat-label>
+    <input matInput type="text" [value]="entry().person ?? ''" (input)="onPersonInput($event)" />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'paradigmsTeach.form.plannedAtLabel' | transloco }}</mat-label>
+    <input matInput type="date" [value]="entry().plannedAt" (input)="onPlannedAtInput($event)" />
+  </mat-form-field>
+
+  <fieldset class="option-group">
+    <legend>{{ 'paradigmsTeach.form.statusLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="entry().status"
+      [attr.aria-label]="'paradigmsTeach.form.statusLabel' | transloco"
+      (change)="onStatusChange($event.value)"
+    >
+      @for (status of statuses; track status) {
+        <mat-button-toggle [value]="status">{{
+          'paradigmsTeach.status.' + status | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+    @if (sharedAt(); as sharedAt) {
+      <p class="shared-at-hint">
+        {{
+          'paradigmsTeach.form.sharedAt'
+            | transloco: { date: (sharedAt | appDate: { dateStyle: 'medium' }) }
+        }}
+      </p>
+    }
+  </fieldset>
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'paradigmsTeach.form.learnedLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
+      [value]="entry().learned ?? ''"
+      (input)="onLearnedInput($event)"
+    ></textarea>
+  </mat-form-field>
+</form>

@@ -5,6 +5,9 @@ export interface ExerciseListItem {
   readonly title: string;
   readonly subtitle?: string;
   readonly done?: boolean;
+  /** Visually highlights the row (issue #52's overdue teach-it commitments) — generic across any
+   * future exercise with a row that needs the user's attention, not specific to what makes it so. */
+  readonly warning?: boolean;
 }
 
 export type ExerciseListSort = 'title' | 'status';

@@ -1,0 +1,12 @@
+<mat-card class="teach-summary" appearance="outlined">
+  <mat-card-content>
+    <p class="count total">
+      {{
+        'paradigmsTeach.summary.shared' | appPlural: summary().shared : { total: summary().total }
+      }}
+    </p>
+    <p class="count">
+      {{ 'paradigmsTeach.summary.overdue' | appPlural: summary().overdue }}
+    </p>
+  </mat-card-content>
+</mat-card>

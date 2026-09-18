@@ -1,0 +1,135 @@
+import { Signal, computed } from '@angular/core';
+import { BaseRecord } from '../../core/data/record';
+import {
+  isArrayOf,
+  isBaseRecord,
+  isOneOf,
+  isOptionalString,
+} from '../../core/data/record-validators';
+import { featureStore } from '../../core/data/feature-store';
+import { getRegisteredModels, registerModel } from '../../core/data/registry';
+import { ExerciseHubStatus, registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { registerHubAction } from '../../shared/exercise-kit/hub-action-registry';
+import { sharedCount } from './teach.logic';
+
+/** The ten book chapters a "teach it" commitment can be made for (issue #52's "Implementation
+ * notes"): the nine habit hubs plus "Inside-Out Again", which has no habit hub of its own. Stored
+ * as a key, never translated text (architecture issue #1 §6). */
+export const TEACH_CHAPTERS = [
+  'paradigms',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'h7',
+  'interdependence',
+  'insideOutAgain',
+] as const;
+export type TeachChapter = (typeof TEACH_CHAPTERS)[number];
+
+/** Whether the user has shared the chapter's key idea yet. */
+export const TEACH_STATUSES = ['planned', 'shared', 'skipped'] as const;
+export type TeachStatus = (typeof TEACH_STATUSES)[number];
+
+/**
+ * One chapter's "teach it to learn it" commitment (issue #52). At most one live entry per
+ * `chapter` (`teach.logic.ts`'s `upsertEntry()` enforces this); `keyIdea` is the user's own
+ * paraphrase of the chapter, required and ≤ 280 chars — form validation, not `validate()`
+ * (architecture issue #1 §6: "checks structure, not business rules"). `plannedAt` defaults to
+ * today + 2 days; `sharedAt` is stamped from `CLOCK` the first time `status` becomes `'shared'`.
+ */
+export interface TeachEntry extends BaseRecord {
+  readonly chapter: TeachChapter;
+  readonly keyIdea: string;
+  readonly person?: string;
+  readonly plannedAt: string;
+  readonly sharedAt?: string;
+  readonly status: TeachStatus;
+  readonly learned?: string;
+}
+
+/** The fields a caller supplies when creating or editing an entry; base record fields come from
+ * `newRecord()`. */
+export type TeachEntryFields = Omit<TeachEntry, keyof BaseRecord>;
+
+/** The model key `featureStore<TeachEntry[]>()` callers resolve, and this exercise's `exerciseId`
+ * (playbook §1: the model key is always the `exerciseId`). */
+export const TEACH_MODEL_KEY = 'paradigms-teach';
+
+/** The document path this model lives at (issue #52's data model). */
+export const TEACH_PATH = 'habits.paradigms.teach';
+
+/** This exercise's mounted URL (`route-registry.ts`, and `registerExercise()`'s `route` below) —
+ * shared with `teach-page.ts`'s own navigation so the two can never drift apart. */
+export const TEACH_ROUTE = 'habits/paradigms/teach';
+
+/** Guards a route query param (e.g. a "teach this" deep link's `?chapter=`) against the fixed
+ * chapter keys. */
+export const isTeachChapter = isOneOf(TEACH_CHAPTERS);
+const isTeachStatus = isOneOf(TEACH_STATUSES);
+
+function isTeachEntry(value: unknown): value is TeachEntry {
+  if (!isBaseRecord(value)) {
+    return false;
+  }
+  const candidate = value as unknown as Record<string, unknown>;
+  return (
+    isTeachChapter(candidate['chapter']) &&
+    typeof candidate['keyIdea'] === 'string' &&
+    isOptionalString(candidate['person']) &&
+    typeof candidate['plannedAt'] === 'string' &&
+    isOptionalString(candidate['sharedAt']) &&
+    isTeachStatus(candidate['status']) &&
+    isOptionalString(candidate['learned'])
+  );
+}
+
+const isTeachEntryArray = isArrayOf(isTeachEntry);
+
+/**
+ * Registers the `paradigms-teach` model, exercise, hub action and hub status, a no-op if already
+ * done — same idempotent guard as `registerExerciseKitModel()`
+ * (`shared/exercise-kit/exercise-kit.model.ts`), needed because this project's unit tests run with
+ * Vitest `isolate: false` (shared module state across spec files).
+ */
+export function registerTeachModel(): void {
+  if (getRegisteredModels().some((model) => model.key === TEACH_MODEL_KEY)) {
+    return;
+  }
+  registerModel<TeachEntry[]>({
+    key: TEACH_MODEL_KEY,
+    path: TEACH_PATH,
+    defaults: () => [],
+    validate: isTeachEntryArray,
+  });
+  registerExercise({
+    exerciseId: TEACH_MODEL_KEY,
+    habit: 'paradigms',
+    titleKey: 'habits.exercises.paradigms-teach.title',
+    summaryKey: 'habits.exercises.paradigms-teach.summary',
+    icon: 'campaign',
+    route: TEACH_ROUTE,
+    statusFactory: (): Signal<ExerciseHubStatus | null> => {
+      const store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
+      return computed(() => {
+        const count = sharedCount(store.value());
+        return count > 0 ? { key: 'habits.exercises.paradigms-teach.sharedCount', count } : null;
+      });
+    },
+  });
+  // "Teach this" (issue #52): every habit hub gets a shortcut to this exercise, pre-selecting the
+  // chapter that matches the hub it's shown on. `queryParams` is generic (`hub-action-registry.ts`
+  // just forwards the current `HabitId`) — this feature is the only thing that knows the query
+  // param is named `chapter` and that a `HabitId` is also one of `TEACH_CHAPTERS`.
+  registerHubAction({
+    id: TEACH_MODEL_KEY,
+    labelKey: 'habits.exercises.paradigms-teach.hubActionLabel',
+    icon: 'campaign',
+    route: TEACH_ROUTE,
+    queryParams: (habit) => ({ chapter: habit }),
+  });
+}
+
+registerTeachModel();

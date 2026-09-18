@@ -43,6 +43,16 @@
   background: var(--mat-sys-primary, currentColor);
 }
 
+// `warning` (issue #52) wins over the selected accent when both are true — same reasoning as the
+// icon slot's own precedence in the template: it's what needs the user's attention.
+.exercise-list__item--warning .exercise-list__item-accent {
+  background: var(--mat-sys-error, darkred);
+}
+
+.exercise-list__item-warning-icon {
+  color: var(--mat-sys-error, darkred);
+}
+
 // `text-align: start` on the row is inherited by its projected content, but the title still needs
 // its own overflow handling: 2 lines with an ellipsis, the subtitle 1 line (#186).
 ::ng-deep .exercise-list__item [matListItemTitle] {

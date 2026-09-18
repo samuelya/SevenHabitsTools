@@ -68,6 +68,14 @@ describe('ExerciseList', () => {
     expect(current?.classList).toContain('exercise-list__item--selected');
   });
 
+  it('highlights a warning item, even when it is also done (issue #52)', () => {
+    const fixture = setUp([{ id: 'a', title: 'Overdue item', done: true, warning: true }]);
+
+    const row = itemButtons(fixture)[0];
+    expect(row.classList).toContain('exercise-list__item--warning');
+    expect(row.querySelector('mat-icon')?.textContent?.trim()).toBe('warning');
+  });
+
   it('filters as the search query changes', () => {
     const fixture = setUp();
     fixture.componentInstance['query'].set('proactive');

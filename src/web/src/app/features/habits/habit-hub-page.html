@@ -3,6 +3,22 @@
   <p class="hub-intro">{{ 'habits.hub.intro.' + definition.id | transloco }}</p>
 }
 
+@if (hubActions().length) {
+  <div class="hub-actions">
+    @for (action of hubActions(); track action.id) {
+      <a
+        mat-stroked-button
+        class="hub-action"
+        [routerLink]="'/' + action.route"
+        [queryParams]="queryParamsFor(action)"
+      >
+        <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+        {{ action.labelKey | transloco }}
+      </a>
+    }
+  </div>
+}
+
 @if (continueRoute(); as route) {
   <a mat-flat-button class="hub-continue" [routerLink]="'/' + route">
     <mat-icon class="flip-in-rtl" aria-hidden="true">play_arrow</mat-icon>
@@ -33,6 +49,13 @@
                     }
             }}
           </span>
+        }
+        @if (statusFor(exercise); as statusSignal) {
+          @if (statusSignal(); as status) {
+            <span matListItemLine class="hub-exercise-status">
+              {{ status.key | appPlural: status.count }}
+            </span>
+          }
         }
       </a>
     }

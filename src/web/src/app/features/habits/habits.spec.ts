@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { Signal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
@@ -6,11 +6,17 @@ import { HABITS } from '../../core/habits/habits';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
+  ExerciseHubStatus,
   ExerciseRegistryEntry,
   registerExercise,
   resetExerciseRegistryForTesting,
   snapshotExerciseRegistryForTesting,
 } from '../../shared/exercise-kit/exercise-registry';
+import {
+  registerHubAction,
+  resetHubActionRegistryForTesting,
+  snapshotHubActionRegistryForTesting,
+} from '../../shared/exercise-kit/hub-action-registry';
 import { configureApp, renderShellAt } from '../../testing/app-test-setup';
 import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
 
@@ -167,6 +173,64 @@ describe('Habits feature', () => {
       expect(h2Item.querySelector('.habit-progress-count')?.textContent?.trim()).toBe(
         TestBed.inject(TranslocoService).translate('habits.progress', { done: 1, total: 2 }),
       );
+    });
+  });
+
+  describe('hub actions and status (#52)', () => {
+    let actionSnapshot: ReturnType<typeof snapshotHubActionRegistryForTesting>;
+    let exerciseSnapshot: ReturnType<typeof snapshotExerciseRegistryForTesting>;
+
+    beforeEach(() => {
+      actionSnapshot = snapshotHubActionRegistryForTesting();
+      resetHubActionRegistryForTesting();
+      exerciseSnapshot = snapshotExerciseRegistryForTesting();
+      resetExerciseRegistryForTesting();
+    });
+
+    afterEach(() => {
+      resetHubActionRegistryForTesting(actionSnapshot);
+      resetExerciseRegistryForTesting(exerciseSnapshot);
+    });
+
+    it('renders every registered hub action on every habit hub, with query params built from that habit', async () => {
+      registerHubAction({
+        id: 'teach-this',
+        labelKey: 'nav.back',
+        icon: 'campaign',
+        route: 'habits/paradigms-teach/teach',
+        queryParams: (habit) => ({ chapter: habit }),
+      });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h3');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const action = host.querySelector('app-habit-hub-page .hub-action') as HTMLAnchorElement;
+      expect(action).not.toBeNull();
+      expect(action.getAttribute('href')).toBe('/habits/paradigms-teach/teach?chapter=h3');
+    });
+
+    it("renders a registered exercise's status factory output next to it", async () => {
+      // A real plural-shaped key (`habits.exercises.paradigms-teach.sharedCount`, issue #52) —
+      // `AppPluralPipe` needs `.one`/`.other` categories to resolve, which a plain string key
+      // (e.g. `nav.back`) doesn't have.
+      const status = signal<ExerciseHubStatus | null>({
+        key: 'habits.exercises.paradigms-teach.sharedCount',
+        count: 2,
+      });
+      registerExercise({
+        exerciseId: 'h3-example',
+        habit: 'h3',
+        titleKey: 'titles.paradigms',
+        summaryKey: 'nav.back',
+        icon: 'flag',
+        route: 'habits/h3/example',
+        statusFactory: (): Signal<ExerciseHubStatus | null> => status,
+      });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h3');
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(host.querySelector('app-habit-hub-page .hub-exercise-status')).not.toBeNull();
     });
   });
 
