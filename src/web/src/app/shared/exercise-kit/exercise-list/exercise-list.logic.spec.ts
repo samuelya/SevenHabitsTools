@@ -49,4 +49,8 @@ describe('sortExerciseItems', () => {
     sortExerciseItems(ITEMS, 'status');
     expect(ITEMS).toEqual(copy);
   });
+
+  it("leaves the given order untouched for 'none' (issue #52's fixed book order)", () => {
+    expect(sortExerciseItems(ITEMS, 'none').map((item) => item.id)).toEqual(['b', 'a', 'c']);
+  });
 });

@@ -59,7 +59,7 @@
       <p class="shared-at-hint">
         {{
           'paradigmsTeach.form.sharedAt'
-            | transloco: { date: (sharedAt | appDate: { dateStyle: 'medium' }) }
+            | transloco: { date: (localDate(sharedAt) | appDate: { dateStyle: 'medium' }) }
         }}
       </p>
     }

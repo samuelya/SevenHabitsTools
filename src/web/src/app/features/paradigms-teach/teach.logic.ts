@@ -1,4 +1,5 @@
 import { isLive, newRecord } from '../../core/data/record';
+import { localDateString } from '../../shared/exercise-kit/assessment-history.logic';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
   TEACH_CHAPTERS,
@@ -25,15 +26,22 @@ export function isKeyIdeaValid(keyIdea: string): boolean {
   return trimmed.length > 0 && keyIdea.length <= KEY_IDEA_MAX_LENGTH;
 }
 
-/** `YYYY-MM-DD`, the ISO date format every date in this document is stored as (architecture issue
- * #1 §6). */
-function isoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+/** A native `<input type="date">` emits either a full `YYYY-MM-DD` or `''` (clearing the field) —
+ * never a partial value. `''` must be rejected at this boundary (CLAUDE.md "validate input at
+ * system boundaries"): `plannedAt` is required (`TeachEntry.plannedAt: string`, not optional), and
+ * an empty string would make `isOverdue()` compare against `'' < today`, which is permanently
+ * `true` — a chapter the user only *tried* to clear would show "Overdue" forever, including after
+ * export/import (`isTeachEntry`'s `typeof === 'string'` structural check lets `''` through). */
+export function isValidPlannedAt(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
-/** `plannedAt`'s default: today + 48 hours (issue #52's acceptance criteria). */
+/** `plannedAt`'s default: today + 48 hours (issue #52's acceptance criteria). `localDateString`
+ * (`shared/exercise-kit/assessment-history.logic.ts`), not `now.toISOString().slice(0, 10)`: the
+ * latter is the UTC day, which mis-dates "today" (and, by extension, the +48h default) near a day
+ * boundary in any non-UTC timezone — the exact bug #49/#50's review already caught once. */
 export function defaultPlannedAt(now: Date): string {
-  return isoDate(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
+  return localDateString(new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000));
 }
 
 /** The live entry for `chapter`, if the user has filled it in yet ("at most one live entry per
@@ -69,17 +77,24 @@ export function upsertEntry(
   );
 }
 
+/** Stamps `sharedAt` the moment `status` first becomes `'shared'`; clears it again once `status`
+ * moves away from `'shared'` — a stale "Shared &lt;date&gt;" hint under a since-reopened Planned or
+ * Skipped toggle would be actively misleading, not just unused data (review finding on #52's PR). */
 function withSharedAt(entry: TeachEntry, previous: TeachEntry | undefined, now: Date): TeachEntry {
-  if (entry.status === 'shared' && previous?.status !== 'shared') {
-    return { ...entry, sharedAt: isoDate(now) };
+  if (entry.status !== 'shared') {
+    return entry.sharedAt === undefined ? entry : { ...entry, sharedAt: undefined };
   }
-  return entry;
+  if (previous?.status === 'shared') {
+    return entry;
+  }
+  return { ...entry, sharedAt: localDateString(now) };
 }
 
 /** Whether `entry` is overdue: still `'planned'` past its `plannedAt` date (issue #52's
- * acceptance criteria). */
+ * acceptance criteria). `localDateString`, not the UTC day — see `defaultPlannedAt`'s own doc
+ * comment for why. */
 export function isOverdue(entry: Pick<TeachEntry, 'status' | 'plannedAt'>, now: Date): boolean {
-  return entry.status === 'planned' && entry.plannedAt < isoDate(now);
+  return entry.status === 'planned' && entry.plannedAt < localDateString(now);
 }
 
 /** How many live entries are `'shared'` — the count shown on the Paradigms hub (issue #52's

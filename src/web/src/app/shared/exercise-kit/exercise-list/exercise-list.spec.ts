@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExerciseList } from './exercise-list';
-import { ExerciseListItem, LIST_TOOLS_MIN_ITEMS } from './exercise-list.logic';
+import { ExerciseListItem, ExerciseListSort, LIST_TOOLS_MIN_ITEMS } from './exercise-list.logic';
 
 const ITEMS: ExerciseListItem[] = [
   { id: 'b', title: 'Begin with the end', subtitle: 'Mission statement', done: false },
@@ -20,6 +20,7 @@ function setUp(
   items: readonly ExerciseListItem[] = ITEMS,
   selectedId: string | null = null,
   noMatchMessage?: string,
+  initialSort?: ExerciseListSort,
 ) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
@@ -31,6 +32,9 @@ function setUp(
   fixture.componentRef.setInput('emptyMessage', 'No items yet.');
   if (noMatchMessage !== undefined) {
     fixture.componentRef.setInput('noMatchMessage', noMatchMessage);
+  }
+  if (initialSort !== undefined) {
+    fixture.componentRef.setInput('initialSort', initialSort);
   }
   fixture.detectChanges();
   return fixture;
@@ -74,6 +78,29 @@ describe('ExerciseList', () => {
     const row = itemButtons(fixture)[0];
     expect(row.classList).toContain('exercise-list__item--warning');
     expect(row.querySelector('mat-icon')?.textContent?.trim()).toBe('warning');
+  });
+
+  it('carries both the selected and warning classes on a row that is both (issue #52)', () => {
+    const fixture = setUp(
+      [{ id: 'a', title: 'Overdue item', warning: true }],
+      'a',
+      undefined,
+      'none',
+    );
+
+    const row = itemButtons(fixture)[0];
+    expect(row.classList).toContain('exercise-list__item--selected');
+    expect(row.classList).toContain('exercise-list__item--warning');
+  });
+
+  it("keeps the given item order for initialSort 'none' (issue #52)", () => {
+    const fixture = setUp(ITEMS, null, undefined, 'none');
+
+    // Unsorted: "Begin with the end" (b) stays before "Be proactive" (a), unlike the alphabetical
+    // default.
+    const titles = itemButtons(fixture).map((el) => el.textContent?.trim());
+    expect(titles[0]).toContain('Begin with the end');
+    expect(titles[1]).toContain('Be proactive');
   });
 
   it('filters as the search query changes', () => {

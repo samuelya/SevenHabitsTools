@@ -81,9 +81,22 @@ describe('TeachPage', () => {
     expect(markDone.disabled).toBe(true);
   });
 
+  it('shows the chapters in book order, not alphabetically (review finding on this PR)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    const titles = [...host.querySelectorAll('app-exercise-list mat-nav-list button')].map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(titles[0]).toContain('Paradigms and principles');
+    expect(titles[1]).toContain('Habit 1');
+    expect(titles[8]).toContain('Paradigms of interdependence');
+    expect(titles[9]).toContain('Inside-Out again');
+  });
+
   it('opens a chapter with no entry yet in the full-screen editor, defaulted to "planned"', async () => {
     const harness = await setUp();
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/h1`);
@@ -94,14 +107,14 @@ describe('TeachPage', () => {
 
   it('creates the chapter entry on first edit and shows it in the list, enabling Mark done once shared', async () => {
     const harness = await setUp();
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     const host = harness.routeNativeElement as HTMLElement;
 
     itemForm(harness).changed.emit({ keyIdea: 'Choose your response' });
     itemForm(harness).changed.emit({ status: 'shared' });
     harness.detectChanges();
 
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')[0].textContent).toContain(
+    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')[1].textContent).toContain(
       'Shared',
     );
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
@@ -110,7 +123,7 @@ describe('TeachPage', () => {
 
   it('marks done and reopens through DoneToggle', async () => {
     const harness = await setUp();
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
     harness.detectChanges();
     const host = harness.routeNativeElement as HTMLElement;
@@ -149,7 +162,7 @@ describe('TeachPage', () => {
     const harness = await setUp();
     const page = pageInstance(harness);
 
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     expect(pageInstance(harness)).toBe(page);
 
     await closeEditor(harness);
@@ -169,7 +182,7 @@ describe('TeachPage', () => {
 
   it('shows the summary counts for shared and overdue entries', async () => {
     const harness = await setUp();
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
     harness.detectChanges();
 
@@ -180,13 +193,13 @@ describe('TeachPage', () => {
 
   it("updates a chapter's translated subtitle when the active language changes", async () => {
     const harness = await setUp();
-    await selectChapter(harness, 0);
+    await selectChapter(harness, 1);
     itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
     harness.detectChanges();
     const host = harness.routeNativeElement as HTMLElement;
-    // The selected row's own CSS class, not a list position — English and Arabic sort the ten
-    // translated chapter titles into a different order, so a row's *index* isn't stable across
-    // the language switch this test makes, only its identity as "the selected one" is.
+    // The selected row's own CSS class, not a list position: robust regardless of list order,
+    // even though the fixed book order (`initialSort="none"`) happens to keep the index stable
+    // across this language switch too.
     const selectedRow = () =>
       host.querySelector('app-exercise-list .exercise-list__item--selected');
 

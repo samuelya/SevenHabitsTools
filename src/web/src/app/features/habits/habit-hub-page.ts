@@ -15,7 +15,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
-import { HabitId, findHabit, isHabitId } from '../../core/habits/habits';
+import { findHabit, isHabitId } from '../../core/habits/habits';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
   ExerciseHubStatus,
@@ -76,16 +76,33 @@ export class HabitHubPage {
     nextExerciseRoute(this.exercises(), (exerciseId) => this.progress.isDone(exerciseId)()),
   );
 
-  /** Every hub action (issue #52), shown on every habit's hub — unlike `exercises()`, not filtered
-   * to this one habit, since an action's target (e.g. "teach this chapter") makes sense from any
-   * hub. */
+  /** Every hub action (issue #52), shown on every *valid* habit's hub — unlike `exercises()`, not
+   * filtered to one habit (an action's target, e.g. "teach this chapter", makes sense from any
+   * hub), but still gated on `isHabitId()` like every other member here: an invalid `:habit` never
+   * renders a real hub (see `habitDefinition()`), so it shouldn't offer hub actions either. */
   protected readonly hubActions = computed<readonly HubActionEntry[]>(() =>
-    getRegisteredHubActions(),
+    isHabitId(this.habit()) ? getRegisteredHubActions() : [],
   );
 
+  /** One memoized `computed()` per action id (same reasoning as `statusFor()`'s own cache below):
+   * a template binding calls this on every render, and `habit-hub-page.html`'s `[queryParams]`
+   * binding re-runs `Object.is` change detection on whatever this returns — a plain method
+   * allocating a fresh object every call would make that binding "change" every check even while
+   * the habit hasn't. `computed()` instead returns the same reference until `this.habit()` itself
+   * changes (a real possibility: this page's route reuses one instance across `/habits/h1` ->
+   * `/habits/h2`). */
+  private readonly queryParamsCache = new Map<string, Signal<Record<string, string>>>();
+
   protected queryParamsFor(action: HubActionEntry): Record<string, string> {
-    const habit = this.habit();
-    return action.queryParams && isHabitId(habit) ? action.queryParams(habit as HabitId) : {};
+    let params = this.queryParamsCache.get(action.id);
+    if (!params) {
+      params = computed(() => {
+        const habit = this.habit();
+        return action.queryParams && isHabitId(habit) ? action.queryParams(habit) : {};
+      });
+      this.queryParamsCache.set(action.id, params);
+    }
+    return params();
   }
 
   /** One memoized status `Signal` per `exerciseId` (same reasoning as `ExerciseProgress`'s own

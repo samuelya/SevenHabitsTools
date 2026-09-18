@@ -1,6 +1,19 @@
-import { getRegisteredModels, validateDocument } from '../../core/data/registry';
-import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
-import { getRegisteredHubActions } from '../../shared/exercise-kit/hub-action-registry';
+import {
+  getRegisteredModels,
+  resetRegistryForTesting,
+  snapshotRegistryForTesting,
+  validateDocument,
+} from '../../core/data/registry';
+import {
+  getRegisteredExercises,
+  resetExerciseRegistryForTesting,
+  snapshotExerciseRegistryForTesting,
+} from '../../shared/exercise-kit/exercise-registry';
+import {
+  getRegisteredHubActions,
+  resetHubActionRegistryForTesting,
+  snapshotHubActionRegistryForTesting,
+} from '../../shared/exercise-kit/hub-action-registry';
 import { registerTeachModel, TeachEntry, TEACH_MODEL_KEY, TEACH_PATH } from './teach.model';
 
 // Vitest here runs with `isolate: false` (shared module state) — see `transition.model.spec.ts`
@@ -96,5 +109,45 @@ describe('paradigms-teach model', () => {
   it('passes validateDocument() when the document contains this slice (export/import guarantee)', () => {
     const issues = validateDocument({ habits: { paradigms: { teach: [FULL_ENTRY] } } });
     expect(issues.filter((issue) => issue.path === TEACH_PATH)).toEqual([]);
+  });
+
+  describe('independent registry guards (review finding on this PR)', () => {
+    it('re-registers the exercise if only the exercise registry was reset', () => {
+      const snapshot = snapshotExerciseRegistryForTesting();
+      resetExerciseRegistryForTesting();
+
+      registerTeachModel();
+
+      expect(
+        getRegisteredExercises().some((exercise) => exercise.exerciseId === TEACH_MODEL_KEY),
+      ).toBe(true);
+      resetExerciseRegistryForTesting(snapshot);
+    });
+
+    it('re-registers the hub action if only the hub-action registry was reset', () => {
+      const snapshot = snapshotHubActionRegistryForTesting();
+      resetHubActionRegistryForTesting();
+
+      registerTeachModel();
+
+      expect(getRegisteredHubActions().some((action) => action.id === TEACH_MODEL_KEY)).toBe(true);
+      resetHubActionRegistryForTesting(snapshot);
+    });
+  });
+
+  it("statusFactory returns null instead of throwing when the model registry doesn't hold this key", () => {
+    const entry = getRegisteredExercises().find(
+      (exercise) => exercise.exerciseId === TEACH_MODEL_KEY,
+    );
+    if (!entry?.statusFactory) {
+      throw new Error('paradigms-teach exercise was not registered with a statusFactory');
+    }
+    const snapshot = snapshotRegistryForTesting();
+    resetRegistryForTesting();
+
+    const status = entry.statusFactory();
+
+    expect(status()).toBeNull();
+    resetRegistryForTesting(snapshot);
   });
 });

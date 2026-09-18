@@ -43,10 +43,26 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
   readonly emptyMessage = input.required<string>();
   /** Shown when items exist but none match the query; defaults to `emptyMessage`. */
   readonly noMatchMessage = input<string>();
+  /** The sort the list starts in (issue #52) — `'title'` for an arbitrary add-your-own list (the
+   * default every existing caller relies on), `'none'` for a caller whose `items()` order is
+   * already meaningful (e.g. book order) and would otherwise be scrambled alphabetically. Read
+   * through `sort()` below (a `computed()` falling back to this input, not a plain signal seeded
+   * from it): `TestBed.createComponent()` — and, in principle, any caller that sets an input after
+   * construction rather than through a template binding present at creation — runs this class's
+   * field initializers with every `input()` still at its declared default, so a `signal(this
+   * .initialSort())` field initializer would permanently capture `'title'` regardless of what a
+   * test's later `componentRef.setInput('initialSort', ...)` sets it to (review finding on #52's
+   * PR: the "book order" fix silently didn't apply in exactly that harness).
+   */
+  readonly initialSort = input<ExerciseListSort>('title');
   readonly itemSelected = output<string>();
 
   protected readonly query = signal('');
-  protected readonly sort = signal<ExerciseListSort>('title');
+  /** `null` until the user picks a sort explicitly; `sort()` falls back to `initialSort()` until
+   * then, so the starting order is whatever the caller asked for but the user's own choice always
+   * wins once made. */
+  private readonly sortOverride = signal<ExerciseListSort | null>(null);
+  protected readonly sort = computed(() => this.sortOverride() ?? this.initialSort());
 
   /** Search and sort only once there's enough to search/sort through (#186). */
   protected readonly showTools = computed(() => this.items().length >= LIST_TOOLS_MIN_ITEMS);
@@ -63,5 +79,9 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
 
   protected onQueryInput(event: Event): void {
     this.query.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onSortChange(sort: ExerciseListSort): void {
+    this.sortOverride.set(sort);
   }
 }

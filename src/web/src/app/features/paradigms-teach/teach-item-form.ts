@@ -17,8 +17,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/locale.pipe';
+import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
-import { KEY_IDEA_MAX_LENGTH, isKeyIdeaValid } from './teach.logic';
+import { KEY_IDEA_MAX_LENGTH, isKeyIdeaValid, isValidPlannedAt } from './teach.logic';
 import { TEACH_STATUSES, TeachEntryFields, TeachStatus } from './teach.model';
 
 /**
@@ -101,7 +102,21 @@ export class TeachItemForm {
   }
 
   protected onPlannedAtInput(event: Event): void {
-    this.changed.emit({ plannedAt: (event.target as HTMLInputElement).value });
+    const value = (event.target as HTMLInputElement).value;
+    // Ignore an incomplete/cleared value rather than persisting it — see `isValidPlannedAt`'s own
+    // doc comment for why a stored `''` would be worse than just not applying this edit.
+    if (isValidPlannedAt(value)) {
+      this.changed.emit({ plannedAt: value });
+    }
+  }
+
+  /** `sharedAt` is a plain ISO date, not a `Date` — `AppDatePipe` needs a real `Date` parsed as
+   * *local* midnight (`parseIsoDate`), the same convention every other date-only render in this
+   * app follows (`maturity-result.ts`, `pc-balance-audit-form.ts`,
+   * `assessment-history-list.ts`) — piping the raw string straight through `new Date(string)`
+   * parses it as UTC midnight, which displays a day early in a negative-UTC-offset timezone. */
+  protected localDate(date: string): Date {
+    return parseIsoDate(date);
   }
 
   protected onStatusChange(status: TeachStatus): void {

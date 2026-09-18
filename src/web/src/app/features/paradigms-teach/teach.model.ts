@@ -1,4 +1,4 @@
-import { Signal, computed } from '@angular/core';
+import { Signal, computed, signal } from '@angular/core';
 import { BaseRecord } from '../../core/data/record';
 import {
   isArrayOf,
@@ -8,8 +8,15 @@ import {
 } from '../../core/data/record-validators';
 import { featureStore } from '../../core/data/feature-store';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
-import { ExerciseHubStatus, registerExercise } from '../../shared/exercise-kit/exercise-registry';
-import { registerHubAction } from '../../shared/exercise-kit/hub-action-registry';
+import {
+  ExerciseHubStatus,
+  getRegisteredExercises,
+  registerExercise,
+} from '../../shared/exercise-kit/exercise-registry';
+import {
+  getRegisteredHubActions,
+  registerHubAction,
+} from '../../shared/exercise-kit/hub-action-registry';
 import { sharedCount } from './teach.logic';
 
 /** The ten book chapters a "teach it" commitment can be made for (issue #52's "Implementation
@@ -89,47 +96,61 @@ function isTeachEntry(value: unknown): value is TeachEntry {
 const isTeachEntryArray = isArrayOf(isTeachEntry);
 
 /**
- * Registers the `paradigms-teach` model, exercise, hub action and hub status, a no-op if already
- * done — same idempotent guard as `registerExerciseKitModel()`
- * (`shared/exercise-kit/exercise-kit.model.ts`), needed because this project's unit tests run with
- * Vitest `isolate: false` (shared module state across spec files).
+ * Registers the `paradigms-teach` model, exercise and hub action — three independent registries,
+ * each guarded on its own key rather than one guard for all three. Vitest here runs with
+ * `isolate: false` (shared module state across spec files), and a spec that resets one registry
+ * (e.g. `resetExerciseRegistryForTesting()`) without also resetting the others would otherwise
+ * leave this a permanent no-op for whichever registry got cleared, since the single guard's
+ * `getRegisteredModels()` check would still see the model and skip re-registering everything
+ * (review finding on #52's PR).
  */
 export function registerTeachModel(): void {
-  if (getRegisteredModels().some((model) => model.key === TEACH_MODEL_KEY)) {
-    return;
+  if (!getRegisteredModels().some((model) => model.key === TEACH_MODEL_KEY)) {
+    registerModel<TeachEntry[]>({
+      key: TEACH_MODEL_KEY,
+      path: TEACH_PATH,
+      defaults: () => [],
+      validate: isTeachEntryArray,
+    });
   }
-  registerModel<TeachEntry[]>({
-    key: TEACH_MODEL_KEY,
-    path: TEACH_PATH,
-    defaults: () => [],
-    validate: isTeachEntryArray,
-  });
-  registerExercise({
-    exerciseId: TEACH_MODEL_KEY,
-    habit: 'paradigms',
-    titleKey: 'habits.exercises.paradigms-teach.title',
-    summaryKey: 'habits.exercises.paradigms-teach.summary',
-    icon: 'campaign',
-    route: TEACH_ROUTE,
-    statusFactory: (): Signal<ExerciseHubStatus | null> => {
-      const store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
-      return computed(() => {
-        const count = sharedCount(store.value());
-        return count > 0 ? { key: 'habits.exercises.paradigms-teach.sharedCount', count } : null;
-      });
-    },
-  });
+  if (!getRegisteredExercises().some((exercise) => exercise.exerciseId === TEACH_MODEL_KEY)) {
+    registerExercise({
+      exerciseId: TEACH_MODEL_KEY,
+      habit: 'paradigms',
+      titleKey: 'habits.exercises.paradigms-teach.title',
+      summaryKey: 'habits.exercises.paradigms-teach.summary',
+      icon: 'campaign',
+      route: TEACH_ROUTE,
+      statusFactory: (): Signal<ExerciseHubStatus | null> => {
+        // Defensive, not just idempotent: this factory runs later, lazily, from the hub page's own
+        // `runInInjectionContext()` call at render time — a spec that reset the model registry
+        // without this feature's own model surviving (or re-registering) would otherwise throw
+        // *during change detection* instead of at a registration call this file controls (review
+        // finding on #52's PR).
+        if (!getRegisteredModels().some((model) => model.key === TEACH_MODEL_KEY)) {
+          return signal(null);
+        }
+        const store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
+        return computed(() => {
+          const count = sharedCount(store.value());
+          return count > 0 ? { key: 'habits.exercises.paradigms-teach.sharedCount', count } : null;
+        });
+      },
+    });
+  }
   // "Teach this" (issue #52): every habit hub gets a shortcut to this exercise, pre-selecting the
   // chapter that matches the hub it's shown on. `queryParams` is generic (`hub-action-registry.ts`
   // just forwards the current `HabitId`) — this feature is the only thing that knows the query
   // param is named `chapter` and that a `HabitId` is also one of `TEACH_CHAPTERS`.
-  registerHubAction({
-    id: TEACH_MODEL_KEY,
-    labelKey: 'habits.exercises.paradigms-teach.hubActionLabel',
-    icon: 'campaign',
-    route: TEACH_ROUTE,
-    queryParams: (habit) => ({ chapter: habit }),
-  });
+  if (!getRegisteredHubActions().some((action) => action.id === TEACH_MODEL_KEY)) {
+    registerHubAction({
+      id: TEACH_MODEL_KEY,
+      labelKey: 'habits.exercises.paradigms-teach.hubActionLabel',
+      icon: 'campaign',
+      route: TEACH_ROUTE,
+      queryParams: (habit) => ({ chapter: habit }),
+    });
+  }
 }
 
 registerTeachModel();

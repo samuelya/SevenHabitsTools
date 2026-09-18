@@ -7,6 +7,7 @@ import {
   entryForChapter,
   isKeyIdeaValid,
   isOverdue,
+  isValidPlannedAt,
   labelsFrom,
   sharedCount,
   summarize,
@@ -87,6 +88,18 @@ describe('upsertEntry', () => {
     const entries = [entry({ chapter: 'h1' })];
     const result = upsertEntry(entries, 'h1', { keyIdea: 'Again' }, NOW);
     expect(result.filter((e) => e.chapter === 'h1')).toHaveLength(1);
+  });
+
+  it('clears sharedAt once status moves away from shared', () => {
+    const entries = [entry({ status: 'shared', sharedAt: '2026-01-04' })];
+    const result = upsertEntry(entries, 'h1', { status: 'planned' }, NOW);
+    expect(result[0].sharedAt).toBeUndefined();
+  });
+
+  it('stays clear of sharedAt for an entry that has never been shared', () => {
+    const entries = [entry({ status: 'planned' })];
+    const result = upsertEntry(entries, 'h1', { status: 'skipped' }, NOW);
+    expect(result[0].sharedAt).toBeUndefined();
   });
 });
 
@@ -222,5 +235,20 @@ describe('isKeyIdeaValid', () => {
   it('accepts text up to the max length and rejects past it', () => {
     expect(isKeyIdeaValid('a'.repeat(KEY_IDEA_MAX_LENGTH))).toBe(true);
     expect(isKeyIdeaValid('a'.repeat(KEY_IDEA_MAX_LENGTH + 1))).toBe(false);
+  });
+});
+
+describe('isValidPlannedAt', () => {
+  it('accepts a full YYYY-MM-DD date', () => {
+    expect(isValidPlannedAt('2026-01-12')).toBe(true);
+  });
+
+  it('rejects an empty value (a cleared date input)', () => {
+    expect(isValidPlannedAt('')).toBe(false);
+  });
+
+  it('rejects a partial or malformed value', () => {
+    expect(isValidPlannedAt('2026-01')).toBe(false);
+    expect(isValidPlannedAt('not-a-date')).toBe(false);
   });
 });

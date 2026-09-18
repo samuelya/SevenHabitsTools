@@ -74,6 +74,30 @@ describe('TeachItemForm', () => {
     expect(fixture.nativeElement.textContent).toContain('Shared');
   });
 
+  it('emits changed with a fully typed planned date', () => {
+    const fixture = setUp(draft());
+    const emitted: unknown[] = [];
+    fixture.componentInstance.changed.subscribe((value) => emitted.push(value));
+
+    const dateInput = fixture.nativeElement.querySelector('input[type="date"]') as HTMLInputElement;
+    dateInput.value = '2026-02-01';
+    dateInput.dispatchEvent(new Event('input'));
+
+    expect(emitted).toEqual([{ plannedAt: '2026-02-01' }]);
+  });
+
+  it('ignores a cleared planned-date input instead of persisting an empty string (review finding)', () => {
+    const fixture = setUp(draft());
+    const emitted: unknown[] = [];
+    fixture.componentInstance.changed.subscribe((value) => emitted.push(value));
+
+    const dateInput = fixture.nativeElement.querySelector('input[type="date"]') as HTMLInputElement;
+    dateInput.value = '';
+    dateInput.dispatchEvent(new Event('input'));
+
+    expect(emitted).toEqual([]);
+  });
+
   it('shows no shared date before the entry has been shared', () => {
     const fixture = setUp(draft());
 
