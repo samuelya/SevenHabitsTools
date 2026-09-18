@@ -1,0 +1,51 @@
+<h1 class="visually-hidden" tabindex="-1">{{ title() }}</h1>
+
+<div class="scaffold" [class.editing]="editing()" [class.handset]="handset()">
+  <div class="body" [attr.inert]="bodyInert() ? '' : null">
+    <div class="intro-slot"><ng-content select="[intro]" /></div>
+    <div class="content-slot"><ng-content /></div>
+  </div>
+
+  @if (showFooter()) {
+    <div class="footer-slot"><ng-content select="[footer]" /></div>
+  }
+
+  @if (editing()) {
+    <!-- `tabindex="-1"`: not a tab stop, just enough for `interactive-supports-focus` since
+         `(keydown.escape)` here only ever needs a focused *descendant* (a field) to bubble up. -->
+    <div class="editor-panel" tabindex="-1" (keydown.escape)="close()">
+      <header class="editor-header">
+        @if (handset()) {
+          <button
+            mat-icon-button
+            type="button"
+            class="editor-close"
+            [attr.aria-label]="'exerciseKit.detail.close' | transloco"
+            (click)="close()"
+          >
+            <mat-icon class="flip-in-rtl" aria-hidden="true">arrow_back</mat-icon>
+          </button>
+        } @else {
+          <button
+            mat-icon-button
+            type="button"
+            class="editor-close"
+            [attr.aria-label]="'exerciseKit.editor.close' | transloco"
+            (click)="close()"
+          >
+            <mat-icon class="flip-in-rtl" aria-hidden="true">close</mat-icon>
+          </button>
+        }
+        <h2 #editorHeading tabindex="-1" class="editor-title">{{ editorTitle() }}</h2>
+        <span class="editor-status" aria-live="polite">
+          @if (editorStatus() === 'saving') {
+            {{ 'exerciseKit.editor.saving' | transloco }}
+          } @else if (editorStatus() === 'saved') {
+            {{ 'exerciseKit.editor.saved' | transloco }}
+          }
+        </span>
+      </header>
+      <div class="editor-body"><ng-content select="[editor]" /></div>
+    </div>
+  }
+</div>

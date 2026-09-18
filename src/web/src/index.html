@@ -4,7 +4,14 @@
     <meta charset="utf-8" />
     <title>Seven Habits Tools</title>
     <base href="/" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- `interactive-widget=resizes-content` (issue #185): Chrome Android otherwise overlays the
+         on-screen keyboard on top of the layout instead of shrinking the viewport, so a focused
+         field in the exercise editor's full-screen panel can end up hidden behind it; Safari
+         already resizes the content by default. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
     <meta
       name="description"
       content="Personal planning tools for working through the seven habits."

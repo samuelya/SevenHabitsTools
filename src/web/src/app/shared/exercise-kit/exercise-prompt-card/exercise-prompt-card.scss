@@ -2,10 +2,44 @@
   margin-block-end: 1rem;
 }
 
+// A plain button, not `mat-card-header`/`mat-card-title` (the card no longer has a title): one
+// row, at least the 44 px touch target, label at the inline-start and chevron at the inline-end —
+// both follow `direction` automatically in a flex row, so RTL needs no extra rule here (unlike
+// the chevron glyph itself, which is already symmetric).
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  inline-size: 100%;
+  min-block-size: 44px;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.toggle-label {
+  font: var(--mat-sys-title-medium);
+}
+
+.content {
+  padding-block-start: 0;
+}
+
+.chapter-reference {
+  color: var(--mat-sys-on-surface-variant, gray);
+  margin-block-end: 0.5rem;
+}
+
 .prompt {
   white-space: pre-line;
 }
 
-.why-it-matters {
-  margin-block-start: 0.5rem;
+.why-it-matters-heading {
+  font: var(--mat-sys-title-small);
+  margin-block: 1rem 0.25rem;
 }

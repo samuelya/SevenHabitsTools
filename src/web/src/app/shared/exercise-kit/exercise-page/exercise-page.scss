@@ -1,0 +1,145 @@
+:host {
+  display: block;
+  // Lets a short list's footer still reach the bottom of `.page` (the shell's own scroll
+  // container, see `shell.scss`) instead of floating right under the last row — the pinned
+  // footer below relies on this. A routed page's own host also needs to stretch to `.page`'s
+  // full height for this to reach the true viewport edge; #187 wires that for the reference page.
+  min-block-size: 100%;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
+
+.scaffold {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+// Full-width bar across the content area, at the bottom edge of the viewport even when the list
+// is short, and staying visible while the page scrolls or in focus mode (owner decision on #184).
+.footer-slot {
+  position: sticky;
+  inset-block-end: 0;
+  border-block-start: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  padding: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+// Mobile: the footer flows at the end of the page instead, clear of the bottom navigation, and is
+// never rendered at all while editing (see `showFooter`).
+.scaffold.handset .footer-slot {
+  position: static;
+  padding-block-end: calc(1rem + env(safe-area-inset-bottom));
+}
+
+// Desktop, focus mode: the body column shrinks and the editor takes the rest of the width, so the
+// page — not the editor — is the scroll container. A CSS grid, not a drawer: grid tracks are
+// direction-aware, so the editor lands at the inline-end under `dir="rtl"` with no extra rule.
+// Rows are pinned explicitly: DOM order is body, footer, editor (the footer's `@if` sits between
+// them in the template), so sparse auto-placement would otherwise put the editor in row 2, under
+// the sticky footer, instead of beside the body in row 1.
+.scaffold.editing:not(.handset) {
+  display: grid;
+  grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
+  grid-template-rows: auto auto;
+  align-items: start;
+  gap: 1rem;
+}
+
+.scaffold.editing:not(.handset) .body {
+  grid-column: 1;
+  grid-row: 1;
+  min-inline-size: 0;
+}
+
+.scaffold.editing:not(.handset) .footer-slot {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+.editor-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--mat-sys-surface);
+}
+
+// Mobile: a full-screen panel over everything, including the bottom navigation, with its own
+// header instead of the app's toolbar; the panel itself is the scroll container so a focused
+// field stays visible with the on-screen keyboard open (`100dvh` tracks the visual viewport once
+// the keyboard opens, together with `index.html`'s `interactive-widget=resizes-content`).
+.scaffold.handset .editor-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  block-size: 100dvh;
+  overflow-y: auto;
+}
+
+// Desktop: a normal grid column with no scroll of its own — the page scrolls.
+.scaffold.editing:not(.handset) .editor-panel {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.editor-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 56px;
+  padding-inline: 0.5rem;
+  background: var(--mat-sys-surface);
+  border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.editor-close {
+  flex: none;
+  min-inline-size: 48px;
+  min-block-size: 48px;
+}
+
+.editor-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-status {
+  flex: none;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-size: 0.75rem;
+}
+
+.editor-body {
+  padding: 1rem;
+}
+
+// The form content itself may cap at 56rem for line length; the column does not.
+.scaffold.editing:not(.handset) .editor-body {
+  max-inline-size: 56rem;
+}
