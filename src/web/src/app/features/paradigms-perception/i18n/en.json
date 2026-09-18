@@ -1,0 +1,47 @@
+{
+  "prompt": {
+    "title": "Notice your paradigm",
+    "chapterReference": "Paradigms and principles",
+    "text": "The lens you look through decides what you see, and what you see decides what you do and what you get. This worksheet recreates that experience with two views of one event, three of your own past attempts to change something, and one situation traced through two different paradigms.",
+    "whyItMatters": "Two people can look at the exact same event and see two different stories, both convinced they're simply describing what happened. Noticing that gap in yourself is what makes it possible to question a paradigm before trying to change a behaviour built on top of it."
+  },
+  "step1": {
+    "stepLabel": "Two views",
+    "viewALabel": "What you saw first",
+    "viewA": "You wave to a coworker in the hallway. They walk past without responding, eyes fixed on their phone. You spend the rest of the day wondering what you did to upset them.",
+    "firstViewLabel": "Your first interpretation: why do you think they didn't respond?",
+    "revealButton": "Show what was really going on",
+    "viewBLabel": "The rest of the story",
+    "viewB": "That coworker had just gotten a message that their child's school was calling. They were reading it as they walked, already typing a reply, and never registered anyone else in the hallway at all.",
+    "switchDifficultyLabel": "How hard was it to let go of your first interpretation?"
+  },
+  "step2": {
+    "stepLabel": "Character or technique",
+    "attemptLabel": "Change attempt {{number}}",
+    "attemptTextLabel": "What you tried to change",
+    "kindLabel": "Was this a technique or a character change?",
+    "kind": {
+      "technique": "Technique (a quick fix)",
+      "character": "Character (a principle you built)"
+    },
+    "differenceLabel": "In one sentence, what's the real difference between a technique and a character-based change, based on what you just noticed?"
+  },
+  "step3": {
+    "stepLabel": "See, do, get",
+    "currentLegend": "Your situation, as you see it now",
+    "altLegend": "The same situation, through a different paradigm",
+    "seeLabel": "What you currently see",
+    "doLabel": "What you do because of that",
+    "getLabel": "What you get as a result"
+  },
+  "form": {
+    "reflectionLabel": "Reflection"
+  },
+  "summary": {
+    "stepsComplete": {
+      "one": "1 of {{total}} steps complete",
+      "other": "{{count}} of {{total}} steps complete"
+    },
+    "doneHint": "Complete all three steps first: your first interpretation and difficulty rating, all three change attempts with the difference sentence, and both see-do-get chains."
+  }
+}

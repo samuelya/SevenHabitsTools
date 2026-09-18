@@ -26,6 +26,10 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     path: 'habits/paradigms/teach',
     loadChildren: () => import('./features/paradigms-teach/teach.routes'),
   },
+  {
+    path: 'habits/paradigms/perception',
+    loadChildren: () => import('./features/paradigms-perception/perception.routes'),
+  },
   { path: 'plan', loadChildren: () => import('./features/plan/plan.routes') },
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },

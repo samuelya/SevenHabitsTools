@@ -19,6 +19,8 @@ import maturityEn from '../features/paradigms-maturity/i18n/en.json';
 import maturityAr from '../features/paradigms-maturity/i18n/ar.json';
 import teachEn from '../features/paradigms-teach/i18n/en.json';
 import teachAr from '../features/paradigms-teach/i18n/ar.json';
+import perceptionEn from '../features/paradigms-perception/i18n/en.json';
+import perceptionAr from '../features/paradigms-perception/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
@@ -56,6 +58,8 @@ export function provideTranslocoTesting(): EnvironmentProviders[] {
           'paradigms-maturity/ar': maturityAr,
           'paradigms-teach/en': teachEn,
           'paradigms-teach/ar': teachAr,
+          'paradigms-perception/en': perceptionEn,
+          'paradigms-perception/ar': perceptionAr,
           'exercise-kit/en': exerciseKitEn,
           'exercise-kit/ar': exerciseKitAr,
         },
