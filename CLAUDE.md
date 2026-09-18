@@ -39,7 +39,7 @@ Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slu
 - **Owner escalation (`needs-owner`)** for permission-blocked actions (Azure roles, deploys, secrets, global toolchain), changes to approved decisions, and scope or cost changes.
 - **Record of rounds:** the round and escalation comments on the issue, plus the tester's checklist on the PR, are the record.
 
-Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`. Reading GitHub: `scripts/gh/issue-context.sh <n>` and `scripts/gh/pr-context.sh <pr>` (one call each, nothing truncated); sub-issues: `scripts/gh/link-sub-issue.sh <parent> <child>`. Agents use these instead of hand-built `gh` commands. Shared config (`CLAUDE.md`, `.claude/`, `.gitignore`, root files) is lead-only and changes via PR (`main` is protected: PR required, 5 required CI checks, no bypass).
+Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`, where Status is exactly one of `Backlog`, `Ready`, `In progress`, `In review`, `Done` (case-sensitive). Reading GitHub: `scripts/gh/issue-context.sh <n>` and `scripts/gh/pr-context.sh <pr>` (one call each, nothing truncated); sub-issues: `scripts/gh/link-sub-issue.sh <parent> <child>`. Agents use these instead of hand-built `gh` commands. Shared config (`CLAUDE.md`, `.claude/`, `.gitignore`, root files) is lead-only and changes via PR (`main` is protected: PR required, 5 required CI checks, no bypass).
 
 ## Cost discipline (lead-run)
 
