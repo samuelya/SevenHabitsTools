@@ -63,6 +63,11 @@ describe('isAssetComplete', () => {
     expect(isAssetComplete(asset({ p: 5, pc: 1, action: '   ' }))).toBe(false);
     expect(isAssetComplete(asset({ p: 5, pc: 1, action: 'Schedule a rest day' }))).toBe(true);
   });
+
+  it('requires a non-blank name, regardless of balance', () => {
+    expect(isAssetComplete(asset({ name: '', p: 3, pc: 3 }))).toBe(false);
+    expect(isAssetComplete(asset({ name: '   ', p: 3, pc: 3 }))).toBe(false);
+  });
 });
 
 describe('isAuditComplete/canMarkDone', () => {

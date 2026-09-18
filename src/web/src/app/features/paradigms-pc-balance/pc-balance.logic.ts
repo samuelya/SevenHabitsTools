@@ -42,11 +42,13 @@ export function isOverUsed(asset: Pick<PcAsset, 'p' | 'pc'>): boolean {
   return statusOf(balanceOf(asset)) === 'overUsed';
 }
 
-/** An asset is complete once it isn't over-used, or — once it is — it names one maintenance
- * action (issue #49's acceptance criteria). Pure business rule, kept out of `validate()`
+/** An asset is complete once it's named, and either isn't over-used or — once it is — it names one
+ * maintenance action (issue #49's acceptance criteria). An unlabelled asset can't meaningfully
+ * count toward "the audit is complete" (review finding on #49/#50's PR — this was previously
+ * unchecked, so an empty-named asset still counted). Pure business rule, kept out of `validate()`
  * (architecture issue #1 §6). */
-export function isAssetComplete(asset: Pick<PcAsset, 'p' | 'pc' | 'action'>): boolean {
-  return !isOverUsed(asset) || Boolean(asset.action?.trim());
+export function isAssetComplete(asset: Pick<PcAsset, 'name' | 'p' | 'pc' | 'action'>): boolean {
+  return Boolean(asset.name.trim()) && (!isOverUsed(asset) || Boolean(asset.action?.trim()));
 }
 
 /** Live audits only (architecture issue #1 §6: tombstoned records are never shown). */

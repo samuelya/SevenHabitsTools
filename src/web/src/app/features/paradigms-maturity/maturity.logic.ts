@@ -1,6 +1,9 @@
 import { newRecord, isLive } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
-import { liveAssessments } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  latestAssessment,
+  liveAssessments,
+} from '../../shared/exercise-kit/assessment-history.logic';
 import {
   MATURITY_AREA_KEYS,
   MATURITY_LEVELS,
@@ -83,11 +86,20 @@ export function suggestedHabits(profile: MaturityLevel | null): readonly HabitId
   }
 }
 
+/** Symmetric in `a`/`b`: if *either* side carries a `key`, match strictly by key equality (so a
+ * renamed built-in area only matches another area with the same `key`, never a same-named custom
+ * one); only when neither has a `key` does it fall back to matching by `name`. A version that
+ * checked only `a`'s `key` (review finding on #49/#50's PR) let `deltaFor(a, [b])` and
+ * `removedAreas([a], [b])` disagree about the very same pair, since they call this with the
+ * operands in opposite order. */
 function matches(
   a: Pick<MaturityArea, 'key' | 'name'>,
   b: Pick<MaturityArea, 'key' | 'name'>,
 ): boolean {
-  return a.key !== undefined ? a.key === b.key : a.name === b.name;
+  if (a.key !== undefined || b.key !== undefined) {
+    return a.key === b.key;
+  }
+  return a.name === b.name;
 }
 
 /** One area's change since `previous` — a level difference, `'new'` if it has no match in
@@ -134,8 +146,7 @@ export interface MaturitySummaryData {
 
 export function summarize(assessments: readonly MaturityAssessment[]): MaturitySummaryData {
   const live = liveAssessments(assessments);
-  const sorted = [...live].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
-  const latest = sorted[0] ?? null;
+  const latest = latestAssessment(live);
   return {
     totalAssessments: live.length,
     latestProfile: latest ? overallProfile(latest.areas) : null,
@@ -161,13 +172,19 @@ export function addArea(areas: readonly MaturityArea[], name: string): MaturityA
 }
 
 /** Renames the area `id`: stores `name`, and — for a built-in area — keeps `key` (issue #50's
- * implementation notes). A no-op copy if `id` is not found. */
+ * implementation notes). A blank `name` clears back to `undefined` rather than freezing the area
+ * on a permanently empty label — a built-in area then falls back to its translated label again
+ * (`displayName()`) instead of showing nothing forever (review finding on #49/#50's PR). A no-op
+ * copy if `id` is not found. */
 export function renameArea(
   areas: readonly MaturityArea[],
   id: string,
   name: string,
 ): MaturityArea[] {
-  return areas.map((area) => (area.id === id ? { ...area, name } : area));
+  const trimmed = name.trim();
+  return areas.map((area) =>
+    area.id === id ? { ...area, name: trimmed === '' ? undefined : name } : area,
+  );
 }
 
 export function setAreaLevel(

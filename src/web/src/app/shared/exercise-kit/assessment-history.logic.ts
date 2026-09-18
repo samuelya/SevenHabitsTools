@@ -10,6 +10,7 @@
 export interface DatedAssessment {
   readonly id: string;
   readonly date: string;
+  readonly createdAt: string;
   readonly deletedAt?: string;
 }
 
@@ -18,9 +19,13 @@ export function liveAssessments<T extends DatedAssessment>(assessments: readonly
   return assessments.filter((assessment) => assessment.deletedAt === undefined);
 }
 
-/** Newest first; same-day entries break ties by `id` so the order is stable across calls. */
+/** Newest first; same-day entries break ties by `createdAt`, not `id` — ids are random UUIDs
+ * unrelated to creation order, so tie-breaking on them picked an arbitrary "latest" among
+ * same-day records instead of the one actually created last (review finding on #49/#50's PR). */
 export function sortedByDateDesc<T extends DatedAssessment>(assessments: readonly T[]): T[] {
-  return [...assessments].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  return [...assessments].sort(
+    (a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt),
+  );
 }
 
 /** The most recent live assessment, `null` with none — used to pre-fill a new one. */
@@ -47,4 +52,17 @@ export function previousAssessment<T extends DatedAssessment>(
  * reading that always round-trips back to the same calendar date. */
 export function parseIsoDate(date: string): Date {
   return new Date(`${date}T00:00:00`);
+}
+
+/** The local calendar date (`YYYY-MM-DD`) `now` falls on — same convention as
+ * `core/data/backup/export-reminder-dismissal.ts`'s own `localDateString()`. A new audit/
+ * assessment must be dated by the browser's local day, not `now.toISOString().slice(0, 10)`'s UTC
+ * day: every reader of this string (`parseIsoDate` above) treats it as local midnight, so stamping
+ * it with the UTC day instead mis-dates a record created near a day boundary in any non-UTC
+ * timezone (review finding on #49/#50's PR). */
+export function localDateString(now: Date): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

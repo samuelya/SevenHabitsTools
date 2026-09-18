@@ -33,19 +33,25 @@ function setUp(initial: MaturityAssessment) {
 }
 
 describe('MaturityAssessmentForm', () => {
-  it('renders one row per area, showing the built-in label when unnamed', () => {
+  it('renders one row per area, showing the built-in label as a placeholder when unnamed', () => {
     const fixture = setUp(
       assessment({ areas: [area({ id: 'a1', key: 'work' }), area({ id: 'a2', key: 'family' })] }),
     );
     const rows = fixture.nativeElement.querySelectorAll('.area-row');
     expect(rows).toHaveLength(2);
-    expect((rows[0].querySelector('input') as HTMLInputElement).value).toBe('Work');
+    const input = rows[0].querySelector('input') as HTMLInputElement;
+    // The placeholder, not the field's own value: seeding the value with the translated fallback
+    // used to freeze it as literal text the moment the field was edited in any way (review finding
+    // on #49/#50's PR).
+    expect(input.value).toBe('');
+    expect(input.placeholder).toBe('Work');
   });
 
-  it('shows a custom or renamed name instead of the built-in label', () => {
+  it('shows a custom or renamed name instead of the built-in label, and no placeholder', () => {
     const fixture = setUp(assessment({ areas: [area({ key: 'work', name: 'Day job' })] }));
     const input = fixture.nativeElement.querySelector('.area-row input') as HTMLInputElement;
     expect(input.value).toBe('Day job');
+    expect(input.placeholder).toBe('');
   });
 
   it('emits the renamed area, keeping its key', () => {
@@ -59,6 +65,37 @@ describe('MaturityAssessmentForm', () => {
 
     const areas = (emitted[0] as { areas: MaturityArea[] }).areas;
     expect(areas[0]).toMatchObject({ key: 'work', name: 'Day job' });
+  });
+
+  it('never captures the translated built-in label as a stored name from an untouched field', () => {
+    // Regression test: the field's `[value]` used to be the translated display fallback, so any
+    // edit anywhere in the field committed that language's label text as a literal `name`.
+    const fixture = setUp(assessment({ areas: [area({ id: 'a1', key: 'work' })] }));
+    const emitted: unknown[] = [];
+    fixture.componentInstance.changed.subscribe((event) => emitted.push(event));
+    const input = fixture.nativeElement.querySelector('.area-row input') as HTMLInputElement;
+
+    // Typing a single character into the (empty, placeholder-only) field.
+    input.value = 'X';
+    input.dispatchEvent(new Event('input'));
+
+    const areas = (emitted[0] as { areas: MaturityArea[] }).areas;
+    expect(areas[0].name).toBe('X');
+  });
+
+  it('clears a custom name back to the built-in placeholder instead of freezing on blank', () => {
+    const fixture = setUp(
+      assessment({ areas: [area({ id: 'a1', key: 'work', name: 'Day job' })] }),
+    );
+    const emitted: unknown[] = [];
+    fixture.componentInstance.changed.subscribe((event) => emitted.push(event));
+    const input = fixture.nativeElement.querySelector('.area-row input') as HTMLInputElement;
+
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+
+    const areas = (emitted[0] as { areas: MaturityArea[] }).areas;
+    expect(areas[0].name).toBeUndefined();
   });
 
   it('emits the selected level for the matching area', () => {

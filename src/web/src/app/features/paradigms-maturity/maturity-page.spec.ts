@@ -68,7 +68,7 @@ describe('MaturityPage', () => {
     expect(TestBed.inject(Router).url).toMatch(new RegExp(`^${LIST_URL}/[^/]+$`));
     const host = harness.routeNativeElement as HTMLElement;
     expect(host.querySelectorAll('.area-row')).toHaveLength(6);
-    expect((host.querySelector('.area-row input') as HTMLInputElement).value).toBe('Work');
+    expect((host.querySelector('.area-row input') as HTMLInputElement).placeholder).toBe('Work');
   });
 
   it('keeps Mark done disabled until every area has a level', async () => {

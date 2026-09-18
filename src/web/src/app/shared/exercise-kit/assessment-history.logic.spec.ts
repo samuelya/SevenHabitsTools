@@ -2,13 +2,14 @@ import {
   DatedAssessment,
   latestAssessment,
   liveAssessments,
+  localDateString,
   parseIsoDate,
   previousAssessment,
   sortedByDateDesc,
 } from './assessment-history.logic';
 
 function assessment(overrides: Partial<DatedAssessment> = {}): DatedAssessment {
-  return { id: 'a1', date: '2026-01-01', ...overrides };
+  return { id: 'a1', date: '2026-01-01', createdAt: '2026-01-01T00:00:00.000Z', ...overrides };
 }
 
 describe('liveAssessments', () => {
@@ -27,10 +28,21 @@ describe('sortedByDateDesc', () => {
     expect(sortedByDateDesc([jan, mar, feb]).map((a) => a.id)).toEqual(['a2', 'a3', 'a1']);
   });
 
-  it('breaks a same-day tie by id for a stable order', () => {
-    const first = assessment({ id: 'a1', date: '2026-01-01' });
-    const second = assessment({ id: 'a2', date: '2026-01-01' });
-    expect(sortedByDateDesc([first, second]).map((a) => a.id)).toEqual(['a2', 'a1']);
+  it('breaks a same-day tie by createdAt, the one created last first', () => {
+    // Ids deliberately sort the *opposite* way `createdAt` does, so a regression back to
+    // tie-breaking on `id` (a random UUID, unrelated to creation order) would fail this.
+    const earlier = assessment({
+      id: 'z-earlier',
+      date: '2026-01-01',
+      createdAt: '2026-01-01T08:00:00.000Z',
+    });
+    const later = assessment({
+      id: 'a-later',
+      date: '2026-01-01',
+      createdAt: '2026-01-01T20:00:00.000Z',
+    });
+    expect(sortedByDateDesc([earlier, later]).map((a) => a.id)).toEqual(['a-later', 'z-earlier']);
+    expect(sortedByDateDesc([later, earlier]).map((a) => a.id)).toEqual(['a-later', 'z-earlier']);
   });
 });
 
@@ -79,5 +91,23 @@ describe('parseIsoDate', () => {
     expect(parsed.getMonth()).toBe(5);
     expect(parsed.getDate()).toBe(15);
     expect(parsed.getHours()).toBe(0);
+  });
+
+  it('round-trips with localDateString', () => {
+    const now = new Date(2026, 8, 3, 23, 45);
+    expect(parseIsoDate(localDateString(now)).getDate()).toBe(now.getDate());
+  });
+});
+
+describe('localDateString', () => {
+  it('formats the local calendar date, zero-padded', () => {
+    expect(localDateString(new Date(2026, 0, 5))).toBe('2026-01-05');
+    expect(localDateString(new Date(2026, 11, 31))).toBe('2026-12-31');
+  });
+
+  it('uses the local date even a moment before local midnight, not the UTC one', () => {
+    // 23:59 local time is still "today" locally, whatever UTC day that instant falls on.
+    const lateLocal = new Date(2026, 5, 15, 23, 59, 0);
+    expect(localDateString(lateLocal)).toBe('2026-06-15');
   });
 });

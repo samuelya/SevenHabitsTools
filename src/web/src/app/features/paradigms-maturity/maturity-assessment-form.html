@@ -8,14 +8,16 @@
             matInput
             type="text"
             appEditorInitialFocus
-            [value]="displayValue(area)"
+            [value]="fieldValue(area)"
+            [attr.placeholder]="placeholderFor(area)"
             (input)="onAreaNameInput(area.id, $event)"
           />
         } @else {
           <input
             matInput
             type="text"
-            [value]="displayValue(area)"
+            [value]="fieldValue(area)"
+            [attr.placeholder]="placeholderFor(area)"
             (input)="onAreaNameInput(area.id, $event)"
           />
         }

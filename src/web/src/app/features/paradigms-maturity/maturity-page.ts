@@ -7,6 +7,7 @@ import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
 import {
+  localDateString,
   previousAssessment,
   sortedByDateDesc,
 } from '../../shared/exercise-kit/assessment-history.logic';
@@ -164,10 +165,7 @@ export class MaturityPage {
   protected onNewAssessment(): void {
     const now = this.clock.now();
     const latest = this.history()[0] ?? null;
-    const fields: MaturityAssessmentFields = newAssessmentFields(
-      latest,
-      now.toISOString().slice(0, 10),
-    );
+    const fields: MaturityAssessmentFields = newAssessmentFields(latest, localDateString(now));
     let createdId: string | null = null;
     const applied = this.store.update((assessments) => {
       const next = addAssessment(assessments, fields, now);

@@ -7,16 +7,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatRadioModule } from '@angular/material/radio';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
-import {
-  addArea,
-  displayName,
-  removeArea,
-  renameArea,
-  setAreaLevel,
-  setAreaNote,
-} from './maturity.logic';
+import { addArea, removeArea, renameArea, setAreaLevel, setAreaNote } from './maturity.logic';
 import {
   MATURITY_LEVELS,
+  MaturityArea,
   MaturityAssessment,
   MaturityAssessmentFields,
   MaturityLevel,
@@ -56,8 +50,25 @@ export class MaturityAssessmentForm {
   protected readonly levels = MATURITY_LEVELS;
   protected readonly newAreaName = signal('');
 
-  protected displayValue = (area: Parameters<typeof displayName>[0]): string =>
-    displayName(area, this.builtInLabels());
+  /** The field's own bound value: only the area's actual custom `name`, never the translated
+   * built-in fallback `displayName()` computes for read-only display elsewhere. Binding the
+   * fallback here used to seed the native input with that language's translated text the moment
+   * the user typed anywhere in the field, freezing it as a literal `name` and losing the
+   * built-in's own translation on a later language switch (review finding on #49/#50's PR) — the
+   * translated label is a placeholder instead (`placeholderFor()`), never part of the value a
+   * keystroke can capture. */
+  protected fieldValue(area: Pick<MaturityArea, 'name'>): string {
+    return area.name ?? '';
+  }
+
+  /** The built-in label to show as a placeholder while no custom name is set — `null` once the
+   * area has a `name` (custom or renamed) or has no `key` to fall back to. */
+  protected placeholderFor(area: Pick<MaturityArea, 'key' | 'name'>): string | null {
+    if (area.name !== undefined || !area.key) {
+      return null;
+    }
+    return this.builtInLabels()[area.key] ?? null;
+  }
 
   protected onAreaNameInput(id: string, event: Event): void {
     const name = (event.target as HTMLInputElement).value;

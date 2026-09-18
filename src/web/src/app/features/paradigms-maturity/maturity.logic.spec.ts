@@ -157,6 +157,18 @@ describe('deltaFor/removedAreas', () => {
   it('removedAreas is empty with no previous assessment', () => {
     expect(removedAreas([], null)).toEqual([]);
   });
+
+  it('agree with each other when one side has a key and the other only a same-text name', () => {
+    // A renamed built-in area (`key` + `name`) must not match a *custom* area that happens to
+    // share the same name text (no `key`) — `matches()` used to check only its first argument's
+    // `key`, so `deltaFor` (previous, current) and `removedAreas` (current, previous) — opposite
+    // argument order — could disagree about this very pair (review finding on #49/#50's PR).
+    const previousBuiltIn = area({ id: 'p1', key: 'work', name: 'Volunteering', level: 1 });
+    const currentCustom = area({ id: 'c1', key: undefined, name: 'Volunteering', level: 2 });
+
+    expect(deltaFor(currentCustom, [previousBuiltIn])).toEqual({ kind: 'new' });
+    expect(removedAreas([currentCustom], [previousBuiltIn])).toEqual([previousBuiltIn]);
+  });
 });
 
 describe('summarize', () => {
@@ -217,6 +229,12 @@ describe('addArea/renameArea/setAreaLevel/setAreaNote/removeArea', () => {
     const target = area({ id: 'a1', key: 'work' });
     const result = renameArea([target], 'a1', 'Day job');
     expect(result[0]).toMatchObject({ key: 'work', name: 'Day job' });
+  });
+
+  it('clears a blank name back to undefined instead of freezing on an empty string', () => {
+    const target = area({ id: 'a1', key: 'work', name: 'Day job' });
+    expect(renameArea([target], 'a1', '')[0].name).toBeUndefined();
+    expect(renameArea([target], 'a1', '   ')[0].name).toBeUndefined();
   });
 
   it('sets an area level and note independently', () => {
