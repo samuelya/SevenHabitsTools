@@ -1,0 +1,114 @@
+<form class="transition-item-form">
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'paradigmsTransition.form.textLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      rows="2"
+      required
+      [value]="script().text"
+      [attr.aria-describedby]="isTouched('text') && !script().text.trim() ? 'text-error' : null"
+      (input)="onTextInput($event)"
+      (blur)="touch('text')"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: `mat-form-field` only displays it once its control reports an
+       `errorState`, which needs a real `NgControl` (reactive/template-driven forms) this simple
+       signal-driven form doesn't have — see the doc comment on `isTouched()`. -->
+  @if (isTouched('text') && !script().text.trim()) {
+    <p id="text-error" class="field-error" role="alert">
+      {{ 'paradigmsTransition.form.textRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="option-group">
+    <legend>{{ 'paradigmsTransition.form.sourceLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="script().source"
+      [attr.aria-label]="'paradigmsTransition.form.sourceLabel' | transloco"
+      (change)="onSourceChange($event.value)"
+    >
+      @for (source of sources; track source) {
+        <mat-button-toggle [value]="source">{{
+          'paradigmsTransition.source.' + source | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  <fieldset class="option-group">
+    <legend>{{ 'paradigmsTransition.form.effectLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="script().effect"
+      [attr.aria-label]="'paradigmsTransition.form.effectLabel' | transloco"
+      (change)="onEffectChange($event.value)"
+    >
+      @for (effect of effects; track effect) {
+        <mat-button-toggle [value]="effect">{{
+          'paradigmsTransition.effect.' + effect | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  <fieldset class="option-group">
+    <legend>{{ 'paradigmsTransition.form.decisionLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="script().decision"
+      [attr.aria-label]="'paradigmsTransition.form.decisionLabel' | transloco"
+      (change)="onDecisionChange($event.value)"
+    >
+      @for (decision of decisions; track decision) {
+        <mat-button-toggle [value]="decision">{{
+          'paradigmsTransition.decision.' + decision | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  @if (needsNewScript()) {
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'paradigmsTransition.form.newScriptLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        rows="2"
+        required
+        [value]="script().newScript ?? ''"
+        [attr.aria-describedby]="
+          isTouched('newScript') && !script().newScript?.trim() ? 'new-script-error' : null
+        "
+        (input)="onNewScriptInput($event)"
+        (blur)="touch('newScript')"
+      ></textarea>
+    </mat-form-field>
+    @if (isTouched('newScript') && !script().newScript?.trim()) {
+      <p id="new-script-error" class="field-error" role="alert">
+        {{ 'paradigmsTransition.form.newScriptRequired' | transloco }}
+      </p>
+    }
+
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'paradigmsTransition.form.situationLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        type="text"
+        required
+        [value]="script().situation ?? ''"
+        [attr.aria-describedby]="
+          isTouched('situation') && !script().situation?.trim() ? 'situation-error' : null
+        "
+        (input)="onSituationInput($event)"
+        (blur)="touch('situation')"
+      />
+    </mat-form-field>
+    @if (isTouched('situation') && !script().situation?.trim()) {
+      <p id="situation-error" class="field-error" role="alert">
+        {{ 'paradigmsTransition.form.situationRequired' | transloco }}
+      </p>
+    }
+  }
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'paradigmsTransition.form.delete' | transloco }}
+  </button>
+</form>

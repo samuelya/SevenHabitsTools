@@ -1,0 +1,41 @@
+<h1 class="page-heading">{{ 'paradigmsTransition.prompt.title' | transloco }}</h1>
+
+<app-exercise-prompt-card
+  [title]="'paradigmsTransition.prompt.title' | transloco"
+  [prompt]="'paradigmsTransition.prompt.text' | transloco"
+  [chapterReference]="'paradigmsTransition.prompt.chapterReference' | transloco"
+  [whyItMatters]="'paradigmsTransition.prompt.whyItMatters' | transloco"
+/>
+
+<app-exercise-detail [hasDetail]="hasDetail()" (closed)="closeDetail()">
+  <div list class="list-pane-content">
+    <button mat-flat-button type="button" class="add-button" (click)="onAddScript()">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      {{ 'paradigmsTransition.list.addButton' | transloco }}
+    </button>
+    <app-exercise-list
+      [items]="items()"
+      [selectedId]="selectedId()"
+      (itemSelected)="select($event)"
+    />
+  </div>
+  @if (selectedScript(); as script) {
+    <div detail>
+      <app-transition-item-form
+        [script]="script"
+        (changed)="onItemChanged(script.id, $event)"
+        (deleted)="onItemDeleted(script.id)"
+      />
+    </div>
+  }
+</app-exercise-detail>
+
+<div class="summary-section">
+  <app-transition-summary [summary]="summary()" />
+  <app-done-toggle
+    [done]="done()"
+    [completedAt]="completedAt()"
+    [disabled]="!readyToMarkDone()"
+    (toggled)="onToggleDone()"
+  />
+</div>

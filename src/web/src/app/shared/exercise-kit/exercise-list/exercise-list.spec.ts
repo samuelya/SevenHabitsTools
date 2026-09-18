@@ -47,7 +47,7 @@ describe('ExerciseList', () => {
   it('marks the selected item current', () => {
     const fixture = setUp('a');
 
-    const current = fixture.nativeElement.querySelector('button[aria-selected="true"]');
+    const current = fixture.nativeElement.querySelector('button[aria-pressed="true"]');
     expect(current?.textContent).toContain('Be proactive');
   });
 

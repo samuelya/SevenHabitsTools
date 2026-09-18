@@ -14,7 +14,7 @@
       </span>
     }
   } @else {
-    <button mat-flat-button type="button" (click)="toggled.emit()">
+    <button mat-flat-button type="button" [disabled]="disabled()" (click)="toggled.emit()">
       <mat-icon aria-hidden="true">check_circle</mat-icon>
       {{ 'exerciseKit.doneToggle.markDone' | transloco }}
     </button>

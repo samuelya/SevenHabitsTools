@@ -43,7 +43,13 @@ describe('Habits feature', () => {
     expect(items[1].getAttribute('href')).toBe('/habits/h1');
   });
 
-  it.each(HABITS.map((habit) => [habit.id, habit.titleKey] as const))(
+  // 'paradigms' now has a real registered exercise (#51's `paradigms-transition`), so it no
+  // longer shows the empty state — same reason `e2e/habits.spec.ts` picks a hub with none.
+  it.each(
+    HABITS.filter((habit) => habit.id !== 'paradigms').map(
+      (habit) => [habit.id, habit.titleKey] as const,
+    ),
+  )(
     'renders the %s hub with its title and empty state when nothing is registered',
     async (id, titleKey) => {
       configureApp({ handset: true });
@@ -55,6 +61,15 @@ describe('Habits feature', () => {
       expect(host.querySelector('app-habit-hub-page')?.textContent).toContain('coming soon');
     },
   );
+
+  it('lists the real paradigms-transition exercise on the paradigms hub (#51)', async () => {
+    configureApp({ handset: false });
+    const fixture = await renderShellAt('/habits/paradigms');
+    const host = fixture.nativeElement as HTMLElement;
+
+    const link = host.querySelector('app-habit-hub-page mat-nav-list a');
+    expect(link?.getAttribute('href')).toBe('/habits/paradigms/transition');
+  });
 
   it('does not match unknown habit ids', async () => {
     configureApp({ handset: false });
