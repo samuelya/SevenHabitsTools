@@ -5,8 +5,10 @@ re-deriving the approach from the kit, the registries and the store. It records 
 are already made; follow it, and if the issue really needs something it doesn't cover, say so on
 the issue before building.
 
-**Reference implementation:** `features/paradigms-transition/` (#51), the list type. Copy its
-structure. Until #51 merges, this document is the only reference.
+**Reference implementation:** `features/paradigms-transition/` (#51), the list type. Start a new
+exercise by copying it (`cp -r src/app/features/paradigms-transition src/app/features/<exerciseId>`
+plus its `e2e/paradigms-transition.spec.ts`), then rename and edit the copies. Don't write the
+files from scratch: it costs far more output tokens and turns for the same result.
 
 Background, only if you need it: `data-model.md` (store, records, registry), `testing.md`, pinned
 issue #1 (§6 JSON rules, §7 frontend conventions, §9 testing bar).
