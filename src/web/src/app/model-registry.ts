@@ -6,4 +6,5 @@
  * document bootstraps. One line per feature; add here when a feature gains a `<feature>.model.ts`.
  */
 import './features/settings/settings.model';
+import './features/paradigms-transition/transition.model';
 import './shared/exercise-kit/exercise-kit.model';

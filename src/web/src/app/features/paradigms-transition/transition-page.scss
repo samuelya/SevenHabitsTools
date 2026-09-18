@@ -1,0 +1,17 @@
+.list-pane-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-button {
+  align-self: flex-start;
+}
+
+.summary-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-block-start: 1rem;
+}

@@ -1,0 +1,44 @@
+{
+  "prompt": {
+    "title": "Become a transition person",
+    "chapterReference": "Paradigms and principles",
+    "text": "Some patterns get passed down without anyone choosing them — a way of arguing, a way of handling money, a way of reacting under pressure. Name the scripts you noticed you inherited, decide what to do with each one, and write the version you want to live by instead.",
+    "whyItMatters": "A 'transition person' is someone who stops a pattern instead of passing it on. Naming a script on purpose is what makes it possible to choose differently the next time it shows up."
+  },
+  "list": {
+    "addButton": "Add a script"
+  },
+  "form": {
+    "textLabel": "The script (what you say, do or expect)",
+    "textRequired": "Describe the script before moving on.",
+    "sourceLabel": "Where it comes from",
+    "effectLabel": "Its effect",
+    "decisionLabel": "Your decision",
+    "newScriptLabel": "The new script you want instead",
+    "newScriptRequired": "Write the new script when you're rewriting or stopping this one.",
+    "situationLabel": "A situation this week where it applies",
+    "situationRequired": "Name a concrete situation this week.",
+    "delete": "Delete this script"
+  },
+  "source": {
+    "family": "Family",
+    "culture": "Culture",
+    "work": "Work",
+    "other": "Other"
+  },
+  "effect": {
+    "helps": "Helps",
+    "harms": "Harms",
+    "mixed": "Mixed"
+  },
+  "decision": {
+    "keep": "Keep",
+    "rewrite": "Rewrite",
+    "stop": "Stop"
+  },
+  "summary": {
+    "total": "{{count}} scripts named",
+    "stopped": "{{count}} stopped",
+    "rewritten": "{{count}} rewritten"
+  }
+}

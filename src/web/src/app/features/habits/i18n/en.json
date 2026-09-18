@@ -26,5 +26,11 @@
       "h7": "Habit 7 is about renewing yourself across the areas that keep you effective — body, mind, heart and spirit. These exercises help you build habits of renewal instead of running on empty.",
       "interdependence": "Moving from independence to interdependence means investing deliberately in the relationships around you. These exercises track the small deposits and withdrawals that build or erode trust over time."
     }
+  },
+  "exercises": {
+    "paradigms-transition": {
+      "title": "Become a transition person",
+      "summary": "Name the scripts you inherited and decide which ones stop with you."
+    }
   }
 }

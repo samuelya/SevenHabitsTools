@@ -10,6 +10,10 @@ import { FeatureRoute } from './core/routing/feature-route';
 export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
   { path: '', loadChildren: () => import('./features/home/home.routes') },
   { path: 'habits', loadChildren: () => import('./features/habits/habits.routes') },
+  {
+    path: 'habits/paradigms/transition',
+    loadChildren: () => import('./features/paradigms-transition/transition.routes'),
+  },
   { path: 'plan', loadChildren: () => import('./features/plan/plan.routes') },
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },

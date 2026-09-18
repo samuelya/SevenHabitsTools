@@ -1,4 +1,5 @@
 import { BaseRecord } from '../../core/data/record';
+import { isArrayOf, isBaseRecord, isOptionalString } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 
 /**
@@ -20,29 +21,19 @@ export const EXERCISE_COMPLETIONS_MODEL_KEY = 'exerciseCompletions';
 /** The document path this model lives at (architecture issue #1 §6: `shared.<entity>`). */
 export const EXERCISE_COMPLETIONS_PATH = 'shared.exerciseCompletions';
 
-function isOptionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === 'string';
-}
-
 function isExerciseCompletion(value: unknown): value is ExerciseCompletion {
-  if (typeof value !== 'object' || value === null) {
+  if (!isBaseRecord(value)) {
     return false;
   }
-  const candidate = value as Record<string, unknown>;
+  const candidate = value as unknown as Record<string, unknown>;
   return (
-    typeof candidate['id'] === 'string' &&
-    typeof candidate['createdAt'] === 'string' &&
-    typeof candidate['updatedAt'] === 'string' &&
-    isOptionalString(candidate['deletedAt']) &&
     typeof candidate['exerciseId'] === 'string' &&
     typeof candidate['completedAt'] === 'string' &&
     isOptionalString(candidate['reopenedAt'])
   );
 }
 
-function isExerciseCompletionArray(value: unknown): value is ExerciseCompletion[] {
-  return Array.isArray(value) && value.every(isExerciseCompletion);
-}
+const isExerciseCompletionArray = isArrayOf(isExerciseCompletion);
 
 /**
  * Registers the `exerciseCompletions` model, a no-op if it already is — same idempotent guard as

@@ -22,11 +22,16 @@
   @if (visibleItems().length) {
     <mat-nav-list>
       @for (item of visibleItems(); track item.id) {
+        <!-- Not `aria-current`/`aria-selected`: `MatListItem` itself owns `aria-current` (its
+             `_getAriaCurrent()` host binding always overrides ours back to absent on a `<button>`
+             host, since it's `'page'`-or-`null` and gated on the host being an `<a>`), and
+             `aria-selected` isn't allowed on `role="button"` (axe `aria-allowed-attr`, #51).
+             `aria-pressed` is the one state MatListItem doesn't already manage. -->
         <button
           mat-list-item
           type="button"
           [activated]="item.id === selectedId()"
-          [attr.aria-selected]="item.id === selectedId()"
+          [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
           (click)="itemSelected.emit(item.id)"
         >
           @if (item.done) {
