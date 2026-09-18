@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
@@ -62,24 +62,39 @@ const DEFAULT_FIELDS: ScriptFields = {
 })
 export class TransitionPage {
   private readonly clock = inject(CLOCK);
-  private readonly transloco = inject(TranslocoService);
   private readonly store = featureStore<Script[]>(TRANSITION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
   protected readonly selectedId = signal<string | null>(null);
 
+  // `translateSignal` (not `transloco.translate()` read inside a `computed`): the scope loads
+  // over HTTP and only once something asks for it, and a `computed` that calls `translate()`
+  // without reading a signal evaluates exactly once, so a cold load can freeze it on the raw key
+  // and a later language switch never re-runs it. `translateSignal` instead subscribes to
+  // Transloco's own `selectTranslate()` stream, so it emits again once the scope arrives and
+  // again on every language change (review finding on #51's PR — see the playbook's "Reactive
+  // labels" section for the pattern every exercise should copy).
+  // The scope is named explicitly, with keys relative to it, rather than left to ambient
+  // `TRANSLOCO_SCOPE` resolution: this route also provides `exercise-kit` (playbook §2), and
+  // `translateSignal` (unlike `TranslocoPipe`, which loads every registered scope and then
+  // translates the fully-aliased key) picks the *last*-registered scope when none is given, which
+  // resolved these keys against the wrong one.
+  private readonly sourceLabels = translateSignal(
+    SCRIPT_SOURCES.map((source) => `source.${source}`),
+    undefined,
+    'paradigms-transition',
+  );
+  private readonly effectLabels = translateSignal(
+    SCRIPT_EFFECTS.map((effect) => `effect.${effect}`),
+    undefined,
+    'paradigms-transition',
+  );
   private readonly labels = computed(() => ({
     source: Object.fromEntries(
-      SCRIPT_SOURCES.map((source) => [
-        source,
-        this.transloco.translate(`paradigmsTransition.source.${source}`),
-      ]),
+      SCRIPT_SOURCES.map((source, index) => [source, this.sourceLabels()[index]]),
     ) as Record<ScriptSource, string>,
     effect: Object.fromEntries(
-      SCRIPT_EFFECTS.map((effect) => [
-        effect,
-        this.transloco.translate(`paradigmsTransition.effect.${effect}`),
-      ]),
+      SCRIPT_EFFECTS.map((effect, index) => [effect, this.effectLabels()[index]]),
     ) as Record<ScriptEffect, string>,
   }));
 

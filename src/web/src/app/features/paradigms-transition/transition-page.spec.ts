@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { provideTranslocoScope } from '@jsverse/transloco';
+import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
 // Side-effect only: `DoneToggle`'s "Completed <time>" caption renders through `AppDatePipe`,
@@ -147,6 +147,26 @@ describe('TransitionPage', () => {
       'app-transition-summary',
     )?.textContent;
     expect(summaryText).toContain('1');
+  });
+
+  it("updates a listed script's translated subtitle when the active language changes", () => {
+    // Regression test for a review finding on #51's PR: `labels` used to be a `computed` that
+    // called `transloco.translate()` without reading a signal, so it evaluated once and never
+    // updated the subtitle again after a language switch (or a scope that loaded late).
+    const fixture = setUp();
+    addScript(fixture);
+    const host = fixture.nativeElement as HTMLElement;
+
+    const subtitleBefore = host.querySelector('app-exercise-list mat-nav-list button')?.textContent;
+    expect(subtitleBefore).toContain('Family');
+    expect(subtitleBefore).toContain('Mixed');
+
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    fixture.detectChanges();
+
+    const subtitleAfter = host.querySelector('app-exercise-list mat-nav-list button')?.textContent;
+    expect(subtitleAfter).toContain('العائلة');
+    expect(subtitleAfter).toContain('مختلط');
   });
 
   it('keeps no page-local state: a second page instance renders the same store contents', () => {

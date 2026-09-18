@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -52,6 +60,25 @@ export class TransitionItemForm {
   protected readonly needsNewScript = computed(() => requiresNewScript(this.script().decision));
 
   private readonly touchedFields = signal<ReadonlySet<string>>(new Set());
+  /** The last `script().id` `touchedFields` was reset for — set alongside it in the constructor
+   * `effect` below, never read outside it. */
+  private lastScriptId: string | null = null;
+
+  constructor() {
+    // The form is reused across selections (`@if (selectedScript(); as script)` in
+    // `TransitionPage` stays truthy), so `touchedFields` must be reset by hand when the id
+    // changes — otherwise a blur on script A leaks its `role="alert"` errors onto script B, which
+    // the user never touched (review finding on #51's PR). Guarded on the id itself, not just any
+    // `script()` change, since every keystroke also produces a new `script()` value.
+    effect(() => {
+      const id = this.script().id;
+      if (id === this.lastScriptId) {
+        return;
+      }
+      this.lastScriptId = id;
+      this.touchedFields.set(new Set());
+    });
+  }
 
   /** Whether `field` has been blurred at least once — gates its own error paragraph (the
    * template's plain `<p role="alert">`, not `<mat-error>`: `mat-form-field` only shows that once

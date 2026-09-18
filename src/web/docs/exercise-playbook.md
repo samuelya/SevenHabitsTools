@@ -111,6 +111,41 @@ records contain a list).
   template-driven forms) — a plain signal-driven form (an `input()`/`(input)` pair, no
   `[formControl]`/`ngModel`) never gets one, so its own required-field message has to be a plain
   `<p role="alert">` next to the field instead (#51's `transition-item-form.html`).
+- **Reactive labels (translating an enum for a plain-data mapper):** when the page translates a
+  fixed set of options (e.g. an enum) to hand pre-translated labels to a pure `<slug>.logic.ts`
+  mapper (so that function stays testable without a translation service), do it with
+  `translateSignal`, not `transloco.translate()` read inside a `computed()`. A `computed` that
+  calls `translate()` without reading any signal runs exactly once and then never again — the
+  exercise's scope loads over HTTP and only once something asks for it, so a cold load (reload, a
+  deep link) can freeze the label at the raw key, and switching language afterwards never
+  re-translates it either (#51's PR review). `translateSignal` instead subscribes to
+  `TranslocoService.selectTranslate()`, which re-emits once the scope arrives and again on every
+  language change:
+
+  ```ts
+  // One `translateSignal` call per enum, keys relative to the exercise's own scope, named
+  // explicitly — see the pitfall below.
+  private readonly sourceLabels = translateSignal(
+    SCRIPT_SOURCES.map((source) => `source.${source}`),
+    undefined,
+    '<exerciseId>',
+  );
+  private readonly labels = computed(() => ({
+    source: Object.fromEntries(
+      SCRIPT_SOURCES.map((source, index) => [source, this.sourceLabels()[index]]),
+    ) as Record<ScriptSource, string>,
+  }));
+  ```
+
+  **Pitfall: always pass the scope explicitly, with keys relative to it.** A route that also
+  provides `exercise-kit` (§2) registers two scopes, and `translateSignal`'s default scope
+  resolution (unlike `TranslocoPipe`, which loads every registered scope and then translates the
+  fully-aliased key) just picks the *last*-registered one — silently resolving your keys against
+  `exercise-kit` instead. Pass the exercise's scope as the third argument and drop the camelCase
+  alias prefix from the keys (`source.family`, not `paradigmsTransition.source.family`); the scope
+  argument supplies it. Test this with a spec that switches `TranslocoService.setActiveLang()`
+  after the page has rendered and asserts the rendered label changed (a scope preloaded
+  synchronously, as `provideTranslocoTesting()` does, won't otherwise catch a frozen `computed`).
 - **List item selection state:** don't bind `aria-selected` on a `mat-list-item` button (axe's
   `aria-allowed-attr` disallows it outside `role="option"`/`"tab"`/etc.), and don't bind
   `aria-current` either — `MatListItem`'s own host binding owns that attribute and silently

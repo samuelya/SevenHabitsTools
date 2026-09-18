@@ -77,6 +77,22 @@ describe('TransitionItemForm', () => {
     expect(fixture.nativeElement.querySelector('.field-error')).not.toBeNull();
   });
 
+  it('does not carry a touched error over to a different script once the selection changes', () => {
+    const fixture = setUp(script({ id: 's1', decision: 'stop' }));
+
+    const newScriptTextarea = fixture.nativeElement.querySelectorAll(
+      'textarea',
+    )[1] as HTMLTextAreaElement;
+    newScriptTextarea.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.field-error')).not.toBeNull();
+
+    fixture.componentRef.setInput('script', script({ id: 's2', decision: 'stop' }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.field-error')).toBeNull();
+  });
+
   it('emits deleted when the delete button is clicked', () => {
     const fixture = setUp(script());
     const emitted: void[] = [];
