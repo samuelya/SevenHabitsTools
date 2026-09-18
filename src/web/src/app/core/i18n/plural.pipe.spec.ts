@@ -13,8 +13,15 @@ import { AppPluralPipe } from './plural.pipe';
  * to unrelated wording changes). */
 function fakeTransloco(lang: string, translations: Record<string, string>) {
   const events = new Subject<{ type: string }>();
+  const langChanges = new Subject<string>();
+  let activeLang = lang;
   const service = {
-    getActiveLang: () => lang,
+    getActiveLang: () => activeLang,
+    setActiveLang: (next: string) => {
+      activeLang = next;
+      langChanges.next(next);
+    },
+    langChanges$: langChanges.asObservable(),
     getTranslation: () => translations,
     translate: (key: string, params: Record<string, unknown>) => {
       const value = translations[key];
@@ -50,7 +57,7 @@ function setUp(
   fixture.componentInstance.count = options.count ?? 0;
   fixture.componentInstance.params = options.params ?? {};
   fixture.detectChanges();
-  return { fixture, events, translations };
+  return { fixture, events, translations, service };
 }
 
 describe('AppPluralPipe', () => {
@@ -135,5 +142,26 @@ describe('AppPluralPipe', () => {
     expect(() => setUp('en', { 'summary.total.other': '{{count}} in total' })).toThrow(
       /Missing key "summary.named.other"/,
     );
+  });
+
+  it('re-renders on a language change with nothing left to load', () => {
+    // Switching back to an already-visited language fires no `translationLoadSuccess` — it is
+    // cached — so the pipe has to mark its view for check on `langChanges$` too, or an `OnPush`
+    // host whose inputs didn't change keeps rendering the previous language (issue #187).
+    const { fixture, service } = setUp(
+      'en',
+      {
+        'summary.named.one': '{{count}} script named',
+        'summary.named.other': '{{count}} scripts named',
+        'summary.named.few': '{{count}} نصوص',
+      },
+      { count: 3 },
+    );
+    expect(fixture.nativeElement.textContent).toBe('3 scripts named');
+
+    service.setActiveLang('ar');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toBe('3 نصوص');
   });
 });

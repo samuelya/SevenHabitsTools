@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, OnDestroy, Pipe, PipeTransform, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
-import { Subscription, filter } from 'rxjs';
+import { Subscription, filter, merge } from 'rxjs';
 
 /**
  * Plural-correct counts without `transloco-messageformat` (issue #133: that plugin costs initial
@@ -38,9 +38,16 @@ export class AppPluralPipe implements PipeTransform, OnDestroy {
     // One subscription per pipe instance (a template binding gets its own instance, reused across
     // change-detection cycles), not per call: every scope load re-renders every `appPlural`
     // binding, not just the one that happened to trigger it.
-    this.subscription ??= this.transloco.events$
-      .pipe(filter((event) => event.type === 'translationLoadSuccess'))
-      .subscribe(() => this.cdr.markForCheck());
+    //
+    // Both streams, not just the load event: a language the user has already visited is cached, so
+    // switching back to it fires no `translationLoadSuccess` at all. An `OnPush` component whose
+    // inputs didn't change (a counts card whose numbers are the same) would then keep rendering
+    // the previous language's strings until something unrelated marked it dirty. `TranslocoPipe`
+    // marks for check on every language change for the same reason.
+    this.subscription ??= merge(
+      this.transloco.langChanges$,
+      this.transloco.events$.pipe(filter((event) => event.type === 'translationLoadSuccess')),
+    ).subscribe(() => this.cdr.markForCheck());
     return this.resolve(key, count, params);
   }
 

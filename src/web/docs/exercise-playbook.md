@@ -288,6 +288,14 @@ fully; `ar` needs `zero`/`one`/`two`/`few`/`many`/`other` to be fully correct) w
 required fallback — `appPlural` picks `<key>.<category>` for the active language's category and
 count, falling back to `<key>.other` when a specific category isn't defined for that key.
 
+A component whose *only* Transloco binding is `appPlural` (a counts card, typically) must still
+re-render on a language switch, and it is the pipe that marks it for check — it listens to
+`langChanges$` as well as the cold-load event, because a language the user has already visited is
+cached and fires no load event at all. If you write another pipe or helper that renders
+translations outside `TranslocoPipe`/`translateSignal`, it needs both too: an `OnPush` component
+whose inputs didn't change is otherwise skipped, and its text stays in the previous language
+(issue #187; `transition-summary.spec.ts`'s en → ar → en test is the guard).
+
 **`DoneToggle`'s `disabledHint`.** Pass one whenever `disabled()` can be true, so the user learns
 _why_ "Mark done" is unavailable instead of finding a silently inert button:
 
