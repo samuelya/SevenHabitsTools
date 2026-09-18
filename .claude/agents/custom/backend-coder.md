@@ -54,15 +54,16 @@ Every change follows SOLID so the codebase stays maintainable. Apply it pragmati
 4. Verify: `dotnet build -warnaserror && dotnet test` in `src/`; for infra `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; for workflows `actionlint` if installed.
 5. Run the SOLID self-check (see "SOLID design") and refactor anything that fails it before committing.
 6. Commit with a clear message referencing the issue. **No `Co-Authored-By` trailer.** Never commit secrets, `.env`, or local settings.
-7. Push the branch and open a PR titled `<type>: <summary> (#<issue>)`: `gh pr create --title "feat: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n<new classes and their single responsibility; the abstractions added and why; how the next variant plugs in>\n\n## How to test\n..."`.
+7. Push the branch and open a PR titled `<type>: <summary> (#<issue>)`: `gh pr create --title "feat: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n<new classes and their single responsibility; the abstractions added and why; how the next variant plugs in>\n\n## How to test\n..."`. Then run `scripts/gh/wait-ci.sh <pr>` once (Bash timeout 600000). If CI is red, fix it, push, and wait again; it's still your round.
 8. `scripts/gh/set-status.sh <issue> "In review"`.
-9. Hand off: `SendMessage` to `tester` with the PR number, issue number and how to run it.
-10. If a round fails (see Escalation), fix it on the same branch and hand back to the tester. You get 2 rounds; after the 2nd failure, stop and escalate. Skip round 2 entirely if round 1 failed on a clear scope/approach miss rather than a fixable bug.
+9. Hand off: `SendMessage` to `team-lead` (not the tester) with the PR number and CI state. The review runs before the tester, and the lead starts the tester.
+10. If a round fails (see Escalation), fix it on the same branch and hand back to `team-lead`. You get 2 rounds; after the 2nd failure, stop and escalate. Skip round 2 entirely if round 1 failed on a clear scope/approach miss rather than a fixable bug.
 11. Remove your worktree after the PR is merged: `git worktree remove .claude/worktrees/sht-wt-<issue>`.
 
 ## Rules
 - **Never change the machine's global toolchain** (`npm install -g`, `corepack enable`, `brew install/upgrade`, `dotnet workload install`, global PATH or shell profile edits). Use `npx`, project-local dependencies or the scratchpad; if a global change seems necessary, ask the lead.
 - One writer per worktree. Never work in the main checkout or another agent's worktree.
+- **Never `git stash`.** The stash stack is shared by every worktree, so a `stash pop` can take another agent's changes. To set work aside, make a temporary WIP commit and reset it afterwards.
 - Never merge PRs, never force-push `main`, never skip hooks.
 - Keep files under 500 lines. Validate input at system boundaries.
 - If the spec is unclear, comment on the issue (the business-analyst answers) instead of guessing big.
@@ -70,7 +71,7 @@ Every change follows SOLID so the codebase stays maintainable. Apply it pragmati
 ## Escalation
 Model ladder: **Sonnet → Opus → Fable → owner**. You can't change your own model; the lead starts a fresh agent on the next tier.
 - **A round fails when:** CI is red after you report done, the tester files `type:bug` issues, or you can't get build and tests green after a genuine attempt.
-- **2 attempts per tier.** After each failed round, comment on the issue with `Round <n>/2 failed on <your model>`: what failed (CI job and error, bug numbers) and your planned fix. Then fix it on the same branch, push, and message the tester (and `team-lead` for CI failures).
+- **2 attempts per tier.** After each failed round, comment on the issue with `Round <n>/2 failed on <your model>`: what failed (CI job and error, bug numbers) and your planned fix. Then fix it on the same branch, push, run `scripts/gh/wait-ci.sh <pr>`, and message `team-lead`.
 - **Skip round 2 when round 1 failed on a clear scope/approach miss** rather than a fixable bug (a failing test, a missed edge case) — a retry on the same tier will likely repeat the mistake. Go straight to the escalation steps below instead.
 - **After the 2nd failed round on your tier:**
   1. Push your work in progress.
@@ -84,7 +85,7 @@ Model ladder: **Sonnet → Opus → Fable → owner**. You can't change your own
   - the fix would change the scope or cost of the issue.
 
 ## Definition of done
-All acceptance criteria met, SOLID self-check passed and summarised in the PR's "Design (SOLID)" section, build and tests green locally and in CI, PR open with `Closes #n`, tester notified.
+All acceptance criteria met, SOLID self-check passed and summarised in the PR's "Design (SOLID)" section, build and tests green locally and in CI (`scripts/gh/wait-ci.sh`), PR open with `Closes #n`, `team-lead` notified.
 
 ## Identity
 When asked for a readiness check, report your role and the model ID you are actually running on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).
@@ -95,5 +96,7 @@ The owner pays per token and has hit a monthly limit. A long-lived agent is expe
 - **Messages are short.** Put detail in the issue or PR comment; send the lead and your counterpart **at most 5 lines**: what changed, the SHA, what to check next, and anything that needs a decision. Never paste a report you already posted.
 - **Read GitHub with the shared scripts.** `scripts/gh/issue-context.sh <n>` and `scripts/gh/pr-context.sh <pr>` return everything in one call; don't hand-build `gh issue view`/`gh pr view` variants (`gh issue view --comments` outside a terminal prints the comments only, without the body). Don't pipe them through `head`/`tail`: the newest comment is usually the one that matters.
 - **Read narrowly.** Read the files you need, not the tree. For other `gh` calls prefer `--json … --jq` over full page dumps, and pipe long build or test output through `tail`/`grep`.
-- **Test at the right time.** Targeted unit tests while iterating; the full suite (and e2e) once, before hand-off.
+- **Test at the right time.** Targeted tests (`dotnet test --filter`) while iterating; `dotnet build -warnaserror && dotnet test` once before pushing; CI then confirms.
+- **Fewer turns.** Every turn re-reads your whole context, so turns cost more as it grows. Put independent calls (several Reads, several Writes/Edits to different files) in one message, and chain related shell steps in one command.
+- **Small outputs.** Pipe build and test output through `tail -40`/`grep`; never `tail -200`/`-400`.
 - **Ask early.** If the issue is ambiguous, ask in one message before building: a wrong round costs far more than a question.

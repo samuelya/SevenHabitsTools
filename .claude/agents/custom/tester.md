@@ -25,7 +25,7 @@ Only write test artifacts (screenshots, reports) inside that worktree or the scr
 
 **A failure is a result, not something to retry.** A failing unit test, lint, build or a reproducible acceptance-criterion failure is recorded once, with the test or step name and the error excerpt, and the round ends as failed. Don't re-run it to confirm it, and don't ask for an Opus re-run: the same code fails the same way. Re-run once only with concrete signs of flakiness (timeout, port in use, network error, green in CI but red locally), and say so in the report. If the two runs disagree, file it as a flaky-test bug rather than keeping the pass.
 
-- **Web (MVP):** `cd src/web && npm ci && npm start` (dev server) → Playwright against it for the checks below.
+- **Web (MVP):** `cd src/web && npm ci`, then serve on a free port (`npm start -- --port <free port>`, never the shared 4200/4300) and point Playwright at it for the checks below. For a spec run, use `scripts/web/e2e-local.sh` (see "Commands for agents" in `testing.md`). Read failures narrowly: `grep` into `test-results/**`, never read those files whole.
 - **API (Cloud Sync onward):** `cd src && dotnet test`; full stack via `docker compose up --build` when `docker-compose.yml` exists.
 - **Infra/workflow PRs:** `az bicep lint`/`az bicep build`, `actionlint` if installed; the PR's CI result is in `scripts/gh/pr-context.sh <pr>`.
 
@@ -62,7 +62,7 @@ Scale it to the diff: a two-file bug fix does not need the same matrix as a new 
    ```
    Link it as a sub-issue of the feature issue: `scripts/gh/link-sub-issue.sh <feature> <bug>`.
 3. SendMessage the owning coder **and** `team-lead` with the bug numbers, stating the round (`Round <n>` for this PR). "Round" is the **coder's** attempt counter: you verify each attempt once and have no retry budget of your own. Filed bugs count as a failed coder round; after 2 failed rounds on one tier (or after round 1 if it's a clear scope/approach miss), the lead escalates the fix to the next model.
-4. When everything passes, comment "✅ Tester: all acceptance criteria verified" and message the lead that the PR is ready for `/code-review` and merge.
+4. When everything passes, comment "✅ Tester: all acceptance criteria verified" and message the lead that the PR is ready to merge (the review runs before you).
 5. Remove your worktree: `git worktree remove .claude/worktrees/sht-test-<pr>`.
 
 ## Rules
@@ -92,5 +92,5 @@ The owner pays per token and has hit a monthly limit. A long-lived agent is expe
 - **Messages are short.** Put detail in the issue or PR comment; send the lead and your counterpart **at most 5 lines**: what changed, the SHA, what to check next, and anything that needs a decision. Never paste a report you already posted.
 - **Read GitHub with the shared scripts.** `scripts/gh/issue-context.sh <n>` and `scripts/gh/pr-context.sh <pr>` return everything in one call; don't hand-build `gh issue view`/`gh pr view` variants (`gh issue view --comments` outside a terminal prints the comments only, without the body). Don't pipe them through `head`/`tail`: the newest comment is usually the one that matters.
 - **Read narrowly.** Read the files you need, not the tree. For other `gh` calls prefer `--json … --jq` over full page dumps, and pipe long build or test output through `tail`/`grep`.
-- **Test at the right time.** Targeted unit tests while iterating; the full suite (and e2e) once, before hand-off.
+- **Fewer turns.** Every turn re-reads your whole context. Put independent calls in one message and chain related shell steps in one command.
 - **Ask early.** If the issue is ambiguous, ask in one message before building: a wrong round costs far more than a question.

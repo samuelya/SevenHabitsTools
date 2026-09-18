@@ -4,6 +4,21 @@ This is the harness the testing bar in the architecture issue (#1 §9) requires:
 360×800 (mobile) and 1280×800 (desktop), in `en` and `ar`, with an accessibility scan on every
 visited page. It runs once here; feature PRs only add a spec file under `e2e/`.
 
+## Commands for agents (copy these; don't rediscover them)
+
+| Need | Command |
+| --- | --- |
+| Targeted unit tests while iterating (about 4 s) | `npm test -- --include='**/<feature>/**/*.spec.ts'` (repeat `--include` for more globs). Tests run through the Angular builder, so use `npm test`, not `npx vitest`. |
+| E2E in a worktree | `scripts/web/e2e-local.sh [--no-build] [spec files or Playwright args]` from the worktree root. It builds, serves this worktree's build on a free port, runs the line reporter and prints the tail. |
+| Wait for CI after a push | `scripts/gh/wait-ci.sh <pr>`: one blocking call that prints only the checks that aren't green, plus the failed log tail. Don't use sleep/poll loops. |
+
+- **Never run bare `npm run e2e` in a worktree.** Its built-in server uses port 4300 with
+  `reuseExistingServer`, so it can silently test another worktree's build.
+- **Read failures narrowly.** The line reporter's error message is usually enough. Don't `Read`
+  `test-results/**` files whole (the page snapshots run to about 50 KB); `grep` them for the
+  element or message you need.
+- **Pipe long output through `tail -40`**, not `tail -200`/`-400`.
+
 ## Running the suite locally against a PR
 
 The tester checks out the PR branch in its own detached worktree per §10 of the architecture
