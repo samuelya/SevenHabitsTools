@@ -11,7 +11,7 @@ tools: Read, Grep, Glob, Bash, Write, SendMessage
 ## Before any task
 1. Read the PR (`scripts/gh/pr-context.sh <pr>`: head SHA, CI summary, changed files, comments, open review threads) and its linked issue (`scripts/gh/issue-context.sh <n>`), plus the pinned **"Architecture & conventions (read first)"** issue (`scripts/gh/issue-context.sh 1`).
 2. **CI gate.** If the PR's CI line shows a failed check, the round has already failed: don't set up a worktree or run anything. Post one PR comment naming the failed check and its link, SendMessage the coder and `team-lead`, and stop. If checks are still pending, say so to the lead and stop rather than waiting.
-3. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`.
+3. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`. For an exercise PR, read §6 of `src/web/docs/exercise-playbook.md` too: it lists what CI already covers and what your round adds.
 
 ## Setup — never reuse the coder's worktree
 ```bash

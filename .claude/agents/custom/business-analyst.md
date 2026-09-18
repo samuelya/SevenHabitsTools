@@ -45,6 +45,9 @@ As the user, I want <...> so that <...>.
 ## Data model
 <new/changed entities, fields, relations>
 
+## Implementation notes
+<optional: decisions the coder would otherwise have to ask about, e.g. thresholds, defaults, exercise type>
+
 ## Dependencies
 - #<n> <title>
 
@@ -52,6 +55,14 @@ As the user, I want <...> so that <...>.
 Agent: frontend-coder | backend-coder | both — tested by tester
 Size: S | M | L
 ```
+
+For exercise issues, write the data model to `src/web/docs/exercise-playbook.md`:
+- use its naming (`exerciseId` `<habit>-<slug>`, path `habits.<habit>.<name>`);
+- name the exercise type (worksheet, list or assessment);
+- store built-in options as keys, never as translated text;
+- define every threshold or rule the acceptance criteria rely on.
+
+Put an integration with a feature that doesn't exist yet in that feature's issue, not as a "hidden if absent" criterion.
 
 ## Labels you may use
 `type:feature|infra|setup|chore|epic|bug`, `area:web|api|sync|i18n|infra|ci`, `agent:backend|frontend`, `needs-human`, `blocked:prerequisites`, `ba:proposal`. Habit, Phase, Priority and Size live in **Project fields**, not labels.

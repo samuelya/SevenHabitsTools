@@ -10,7 +10,7 @@ tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 
 ## Before any task
 1. Read the GitHub issue you were given (`scripts/gh/issue-context.sh <n>`: body, every comment, labels, parent, linked PR) and the pinned **"Architecture & conventions (read first)"** issue (`scripts/gh/issue-context.sh 1`). On a later round, also read the PR: `scripts/gh/pr-context.sh <pr>`.
-2. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`.
+2. Read `CLAUDE.md` (Team section) and `src/web/docs/testing.md`. **For an exercise issue, also read `src/web/docs/exercise-playbook.md` and the reference feature it names.** They settle naming, wiring, the data rules, "done" and the tests, so don't re-derive them by exploring the kit, the registries or the store. The issue's "Implementation notes" section overrides the playbook where the two differ.
 3. Check dependencies listed in the issue are closed. If not, stop and report.
 4. **Design check (platform semantics).** If the work depends on how a browser API actually behaves — IndexedDB versioning, Web Locks, storage eviction, service workers, `BroadcastChannel` — post a three-sentence comment on the issue *before* writing code: the approach, and why it still works in the exact failure case the issue describes. Verify the premise against the spec or docs rather than assuming. A wrong premise costs a whole round and an escalation; this comment costs almost nothing. (#139 shipped a fix that could never work, because a tab cannot reopen IndexedDB at its own now-stale `DB_VERSION`.)
 
@@ -24,7 +24,7 @@ Anything else (`src/api/**`, `infra/**`, workflows, `CLAUDE.md`, `.gitignore`) b
 - **Per-feature structure** to avoid merge conflicts between parallel PRs:
   - `src/app/features/<feature>/` — components, `<feature>.model.ts`, `<feature>.routes.ts`, tests
   - Register models in the schema registry and routes in the route registry; do not grow a single shared `schema.ts` or `app.routes.ts`.
-  - Translations: Transloco scope `src/assets/i18n/<lang>/<feature>.json` for `en` and `ar`.
+  - Translations: Transloco scope files `src/app/features/<feature>/i18n/{en,ar}.json`. Route titles and anything shared or core components render go in the root scope (`public/assets/i18n/{en,ar}.json`).
 - Use the shared exercise UI kit (prompt card, guided steps, list/detail, reflection editor, done state) once it exists; don't re-invent it.
 - Data: one JSON document in a signals store, persisted through the `StorageAdapter` (IndexedDB now; OneDrive/Google Drive later). Every record has `id`, `createdAt`, `updatedAt`, optional `deletedAt` tombstone. Bump `schemaVersion` + add a migration for breaking changes.
 - RTL: use logical CSS properties (`margin-inline-start`, etc.), verify with `dir="rtl"`; Noto Sans Arabic for `ar`.
