@@ -55,20 +55,26 @@
 // Desktop, focus mode: the body column shrinks and the editor takes the rest of the width, so the
 // page — not the editor — is the scroll container. A CSS grid, not a drawer: grid tracks are
 // direction-aware, so the editor lands at the inline-end under `dir="rtl"` with no extra rule.
+// Rows are pinned explicitly: DOM order is body, footer, editor (the footer's `@if` sits between
+// them in the template), so sparse auto-placement would otherwise put the editor in row 2, under
+// the sticky footer, instead of beside the body in row 1.
 .scaffold.editing:not(.handset) {
   display: grid;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
+  grid-template-rows: auto auto;
   align-items: start;
   gap: 1rem;
 }
 
 .scaffold.editing:not(.handset) .body {
   grid-column: 1;
+  grid-row: 1;
   min-inline-size: 0;
 }
 
 .scaffold.editing:not(.handset) .footer-slot {
   grid-column: 1 / -1;
+  grid-row: 2;
 }
 
 .editor-panel {
@@ -92,6 +98,7 @@
 // Desktop: a normal grid column with no scroll of its own — the page scrolls.
 .scaffold.editing:not(.handset) .editor-panel {
   grid-column: 2;
+  grid-row: 1;
 }
 
 .editor-header {

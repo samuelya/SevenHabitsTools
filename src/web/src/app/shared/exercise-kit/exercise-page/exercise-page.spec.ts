@@ -3,7 +3,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoScope } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
 import { EditorInitialFocus } from './editor-initial-focus.directive';
@@ -121,6 +121,24 @@ describe('ExercisePage', () => {
     expect(host.querySelector('.body')?.getAttribute('inert')).toBeNull();
   });
 
+  it('pins the body and editor to the same grid row, above the footer, on desktop (#188)', () => {
+    // Sparse grid auto-placement would otherwise put the editor (column 2) in row 2, under the
+    // sticky footer (row 1), since the footer sits between body and editor in DOM order.
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const body = host.querySelector('.body') as HTMLElement;
+    const editorPanel = host.querySelector('.editor-panel') as HTMLElement;
+    const footer = host.querySelector('.footer-slot') as HTMLElement;
+
+    expect(getComputedStyle(body).gridRow).toBe('1');
+    expect(getComputedStyle(editorPanel).gridRow).toBe('1');
+    expect(getComputedStyle(footer).gridRow).toBe('2');
+  });
+
   it('shows the saving and saved status text through the aria-live region', () => {
     configureTestBed(false);
     const fixture = TestBed.createComponent(HostComponent);
@@ -229,6 +247,56 @@ describe('ExercisePage', () => {
     fixture.detectChanges();
     expect((document.activeElement as HTMLElement)?.className).toBe('editor-title');
 
+    fixture.componentInstance.editing.set(false);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(trigger);
+
+    host.remove();
+  });
+
+  it('moves focus into the editor panel when the handset breakpoint is crossed while already editing', () => {
+    // The `wasEditing` transition alone misses this: `editing()` doesn't change here, only
+    // `handset()` does. Without tracking that crossing too, `bodyInert` turning on (body is not
+    // inert on desktop, so focus is free to sit there while editing) blurs focus straight to
+    // `document.body` instead of moving it into the now full-screen editor panel.
+    let matchesHandset = false;
+    const state$ = new BehaviorSubject<BreakpointState>({ matches: false, breakpoints: {} });
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => state$.asObservable(), isMatched: () => matchesHandset },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(HostComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+
+    const trigger = host.querySelector('.body-content') as HTMLButtonElement;
+    trigger.focus();
+
+    // Opens on desktop: focus moves into the two-column editor.
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+    expect((document.activeElement as HTMLElement)?.className).toBe('editor-title');
+
+    // The user tabs back into the still-visible (not inert on desktop) body/list column.
+    const bodyContent = host.querySelector('.body-content') as HTMLButtonElement;
+    bodyContent.focus();
+    expect(document.activeElement).toBe(bodyContent);
+
+    // The window narrows below the handset breakpoint while still editing (a resize, fold or
+    // rotation) — `editing()` itself doesn't change, only `handset()` does.
+    matchesHandset = true;
+    state$.next({ matches: true, breakpoints: {} });
+    fixture.detectChanges();
+    expect((document.activeElement as HTMLElement)?.className).toBe('editor-title');
+
+    // Closing still restores focus to the original trigger, not to whatever was focused in the
+    // body right before the handset crossing — the crossing must not have overwritten it.
     fixture.componentInstance.editing.set(false);
     fixture.detectChanges();
     expect(document.activeElement).toBe(trigger);

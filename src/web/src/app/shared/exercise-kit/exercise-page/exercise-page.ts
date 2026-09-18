@@ -81,15 +81,28 @@ export class ExercisePage {
    * must still be treated as an open/close transition here, exactly like `ExerciseDetail`'s own
    * `wasHandsetOpen` (#174's follow-up) — otherwise capture or restore silently no-ops. */
   private wasEditing = false;
+  /** Tracks the combined "editing on handset" state so a resize/fold that crosses *into* handset
+   * while already editing is caught even though `editing()` itself didn't change: `bodyInert`
+   * (above) turning on forces focus straight to `document.body` (the spec's `inert`-blurs-focus
+   * behaviour), same as `ExerciseDetail`'s `wasHandsetOpen` does for its drawer. */
+  private wasHandsetEditing = false;
 
   constructor() {
     effect(() => {
       const editing = this.editing();
-      if (editing === this.wasEditing) {
+      const handsetEditing = this.handset() && editing;
+      const openedFocusMode = editing && !this.wasEditing;
+      const closedFocusMode = !editing && this.wasEditing;
+      const crossedIntoHandsetWhileEditing = editing && handsetEditing && !this.wasHandsetEditing;
+      this.wasEditing = editing;
+      this.wasHandsetEditing = handsetEditing;
+      if (!openedFocusMode && !closedFocusMode && !crossedIntoHandsetWhileEditing) {
         return;
       }
-      this.wasEditing = editing;
-      if (editing) {
+      // Only a genuine open captures the trigger; crossing into handset mid-edit must leave the
+      // original trigger alone so close still restores focus to it, not to whatever was focused
+      // in the body right before `bodyInert` blurred it.
+      if (openedFocusMode) {
         this.triggerElement = this.document.activeElement as HTMLElement | null;
       }
       // Deferred to a render hook, not run inline here: the `@if` that renders the editor panel
