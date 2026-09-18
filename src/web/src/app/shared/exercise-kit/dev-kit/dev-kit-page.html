@@ -3,7 +3,6 @@
 <section>
   <h2>Prompt card</h2>
   <app-exercise-prompt-card
-    title="Circle of Influence"
     prompt="List the things in your life you can directly control, versus the things you can only be concerned about."
     chapterReference="Habit 1"
     whyItMatters="Focusing your energy on what you can influence is the core of proactive behavior."
@@ -27,21 +26,38 @@
 </section>
 
 <section>
-  <h2>List / detail</h2>
-  <app-exercise-detail [hasDetail]="hasDetail()" (closed)="selectedId.set(null)">
-    <app-exercise-list
-      list
-      [items]="items"
-      [selectedId]="selectedId()"
-      (itemSelected)="select($event)"
+  <h2>Exercise page scaffold</h2>
+  <app-exercise-page
+    title="Circle of Influence"
+    [editing]="editing()"
+    [editorTitle]="editorTitle()"
+    [editorStatus]="editorStatus()"
+    (editorClosed)="closeEditor()"
+  >
+    <app-exercise-prompt-card
+      intro
+      prompt="List the things in your life you can directly control, versus the things you can only be concerned about."
+      chapterReference="Habit 1"
+      whyItMatters="Focusing your energy on what you can influence is the core of proactive behavior."
     />
-    @if (selectedId(); as selectedId) {
-      <div detail>
-        <h3>{{ selectedId }}</h3>
-        <p>Detail content for the selected exercise would render here.</p>
-      </div>
-    }
-  </app-exercise-detail>
+
+    <button mat-flat-button type="button" class="add-button">
+      <mat-icon aria-hidden="true">add</mat-icon>
+      Add item
+    </button>
+    <app-exercise-list [items]="items" [selectedId]="editingId()" (itemSelected)="edit($event)" />
+
+    <div editor>
+      <p appEditorInitialFocus tabindex="-1">
+        Editor content for the selected exercise would render here.
+      </p>
+    </div>
+
+    <div footer class="footer-content">
+      <span>2 of 3 done</span>
+      <app-done-toggle [done]="done()" [completedAt]="completedAt()" (toggled)="onToggle()" />
+    </div>
+  </app-exercise-page>
 </section>
 
 <section>

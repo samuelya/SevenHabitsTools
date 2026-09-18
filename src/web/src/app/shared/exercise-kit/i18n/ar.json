@@ -1,5 +1,6 @@
 {
   "promptCard": {
+    "about": "حول هذا التمرين",
     "whyItMatters": "لماذا يهم هذا"
   },
   "stepper": {
@@ -15,6 +16,11 @@
   },
   "detail": {
     "close": "العودة إلى القائمة"
+  },
+  "editor": {
+    "close": "إغلاق",
+    "saved": "تم الحفظ",
+    "saving": "جارٍ الحفظ…"
   },
   "reflection": {
     "characterCount": "{{count}} حرفًا",

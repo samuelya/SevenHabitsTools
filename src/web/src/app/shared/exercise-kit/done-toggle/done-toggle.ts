@@ -12,6 +12,10 @@ import { AppDatePipe } from '../../../core/i18n/locale.pipe';
  * `disabled` (issue #51) only gates the "Mark done" button — a list exercise whose done rule is
  * "at least one item is complete" passes `!canMarkDone` here rather than hiding the control.
  * Reopening stays available regardless: it undoes a past action, not one gated by current data.
+ *
+ * `disabledHint` (issue #185) renders next to a disabled "Mark done" button, linked to it with
+ * `aria-describedby`, so the user learns *why* it's unavailable instead of a silently inert
+ * button.
  */
 @Component({
   selector: 'app-done-toggle',
@@ -21,8 +25,15 @@ import { AppDatePipe } from '../../../core/i18n/locale.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DoneToggle {
+  private static nextHintId = 0;
+
   readonly done = input.required<boolean>();
   readonly completedAt = input<string | null>(null);
   readonly disabled = input(false);
+  readonly disabledHint = input<string | null>(null);
   readonly toggled = output<void>();
+
+  /** Own instance id, so two `DoneToggle`s on the same page (e.g. the dev kit demo) don't collide
+   * on the same `id` for `aria-describedby` to point at. */
+  protected readonly hintId = `done-toggle-hint-${DoneToggle.nextHintId++}`;
 }

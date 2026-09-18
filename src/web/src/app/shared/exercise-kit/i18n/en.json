@@ -1,5 +1,6 @@
 {
   "promptCard": {
+    "about": "About this exercise",
     "whyItMatters": "Why this matters"
   },
   "stepper": {
@@ -15,6 +16,11 @@
   },
   "detail": {
     "close": "Back to list"
+  },
+  "editor": {
+    "close": "Close",
+    "saved": "Saved",
+    "saving": "Saving…"
   },
   "reflection": {
     "characterCount": "{{count}} characters",

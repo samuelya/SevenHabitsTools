@@ -14,9 +14,18 @@
       </span>
     }
   } @else {
-    <button mat-flat-button type="button" [disabled]="disabled()" (click)="toggled.emit()">
+    <button
+      mat-flat-button
+      type="button"
+      [disabled]="disabled()"
+      [attr.aria-describedby]="disabled() && disabledHint() ? hintId : null"
+      (click)="toggled.emit()"
+    >
       <mat-icon aria-hidden="true">check_circle</mat-icon>
       {{ 'exerciseKit.doneToggle.markDone' | transloco }}
     </button>
+    @if (disabled() && disabledHint(); as hint) {
+      <span class="disabled-hint" [id]="hintId">{{ hint }}</span>
+    }
   }
 </div>

@@ -4,7 +4,12 @@ import '../../../features/settings/settings.model';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { DoneToggle } from './done-toggle';
 
-function setUp(done: boolean, completedAt: string | null = null, disabled = false) {
+function setUp(
+  done: boolean,
+  completedAt: string | null = null,
+  disabled = false,
+  disabledHint: string | null = null,
+) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
   });
@@ -12,6 +17,7 @@ function setUp(done: boolean, completedAt: string | null = null, disabled = fals
   fixture.componentRef.setInput('done', done);
   fixture.componentRef.setInput('completedAt', completedAt);
   fixture.componentRef.setInput('disabled', disabled);
+  fixture.componentRef.setInput('disabledHint', disabledHint);
   fixture.detectChanges();
   return fixture;
 }
@@ -53,5 +59,30 @@ describe('DoneToggle', () => {
     expect((fixture.nativeElement.querySelector('button') as HTMLButtonElement).disabled).toBe(
       false,
     );
+  });
+
+  it('renders the disabled hint and links it to the button, when disabled and a hint is given', () => {
+    const fixture = setUp(false, null, true, 'Complete at least one item first.');
+    const host = fixture.nativeElement as HTMLElement;
+    const button = host.querySelector('button') as HTMLButtonElement;
+    const hint = host.querySelector('.disabled-hint') as HTMLElement;
+
+    expect(hint.textContent).toContain('Complete at least one item first.');
+    expect(button.getAttribute('aria-describedby')).toBe(hint.id);
+  });
+
+  it('omits the hint when a hint is given but the button is not disabled', () => {
+    const fixture = setUp(false, null, false, 'Complete at least one item first.');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('.disabled-hint')).toBeNull();
+    expect(
+      (host.querySelector('button') as HTMLButtonElement).getAttribute('aria-describedby'),
+    ).toBeNull();
+  });
+
+  it('omits the hint when disabled but no hint is given', () => {
+    const fixture = setUp(false, null, true);
+    expect((fixture.nativeElement as HTMLElement).querySelector('.disabled-hint')).toBeNull();
   });
 });
