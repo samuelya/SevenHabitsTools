@@ -15,6 +15,7 @@ import {
   addScript,
   canMarkDone,
   editScript,
+  labelsFrom,
   liveScripts,
   removeScript,
   summarize,
@@ -24,9 +25,7 @@ import {
   SCRIPT_EFFECTS,
   SCRIPT_SOURCES,
   Script,
-  ScriptEffect,
   ScriptFields,
-  ScriptSource,
   TRANSITION_MODEL_KEY,
 } from './transition.model';
 
@@ -89,14 +88,12 @@ export class TransitionPage {
     undefined,
     'paradigms-transition',
   );
-  private readonly labels = computed(() => ({
-    source: Object.fromEntries(
-      SCRIPT_SOURCES.map((source, index) => [source, this.sourceLabels()[index]]),
-    ) as Record<ScriptSource, string>,
-    effect: Object.fromEntries(
-      SCRIPT_EFFECTS.map((effect, index) => [effect, this.effectLabels()[index]]),
-    ) as Record<ScriptEffect, string>,
-  }));
+  // `labelsFrom` falls back to `''` for a missing index — `translateSignal` with an array key
+  // starts at `['']` (fesm2022/jsverse-transloco.mjs), not one empty string per key, so every
+  // index past 0 is `undefined` until the scope loads.
+  private readonly labels = computed(() =>
+    labelsFrom(SCRIPT_SOURCES, this.sourceLabels(), SCRIPT_EFFECTS, this.effectLabels()),
+  );
 
   protected readonly scripts = computed(() => liveScripts(this.store.value()));
   protected readonly items = computed(() =>

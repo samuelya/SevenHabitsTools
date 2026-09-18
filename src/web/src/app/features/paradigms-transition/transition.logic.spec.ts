@@ -1,9 +1,10 @@
-import { Script } from './transition.model';
+import { SCRIPT_EFFECTS, SCRIPT_SOURCES, Script } from './transition.model';
 import {
   addScript,
   canMarkDone,
   editScript,
   isItemComplete,
+  labelsFrom,
   removeScript,
   requiresNewScript,
   summarize,
@@ -90,6 +91,33 @@ describe('summarize', () => {
 
   it('is all zero with no scripts', () => {
     expect(summarize([])).toEqual({ stopped: 0, rewritten: 0, total: 0 });
+  });
+});
+
+describe('labelsFrom', () => {
+  it('falls back to an empty string for every label past index 0 before the scope has loaded', () => {
+    // `translateSignal` with an array key starts at `['']` (one placeholder, not one per key)
+    // until the scope's HTTP request resolves, so every index past 0 reads as `undefined`.
+    const labels = labelsFrom(SCRIPT_SOURCES, [''], SCRIPT_EFFECTS, ['']);
+
+    expect(labels).toEqual({
+      source: { family: '', culture: '', work: '', other: '' },
+      effect: { helps: '', harms: '', mixed: '' },
+    });
+  });
+
+  it('maps each translated label to its enum value once the scope has loaded', () => {
+    const labels = labelsFrom(
+      SCRIPT_SOURCES,
+      ['Family', 'Culture', 'Work', 'Other'],
+      SCRIPT_EFFECTS,
+      ['Helps', 'Harms', 'Mixed'],
+    );
+
+    expect(labels).toEqual({
+      source: { family: 'Family', culture: 'Culture', work: 'Work', other: 'Other' },
+      effect: { helps: 'Helps', harms: 'Harms', mixed: 'Mixed' },
+    });
   });
 });
 

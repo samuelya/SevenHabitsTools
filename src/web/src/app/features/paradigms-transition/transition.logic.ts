@@ -59,6 +59,26 @@ export interface ScriptLabels {
   readonly effect: Record<ScriptEffect, string>;
 }
 
+/** Builds `ScriptLabels` from Transloco's `translateSignal` output for each enum. `translateSignal`
+ * with an array key starts at `['']` (one placeholder, not one per key) until the scope has loaded,
+ * so every index past 0 reads as `undefined` on a cold load — falling back to `''` keeps the list
+ * subtitle blank instead of rendering the literal text "undefined" (review finding on #51's PR). */
+export function labelsFrom(
+  sources: readonly ScriptSource[],
+  sourceLabels: readonly (string | undefined)[],
+  effects: readonly ScriptEffect[],
+  effectLabels: readonly (string | undefined)[],
+): ScriptLabels {
+  return {
+    source: Object.fromEntries(
+      sources.map((source, index) => [source, sourceLabels[index] ?? '']),
+    ) as Record<ScriptSource, string>,
+    effect: Object.fromEntries(
+      effects.map((effect, index) => [effect, effectLabels[index] ?? '']),
+    ) as Record<ScriptEffect, string>,
+  };
+}
+
 /** Maps a script to the row `ExerciseList` renders. */
 export function toListItem(script: Script, labels: ScriptLabels): ExerciseListItem {
   return {

@@ -130,11 +130,9 @@ records contain a list).
     undefined,
     '<exerciseId>',
   );
-  private readonly labels = computed(() => ({
-    source: Object.fromEntries(
-      SCRIPT_SOURCES.map((source, index) => [source, this.sourceLabels()[index]]),
-    ) as Record<ScriptSource, string>,
-  }));
+  // `labelsFrom` (a pure function in `<slug>.logic.ts`) falls back to `''` per index — see the
+  // second pitfall below.
+  private readonly labels = computed(() => labelsFrom(SCRIPT_SOURCES, this.sourceLabels()));
   ```
 
   **Pitfall: always pass the scope explicitly, with keys relative to it.** A route that also
@@ -146,6 +144,14 @@ records contain a list).
   argument supplies it. Test this with a spec that switches `TranslocoService.setActiveLang()`
   after the page has rendered and asserts the rendered label changed (a scope preloaded
   synchronously, as `provideTranslocoTesting()` does, won't otherwise catch a frozen `computed`).
+
+  **Pitfall: `translateSignal` with an array key starts at `['']`, not one empty string per
+  key** (`node_modules/@jsverse/transloco/fesm2022/jsverse-transloco.mjs`'s `toSignal` call). So on
+  a cold load, before the scope arrives, every index past 0 reads as `undefined` and a naive
+  `this.sourceLabels()[index]` renders the literal text "undefined" in the list subtitle. Have the
+  mapping function (`labelsFrom` above) fall back to `''` per index, and unit-test that
+  before-load shape directly (`labelsFrom(SCRIPT_SOURCES, [''])`) rather than relying on a spec's
+  synchronously preloaded scope to reproduce it (#51's PR follow-up).
 - **List item selection state:** don't bind `aria-selected` on a `mat-list-item` button (axe's
   `aria-allowed-attr` disallows it outside `role="option"`/`"tab"`/etc.), and don't bind
   `aria-current` either — `MatListItem`'s own host binding owns that attribute and silently
