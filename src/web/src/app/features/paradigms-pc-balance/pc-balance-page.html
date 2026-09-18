@@ -1,0 +1,43 @@
+<app-exercise-page
+  [title]="'paradigmsPcBalance.prompt.title' | transloco"
+  [editing]="hasDetail()"
+  [editorTitle]="'paradigmsPcBalance.editor.title' | transloco"
+  [editorStatus]="editorStatus()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [prompt]="'paradigmsPcBalance.prompt.text' | transloco"
+    [chapterReference]="'paradigmsPcBalance.prompt.chapterReference' | transloco"
+    [whyItMatters]="'paradigmsPcBalance.prompt.whyItMatters' | transloco"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onNewAudit()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'paradigmsPcBalance.history.newAudit' | transloco }}
+  </button>
+
+  <app-assessment-history-list
+    [items]="historyItems()"
+    [selectedId]="itemId()"
+    [emptyMessage]="'paradigmsPcBalance.history.empty' | transloco"
+    (itemSelected)="select($event)"
+  />
+
+  <div editor>
+    @if (selectedAudit(); as audit) {
+      <app-pc-balance-audit-form [audit]="audit" (changed)="onAuditChanged(audit.id, $event)" />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    <app-pc-balance-summary [summary]="summary()" />
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [disabledHint]="'paradigmsPcBalance.summary.doneHint' | transloco"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

@@ -1,0 +1,30 @@
+<div class="assessment-history-list">
+  @if (items().length) {
+    <mat-nav-list>
+      @for (item of items(); track item.id) {
+        <!-- `aria-pressed`, not `aria-selected`/`aria-current`: same reasoning as `ExerciseList`'s
+             own item button (`exercise-list.html`) — `MatListItem` already owns `aria-current` and
+             `aria-selected` isn't allowed on `role="button"`. -->
+        <button
+          mat-list-item
+          type="button"
+          class="assessment-history-list__item"
+          [class.assessment-history-list__item--selected]="item.id === selectedId()"
+          [activated]="item.id === selectedId()"
+          [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
+          (click)="itemSelected.emit(item.id)"
+        >
+          <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
+          <span matListItemTitle>{{
+            localDate(item.date) | appDate: { dateStyle: 'medium' }
+          }}</span>
+          @if (item.subtitle; as subtitle) {
+            <span matListItemLine>{{ subtitle }}</span>
+          }
+        </button>
+      }
+    </mat-nav-list>
+  } @else {
+    <p class="empty">{{ emptyMessage() }}</p>
+  }
+</div>

@@ -1,0 +1,53 @@
+<app-exercise-page
+  [title]="'paradigmsMaturity.prompt.title' | transloco"
+  [editing]="hasDetail()"
+  [editorTitle]="'paradigmsMaturity.editor.title' | transloco"
+  [editorStatus]="editorStatus()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [prompt]="'paradigmsMaturity.prompt.text' | transloco"
+    [chapterReference]="'paradigmsMaturity.prompt.chapterReference' | transloco"
+    [whyItMatters]="'paradigmsMaturity.prompt.whyItMatters' | transloco"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onNewAssessment()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'paradigmsMaturity.history.newAssessment' | transloco }}
+  </button>
+
+  <app-assessment-history-list
+    [items]="historyItems()"
+    [selectedId]="itemId()"
+    [emptyMessage]="'paradigmsMaturity.history.empty' | transloco"
+    (itemSelected)="select($event)"
+  />
+
+  <div editor>
+    @if (selectedAssessment(); as assessment) {
+      <app-maturity-assessment-form
+        [assessment]="assessment"
+        [builtInLabels]="builtInLabels()"
+        (changed)="onAssessmentChanged(assessment.id, $event)"
+      />
+      <app-maturity-result
+        [assessment]="assessment"
+        [previous]="previous()"
+        [builtInLabels]="builtInLabels()"
+        [profileLabels]="profileLabels()"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    <app-maturity-summary [summary]="summary()" [profileLabels]="profileLabels()" />
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [disabledHint]="'paradigmsMaturity.summary.doneHint' | transloco"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

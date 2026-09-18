@@ -1,0 +1,55 @@
+<div class="maturity-result">
+  @if (profile(); as profile) {
+    <p class="profile">
+      {{ 'paradigmsMaturity.result.profileLabel' | transloco }}: {{ profileLabels()[profile] }}
+    </p>
+    @if (suggestions().length) {
+      <ul class="suggestions">
+        @for (habit of suggestions(); track habit) {
+          <li>
+            <a [routerLink]="'/habits/' + habit">
+              {{ 'paradigmsMaturity.result.habitLink' | transloco: { number: habitNumber(habit) } }}
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <p class="profile-pending">{{ 'paradigmsMaturity.result.profilePending' | transloco }}</p>
+  }
+
+  @if (previous(); as previous) {
+    <div class="deltas">
+      <p class="deltas-title">
+        {{
+          'paradigmsMaturity.result.deltaTitle'
+            | transloco: { date: localDate(previous.date) | appDate: { dateStyle: 'medium' } }
+        }}
+      </p>
+      <ul>
+        @for (entry of areaDeltas(); track entry.area.id) {
+          <li>
+            <span class="delta-name">{{ displayValue(entry.area) }}</span>
+            @if (entry.delta === null) {
+              <span class="delta-value">—</span>
+            } @else if (entry.delta.kind === 'new') {
+              <span class="delta-value">{{ 'paradigmsMaturity.result.newArea' | transloco }}</span>
+            } @else {
+              <span class="delta-value">{{
+                entry.delta.value > 0 ? '+' + entry.delta.value : entry.delta.value
+              }}</span>
+            }
+          </li>
+        }
+        @for (area of removed(); track area.id) {
+          <li>
+            <span class="delta-name">{{ displayValue(area) }}</span>
+            <span class="delta-value">{{
+              'paradigmsMaturity.result.removedArea' | transloco
+            }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+</div>

@@ -1,0 +1,246 @@
+import { PcAsset, PcAudit } from './pc-balance.model';
+import {
+  addAsset,
+  addAudit,
+  auditAverageBalance,
+  balanceOf,
+  canMarkDone,
+  editAsset,
+  editAudit,
+  groupSummaries,
+  isAssetComplete,
+  isAuditComplete,
+  isOverUsed,
+  newAuditFields,
+  removeAsset,
+  statusOf,
+  summarize,
+} from './pc-balance.logic';
+
+const NOW = new Date('2026-01-01T00:00:00.000Z');
+
+function asset(overrides: Partial<PcAsset> = {}): PcAsset {
+  return { key: 'k1', name: 'Health', group: 'physical', p: 3, pc: 3, ...overrides };
+}
+
+function audit(overrides: Partial<PcAudit> = {}): PcAudit {
+  return {
+    id: 'a1',
+    createdAt: NOW.toISOString(),
+    updatedAt: NOW.toISOString(),
+    date: '2026-01-01',
+    assets: [],
+    reflection: '',
+    ...overrides,
+  };
+}
+
+describe('balanceOf/statusOf', () => {
+  it('is over-used at a balance of 2 or more', () => {
+    expect(statusOf(balanceOf({ p: 5, pc: 3 }))).toBe('overUsed');
+    expect(statusOf(balanceOf({ p: 4, pc: 2 }))).toBe('overUsed');
+  });
+
+  it('is under-used at a balance of -2 or less', () => {
+    expect(statusOf(balanceOf({ p: 1, pc: 3 }))).toBe('underUsed');
+  });
+
+  it('is balanced between -2 and 2, exclusive of the thresholds', () => {
+    expect(statusOf(balanceOf({ p: 3, pc: 3 }))).toBe('balanced');
+    expect(statusOf(balanceOf({ p: 4, pc: 3 }))).toBe('balanced');
+    expect(statusOf(balanceOf({ p: 2, pc: 3 }))).toBe('balanced');
+  });
+});
+
+describe('isAssetComplete', () => {
+  it('is true for a balanced or under-used asset regardless of action', () => {
+    expect(isAssetComplete(asset({ p: 3, pc: 3, action: undefined }))).toBe(true);
+    expect(isAssetComplete(asset({ p: 1, pc: 5, action: undefined }))).toBe(true);
+  });
+
+  it('requires an action once over-used', () => {
+    expect(isAssetComplete(asset({ p: 5, pc: 1, action: undefined }))).toBe(false);
+    expect(isAssetComplete(asset({ p: 5, pc: 1, action: '   ' }))).toBe(false);
+    expect(isAssetComplete(asset({ p: 5, pc: 1, action: 'Schedule a rest day' }))).toBe(true);
+  });
+
+  it('requires a non-blank name, regardless of balance', () => {
+    expect(isAssetComplete(asset({ name: '', p: 3, pc: 3 }))).toBe(false);
+    expect(isAssetComplete(asset({ name: '   ', p: 3, pc: 3 }))).toBe(false);
+  });
+});
+
+describe('isAuditComplete/canMarkDone', () => {
+  it('is false with no assets', () => {
+    expect(isAuditComplete(audit({ assets: [] }))).toBe(false);
+  });
+
+  it('is false while an over-used asset has no action', () => {
+    expect(isAuditComplete(audit({ assets: [asset({ p: 5, pc: 1 })] }))).toBe(false);
+  });
+
+  it('is true once every over-used asset has an action', () => {
+    expect(
+      isAuditComplete(
+        audit({ assets: [asset({ p: 5, pc: 1, action: 'Rest' }), asset({ key: 'k2' })] }),
+      ),
+    ).toBe(true);
+  });
+
+  it('canMarkDone ignores a tombstoned audit', () => {
+    const complete = audit({
+      id: 'a1',
+      assets: [asset()],
+      deletedAt: NOW.toISOString(),
+    });
+    expect(canMarkDone([complete])).toBe(false);
+  });
+
+  it('canMarkDone is true once at least one live audit is complete', () => {
+    const incomplete = audit({ id: 'a1', assets: [] });
+    const complete = audit({ id: 'a2', assets: [asset()] });
+    expect(canMarkDone([incomplete, complete])).toBe(true);
+  });
+});
+
+describe('auditAverageBalance', () => {
+  it('is null with no assets', () => {
+    expect(auditAverageBalance(audit({ assets: [] }))).toBeNull();
+  });
+
+  it('is the mean of p - pc, to 1 decimal', () => {
+    const assets = [asset({ key: 'k1', p: 5, pc: 3 }), asset({ key: 'k2', p: 2, pc: 4 })];
+    // (2 + -2) / 2 = 0
+    expect(auditAverageBalance(audit({ assets }))).toBe(0);
+    const uneven = [asset({ key: 'k1', p: 5, pc: 3 }), asset({ key: 'k2', p: 3, pc: 3 })];
+    // (2 + 0) / 2 = 1
+    expect(auditAverageBalance(audit({ assets: uneven }))).toBe(1);
+    const rounding = [asset({ key: 'k1', p: 5, pc: 3 }), asset({ key: 'k2', p: 4, pc: 3 })];
+    // (2 + 1) / 2 = 1.5
+    expect(auditAverageBalance(audit({ assets: rounding }))).toBe(1.5);
+  });
+});
+
+describe('groupSummaries', () => {
+  it('reports one entry per group, in group order, null average with no assets', () => {
+    const summaries = groupSummaries([]);
+    expect(summaries.map((s) => s.group)).toEqual(['physical', 'financial', 'human']);
+    expect(summaries.every((s) => s.averageBalance === null)).toBe(true);
+  });
+
+  it('averages and counts only the assets in that group', () => {
+    const assets = [
+      asset({ key: 'k1', group: 'physical', p: 5, pc: 3 }), // over-used
+      asset({ key: 'k2', group: 'physical', p: 3, pc: 3 }), // balanced
+      asset({ key: 'k3', group: 'financial', p: 1, pc: 4 }), // under-used
+    ];
+    const summaries = groupSummaries(assets);
+    const physical = summaries.find((s) => s.group === 'physical')!;
+    expect(physical.averageBalance).toBe(1);
+    expect(physical.overUsed).toBe(1);
+    expect(physical.balanced).toBe(1);
+    const financial = summaries.find((s) => s.group === 'financial')!;
+    expect(financial.underUsed).toBe(1);
+    const human = summaries.find((s) => s.group === 'human')!;
+    expect(human.averageBalance).toBeNull();
+  });
+});
+
+describe('summarize', () => {
+  it('counts only live audits and reports the latest one’s average balance', () => {
+    const older = audit({ id: 'a1', date: '2026-01-01', assets: [asset({ p: 3, pc: 3 })] });
+    const newer = audit({ id: 'a2', date: '2026-02-01', assets: [asset({ p: 5, pc: 3 })] });
+    const deleted = audit({ id: 'a3', date: '2026-03-01', deletedAt: NOW.toISOString() });
+    expect(summarize([older, newer, deleted])).toEqual({ totalAudits: 2, latestAverageBalance: 2 });
+  });
+
+  it('is empty with no audits', () => {
+    expect(summarize([])).toEqual({ totalAudits: 0, latestAverageBalance: null });
+  });
+});
+
+describe('newAuditFields', () => {
+  it('starts with no assets when there is no previous audit', () => {
+    expect(newAuditFields(null, '2026-02-01')).toEqual({
+      date: '2026-02-01',
+      assets: [],
+      reflection: '',
+    });
+  });
+
+  it('carries over names and groups from the latest audit, sliders reset to 3, no action', () => {
+    const latest = audit({
+      assets: [
+        asset({ key: 'k1', name: 'Health', group: 'physical', p: 5, pc: 1, action: 'Rest' }),
+      ],
+    });
+    const fields = newAuditFields(latest, '2026-02-01');
+    expect(fields.date).toBe('2026-02-01');
+    expect(fields.reflection).toBe('');
+    expect(fields.assets).toHaveLength(1);
+    expect(fields.assets[0]).toMatchObject({ name: 'Health', group: 'physical', p: 3, pc: 3 });
+    expect(fields.assets[0].action).toBeUndefined();
+    expect(fields.assets[0].key).not.toBe('k1');
+  });
+});
+
+describe('addAsset/editAsset/removeAsset', () => {
+  it('adds an asset with both sliders at 3', () => {
+    const result = addAsset([], 'Savings', 'financial');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ name: 'Savings', group: 'financial', p: 3, pc: 3 });
+    expect(result[0].key).toBeTruthy();
+  });
+
+  it('edits only the matching asset', () => {
+    const target = asset({ key: 'k1', name: 'old' });
+    const other = asset({ key: 'k2', name: 'other' });
+    const result = editAsset([target, other], 'k1', { name: 'new' });
+    expect(result.find((a) => a.key === 'k1')?.name).toBe('new');
+    expect(result.find((a) => a.key === 'k2')?.name).toBe('other');
+  });
+
+  it('removes only the matching asset', () => {
+    const target = asset({ key: 'k1' });
+    const other = asset({ key: 'k2' });
+    expect(removeAsset([target, other], 'k1')).toEqual([other]);
+  });
+});
+
+describe('addAudit/editAudit', () => {
+  it('appends a new audit stamped with a fresh id and the given time', () => {
+    const result = addAudit([], { date: '2026-01-01', assets: [], reflection: '' }, NOW);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      date: '2026-01-01',
+      createdAt: NOW.toISOString(),
+      updatedAt: NOW.toISOString(),
+    });
+    expect(result[0].id).toBeTruthy();
+  });
+
+  it('merges fields into the matching live audit only', () => {
+    const target = audit({ id: 'a1', reflection: 'old' });
+    const other = audit({ id: 'a2', reflection: 'other' });
+    const result = editAudit([target, other], 'a1', { reflection: 'new' });
+    expect(result.find((a) => a.id === 'a1')?.reflection).toBe('new');
+    expect(result.find((a) => a.id === 'a2')?.reflection).toBe('other');
+  });
+
+  it('leaves a tombstoned audit unchanged', () => {
+    const deleted = audit({ id: 'a1', reflection: 'old', deletedAt: NOW.toISOString() });
+    expect(editAudit([deleted], 'a1', { reflection: 'new' })[0].reflection).toBe('old');
+  });
+
+  it('is a no-op copy when the id is not found', () => {
+    const target = audit({ id: 'a1' });
+    expect(editAudit([target], 'missing', { reflection: 'new' })).toEqual([target]);
+  });
+});
+
+describe('isOverUsed', () => {
+  it('mirrors statusOf', () => {
+    expect(isOverUsed({ p: 5, pc: 1 })).toBe(true);
+    expect(isOverUsed({ p: 3, pc: 3 })).toBe(false);
+  });
+});

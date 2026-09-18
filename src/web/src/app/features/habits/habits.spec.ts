@@ -67,8 +67,13 @@ describe('Habits feature', () => {
     const fixture = await renderShellAt('/habits/paradigms');
     const host = fixture.nativeElement as HTMLElement;
 
-    const link = host.querySelector('app-habit-hub-page mat-nav-list a');
-    expect(link?.getAttribute('href')).toBe('/habits/paradigms/transition');
+    // The paradigms hub has grown more real exercises since #51 (#49, #50), so this looks up the
+    // link by its own `href` rather than assuming it's first on the page — registration order
+    // among them isn't this test's concern, only that transition's own link is there and correct.
+    const link = host.querySelector(
+      'app-habit-hub-page mat-nav-list a[href="/habits/paradigms/transition"]',
+    );
+    expect(link).not.toBeNull();
   });
 
   it('does not match unknown habit ids', async () => {

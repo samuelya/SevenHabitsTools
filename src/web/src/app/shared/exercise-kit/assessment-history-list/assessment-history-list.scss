@@ -1,0 +1,34 @@
+.assessment-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant, gray);
+  padding: 1rem;
+}
+
+.assessment-history-list__item {
+  position: relative;
+  text-align: start;
+  min-block-size: 48px;
+}
+
+.assessment-history-list__item-accent {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  background: transparent;
+}
+
+.assessment-history-list__item--selected .assessment-history-list__item-accent {
+  background: var(--mat-sys-primary, currentColor);
+}
+
+::ng-deep .assessment-history-list__item [matListItemLine] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

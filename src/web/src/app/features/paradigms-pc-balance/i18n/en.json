@@ -1,0 +1,50 @@
+{
+  "prompt": {
+    "title": "Audit your results and capacity",
+    "chapterReference": "Paradigms and principles",
+    "text": "Every asset you rely on — your body, your money, your relationships — produces results only as long as you also maintain it. Rate a few assets in each group on how much you're getting out of them right now and how much you're putting back in, and name one maintenance action for anything you're running into the ground.",
+    "whyItMatters": "Chasing results while skipping maintenance works for a while, then the asset stops producing altogether. Naming the trade-off on purpose is what makes it possible to rebalance before that happens."
+  },
+  "editor": {
+    "title": "Audit",
+    "dateLabel": "Date"
+  },
+  "history": {
+    "newAudit": "New audit",
+    "empty": "No audits yet. Start your first one."
+  },
+  "group": {
+    "physical": "Physical",
+    "financial": "Financial",
+    "human": "Human and relationships"
+  },
+  "groupSummary": {
+    "noAssets": "No assets yet",
+    "average": "Average balance: {{value}}",
+    "counts": "{{over}} over-used · {{balanced}} balanced · {{under}} under-used"
+  },
+  "form": {
+    "nameLabel": "Asset",
+    "pLabel": "Getting out (P)",
+    "pcLabel": "Maintaining (PC)",
+    "actionLabel": "One maintenance action",
+    "actionRequired": "Name one maintenance action for this over-used asset.",
+    "removeAsset": "Remove this asset",
+    "newAssetLabel": "New asset name",
+    "addAsset": "Add asset",
+    "reflectionLabel": "Reflection"
+  },
+  "status": {
+    "overUsed": "Over-used",
+    "balanced": "Balanced",
+    "underUsed": "Under-used"
+  },
+  "summary": {
+    "totalAudits": {
+      "one": "1 audit taken",
+      "other": "{{count}} audits taken"
+    },
+    "latestBalance": "Latest average balance: {{value}}",
+    "doneHint": "Complete at least one audit first: it needs at least one asset, and every over-used asset needs a maintenance action."
+  }
+}

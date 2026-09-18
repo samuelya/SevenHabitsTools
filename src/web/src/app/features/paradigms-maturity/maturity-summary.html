@@ -1,0 +1,15 @@
+<mat-card class="maturity-summary" appearance="outlined">
+  <mat-card-content>
+    <p class="count total">
+      {{ 'paradigmsMaturity.summary.totalAssessments' | appPlural: summary().totalAssessments }}
+    </p>
+    @if (summary().latestProfile !== null) {
+      <p class="count">
+        {{
+          'paradigmsMaturity.summary.latestProfile'
+            | transloco: { profile: profileLabels()[summary().latestProfile!] }
+        }}
+      </p>
+    }
+  </mat-card-content>
+</mat-card>
