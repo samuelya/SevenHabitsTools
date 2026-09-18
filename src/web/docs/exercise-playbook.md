@@ -172,32 +172,47 @@ search matches nothing — falls back to `list.empty` if omitted). Search and so
 the list has `LIST_TOOLS_MIN_ITEMS` (6) items (`exercise-list.logic.ts`) — a short list starts
 straight with rows, no empty toolbar above them.
 
-**Selection is a route param, not a page signal.** The mobile editor is the child route
-`<slug>.routes.ts` already declares two siblings for:
+**Selection is a route param, not a page signal — on _one_ route, not a sibling pair.** The
+editor is an optional trailing URL segment, matched by `optionalParamMatcher`
+(`core/routing/optional-param-matcher.ts`) so that `<base>` and `<base>/<itemId>` are the same
+route config:
 
 ```ts
-children: [
-  { path: '', pathMatch: 'full', title: 'titles.<exerciseId>', component: <Slug>Page },
-  { path: ':itemId', title: 'titles.<exerciseId>', component: <Slug>Page },
-],
+export default [
+  {
+    matcher: optionalParamMatcher('itemId'),
+    title: 'titles.<exerciseId>',
+    providers: [provideTranslocoScope('<exerciseId>'), provideTranslocoScope('exercise-kit')],
+    component: <Slug>Page,
+  },
+] satisfies Routes;
 ```
+
+**Never two siblings (`''` and `':itemId'`) pointing at the same page**, however natural that
+looks: Angular's default `RouteReuseStrategy` reuses a component only while
+`future.routeConfig === curr.routeConfig`, so a sibling pair destroys and rebuilds the whole page
+on every open _and_ every close. That takes the kit's focus-restore-on-close with it (the new
+instance never saw the editor open), resets `ExerciseList`'s search and sort, re-expands the intro
+card the kit had just collapsed, and leaves any async work started by the closing action (a
+delete's Undo snackbar) running on a component about to be destroyed. One route with the matcher
+makes open/close the same kind of navigation as `/user/1` → `/user/2`: same config, same instance,
+a new param value (issue #187, which had to undo the sibling version).
 
 `itemId = input<string | null>(null)` binds to `:itemId` through `withComponentInputBinding()`
 (`app.config.ts`) — the same mechanism `HabitHubPage.habit` already uses for `:habit`. Two things
 every page gets wrong the first time:
 
-- **`unmatchedInputBehavior` defaults to `'alwaysUndefined'`:** on the plain `''` route (no
-  `:itemId` param at all), the router calls `setInput('itemId', undefined)`, not "leave the
+- **`unmatchedInputBehavior` defaults to `'alwaysUndefined'`:** with no trailing segment there is
+  no `:itemId` param at all, so the router calls `setInput('itemId', undefined)`, not "leave the
   `null` default alone". Guard with `id != null`, not `id !== null`, anywhere you check for "no
   selection" — an `!== null` check silently treats `undefined` as a real id and can misfire (a
   page that redirects on an unrecognised id would otherwise redirect on _every_ plain list visit).
-- **Navigate absolutely, never `relativeTo: this.route`.** A page's own route is nested at least
-  three deep in the real app (the `ROUTE_REGISTRY` mount point, this file's own componentless `''`
-  grouping route, then `''` or `:itemId`), and relative navigation's `'../'` counts route _config_
-  nesting: it either throws resolving through an empty-path `pathMatch: 'full'` route (`NG04005`,
-  no segment of its own to walk back up from) or, relative to the grouping route instead, silently
-  builds a URL tree that matches nothing and falls through to the app's wildcard-redirects-home
-  route — and a unit test that mounts the routes shallower than the real registry won't catch it
+- **Navigate absolutely, never `relativeTo: this.route`.** A page's own route is lazily mounted
+  under the `ROUTE_REGISTRY` entry for it, and relative navigation's `'../'` counts route _config_
+  nesting: it either throws resolving through a route with no segment of its own to walk back up
+  from (`NG04005`) or silently builds a URL tree that matches nothing and falls through to the
+  app's wildcard-redirects-home route — and a unit test that mounts the routes shallower than the
+  real registry won't catch it
   (only `RouterTestingHarness` wrapped in the _same_ nesting `transition-page.spec.ts` uses will).
   Export the exercise's own mounted path as a constant (`<slug>.model.ts`'s
   `<EXERCISE_ID>_ROUTE`, reused by `registerExercise({ route: ... })` so the two can't drift) and
@@ -209,22 +224,35 @@ every page gets wrong the first time:
 - The back gesture, reload and deep links then come for free: they're just the browser's own
   history and URL handling over a real route, nothing the page has to implement.
 
-**A nested editor form focuses its own first field.** `ExercisePage`'s `appEditorInitialFocus`/
-`EditorInitialFocus` marker is a `contentChild` read on the _page's own_ template — like every
-Angular content query, it cannot see into a separate presentational component's view. If the
-`[editor]` slot's content is `<app-<slug>-item-form>` (which it should be, per §6's split) rather
-than plain markup, marking a field inside _that_ component's template with
-`appEditorInitialFocus` silently does nothing. Instead, have the form focus its own field itself,
-in the same `effect()` that already resets any per-item UI state (touched fields, etc.) when
-`script().id`/the record's id changes — that one effect doubles as "focus on the editor's first
-open" for free, since its `lastId` starts at `null`. Defer the actual `.focus()` call with
-`queueMicrotask`, not a direct call in the same synchronous tick: focusing a real `matInput`
-re-enters change detection (Material's `FocusMonitor` reacts to the native `focus` event), which
-can abort the rest of _that_ tick's render — including a signal write earlier in the very same
-effect (`transition-item-form.spec.ts`'s "does not carry a touched error" test is the regression
-guard for this). A field that's only conditionally rendered (e.g. revealed by a toggle) still uses
-`afterNextRender` instead, exactly like `ExercisePage`'s own focus moves — that field genuinely
-isn't in the DOM yet when the effect runs, unlike the always-rendered main field.
+**Who moves focus, and when.** The kit owns the editor's opening and closing focus; the feature
+owns only what happens while the editor stays open. Mark the editor's first field with
+`appEditorInitialFocus` and stop there — the marker registers itself with `ExercisePage` through
+`EDITOR_FOCUS_HOST`, so it works from inside a nested presentational form's template just as well
+as from the page's own (issue #187; it used to be a `contentChild` query, which could not see into
+a nested component's view and quietly did nothing there). `ExercisePage` focuses that field when
+the editor opens, restores focus to whatever opened it when the editor closes, and traps focus
+inside the full-screen panel on handset. A feature that also focuses the same field on open is a
+second writer for one moment, ordered only by the accident of `queueMicrotask` running after
+`afterNextRender`.
+
+Two transitions the kit cannot see, which the editor form does own:
+
+- **Switching to a different item while the editor stays open** (the compact desktop list stays
+  clickable in focus mode, reusing the same form instance). React to the record's id _changing_,
+  not to its first value, in the same place that resets per-item UI state (touched fields, etc.).
+  Defer the `.focus()` call with `queueMicrotask` rather than calling it inline: focusing a real
+  `matInput` re-enters change detection (Material's `FocusMonitor` reacts to the native `focus`
+  event), which can abort the rest of _that_ tick's render — including a signal write earlier in
+  the very same effect (`transition-item-form.spec.ts`'s "does not carry a touched error" test is
+  the regression guard).
+- **A field revealed by a choice** (Rewrite/Stop revealing the new-script field). Use
+  `afterNextRender`, since that field genuinely isn't in the DOM yet when the effect runs, and
+  fire only on the `false` → `true` transition: opening an item that is _already_ in the revealed
+  state is the kit's open-focus moment, not a reveal.
+
+Both are "react to a change of value, not to a value" — `script()` is a new object on every
+keystroke, so a plain `effect` would re-focus constantly. `transition-item-form.ts`'s local
+`onChange(source, react)` helper is the shape to copy.
 
 **Delete, with Undo.** A destructive action needs a way back:
 

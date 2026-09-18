@@ -1,5 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideTranslocoScope } from '@jsverse/transloco';
+import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TransitionItemForm } from './transition-item-form';
 import { Script } from './transition.model';
@@ -117,13 +119,19 @@ describe('TransitionItemForm', () => {
     );
   });
 
-  it('focuses the script field on open (#187)', async () => {
+  it("leaves the editor's opening focus to the kit, and marks the script field for it (#187)", async () => {
     const fixture = setUp(script(), { attached: true });
-    // The focus call is a `queueMicrotask` (see `transition-item-form.ts`'s doc comment on why),
-    // so it hasn't run yet at the point `setUp()` returns.
+    const elsewhere = fixture.nativeElement.querySelector('.delete-button') as HTMLButtonElement;
+    elsewhere.focus();
     await Promise.resolve();
+    await fixture.whenStable();
 
-    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+    // The script field carries `appEditorInitialFocus`, so `ExercisePage` focuses it when the
+    // editor opens (`transition-page.spec.ts` asserts that end to end). This form must not focus
+    // it a second time on its first render — two writers for one moment, ordered only by luck.
+    const marked = fixture.debugElement.query(By.directive(EditorInitialFocus));
+    expect(marked.nativeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+    expect(document.activeElement).toBe(elsewhere);
 
     fixture.nativeElement.remove();
   });

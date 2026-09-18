@@ -56,6 +56,30 @@ class InitialFocusHostComponent {
   readonly editing = signal(false);
 }
 
+/** A separate presentational component for the editor — what most exercises' editors actually
+ * are (`TransitionItemForm`), and what a `contentChild` query on `ExercisePage` could never see
+ * into (issue #187). */
+@Component({
+  selector: 'app-nested-editor',
+  imports: [EditorInitialFocus],
+  template: `<input class="nested-field" appEditorInitialFocus />`,
+})
+class NestedEditorComponent {}
+
+@Component({
+  selector: 'app-nested-focus-host',
+  imports: [ExercisePage, NestedEditorComponent],
+  template: `
+    <app-exercise-page title="Circle of Influence" [editing]="editing()" editorTitle="Editing">
+      <button type="button" class="body-content">Add</button>
+      <div editor><app-nested-editor /></div>
+    </app-exercise-page>
+  `,
+})
+class NestedFocusHostComponent {
+  readonly editing = signal(false);
+}
+
 function configureTestBed(handset: boolean): void {
   const state: BreakpointState = { matches: handset, breakpoints: {} };
   TestBed.configureTestingModule({
@@ -317,5 +341,50 @@ describe('ExercisePage', () => {
     expect((document.activeElement as HTMLElement)?.className).toBe('first-field');
 
     host.remove();
+  });
+
+  it('moves focus to a marked field inside a nested editor component (#187)', () => {
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(NestedFocusHostComponent);
+    const host = fixture.nativeElement as HTMLElement;
+    document.body.appendChild(host);
+    fixture.detectChanges();
+
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    expect((document.activeElement as HTMLElement)?.className).toBe('nested-field');
+
+    host.remove();
+  });
+
+  it('traps focus inside the full-screen editor panel on handset', () => {
+    // The panel covers the app's toolbar and bottom navigation rather than containing them, and
+    // `bodyInert` only removes this page's own body from the tab order — so without a trap, Tab
+    // reaches the shell's controls underneath. The CDK trap marks its reach with tabbable anchors
+    // around the panel.
+    configureTestBed(true);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.cdk-focus-trap-anchor[tabindex="0"]',
+      ),
+    ).toHaveLength(2);
+  });
+
+  it('does not trap focus in the desktop editor column, where the list beside it stays reachable', () => {
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelectorAll(
+        '.cdk-focus-trap-anchor[tabindex="0"]',
+      ),
+    ).toHaveLength(0);
   });
 });

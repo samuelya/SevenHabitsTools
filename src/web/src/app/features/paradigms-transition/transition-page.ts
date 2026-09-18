@@ -49,12 +49,16 @@ const DELETE_UNDO_MS = 5000;
  * `ExerciseProgress`, and passes plain values down to `ExerciseList`/`TransitionItemForm`/
  * `TransitionSummary` — none of which inject the store or a service.
  *
- * **Routing (issue #187, owner decision on #184: option (b)):** the selected script is the child
- * route param `:itemId` (`transition.routes.ts`), bound to `itemId` through
+ * **Routing (issue #187, owner decision on #184: option (b)):** the selected script is the
+ * optional trailing URL segment `:itemId` (`transition.routes.ts`), bound to `itemId` through
  * `withComponentInputBinding()` — not a page-local signal. That's what makes the mobile editor a
  * real navigation: the phone's back gesture closes it, a reload with `:itemId` in the URL reopens
  * it, and every "select"/"add"/"close" action below is a `Router.navigate()`, not a local
- * `.set()`. Navigation is always the *absolute* `TRANSITION_ROUTE` (`goTo()`), never relative to
+ * `.set()`. It is one route with an `optionalParamMatcher`, *not* a `''`/`':itemId'` sibling
+ * pair, so opening and closing the editor is a param change on a route the router keeps rather
+ * than a swap between two configs that destroys and rebuilds this page (and with it the kit's
+ * focus-restore state, the list's search text and the intro card's collapsed state) each time.
+ * Navigation is always the *absolute* `TRANSITION_ROUTE` (`goTo()`), never relative to
  * `this.route` — see `goTo()`'s own doc comment for why relative navigation doesn't work here.
  */
 @Component({
@@ -82,8 +86,8 @@ export class TransitionPage {
   private readonly store = featureStore<Script[]>(TRANSITION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
-  /** The `:itemId` route param, bound through `withComponentInputBinding` — absent (`null`) when
-   * this instance is matched by the plain '' route instead. */
+  /** The `:itemId` route param, bound through `withComponentInputBinding` — absent while the URL
+   * has no trailing segment, i.e. while the list, not a script, is showing. */
   readonly itemId = input<string | null>(null);
 
   // `translateSignal` (not `transloco.translate()` read inside a `computed`): the scope loads
@@ -145,9 +149,10 @@ export class TransitionPage {
     // both a bad id from the start and one that goes bad while open.
     //
     // `id != null` (not `!== null`): `withComponentInputBinding()`'s default
-    // `unmatchedInputBehavior` is `'alwaysUndefined'` — on the plain '' route, which has no
-    // `itemId` param at all, it calls `setInput('itemId', undefined)` rather than leaving this
-    // input's own `null` default alone, so `undefined` is just as much "no id" as `null` is.
+    // `unmatchedInputBehavior` is `'alwaysUndefined'`, so closing the editor — a URL with no
+    // trailing segment, and therefore no `itemId` param — calls `setInput('itemId', undefined)`
+    // rather than leaving this input's own `null` default alone. `undefined` is just as much
+    // "no id" as `null` is.
     effect(() => {
       const id = this.itemId();
       if (id != null && !this.scripts().some((script) => script.id === id)) {
@@ -157,16 +162,14 @@ export class TransitionPage {
   }
 
   /** Absolute, not `router.navigate([...], { relativeTo: this.route })`: relative navigation's
-   * `'../'` counts route *config* nesting, and this route is nested three deep in the real app
-   * (the `ROUTE_REGISTRY` mount point, `transition.routes.ts`'s own componentless '' grouping
-   * route, then '' or ':itemId') — Angular either throws resolving `'../'` through an empty-path
-   * `pathMatch: 'full'` route (it contributes no segment of its own to walk back up from,
-   * `NG04005`) or, relative to the grouping route instead, silently builds a URL tree that
-   * doesn't match any configured route and falls through to the app's wildcard-redirects-home
-   * route once there's an extra layer of nesting the unit tests' shallower mounting didn't have
-   * (only caught by `e2e/paradigms-transition.spec.ts` against the real `ROUTE_REGISTRY`).
-   * `TRANSITION_ROUTE` is exactly the URL `registerExercise()` already advertises for this
-   * exercise, so it can't drift from where this feature is actually mounted. */
+   * `'../'` counts route *config* nesting, and this feature's routes are lazily mounted under the
+   * `ROUTE_REGISTRY`'s own `habits/paradigms/transition` entry, so `'../'` resolves against a
+   * route that contributes no segment to walk back up from — Angular either throws (`NG04005`) or
+   * silently builds a URL tree that matches nothing and falls through to the app's
+   * wildcard-redirects-home route (only caught by `e2e/paradigms-transition.spec.ts` against the
+   * real `ROUTE_REGISTRY`; the unit tests' shallower mounting hid it). `TRANSITION_ROUTE` is
+   * exactly the URL `registerExercise()` already advertises for this exercise, so it can't drift
+   * from where this feature is actually mounted. */
   private goTo(commands: readonly string[]): void {
     void this.router.navigate([`/${TRANSITION_ROUTE}`, ...commands]);
   }

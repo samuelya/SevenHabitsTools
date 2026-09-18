@@ -12,15 +12,15 @@ import { CLOCK } from '../../core/time/clock';
 // which resolves `settings.numerals` via `featureStore` — see `done-toggle.spec.ts`'s own import.
 import '../../features/settings/settings.model';
 import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit.model';
+import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TransitionItemForm } from './transition-item-form';
 import transitionRoutes from './transition.routes';
 import { registerTransitionModel, TRANSITION_ROUTE } from './transition.model';
 
-/** `TRANSITION_ROUTE`, not '/': `transition-page.ts`'s navigation is absolute, and this feature's
- * own `transition.routes.ts` already nests one componentless '' grouping route inside the '' or
- * ':itemId` leaf — mounting it at the harness *root* instead of at its real `ROUTE_REGISTRY`
- * prefix would hide exactly the nesting-depth bug `goTo()`'s doc comment describes. */
+/** `TRANSITION_ROUTE`, not '/': `transition-page.ts`'s navigation is absolute, and mounting this
+ * feature at the harness *root* instead of at its real `ROUTE_REGISTRY` prefix would hide exactly
+ * the nesting-depth bug `goTo()`'s doc comment describes. */
 const LIST_URL = `/${TRANSITION_ROUTE}`;
 
 function testRoutes(): Routes {
@@ -45,7 +45,7 @@ function fakeSnackbar(): { open: ReturnType<typeof vi.fn>; action: Subject<void>
  * rather than rebuilding a parallel route table.
  */
 async function setUp(
-  options: { now?: string; snackbar?: ReturnType<typeof fakeSnackbar> } = {},
+  options: { now?: string; snackbar?: ReturnType<typeof fakeSnackbar>; attached?: boolean } = {},
 ): Promise<RouterTestingHarness> {
   // Vitest here runs with `isolate: false` (shared module state across spec files) — see
   // `exercise-kit.model.spec.ts` for why these re-assert their registration instead of resetting.
@@ -63,12 +63,33 @@ async function setUp(
       { provide: AppSnackbar, useValue: options.snackbar ?? fakeSnackbar() },
     ],
   });
-  return RouterTestingHarness.create(LIST_URL);
+  const harness = await RouterTestingHarness.create(LIST_URL);
+  if (options.attached) {
+    // `HTMLElement.focus()` on a still-detached element silently no-ops in jsdom, so the
+    // focus-move assertions below need the harness in the real document.
+    document.body.appendChild(harness.fixture.nativeElement);
+  }
+  return harness;
+}
+
+/** The routed `TransitionPage` instance currently in the outlet — the same object across an
+ * open/close cycle is exactly what issue #187's route change is for. */
+function pageInstance(harness: RouterTestingHarness): unknown {
+  return harness.routeDebugElement!.componentInstance;
+}
+
+async function closeEditor(harness: RouterTestingHarness): Promise<void> {
+  (harness.routeNativeElement!.querySelector('.editor-close') as HTMLButtonElement).click();
+  await harness.fixture.whenStable();
 }
 
 async function addScript(harness: RouterTestingHarness): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
-  (host.querySelector('.add-button') as HTMLButtonElement).click();
+  const addButton = host.querySelector('.add-button') as HTMLButtonElement;
+  // A real click focuses the button first; jsdom's `.click()` doesn't, and the kit captures
+  // whatever is focused at that moment as the element to restore focus to on close.
+  addButton.focus();
+  addButton.click();
   await harness.fixture.whenStable();
 }
 
@@ -215,6 +236,67 @@ describe('TransitionPage', () => {
 
     await harness.navigateByUrl(`${LIST_URL}/${id}`);
     expect(harness.routeNativeElement?.querySelector('app-transition-item-form')).not.toBeNull();
+  });
+
+  it('keeps the one page instance alive across opening and closing the editor (#187)', async () => {
+    // The whole point of the single `optionalParamMatcher` route: with the earlier `''`/`':itemId'`
+    // sibling pair, `RouteReuseStrategy` saw two different route configs and rebuilt the page —
+    // and with it the kit's focus-restore state, the list's search text and the intro card's
+    // collapsed state — on every open and every close.
+    const harness = await setUp();
+    const page = pageInstance(harness);
+
+    await addScript(harness);
+    expect(pageInstance(harness)).toBe(page);
+
+    await closeEditor(harness);
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(pageInstance(harness)).toBe(page);
+  });
+
+  it('focuses the script field when the editor opens and returns focus to the trigger when it closes', async () => {
+    const harness = await setUp({ attached: true });
+    const host = harness.routeNativeElement as HTMLElement;
+    const addButton = host.querySelector('.add-button') as HTMLButtonElement;
+
+    await addScript(harness);
+    expect(document.activeElement).toBe(host.querySelector('app-transition-item-form textarea'));
+
+    await closeEditor(harness);
+    expect(document.activeElement).toBe(addButton);
+
+    harness.fixture.nativeElement.remove();
+  });
+
+  it('keeps the intro card collapsed and the list search text after the editor closes', async () => {
+    const harness = await setUp();
+    // Search and sort only appear once the list is long enough to need them (#186).
+    for (let i = 0; i < 6; i++) {
+      await addScript(harness);
+      await closeEditor(harness);
+    }
+    const host = harness.routeNativeElement as HTMLElement;
+    const promptCard = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    const search = host.querySelector('app-exercise-list .search input') as HTMLInputElement;
+    // Matches every row's subtitle, so there's still a row to open with the query in place.
+    search.value = 'family';
+    search.dispatchEvent(new Event('input'));
+    harness.detectChanges();
+
+    (host.querySelector('app-exercise-list mat-nav-list button') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    await closeEditor(harness);
+
+    // Entering focus mode collapses the intro; leaving it never re-expands (owner decision, #184).
+    expect(promptCard.expanded()).toBe(false);
+    expect(
+      (
+        harness.routeNativeElement!.querySelector(
+          'app-exercise-list .search input',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe('family');
   });
 
   it('shows the summary counts for stopped and rewritten live scripts', async () => {

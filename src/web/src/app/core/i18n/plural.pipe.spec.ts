@@ -34,7 +34,7 @@ function fakeTransloco(lang: string, translations: Record<string, string>) {
   template: `{{ key | appPlural: count : params }}`,
 })
 class HostComponent {
-  key = 'a';
+  key = 'summary.named';
   count = 0;
   params: Record<string, unknown> = {};
 }
@@ -61,7 +61,10 @@ describe('AppPluralPipe', () => {
   ])('picks the "en" category for count %i', (count, expected) => {
     const { fixture } = setUp(
       'en',
-      { 'a.one': '{{count}} script named', 'a.other': '{{count}} scripts named' },
+      {
+        'summary.named.one': '{{count}} script named',
+        'summary.named.other': '{{count}} scripts named',
+      },
       { count },
     );
 
@@ -79,12 +82,12 @@ describe('AppPluralPipe', () => {
     const { fixture } = setUp(
       'ar',
       {
-        'a.zero': 'zero scripts',
-        'a.one': 'one script',
-        'a.two': 'two scripts',
-        'a.few': 'a few scripts',
-        'a.many': 'many scripts',
-        'a.other': 'other scripts',
+        'summary.named.zero': 'zero scripts',
+        'summary.named.one': 'one script',
+        'summary.named.two': 'two scripts',
+        'summary.named.few': 'a few scripts',
+        'summary.named.many': 'many scripts',
+        'summary.named.other': 'other scripts',
       },
       { count },
     );
@@ -95,7 +98,7 @@ describe('AppPluralPipe', () => {
   it('falls back to ".other" when the key defines no category for the count', () => {
     // `ar`'s "few" category (count 3) has no dedicated translation for this key — only "other" is
     // defined, the same shape a key that never bothers with every category can have.
-    const { fixture } = setUp('ar', { 'a.other': '{{count}} scripts' }, { count: 3 });
+    const { fixture } = setUp('ar', { 'summary.named.other': '{{count}} scripts' }, { count: 3 });
 
     expect(fixture.nativeElement.textContent).toBe('3 scripts');
   });
@@ -103,7 +106,7 @@ describe('AppPluralPipe', () => {
   it('passes extra params through alongside count', () => {
     const { fixture } = setUp(
       'en',
-      { 'a.other': '{{count}} of {{total}}' },
+      { 'summary.named.other': '{{count}} of {{total}}' },
       { count: 2, params: { total: 5 } },
     );
 
@@ -111,16 +114,26 @@ describe('AppPluralPipe', () => {
   });
 
   it('re-renders once the scope finishes loading (cold load, issue #187)', () => {
-    // Nothing is translated yet — the scope's HTTP request hasn't resolved (`translate()` on the
-    // stub throws, mirroring `ThrowingMissingHandler` on a genuinely missing key in dev/test).
+    // Nothing is translated yet — the scope's HTTP request hasn't resolved. The pipe must render
+    // blank rather than ask `translate()` for a key it knows isn't loaded, which would hit
+    // `ThrowingMissingHandler` (the stub's throw) for what is only a pending request.
     const { fixture, events, translations } = setUp('en', {});
     expect(fixture.nativeElement.textContent).toBe('');
 
     // The scope arrives; the pipe's `events$` subscription should mark this view for a recheck.
-    translations['a.other'] = '{{count}} scripts named';
+    translations['summary.named.other'] = '{{count}} scripts named';
     events.next({ type: 'translationLoadSuccess' });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toBe('0 scripts named');
+  });
+
+  it('surfaces a genuinely missing key once its namespace is loaded, instead of rendering blank', () => {
+    // The scope is loaded (other keys in the same namespace are there) but this key's `.other`
+    // fallback was never written — a real translation gap, which has to fail the test run through
+    // `ThrowingMissingHandler` (#149/#162) rather than silently render nothing forever.
+    expect(() => setUp('en', { 'summary.total.other': '{{count}} in total' })).toThrow(
+      /Missing key "summary.named.other"/,
+    );
   });
 });

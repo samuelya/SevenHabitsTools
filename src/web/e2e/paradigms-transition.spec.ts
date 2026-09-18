@@ -47,8 +47,10 @@ test.describe('paradigms transition reflection', () => {
     await page.locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle }).click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/transition$/);
 
-    await page.locator('.add-button').click();
-    // The selected script is the child route `:itemId` (issue #187, owner decision on #184).
+    const addButton = page.locator('.add-button');
+    await addButton.click();
+    // The selected script is the optional trailing segment `:itemId` on this page's own route
+    // (issue #187, owner decision on #184).
     await expect(page).toHaveURL(/\/habits\/paradigms\/transition\/[^/]+$/);
     const form = page.locator('app-transition-item-form');
     await expect(form).toBeVisible();
@@ -79,7 +81,7 @@ test.describe('paradigms transition reflection', () => {
 
     if (isMobile) {
       // The phone's back gesture closes the editor and returns to the list, without leaving the
-      // exercise page (issue #187, owner decision on #184: option (b), the child route).
+      // exercise page (issue #187, owner decision on #184: option (b), the child segment).
       await page.goBack();
       await expect(page).toHaveURL(/\/habits\/paradigms\/transition$/);
       await expect(form).not.toBeVisible();
@@ -87,6 +89,13 @@ test.describe('paradigms transition reflection', () => {
       await page.locator('app-exercise-page .editor-close').click();
       await expect(page.locator('.editor-panel')).not.toBeVisible();
     }
+
+    // Closing the editor is a param change on the page's own route, so the page instance survives
+    // and the kit can hand focus back to the control that opened it, with the intro card still
+    // collapsed (owner decision on #184). The sibling-route version rebuilt the page here, which
+    // dropped focus to `<body>` and re-expanded the intro (issue #187).
+    await expect(addButton).toBeFocused();
+    await expect(page.locator('app-exercise-prompt-card .content')).toHaveCount(0);
 
     await expect(page.locator('app-transition-summary')).toBeVisible();
     const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
@@ -109,6 +118,19 @@ test.describe('paradigms transition reflection', () => {
     page,
   }) => {
     await page.goto('/habits/paradigms/transition');
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(
+      results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+    ).toEqual([]);
+  });
+
+  test('accessibility: the open editor has no serious or critical violations', async ({ page }) => {
+    // Focus mode is its own screen, with its own header, an `inert` page behind it and (on
+    // handset) a CDK focus trap — none of which the list-only scan above reaches.
+    await page.goto('/habits/paradigms/transition');
+    await page.locator('.add-button').click();
+    await expect(page.locator('app-transition-item-form')).toBeVisible();
+
     const results = await new AxeBuilder({ page }).analyze();
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),

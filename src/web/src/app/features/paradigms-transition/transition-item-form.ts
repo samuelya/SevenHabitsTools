@@ -4,6 +4,7 @@ import {
   Component,
   ElementRef,
   Injector,
+  Signal,
   afterNextRender,
   computed,
   effect,
@@ -19,6 +20,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import { requiresNewScript } from './transition.logic';
 import {
   SCRIPT_DECISIONS,
@@ -40,20 +42,20 @@ import {
  * change so the page can persist through `featureStore` immediately, the same autosave-on-edit
  * convention as `ReflectionEditor` (no explicit Save step).
  *
- * Focuses its own script field whenever `script().id` changes (issue #187), covering both the
- * editor's first open and a direct switch to a different script while it's already open (the
- * compact desktop list stays clickable in focus mode, reusing this same component instance) —
- * not `ExercisePage`'s `appEditorInitialFocus`/`EditorInitialFocus` marker: that directive is a
- * `contentChild` read on `ExercisePage` itself, which — like every Angular content query — can
- * only see nodes from the *page's own* template, not descend into a nested presentational
- * component's separate view. Placing the marker on this form's field would silently do nothing,
- * so this form owns its own initial focus instead (the playbook's "Page layout" section calls
- * this out for the next exercise whose editor is a nested component, which most will be).
+ * **Who moves focus, and when** — one writer per moment, no racing (issue #187): the kit focuses
+ * the script field when the *editor opens*, because the field carries `appEditorInitialFocus` and
+ * that marker registers itself with `ExercisePage` (it works from inside a nested component's view
+ * now; see the directive). This form only moves focus for the two transitions the kit cannot see,
+ * both of which happen while the editor stays open: switching to a *different* script (the compact
+ * desktop list stays clickable in focus mode, reusing this instance), and choosing Rewrite or Stop,
+ * which reveals the new-script field. Neither fires on the first render, so the kit's open-focus is
+ * never fought over.
  */
 @Component({
   selector: 'app-transition-item-form',
   imports: [
     CdkTextareaAutosize,
+    EditorInitialFocus,
     MatButtonModule,
     MatButtonToggleModule,
     MatFormFieldModule,
@@ -82,13 +84,6 @@ export class TransitionItemForm {
   private readonly newScriptField = viewChild<ElementRef<HTMLTextAreaElement>>('newScriptField');
 
   private readonly touchedFields = signal<ReadonlySet<string>>(new Set());
-  /** The last `script().id` `touchedFields` was reset for — set alongside it in the constructor
-   * `effect` below, never read outside it. */
-  private lastScriptId: string | null = null;
-  /** The last `needsNewScript()` value, tracked so the focus-move effect below only fires on the
-   * `false` → `true` transition (choosing Rewrite or Stop), never on every re-render while it's
-   * already `true`. */
-  private wasNeedingNewScript = false;
 
   constructor() {
     // The form is reused across selections (`TransitionPage`'s `@if (selectedScript(); as
@@ -97,37 +92,37 @@ export class TransitionItemForm {
     // script B, which the user never touched (review finding on #51's PR). Guarded on the id
     // itself, not just any `script()` change, since every keystroke also produces a new `script()`
     // value.
-    // Also focuses the script field on the same id change (issue #187) — the editor's first open
-    // (`lastScriptId` still `null`) and a direct switch to a different script while the form
-    // stays open (the compact desktop list stays clickable in focus mode, reusing this same
-    // instance). `queueMicrotask`, not a direct call: focusing a real `matInput` synchronously
-    // inside this effect re-enters Angular's own change detection (Material's `FocusMonitor`
-    // reacts to the native `focus` event), which — empirically, this is what
-    // `transition-item-form.spec.ts`'s "does not carry a touched error" regression test caught —
-    // aborts the *rest* of this same `detectChanges()` pass, leaving the `touchedFields` reset
-    // just above applied to the signal but not yet reflected in the template. Deferring the
-    // native focus call past the current synchronous task sidesteps the same re-entrant tick
-    // instead of trying to make it safe to call inline.
-    effect(() => {
-      const id = this.script().id;
-      if (id === this.lastScriptId) {
-        return;
-      }
-      this.lastScriptId = id;
-      this.touchedFields.set(new Set());
-      queueMicrotask(() => this.scriptField()?.nativeElement.focus());
-    });
+    onChange(
+      computed(() => this.script().id),
+      (_id, previous) => {
+        this.touchedFields.set(new Set());
+        if (previous === undefined) {
+          // First render: the editor is opening, and the kit focuses `appEditorInitialFocus` (this
+          // form's script field) itself. Focusing it here too would be a second writer for the
+          // same moment, ordered only by the accident of `queueMicrotask` running after
+          // `afterNextRender`.
+          return;
+        }
+        // A switch to a different script with the editor already open. `queueMicrotask`, not a
+        // direct call: focusing a real `matInput` synchronously inside an effect re-enters
+        // Angular's own change detection (Material's `FocusMonitor` reacts to the native `focus`
+        // event), which — empirically, this is what `transition-item-form.spec.ts`'s "does not
+        // carry a touched error" regression test caught — aborts the *rest* of this same
+        // `detectChanges()` pass, leaving the `touchedFields` reset just above applied to the
+        // signal but not yet reflected in the template.
+        queueMicrotask(() => this.scriptField()?.nativeElement.focus());
+      },
+    );
 
     // Choosing Rewrite or Stop reveals the new-script/situation fields and moves focus straight
     // into the new-script one (issue #187's acceptance criteria) — deferred to a render hook since
     // the fields are behind an `@if` that reacts to this same `needsNewScript()` change, and
     // focusing a not-yet-rendered element silently no-ops in a real browser (the same reason
-    // `ExercisePage` defers its own focus moves with `afterNextRender`).
-    effect(() => {
-      const needsNewScript = this.needsNewScript();
-      const revealed = needsNewScript && !this.wasNeedingNewScript;
-      this.wasNeedingNewScript = needsNewScript;
-      if (revealed) {
+    // `ExercisePage` defers its own focus moves with `afterNextRender`). Only on the `false` →
+    // `true` transition: opening a script that is *already* set to Rewrite or Stop is the kit's
+    // open-focus moment, not a reveal.
+    onChange(this.needsNewScript, (needsNewScript, previous) => {
+      if (needsNewScript && previous === false) {
         afterNextRender(() => this.newScriptField()?.nativeElement.focus(), {
           injector: this.injector,
         });
@@ -172,4 +167,23 @@ export class TransitionItemForm {
   protected onSituationInput(event: Event): void {
     this.changed.emit({ situation: (event.target as HTMLInputElement).value });
   }
+}
+
+/**
+ * Runs `react` only when `source()` actually *changes* value, handing it the previous value —
+ * `undefined` on the first run. Both of this form's reactions are to a transition rather than to a
+ * value: `script()` is a brand-new object on every keystroke, so a plain `effect` would re-run
+ * (and re-focus) constantly. Must be called from an injection context.
+ */
+function onChange<T>(source: Signal<T>, react: (value: T, previous: T | undefined) => void): void {
+  let previous: T | undefined;
+  effect(() => {
+    const value = source();
+    if (previous !== undefined && value === previous) {
+      return;
+    }
+    const before = previous;
+    previous = value;
+    react(value, before);
+  });
 }
