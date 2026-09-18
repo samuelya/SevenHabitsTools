@@ -1,11 +1,24 @@
-.list-pane-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+:host {
+  display: block;
+  // `ExercisePage`'s own `min-block-size: 100%` needs a routed page's host to stretch to `.page`'s
+  // full height too, so its pinned footer (desktop) actually reaches the true viewport edge
+  // instead of stopping at this component's own content height (`exercise-page.scss`'s comment).
+  min-block-size: 100%;
 }
 
 .add-button {
   align-self: flex-start;
+  margin-block-end: 0.5rem;
+  min-block-size: 44px;
+}
+
+// Full width below the handset breakpoint (`HANDSET_QUERY`, `core/layout/breakpoints.ts`); a
+// left-aligned button at that width reads like it belongs to the row above it, not its own
+// primary action (issue #187's acceptance criteria).
+@media (max-width: 599.98px) {
+  .add-button {
+    align-self: stretch;
+  }
 }
 
 .summary-section {
@@ -13,5 +26,5 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 1rem;
-  margin-block-start: 1rem;
+  inline-size: 100%;
 }

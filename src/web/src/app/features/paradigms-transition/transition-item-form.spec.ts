@@ -17,11 +17,17 @@ function script(overrides: Partial<Script> = {}): Script {
   };
 }
 
-function setUp(value: Script) {
+/** `attached: true` puts the fixture in `document.body` before the first `detectChanges()` —
+ * required for the focus-move tests below: `HTMLElement.focus()` on a still-detached element
+ * silently no-ops in jsdom. */
+function setUp(value: Script, options: { attached?: boolean } = {}) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('paradigms-transition')],
   });
   const fixture = TestBed.createComponent(TransitionItemForm);
+  if (options.attached) {
+    document.body.appendChild(fixture.nativeElement);
+  }
   fixture.componentRef.setInput('script', value);
   fixture.detectChanges();
   return fixture;
@@ -101,5 +107,56 @@ describe('TransitionItemForm', () => {
     (fixture.nativeElement.querySelector('.delete-button') as HTMLButtonElement).click();
 
     expect(emitted).toHaveLength(1);
+  });
+
+  it('shows the decision hint under the decision toggle group', () => {
+    const fixture = setUp(script());
+
+    expect(fixture.nativeElement.querySelector('.decision-hint')?.textContent).toContain(
+      'write the new script',
+    );
+  });
+
+  it('focuses the script field on open (#187)', async () => {
+    const fixture = setUp(script(), { attached: true });
+    // The focus call is a `queueMicrotask` (see `transition-item-form.ts`'s doc comment on why),
+    // so it hasn't run yet at the point `setUp()` returns.
+    await Promise.resolve();
+
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+
+    fixture.nativeElement.remove();
+  });
+
+  it('moves focus to the script field again when switching to a different script while the form stays open', async () => {
+    const fixture = setUp(script({ id: 's1' }), { attached: true });
+    await Promise.resolve();
+    (fixture.nativeElement.querySelector('.delete-button') as HTMLButtonElement).focus();
+
+    fixture.componentRef.setInput('script', script({ id: 's2', text: 'A different script' }));
+    fixture.detectChanges();
+    await Promise.resolve();
+
+    expect(document.activeElement).toBe(fixture.nativeElement.querySelector('textarea'));
+
+    fixture.nativeElement.remove();
+  });
+
+  it('moves focus to the new-script field once choosing Rewrite or Stop reveals it (#187)', async () => {
+    const fixture = setUp(script({ decision: 'keep' }));
+    document.body.appendChild(fixture.nativeElement);
+    // Flushes the id-change effect's own queued focus-the-script-field microtask (same id here,
+    // so it only ran once, on construction) before it can fire *after* this test's own focus
+    // move below and steal it back.
+    await Promise.resolve();
+
+    fixture.componentRef.setInput('script', script({ decision: 'stop' }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const newScriptField = fixture.nativeElement.querySelectorAll('textarea')[1];
+    expect(document.activeElement).toBe(newScriptField);
+
+    fixture.nativeElement.remove();
   });
 });

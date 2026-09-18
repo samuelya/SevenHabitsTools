@@ -1,11 +1,17 @@
+import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -33,10 +39,21 @@ import {
  * presentational — `script` is the current value, `changed` emits the edited field(s) on every
  * change so the page can persist through `featureStore` immediately, the same autosave-on-edit
  * convention as `ReflectionEditor` (no explicit Save step).
+ *
+ * Focuses its own script field whenever `script().id` changes (issue #187), covering both the
+ * editor's first open and a direct switch to a different script while it's already open (the
+ * compact desktop list stays clickable in focus mode, reusing this same component instance) —
+ * not `ExercisePage`'s `appEditorInitialFocus`/`EditorInitialFocus` marker: that directive is a
+ * `contentChild` read on `ExercisePage` itself, which — like every Angular content query — can
+ * only see nodes from the *page's own* template, not descend into a nested presentational
+ * component's separate view. Placing the marker on this form's field would silently do nothing,
+ * so this form owns its own initial focus instead (the playbook's "Page layout" section calls
+ * this out for the next exercise whose editor is a nested component, which most will be).
  */
 @Component({
   selector: 'app-transition-item-form',
   imports: [
+    CdkTextareaAutosize,
     MatButtonModule,
     MatButtonToggleModule,
     MatFormFieldModule,
@@ -49,6 +66,8 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TransitionItemForm {
+  private readonly injector = inject(Injector);
+
   readonly script = input.required<Script>();
   readonly changed = output<Partial<ScriptFields>>();
   readonly deleted = output<void>();
@@ -59,17 +78,36 @@ export class TransitionItemForm {
 
   protected readonly needsNewScript = computed(() => requiresNewScript(this.script().decision));
 
+  private readonly scriptField = viewChild<ElementRef<HTMLTextAreaElement>>('scriptField');
+  private readonly newScriptField = viewChild<ElementRef<HTMLTextAreaElement>>('newScriptField');
+
   private readonly touchedFields = signal<ReadonlySet<string>>(new Set());
   /** The last `script().id` `touchedFields` was reset for — set alongside it in the constructor
    * `effect` below, never read outside it. */
   private lastScriptId: string | null = null;
+  /** The last `needsNewScript()` value, tracked so the focus-move effect below only fires on the
+   * `false` → `true` transition (choosing Rewrite or Stop), never on every re-render while it's
+   * already `true`. */
+  private wasNeedingNewScript = false;
 
   constructor() {
-    // The form is reused across selections (`@if (selectedScript(); as script)` in
-    // `TransitionPage` stays truthy), so `touchedFields` must be reset by hand when the id
-    // changes — otherwise a blur on script A leaks its `role="alert"` errors onto script B, which
-    // the user never touched (review finding on #51's PR). Guarded on the id itself, not just any
-    // `script()` change, since every keystroke also produces a new `script()` value.
+    // The form is reused across selections (`TransitionPage`'s `@if (selectedScript(); as
+    // script)` stays truthy while the id changes underneath), so `touchedFields` must be reset by
+    // hand when the id changes — otherwise a blur on script A leaks its `role="alert"` errors onto
+    // script B, which the user never touched (review finding on #51's PR). Guarded on the id
+    // itself, not just any `script()` change, since every keystroke also produces a new `script()`
+    // value.
+    // Also focuses the script field on the same id change (issue #187) — the editor's first open
+    // (`lastScriptId` still `null`) and a direct switch to a different script while the form
+    // stays open (the compact desktop list stays clickable in focus mode, reusing this same
+    // instance). `queueMicrotask`, not a direct call: focusing a real `matInput` synchronously
+    // inside this effect re-enters Angular's own change detection (Material's `FocusMonitor`
+    // reacts to the native `focus` event), which — empirically, this is what
+    // `transition-item-form.spec.ts`'s "does not carry a touched error" regression test caught —
+    // aborts the *rest* of this same `detectChanges()` pass, leaving the `touchedFields` reset
+    // just above applied to the signal but not yet reflected in the template. Deferring the
+    // native focus call past the current synchronous task sidesteps the same re-entrant tick
+    // instead of trying to make it safe to call inline.
     effect(() => {
       const id = this.script().id;
       if (id === this.lastScriptId) {
@@ -77,6 +115,23 @@ export class TransitionItemForm {
       }
       this.lastScriptId = id;
       this.touchedFields.set(new Set());
+      queueMicrotask(() => this.scriptField()?.nativeElement.focus());
+    });
+
+    // Choosing Rewrite or Stop reveals the new-script/situation fields and moves focus straight
+    // into the new-script one (issue #187's acceptance criteria) — deferred to a render hook since
+    // the fields are behind an `@if` that reacts to this same `needsNewScript()` change, and
+    // focusing a not-yet-rendered element silently no-ops in a real browser (the same reason
+    // `ExercisePage` defers its own focus moves with `afterNextRender`).
+    effect(() => {
+      const needsNewScript = this.needsNewScript();
+      const revealed = needsNewScript && !this.wasNeedingNewScript;
+      this.wasNeedingNewScript = needsNewScript;
+      if (revealed) {
+        afterNextRender(() => this.newScriptField()?.nativeElement.focus(), {
+          injector: this.injector,
+        });
+      }
     });
   }
 
@@ -95,7 +150,7 @@ export class TransitionItemForm {
   }
 
   protected onTextInput(event: Event): void {
-    this.changed.emit({ text: (event.target as HTMLInputElement).value });
+    this.changed.emit({ text: (event.target as HTMLTextAreaElement).value });
   }
 
   protected onSourceChange(source: ScriptSource): void {

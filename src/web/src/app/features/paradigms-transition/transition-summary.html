@@ -1,13 +1,13 @@
 <mat-card class="transition-summary" appearance="outlined">
   <mat-card-content>
     <p class="count total">
-      {{ 'paradigmsTransition.summary.total' | transloco: { count: summary().total } }}
+      {{ 'paradigmsTransition.summary.total' | appPlural: summary().total }}
     </p>
     <p class="count">
-      {{ 'paradigmsTransition.summary.stopped' | transloco: { count: summary().stopped } }}
+      {{ 'paradigmsTransition.summary.stopped' | appPlural: summary().stopped }}
     </p>
     <p class="count">
-      {{ 'paradigmsTransition.summary.rewritten' | transloco: { count: summary().rewritten } }}
+      {{ 'paradigmsTransition.summary.rewritten' | appPlural: summary().rewritten }}
     </p>
   </mat-card-content>
 </mat-card>

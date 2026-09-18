@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { Router } from '@angular/router';
+import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { AppSnackbar } from '../../core/layout/app-snackbar';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { ExerciseDetail } from '../../shared/exercise-kit/exercise-detail/exercise-detail';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
+import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { TransitionItemForm } from './transition-item-form';
@@ -18,6 +20,7 @@ import {
   labelsFrom,
   liveScripts,
   removeScript,
+  restoreScript,
   summarize,
   toListItem,
 } from './transition.logic';
@@ -27,6 +30,7 @@ import {
   Script,
   ScriptFields,
   TRANSITION_MODEL_KEY,
+  TRANSITION_ROUTE,
 } from './transition.model';
 
 /** Every new script starts here; the user edits it straight away in the opened detail form. */
@@ -37,17 +41,28 @@ const DEFAULT_FIELDS: ScriptFields = {
   decision: 'keep',
 };
 
+/** How long the "Script deleted" snackbar stays up before Undo stops working (issue #187). */
+const DELETE_UNDO_MS = 5000;
+
 /** Transition-person reflection (issue #51): the reference "list" exercise every later exercise
  * copies (`src/web/docs/exercise-playbook.md`). The container: it reads `featureStore`, calls
- * `ExerciseProgress`, and passes plain values down to `ExerciseList`/`ExerciseDetail`/
- * `TransitionItemForm`/`TransitionSummary` — none of which inject the store or a service.
+ * `ExerciseProgress`, and passes plain values down to `ExerciseList`/`TransitionItemForm`/
+ * `TransitionSummary` — none of which inject the store or a service.
+ *
+ * **Routing (issue #187, owner decision on #184: option (b)):** the selected script is the child
+ * route param `:itemId` (`transition.routes.ts`), bound to `itemId` through
+ * `withComponentInputBinding()` — not a page-local signal. That's what makes the mobile editor a
+ * real navigation: the phone's back gesture closes it, a reload with `:itemId` in the URL reopens
+ * it, and every "select"/"add"/"close" action below is a `Router.navigate()`, not a local
+ * `.set()`. Navigation is always the *absolute* `TRANSITION_ROUTE` (`goTo()`), never relative to
+ * `this.route` — see `goTo()`'s own doc comment for why relative navigation doesn't work here.
  */
 @Component({
   selector: 'app-transition-page',
   imports: [
     DoneToggle,
-    ExerciseDetail,
     ExerciseList,
+    ExercisePage,
     ExercisePromptCard,
     MatButtonModule,
     MatIconModule,
@@ -61,10 +76,15 @@ const DEFAULT_FIELDS: ScriptFields = {
 })
 export class TransitionPage {
   private readonly clock = inject(CLOCK);
+  private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
+  private readonly snackbar = inject(AppSnackbar);
   private readonly store = featureStore<Script[]>(TRANSITION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
-  protected readonly selectedId = signal<string | null>(null);
+  /** The `:itemId` route param, bound through `withComponentInputBinding` — absent (`null`) when
+   * this instance is matched by the plain '' route instead. */
+  readonly itemId = input<string | null>(null);
 
   // `translateSignal` (not `transloco.translate()` read inside a `computed`): the scope loads
   // over HTTP and only once something asks for it, and a `computed` that calls `translate()`
@@ -100,21 +120,67 @@ export class TransitionPage {
     this.scripts().map((script) => toListItem(script, this.labels())),
   );
   protected readonly selectedScript = computed(
-    () => this.scripts().find((script) => script.id === this.selectedId()) ?? null,
+    () => this.scripts().find((script) => script.id === this.itemId()) ?? null,
   );
   protected readonly hasDetail = computed(() => this.selectedScript() !== null);
+  /** Drives the editor header's title (issue #187's acceptance criteria): a script created but
+   * never typed into yet is still "new", even though it already exists in the document. */
+  protected readonly isNewScript = computed(() => !this.selectedScript()?.text.trim());
+  /** This page's `store.update()` is always synchronous (in-memory; the debounced write to disk
+   * is a separate, lower layer — `DocumentPersistence`), so there's no "saving" state to show:
+   * every applied change is "saved" the instant it lands (playbook's "Page layout" section). */
+  protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
+    this.hasDetail() ? 'saved' : null,
+  );
   protected readonly summary = computed(() => summarize(this.store.value()));
   protected readonly readyToMarkDone = computed(() => canMarkDone(this.store.value()));
 
   protected readonly done = this.progress.isDone(TRANSITION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(TRANSITION_MODEL_KEY);
 
+  constructor() {
+    // An `:itemId` that isn't a live script — a typo'd/stale deep link, or one this same effect
+    // just tombstoned by deleting it — redirects to the list (issue #187's acceptance criteria).
+    // Deleting and then navigating away explicitly would race this: this single effect covers
+    // both a bad id from the start and one that goes bad while open.
+    //
+    // `id != null` (not `!== null`): `withComponentInputBinding()`'s default
+    // `unmatchedInputBehavior` is `'alwaysUndefined'` — on the plain '' route, which has no
+    // `itemId` param at all, it calls `setInput('itemId', undefined)` rather than leaving this
+    // input's own `null` default alone, so `undefined` is just as much "no id" as `null` is.
+    effect(() => {
+      const id = this.itemId();
+      if (id != null && !this.scripts().some((script) => script.id === id)) {
+        this.goToList();
+      }
+    });
+  }
+
+  /** Absolute, not `router.navigate([...], { relativeTo: this.route })`: relative navigation's
+   * `'../'` counts route *config* nesting, and this route is nested three deep in the real app
+   * (the `ROUTE_REGISTRY` mount point, `transition.routes.ts`'s own componentless '' grouping
+   * route, then '' or ':itemId') — Angular either throws resolving `'../'` through an empty-path
+   * `pathMatch: 'full'` route (it contributes no segment of its own to walk back up from,
+   * `NG04005`) or, relative to the grouping route instead, silently builds a URL tree that
+   * doesn't match any configured route and falls through to the app's wildcard-redirects-home
+   * route once there's an extra layer of nesting the unit tests' shallower mounting didn't have
+   * (only caught by `e2e/paradigms-transition.spec.ts` against the real `ROUTE_REGISTRY`).
+   * `TRANSITION_ROUTE` is exactly the URL `registerExercise()` already advertises for this
+   * exercise, so it can't drift from where this feature is actually mounted. */
+  private goTo(commands: readonly string[]): void {
+    void this.router.navigate([`/${TRANSITION_ROUTE}`, ...commands]);
+  }
+
+  private goToList(): void {
+    this.goTo([]);
+  }
+
   protected select(id: string): void {
-    this.selectedId.set(id);
+    this.goTo([id]);
   }
 
   protected closeDetail(): void {
-    this.selectedId.set(null);
+    this.goToList();
   }
 
   protected onAddScript(): void {
@@ -126,7 +192,7 @@ export class TransitionPage {
       return next;
     });
     if (applied && createdId) {
-      this.selectedId.set(createdId);
+      this.goTo([createdId]);
     }
   }
 
@@ -136,6 +202,19 @@ export class TransitionPage {
 
   protected onItemDeleted(id: string): void {
     this.store.update((scripts) => removeScript(scripts, id, this.clock.now()));
+    // The redirect effect above closes the editor (the id is no longer a live script) — this just
+    // owns the snackbar and its Undo.
+    void this.snackbar
+      .open(
+        this.transloco.translate('paradigmsTransition.list.deleted'),
+        this.transloco.translate('paradigmsTransition.list.undo'),
+        { duration: DELETE_UNDO_MS },
+      )
+      .then((ref) =>
+        ref.onAction().subscribe(() => {
+          this.store.update((scripts) => restoreScript(scripts, id, this.clock.now()));
+        }),
+      );
   }
 
   protected onToggleDone(): void {

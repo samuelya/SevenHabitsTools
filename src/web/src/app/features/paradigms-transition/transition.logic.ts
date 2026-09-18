@@ -1,4 +1,4 @@
-import { newRecord, softDelete, isLive } from '../../core/data/record';
+import { newRecord, softDelete, touch, isLive } from '../../core/data/record';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
   Script,
@@ -109,6 +109,14 @@ export function editScript(
 /** Tombstones the script `id` (never removed, architecture issue #1 §6). */
 export function removeScript(scripts: readonly Script[], id: string, now: Date): Script[] {
   return scripts.map((script) => (script.id === id ? softDelete(script, now) : script));
+}
+
+/** Undoes `removeScript()`: clears the script `id`'s tombstone and bumps `updatedAt` (issue
+ * #187's delete-with-undo snackbar). A no-op copy if `id` is not found or was never deleted. */
+export function restoreScript(scripts: readonly Script[], id: string, now: Date): Script[] {
+  return scripts.map((script) =>
+    script.id === id && !isLive(script) ? touch({ ...script, deletedAt: undefined }, now) : script,
+  );
 }
 
 /** Whether `decision` requires the `newScript`/`situation` fields (drives form validation). */

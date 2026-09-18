@@ -47,6 +47,10 @@ export const TRANSITION_MODEL_KEY = 'paradigms-transition';
 /** The document path this model lives at (issue #51's data model). */
 export const TRANSITION_PATH = 'habits.paradigms.scripts';
 
+/** This exercise's mounted URL (`route-registry.ts`, and `registerExercise()`'s `route` below) —
+ * shared with `transition-page.ts`'s own navigation so the two can never drift apart. */
+export const TRANSITION_ROUTE = 'habits/paradigms/transition';
+
 const isScriptSource = isOneOf(SCRIPT_SOURCES);
 const isScriptEffect = isOneOf(SCRIPT_EFFECTS);
 const isScriptDecision = isOneOf(SCRIPT_DECISIONS);
@@ -90,7 +94,7 @@ export function registerTransitionModel(): void {
     titleKey: 'habits.exercises.paradigms-transition.title',
     summaryKey: 'habits.exercises.paradigms-transition.summary',
     icon: 'compare_arrows',
-    route: 'habits/paradigms/transition',
+    route: TRANSITION_ROUTE,
   });
 }
 
