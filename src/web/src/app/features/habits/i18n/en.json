@@ -48,6 +48,10 @@
         "one": "1 chapter shared",
         "other": "{{count}} chapters shared"
       }
+    },
+    "paradigms-perception": {
+      "title": "Notice your paradigm",
+      "summary": "See how two views of one event differ, sort your own change attempts, and trace a situation through two paradigms."
     }
   }
 }

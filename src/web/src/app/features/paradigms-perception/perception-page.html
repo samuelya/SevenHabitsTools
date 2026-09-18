@@ -1,0 +1,192 @@
+<app-exercise-page [title]="'paradigmsPerception.prompt.title' | transloco">
+  <app-exercise-prompt-card
+    intro
+    [prompt]="'paradigmsPerception.prompt.text' | transloco"
+    [chapterReference]="'paradigmsPerception.prompt.chapterReference' | transloco"
+    [whyItMatters]="'paradigmsPerception.prompt.whyItMatters' | transloco"
+  />
+
+  <app-guided-stepper
+    [steps]="steps()"
+    [selectedIndex]="selectedIndex()"
+    (selectedIndexChange)="selectedIndex.set($event)"
+  >
+    <ng-template appGuidedStep="twoViews">
+      <div class="step-two-views">
+        <mat-card appearance="outlined" class="view-card">
+          <mat-card-header>
+            <mat-card-title>{{
+              'paradigmsPerception.step1.viewALabel' | transloco
+            }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ 'paradigmsPerception.step1.viewA' | transloco }}</p>
+          </mat-card-content>
+        </mat-card>
+
+        <mat-form-field appearance="outline" class="field">
+          <mat-label>{{ 'paradigmsPerception.step1.firstViewLabel' | transloco }}</mat-label>
+          <textarea
+            matInput
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="3"
+            cdkAutosizeMaxRows="10"
+            [value]="exercise()?.firstView ?? ''"
+            (input)="onFirstViewChanged($event)"
+          ></textarea>
+        </mat-form-field>
+
+        @if (!revealed()) {
+          <button mat-flat-button type="button" [disabled]="!hasFirstView()" (click)="onReveal()">
+            {{ 'paradigmsPerception.step1.revealButton' | transloco }}
+          </button>
+        }
+
+        @if (revealed()) {
+          <mat-card appearance="outlined" class="view-card">
+            <mat-card-header>
+              <mat-card-title>{{
+                'paradigmsPerception.step1.viewBLabel' | transloco
+              }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p>{{ 'paradigmsPerception.step1.viewB' | transloco }}</p>
+            </mat-card-content>
+          </mat-card>
+
+          <div class="slider-field">
+            <span id="switch-difficulty-label">
+              {{ 'paradigmsPerception.step1.switchDifficultyLabel' | transloco }}:
+              @if (exercise()?.switchDifficulty; as rated) {
+                {{ rated }}
+              } @else {
+                {{ 'paradigmsPerception.step1.switchDifficultyUnrated' | transloco }}
+              }
+            </span>
+            <mat-slider [min]="sliderMin" [max]="sliderMax" step="1" discrete>
+              <input
+                matSliderThumb
+                [value]="switchDifficultySliderValue()"
+                aria-labelledby="switch-difficulty-label"
+                (valueChange)="onSwitchDifficultyChanged($event)"
+              />
+            </mat-slider>
+          </div>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template appGuidedStep="characterOrTechnique">
+      <div class="step-character-technique">
+        @for (attempt of changeAttempts(); track $index) {
+          <fieldset class="attempt-row">
+            <legend>
+              {{ 'paradigmsPerception.step2.attemptLabel' | transloco: { number: $index + 1 } }}
+            </legend>
+
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step2.attemptTextLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="attempt.text"
+                (input)="onAttemptTextChanged($index, $event)"
+              ></textarea>
+            </mat-form-field>
+
+            <mat-button-toggle-group
+              class="kind-toggle"
+              [value]="attempt.kind"
+              [attr.aria-label]="'paradigmsPerception.step2.kindLabel' | transloco"
+              (change)="onAttemptKindChanged($index, $event.value)"
+            >
+              @for (kind of changeAttemptKinds; track kind) {
+                <mat-button-toggle [value]="kind">{{
+                  'paradigmsPerception.step2.kind.' + kind | transloco
+                }}</mat-button-toggle>
+              }
+            </mat-button-toggle-group>
+          </fieldset>
+        }
+
+        <mat-form-field appearance="outline" class="field">
+          <mat-label>{{ 'paradigmsPerception.step2.differenceLabel' | transloco }}</mat-label>
+          <textarea
+            matInput
+            cdkTextareaAutosize
+            cdkAutosizeMinRows="2"
+            cdkAutosizeMaxRows="6"
+            [value]="exercise()?.difference ?? ''"
+            (input)="onDifferenceChanged($event)"
+          ></textarea>
+        </mat-form-field>
+      </div>
+    </ng-template>
+
+    <ng-template appGuidedStep="seeDoGet">
+      <div class="step-see-do-get">
+        @for (section of chainSections(); track section.key) {
+          <fieldset class="chain-fieldset">
+            <legend>{{ 'paradigmsPerception.step3.' + section.legendKey | transloco }}</legend>
+
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.seeLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.see"
+                (input)="onChainFieldChanged(section.key, 'see', $event)"
+              ></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.doLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.do"
+                (input)="onChainFieldChanged(section.key, 'do', $event)"
+              ></textarea>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="field">
+              <mat-label>{{ 'paradigmsPerception.step3.getLabel' | transloco }}</mat-label>
+              <textarea
+                matInput
+                cdkTextareaAutosize
+                cdkAutosizeMinRows="2"
+                cdkAutosizeMaxRows="6"
+                [value]="section.chain.get"
+                (input)="onChainFieldChanged(section.key, 'get', $event)"
+              ></textarea>
+            </mat-form-field>
+          </fieldset>
+        }
+      </div>
+    </ng-template>
+  </app-guided-stepper>
+
+  <app-reflection-editor
+    [value]="exercise()?.reflection ?? ''"
+    [label]="'paradigmsPerception.form.reflectionLabel' | transloco"
+    [updatedAt]="exercise()?.updatedAt ?? null"
+    (valueChange)="onReflectionChanged($event)"
+  />
+
+  <div footer class="summary-section">
+    <app-perception-summary [summary]="summary()" />
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [disabledHint]="'paradigmsPerception.summary.doneHint' | transloco"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>
