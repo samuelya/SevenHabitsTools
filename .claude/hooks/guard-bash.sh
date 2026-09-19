@@ -18,7 +18,11 @@ cmd=$(perl -0pe '
   s/(--body|--body-file|--title|-m|-F body=)\s*("(?:[^"\\]|\\.)*"|'"'"'[^'"'"']*'"'"')/$1 ""/g;
 ' <<<"$cmd")
 
-block() { echo "Blocked by .claude/hooks/guard-bash.sh: $1" >&2; exit 2; }
+log="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}/.claude/guard.log"
+block() {
+  printf '%s\t%s\t%s\n' "$(date -u +%FT%TZ)" "${agent:-lead}" "${1%%[;:(]*}" >> "$log" 2>/dev/null || true
+  echo "Blocked by .claude/hooks/guard-bash.sh: $1" >&2; exit 2
+}
 has() { grep -qE -- "$1" <<<"$cmd"; }
 
 # Global toolchain changes: use npx, project-local deps or the scratchpad; ask the lead otherwise.

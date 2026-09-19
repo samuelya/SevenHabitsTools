@@ -14,7 +14,7 @@
 
 ## Seven Habits Tools — Team
 
-Run `/team-up` at the start of each implementation session (gh auth, guard hook, open escalations, open PRs, leftover worktrees).
+Run `/team-up` at the start of each implementation session (gh auth, guard hook, open escalations, open PRs, leftover worktrees). Run `/eco-review` every two weeks or ten merged PRs: it measures tokens and quality (`scripts/gh/team-metrics.sh`), compares with the last review on the "Ecosystem review log" issue, and proposes at most three changes.
 Read the pinned GitHub issue "Architecture & conventions (read first)" before any work.
 
 | Agent | Model | Owns | Never |
@@ -54,6 +54,7 @@ Status updates: `scripts/gh/set-status.sh <issue> "<Status>"`, Status exactly on
 
 Token cost is a first-class constraint: the owner pays per token and has hit a monthly limit. A long-lived agent is the main cost driver, because every turn resends its whole history and an idle gap expires the cache, re-billing it in full.
 
+- **Context × turns is the cost.** The week before 2026-09-19, one coder run made 809 model calls at a median 473k-token context (peak 966k) and processed 396M input tokens; the tester averaged 111k per turn and the lead 278k. Two hard caps hold this down: `maxTurns` in each agent's frontmatter (coders 300, tester 150, BA 100; a capped run returns partial output and the lead resumes it or starts a fresh agent from the WIP commit) and `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=30` in `.claude/settings.json` (compaction at 30% of the window, for the lead and every subagent). Agents keep context small by reading narrowly, batching independent calls in one turn, and committing WIP checkpoints so a cap loses nothing. `/eco-review` watches whether these move the numbers without raising failed rounds.
 - **One issue at a time by default.** Run two only when they share no files.
 - **Fresh agent per round.** A coder or tester does one round, hands off and stops. The lead starts a new agent for the next round, pointed at the issue and the PR comment. GitHub is the shared memory, so those comments must be good enough to continue from.
 - **Fix rounds read less.** A fresh agent on a fix round reads the issue, the PR context and the files the findings name; not the architecture issue or the playbook again. Post `/code-review` findings as a PR comment (not only a message), then start a fresh agent for the fix. Resume the original coder only if it is still `running` when the review lands.
