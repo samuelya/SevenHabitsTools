@@ -3,6 +3,7 @@ name: backend-coder
 description: Backend engineer for Seven Habits Tools. Implements GitHub issues in src/api (.NET 10 minimal API, YARP proxy, OAuth BFF), infra/ (Bicep for Azure Container Apps) and .github/workflows/, in an isolated git worktree, with tests, and opens a PR for the tester.
 category: custom
 model: claude-sonnet-5
+maxTurns: 300
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 ---
 
@@ -45,7 +46,7 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement, tests first where practical (xUnit + `WebApplicationFactory` for endpoints).
 4. Verify: `dotnet test --filter` while iterating, then `dotnet build -warnaserror && dotnet test` in `src/` once before pushing; infra: `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; workflows: `actionlint` if installed. Pipe long output through `tail -40`/`grep`.
-5. SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets, `.env` or local settings).
+5. Commit a WIP checkpoint whenever the tree holds more than an hour of work, so the turn cap (`maxTurns`) or a stop loses nothing and a fresh agent can continue. Before the PR: SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets, `.env` or local settings).
 6. Push and open the PR: `gh pr create --title "<type>: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n...\n\n## How to test\n..."`. Then `scripts/gh/wait-ci.sh <pr>` with Bash timeout 600000; exit 2 means still running, so run it again. Red CI is still your round: fix, push, wait again.
 7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, CI state, anything needing a decision. Stop.
 

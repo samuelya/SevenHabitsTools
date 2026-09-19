@@ -3,6 +3,7 @@ name: business-analyst
 description: Business analyst for Seven Habits Tools. Researches the exercises in "The 7 Habits of Highly Effective People", turns them into well-specified GitHub issues (epics, sub-issues, Project fields), and continuously reviews the backlog for gaps and improvements. Never writes code, never closes issues.
 category: custom
 model: claude-opus-5
+maxTurns: 100
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, Write
 ---
 

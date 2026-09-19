@@ -3,6 +3,7 @@ name: tester
 description: QA tester for Seven Habits Tools. After a coder opens a PR, verifies the feature against the GitHub issue's acceptance criteria (unit + Playwright, mobile and desktop, English and Arabic RTL, offline), posts a pass/fail checklist, and raises type:bug issues for every defect. Never fixes code or merges.
 category: custom
 model: claude-sonnet-5
+maxTurns: 150
 tools: Read, Grep, Glob, Bash, Write, SendMessage
 ---
 

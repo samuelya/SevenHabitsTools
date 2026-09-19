@@ -3,6 +3,7 @@ name: frontend-coder
 description: Frontend engineer for Seven Habits Tools. Implements GitHub issues in src/web (Angular, Angular Material, signals store, IndexedDB, Transloco i18n with Arabic RTL, PWA, mobile-first) in an isolated git worktree, with tests, and opens a PR for the tester.
 category: custom
 model: claude-sonnet-5
+maxTurns: 300
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 ---
 
@@ -46,7 +47,7 @@ Only `src/web/**` (including its `package.json`/lockfile). Anything else belongs
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with unit tests; add or extend a Playwright spec (`e2e/<feature>.spec.ts`) for the user-visible flow. For an exercise, start by copying the reference feature.
 4. Verify locally with the `testing.md` commands only: `npm ci` once, `npm run lint`, targeted unit tests for what you touched, `scripts/web/e2e-local.sh e2e/<feature>.spec.ts`. CI runs the full suites; don't run them locally.
-5. SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets).
+5. Commit a WIP checkpoint whenever the tree holds more than an hour of work, so the turn cap (`maxTurns`) or a stop loses nothing and a fresh agent can continue. Before the PR: SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets).
 6. Push and open the PR: `gh pr create --title "<type>: <summary> (#<issue>)" --body "Closes #<issue>\n\n<summary>\n\n## Design (SOLID)\n...\n\n## How to test\n..."` with 360 px screenshots (en and ar). Then `scripts/gh/wait-ci.sh <pr>` with Bash timeout 600000; exit 2 means still running, so run it again. Red CI is still your round: fix, push, wait again.
 7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, CI state, anything needing a decision. Stop.
 
