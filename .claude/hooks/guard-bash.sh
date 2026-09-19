@@ -4,8 +4,11 @@
 # Exit 2 blocks the call; the message on stderr is what the agent sees. Exit 0 lets it through.
 # Test: echo '{"tool_input":{"command":"npm install -g x"}}' | .claude/hooks/guard-bash.sh
 set -uo pipefail
-cmd=$(jq -r '.tool_input.command // empty' 2>/dev/null)
+input=$(cat)
+cmd=$(jq -r '.tool_input.command // empty' <<<"$input" 2>/dev/null)
 [[ -n "$cmd" ]] || exit 0
+# agent_type is present only when a subagent makes the call; the lead session has none.
+agent=$(jq -r '.agent_type // empty' <<<"$input" 2>/dev/null)
 
 # Match only what the shell would run: drop heredoc bodies (file content written with cat <<'EOF')
 # and quoted message payloads (--body/--title/-m "..."), so a doc or comment that merely mentions a
@@ -29,9 +32,12 @@ has '\bgit push\b.*\borigin\b +(HEAD:)?main\b|\bgit push\b +origin +main\b' && b
 has '\bgit (commit|push|merge)\b.*--no-verify\b' && block "--no-verify skips hooks."
 has '\bgit checkout\b +main\b|\bgit switch\b +main\b' && has '\.claude/worktrees/' && block "switching a worktree to main."
 
-# Merging and closing are the owner's. Prefix OWNER_MERGE=1 when the owner asked the lead to merge.
-has '\bgh pr merge\b' && ! has '^OWNER_MERGE=1 ' && block "gh pr merge is the owner's step (lead: prefix OWNER_MERGE=1 when the owner asked for the merge)."
-has '\bgh (issue|pr) close\b' && ! has '^OWNER_MERGE=1 ' && block "closing issues/PRs is the owner's step."
+# Merging and closing are the owner's. Subagents never do them; the lead prefixes OWNER_MERGE=1
+# when the owner asked for the merge (the prefix is ignored for a subagent, so it can't self-grant).
+if has '\bgh pr merge\b|\bgh (issue|pr) close\b'; then
+  [[ -n "$agent" ]] && block "merging and closing are the owner's steps; report to team-lead instead."
+  has '^OWNER_MERGE=1 ' || block "gh pr merge / close is the owner's step (lead: prefix OWNER_MERGE=1 when the owner asked for it)."
+fi
 
 # GitHub reads go through the shared scripts (one call, nothing truncated, no wrong-flag surprises).
 has '\bgh issue view\b' && block "use scripts/gh/issue-context.sh <n> (gh issue view drops the body outside a terminal)."
