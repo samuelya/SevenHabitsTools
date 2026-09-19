@@ -81,7 +81,7 @@ test.describe('P/PC balance audit', () => {
     // `e2e/multi-tab.spec.ts`'s own comment on the same wait before relying on persisted state.
     await page.waitForTimeout(1000);
     await page.reload();
-    await expect(page.locator('app-assessment-history-list mat-nav-list button')).toHaveCount(1);
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');

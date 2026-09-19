@@ -19,12 +19,46 @@
   padding: 1rem;
 }
 
+// The swipe host (issue #203): the row button and the trailing bin button as siblings, laid out in
+// a row so the bin sits at the row's own end edge (mirrored automatically under `dir="rtl"` by
+// `inline-flex`'s own logical direction — no `left`/`right` needed).
+.exercise-list__row {
+  display: flex;
+  align-items: stretch;
+}
+
+.exercise-list__row .exercise-list__item {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
 // A `<button mat-list-item>` inherits the browser's default `text-align: center` for `<button>`;
 // override it so titles read like a list, not a row of centred pills (#186).
 .exercise-list__item {
   position: relative;
   text-align: start;
   min-block-size: 48px;
+}
+
+// Always visible, not a reveal-on-swipe affordance (issue #203's design decision: swiping isn't
+// discoverable, so the same bin button that opens the confirm dialog is on the row at all times).
+// ≥ 44px in both dimensions for the touch target (architecture issue #1 §7).
+.exercise-list__delete {
+  flex: 0 0 auto;
+  inline-size: 44px;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant, gray);
+  cursor: pointer;
+}
+
+.exercise-list__delete:hover,
+.exercise-list__delete:focus-visible {
+  color: var(--mat-sys-error, darkred);
 }
 
 // A 3 px inline-start accent bar in addition to `aria-pressed`/the `activated` background, so the

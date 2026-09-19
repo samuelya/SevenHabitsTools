@@ -1,4 +1,4 @@
-import { newRecord, isLive } from '../../core/data/record';
+import { newRecord, isLive, softDelete, touch } from '../../core/data/record';
 import {
   latestAssessment,
   liveAssessments,
@@ -180,5 +180,19 @@ export function editAudit(
 ): PcAudit[] {
   return audits.map((audit) =>
     audit.id === id && isLive(audit) ? { ...audit, ...fields } : audit,
+  );
+}
+
+/** Tombstones the audit `id` (never removed, architecture issue #1 §6) — issue #203's shared
+ * delete pattern. */
+export function removeAudit(audits: readonly PcAudit[], id: string, now: Date): PcAudit[] {
+  return audits.map((audit) => (audit.id === id ? softDelete(audit, now) : audit));
+}
+
+/** Undoes `removeAudit()`: clears the audit `id`'s tombstone and bumps `updatedAt` (issue #203's
+ * Undo snackbar). A no-op copy if `id` is not found or was never deleted. */
+export function restoreAudit(audits: readonly PcAudit[], id: string, now: Date): PcAudit[] {
+  return audits.map((audit) =>
+    audit.id === id && !isLive(audit) ? touch({ ...audit, deletedAt: undefined }, now) : audit,
   );
 }

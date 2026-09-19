@@ -10,7 +10,8 @@
   "list": {
     "sortLabel": "ترتيب",
     "sortByTitle": "حسب العنوان",
-    "sortByStatus": "حسب الحالة"
+    "sortByStatus": "حسب الحالة",
+    "deleteAria": "حذف {{item}}"
   },
   "detail": {
     "close": "العودة إلى القائمة"

@@ -10,8 +10,10 @@ import {
   newAssessmentFields,
   overallProfile,
   removeArea,
+  removeAssessment,
   removedAreas,
   renameArea,
+  restoreAssessment,
   setAreaLevel,
   setAreaNote,
   suggestedHabits,
@@ -276,5 +278,40 @@ describe('addAssessment/editAssessment', () => {
     const deleted = assessment({ id: 'a1', areas: [], deletedAt: NOW.toISOString() });
     const result = editAssessment([deleted], 'a1', { areas: [area()] });
     expect(result[0].areas).toEqual([]);
+  });
+});
+
+describe('removeAssessment/restoreAssessment (issue #203)', () => {
+  const LATER = new Date('2026-01-02T00:00:00.000Z');
+
+  it('tombstones the matching assessment, leaving others alone', () => {
+    const target = assessment({ id: 'a1' });
+    const other = assessment({ id: 'a2' });
+    const result = removeAssessment([target, other], 'a1', LATER);
+
+    expect(result.find((a) => a.id === 'a1')?.deletedAt).toBe(LATER.toISOString());
+    expect(result.find((a) => a.id === 'a2')?.deletedAt).toBeUndefined();
+  });
+
+  it('restore clears the tombstone and bumps updatedAt', () => {
+    const deleted = assessment({ id: 'a1', deletedAt: LATER.toISOString() });
+    const result = restoreAssessment([deleted], 'a1', LATER);
+
+    expect(result[0].deletedAt).toBeUndefined();
+    expect(result[0].updatedAt).toBe(LATER.toISOString());
+  });
+
+  it('restore is a no-op for an id that was never deleted', () => {
+    const live = assessment({ id: 'a1' });
+    const result = restoreAssessment([live], 'a1', LATER);
+
+    expect(result[0]).toBe(live);
+  });
+
+  it('restore is a no-op for an unknown id', () => {
+    const deleted = assessment({ id: 'a1', deletedAt: LATER.toISOString() });
+    const result = restoreAssessment([deleted], 'not-found', LATER);
+
+    expect(result[0]).toBe(deleted);
   });
 });

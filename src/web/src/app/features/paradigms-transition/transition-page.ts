@@ -3,9 +3,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
-import { AppSnackbar } from '../../core/layout/app-snackbar';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
+import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
@@ -40,9 +40,6 @@ const DEFAULT_FIELDS: ScriptFields = {
   effect: 'mixed',
   decision: 'keep',
 };
-
-/** How long the "Script deleted" snackbar stays up before Undo stops working (issue #187). */
-const DELETE_UNDO_MS = 5000;
 
 /** Transition-person reflection (issue #51): the reference "list" exercise every later exercise
  * copies (`src/web/docs/exercise-playbook.md`). The container: it reads `featureStore`, calls
@@ -82,7 +79,7 @@ export class TransitionPage {
   private readonly clock = inject(CLOCK);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
-  private readonly snackbar = inject(AppSnackbar);
+  private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<Script[]>(TRANSITION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -204,20 +201,15 @@ export class TransitionPage {
   }
 
   protected onItemDeleted(id: string): void {
-    this.store.update((scripts) => removeScript(scripts, id, this.clock.now()));
-    // The redirect effect above closes the editor (the id is no longer a live script) — this just
-    // owns the snackbar and its Undo.
-    void this.snackbar
-      .open(
-        this.transloco.translate('paradigmsTransition.list.deleted'),
-        this.transloco.translate('paradigmsTransition.list.undo'),
-        { duration: DELETE_UNDO_MS },
-      )
-      .then((ref) =>
-        ref.onAction().subscribe(() => {
-          this.store.update((scripts) => restoreScript(scripts, id, this.clock.now()));
-        }),
-      );
+    // The redirect effect above closes the editor once the delete lands (the id is no longer a
+    // live script) — this only owns confirm, the tombstone itself, and Undo (playbook's "Deleting
+    // entries"; `DeleteWithUndo` is the shared confirm → delete → undo flow issue #203 introduced).
+    void this.deleteWithUndo.confirmAndDelete({
+      deletedMessage: this.transloco.translate('paradigmsTransition.list.deleted'),
+      undoLabel: this.transloco.translate('paradigmsTransition.list.undo'),
+      onConfirm: () => this.store.update((scripts) => removeScript(scripts, id, this.clock.now())),
+      onUndo: () => this.store.update((scripts) => restoreScript(scripts, id, this.clock.now())),
+    });
   }
 
   protected onToggleDone(): void {

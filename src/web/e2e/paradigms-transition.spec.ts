@@ -16,19 +16,33 @@ function localeFor(projectName: string): 'en' | 'ar' {
 
 const TEXT: Record<
   'en' | 'ar',
-  { hubTitle: string; markDone: string; reopen: string; stopToggle: string }
+  {
+    hubTitle: string;
+    markDone: string;
+    reopen: string;
+    stopToggle: string;
+    cancel: string;
+    delete: string;
+    undo: string;
+  }
 > = {
   en: {
     hubTitle: 'Become a transition person',
     markDone: 'Mark done',
     reopen: 'Reopen',
     stopToggle: 'Stop',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    undo: 'Undo',
   },
   ar: {
     hubTitle: 'كن حلقة انتقال إيجابية',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     stopToggle: 'أوقفه',
+    cancel: 'إلغاء',
+    delete: 'حذف',
+    undo: 'تراجع',
   },
 };
 
@@ -107,7 +121,7 @@ test.describe('paradigms transition reflection', () => {
     // `e2e/multi-tab.spec.ts`'s own comment on the same wait before relying on persisted state.
     await page.waitForTimeout(1000);
     await page.reload();
-    await expect(page.locator('app-exercise-list mat-nav-list button')).toHaveCount(1);
+    await expect(page.locator('.exercise-list__item')).toHaveCount(1);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');
@@ -175,5 +189,65 @@ test.describe('paradigms transition reflection', () => {
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
+  });
+
+  // Issue #203: the shared delete pattern via the list's own bin button — Cancel leaves the script
+  // in place, Delete tombstones it and offers Undo through the snackbar.
+  test('deletes a script from the list, with a confirm dialog and an Undo snackbar', async ({
+    page,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    const isMobile = testInfo.project.name.startsWith('mobile');
+    await page.goto('/habits/paradigms/transition');
+
+    await page.locator('.add-button').click();
+    const form = page.locator('app-transition-item-form');
+    await form.locator('textarea').first().fill('Old habit to remove');
+    if (isMobile) {
+      await page.goBack();
+    } else {
+      await page.locator('app-exercise-page .editor-close').click();
+    }
+    await expect(form).not.toBeVisible();
+    await expect(page.locator('.exercise-list__item')).toHaveCount(1);
+
+    const deleteButton = page.locator('.exercise-list__delete');
+    // Reachable by keyboard, not just click — acceptance criteria's "bin button reachable by Tab".
+    await deleteButton.focus();
+    await page.keyboard.press('Enter');
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    // Cancel focused by default (acceptance criteria).
+    await expect(page.getByRole('button', { name: text.cancel })).toBeFocused();
+
+    // Cancel leaves the item untouched, and returns focus to the button that opened the dialog.
+    await page.keyboard.press('Enter');
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('.exercise-list__item')).toHaveCount(1);
+    await expect(deleteButton).toBeFocused();
+
+    // Delete tombstones it and offers Undo.
+    await deleteButton.click();
+    await expect(dialog).toBeVisible();
+    await expect(page.getByRole('button', { name: text.cancel })).toBeFocused();
+    // `toBeVisible()`/`toBeFocused()` only confirm the dialog is in the DOM and focused, not that
+    // its CDK-driven enter transition (opacity/transform) has finished, or that Noto Sans Arabic
+    // has finished loading — both leave axe scanning a not-yet-settled state (the Delete button
+    // blended with the backdrop mid-transition; the still-loading fallback font's wider glyphs
+    // briefly overflowing the dialog's content area, which `smoke.spec.ts`'s own `document.fonts
+    // .ready` wait exists to rule out).
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(300);
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(
+      results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+    ).toEqual([]);
+    await page.getByRole('button', { name: text.delete, exact: true }).click();
+    await expect(page.locator('.exercise-list__item')).toHaveCount(0);
+    const undoButton = page.getByRole('button', { name: text.undo });
+    await expect(undoButton).toBeVisible();
+
+    await undoButton.click();
+    await expect(page.locator('.exercise-list__item')).toHaveCount(1);
   });
 });

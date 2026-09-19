@@ -21,7 +21,9 @@
     [items]="historyItems()"
     [selectedId]="itemId()"
     [emptyMessage]="'paradigmsPcBalance.history.empty' | transloco"
+    [deletable]="true"
     (itemSelected)="select($event)"
+    (deleteRequested)="onAuditDeleted($event)"
   />
 
   <div editor>

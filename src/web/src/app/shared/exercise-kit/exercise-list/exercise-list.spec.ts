@@ -21,6 +21,7 @@ function setUp(
   selectedId: string | null = null,
   noMatchMessage?: string,
   initialSort?: ExerciseListSort,
+  deletable?: boolean,
 ) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
@@ -36,8 +37,15 @@ function setUp(
   if (initialSort !== undefined) {
     fixture.componentRef.setInput('initialSort', initialSort);
   }
+  if (deletable !== undefined) {
+    fixture.componentRef.setInput('deletable', deletable);
+  }
   fixture.detectChanges();
   return fixture;
+}
+
+function deleteButtons(fixture: { nativeElement: HTMLElement }): HTMLButtonElement[] {
+  return [...fixture.nativeElement.querySelectorAll<HTMLButtonElement>('.exercise-list__delete')];
 }
 
 function itemButtons(fixture: { nativeElement: HTMLElement }): HTMLButtonElement[] {
@@ -154,5 +162,47 @@ describe('ExerciseList', () => {
 
     expect(fixture.nativeElement.querySelector('.search')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.sort')).not.toBeNull();
+  });
+
+  it('renders no bin button when deletable is left at its default (issue #203)', () => {
+    const fixture = setUp();
+
+    expect(deleteButtons(fixture)).toHaveLength(0);
+  });
+
+  it('renders a bin button per row, named after the item, once deletable is set', () => {
+    const fixture = setUp(ITEMS, null, undefined, undefined, true);
+
+    const buttons = deleteButtons(fixture);
+    expect(buttons).toHaveLength(2);
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toContain(
+      'Delete Be proactive',
+    );
+  });
+
+  it('emits deleteRequested with the item id when its bin button is clicked', () => {
+    const fixture = setUp(ITEMS, null, undefined, undefined, true);
+    const emitted: string[] = [];
+    fixture.componentInstance.deleteRequested.subscribe((id) => emitted.push(id));
+
+    // Sorted alphabetically by default: "Be proactive" (a) before "Begin with the end" (b).
+    deleteButtons(fixture)[0].click();
+
+    expect(emitted).toEqual(['a']);
+  });
+
+  it("omits a row's own bin button when that item opts out with deletable: false (paradigms-teach)", () => {
+    const fixture = setUp(
+      [
+        { id: 'a', title: 'Has an entry', deletable: true },
+        { id: 'b', title: 'No entry yet', deletable: false },
+      ],
+      null,
+      undefined,
+      'none',
+      true,
+    );
+
+    expect(deleteButtons(fixture)).toHaveLength(1);
   });
 });

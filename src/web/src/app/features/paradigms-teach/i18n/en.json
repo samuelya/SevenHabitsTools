@@ -9,7 +9,9 @@
     "searchLabel": "Search chapters",
     "empty": "No chapters yet.",
     "noMatch": "No chapters match your search.",
-    "overdue": "Overdue"
+    "overdue": "Overdue",
+    "deleted": "Entry deleted",
+    "undo": "Undo"
   },
   "editor": {
     "newTitle": "New commitment",

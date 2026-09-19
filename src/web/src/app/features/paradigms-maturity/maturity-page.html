@@ -21,7 +21,9 @@
     [items]="historyItems()"
     [selectedId]="itemId()"
     [emptyMessage]="'paradigmsMaturity.history.empty' | transloco"
+    [deletable]="true"
     (itemSelected)="select($event)"
+    (deleteRequested)="onAssessmentDeleted($event)"
   />
 
   <div editor>

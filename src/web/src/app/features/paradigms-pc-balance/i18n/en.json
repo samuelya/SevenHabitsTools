@@ -11,7 +11,9 @@
   },
   "history": {
     "newAudit": "New audit",
-    "empty": "No audits yet. Start your first one."
+    "empty": "No audits yet. Start your first one.",
+    "deleted": "Audit deleted",
+    "undo": "Undo"
   },
   "group": {
     "physical": "Physical",

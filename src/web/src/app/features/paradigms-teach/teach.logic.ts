@@ -1,4 +1,4 @@
-import { isLive, newRecord } from '../../core/data/record';
+import { isLive, newRecord, softDelete, touch } from '../../core/data/record';
 import { localDateString } from '../../shared/exercise-kit/assessment-history.logic';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
@@ -174,7 +174,11 @@ export function draftFor(
   return { chapter, keyIdea: '', plannedAt: defaultPlannedAt(now), status: 'planned' };
 }
 
-/** Maps one chapter — with or without an entry yet — to the row `ExerciseList` renders. */
+/** Maps one chapter — with or without an entry yet — to the row `ExerciseList` renders.
+ * `deletable: false` for a chapter with no entry yet (issue #203): unlike every other list
+ * exercise, `paradigms-teach`'s rows are the ten fixed chapters, not one-to-one with what a delete
+ * removes, so a chapter with nothing filled in yet has nothing to delete — `ExerciseList` reads
+ * this to skip the row's own bin button and swipe (playbook's "Deleting entries"). */
 export function toListItem(
   chapter: TeachChapter,
   entry: TeachEntry | undefined,
@@ -182,7 +186,7 @@ export function toListItem(
   now: Date,
 ): ExerciseListItem {
   if (!entry) {
-    return { id: chapter, title: labels.chapter[chapter], done: false };
+    return { id: chapter, title: labels.chapter[chapter], done: false, deletable: false };
   }
   const statusLabel = labels.status[entry.status];
   const overdue = isOverdue(entry, now);
@@ -192,5 +196,22 @@ export function toListItem(
     subtitle: overdue ? `${statusLabel} · ${labels.overdue}` : statusLabel,
     done: entry.status === 'shared',
     warning: overdue,
+    deletable: true,
   };
+}
+
+/** Tombstones the entry `id` (never removed, architecture issue #1 §6) — issue #203's shared
+ * delete pattern. Keyed by the entry's own record id, not the chapter: `upsertEntry()` creates a
+ * fresh entry the next time this chapter is filled in, the same way a deleted-then-recreated
+ * script would in `paradigms-transition`. */
+export function removeEntry(entries: readonly TeachEntry[], id: string, now: Date): TeachEntry[] {
+  return entries.map((entry) => (entry.id === id ? softDelete(entry, now) : entry));
+}
+
+/** Undoes `removeEntry()`: clears the entry `id`'s tombstone and bumps `updatedAt` (issue #203's
+ * Undo snackbar). A no-op copy if `id` is not found or was never deleted. */
+export function restoreEntry(entries: readonly TeachEntry[], id: string, now: Date): TeachEntry[] {
+  return entries.map((entry) =>
+    entry.id === id && !isLive(entry) ? touch({ ...entry, deletedAt: undefined }, now) : entry,
+  );
 }

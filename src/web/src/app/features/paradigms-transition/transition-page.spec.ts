@@ -4,13 +4,15 @@ import { By } from '@angular/platform-browser';
 import { provideRouter, Router, Routes, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslocoService } from '@jsverse/transloco';
-import { Subject } from 'rxjs';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
-import { AppSnackbar } from '../../core/layout/app-snackbar';
 import { CLOCK } from '../../core/time/clock';
 // Side-effect only: `DoneToggle`'s "Completed <time>" caption renders through `AppDatePipe`,
 // which resolves `settings.numerals` via `featureStore` — see `done-toggle.spec.ts`'s own import.
 import '../../features/settings/settings.model';
+import {
+  ConfirmAndDeleteOptions,
+  DeleteWithUndo,
+} from '../../shared/exercise-kit/delete-with-undo';
 import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit.model';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
@@ -27,14 +29,21 @@ function testRoutes(): Routes {
   return [{ path: TRANSITION_ROUTE, children: transitionRoutes }];
 }
 
-/** A fake `AppSnackbar` (same shape `app-update.service.spec.ts` uses): the real one loads
- * `@angular/material/snack-bar` through a dynamic `import()`, which can still be resolving after
- * a test (and this TestBed's `EnvironmentInjector`) has torn down, throwing an unrelated `NG0205`
- * as an unhandled rejection in whichever test runs next. */
-function fakeSnackbar(): { open: ReturnType<typeof vi.fn>; action: Subject<void> } {
-  const action = new Subject<void>();
-  const open = vi.fn(async () => ({ onAction: () => action }));
-  return { open, action };
+/** A fake `DeleteWithUndo` (the real one loads `@angular/material/dialog` through a dynamic
+ * `import()`, the same `NG0205`-after-teardown risk `app-update.service.spec.ts`'s `AppSnackbar`
+ * fake avoids — playbook's "Delete, with Undo"): captures each call's options instead of actually
+ * opening a dialog, so a test drives confirm/Undo itself by calling `onConfirm()`/`onUndo()`
+ * directly — the dialog and the snackbar wiring are `DeleteWithUndo`'s own spec's job, not this
+ * page's. */
+function fakeDeleteWithUndo(): {
+  confirmAndDelete: ReturnType<typeof vi.fn>;
+  calls: ConfirmAndDeleteOptions[];
+} {
+  const calls: ConfirmAndDeleteOptions[] = [];
+  const confirmAndDelete = vi.fn(async (options: ConfirmAndDeleteOptions) => {
+    calls.push(options);
+  });
+  return { confirmAndDelete, calls };
 }
 
 /**
@@ -45,7 +54,11 @@ function fakeSnackbar(): { open: ReturnType<typeof vi.fn>; action: Subject<void>
  * rather than rebuilding a parallel route table.
  */
 async function setUp(
-  options: { now?: string; snackbar?: ReturnType<typeof fakeSnackbar>; attached?: boolean } = {},
+  options: {
+    now?: string;
+    deleteWithUndo?: ReturnType<typeof fakeDeleteWithUndo>;
+    attached?: boolean;
+  } = {},
 ): Promise<RouterTestingHarness> {
   // Vitest here runs with `isolate: false` (shared module state across spec files) — see
   // `exercise-kit.model.spec.ts` for why these re-assert their registration instead of resetting.
@@ -60,7 +73,7 @@ async function setUp(
         useValue: { now: () => new Date(options.now ?? '2026-01-01T00:00:00.000Z') },
       },
       { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
-      { provide: AppSnackbar, useValue: options.snackbar ?? fakeSnackbar() },
+      { provide: DeleteWithUndo, useValue: options.deleteWithUndo ?? fakeDeleteWithUndo() },
     ],
   });
   const harness = await RouterTestingHarness.create(LIST_URL);
@@ -110,7 +123,9 @@ describe('TransitionPage', () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
 
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')).toHaveLength(0);
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ).toHaveLength(0);
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.disabled).toBe(true);
   });
@@ -122,7 +137,9 @@ describe('TransitionPage', () => {
 
     expect(TestBed.inject(Router).url).toMatch(new RegExp(`^${LIST_URL}/[^/]+$`));
     expect(host.querySelector('app-transition-item-form')).not.toBeNull();
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')).toHaveLength(1);
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ).toHaveLength(1);
   });
 
   it('editing the text updates the list item and enables Mark done for a kept script', async () => {
@@ -133,9 +150,9 @@ describe('TransitionPage', () => {
     itemForm(harness).changed.emit({ text: 'Silence means agreement' });
     harness.detectChanges();
 
-    expect(host.querySelector('app-exercise-list mat-nav-list button')?.textContent).toContain(
-      'Silence means agreement',
-    );
+    expect(
+      host.querySelector('app-exercise-list mat-nav-list .exercise-list__item')?.textContent,
+    ).toContain('Silence means agreement');
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.disabled).toBe(false);
   });
@@ -176,9 +193,9 @@ describe('TransitionPage', () => {
     expect(host.querySelector('app-done-toggle')?.textContent).toContain('Mark done');
   });
 
-  it('deleting a script closes its editor, returns to the list route, and removes it from the list, but keeps it counted', async () => {
-    const snackbar = fakeSnackbar();
-    const harness = await setUp({ snackbar });
+  it('deleting a script asks DeleteWithUndo to confirm, then closes the editor, returns to the list route, and removes it from the list, but keeps it counted', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
     await addScript(harness);
 
     (
@@ -186,19 +203,27 @@ describe('TransitionPage', () => {
         'app-transition-item-form .delete-button',
       ) as HTMLButtonElement
     ).click();
+
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].deletedMessage).toBe('Script deleted');
+    expect(deleteWithUndo.calls[0].undoLabel).toBe('Undo');
+
+    // Simulates the user confirming in the (faked-away) dialog.
+    deleteWithUndo.calls[0].onConfirm();
     harness.detectChanges();
     await harness.fixture.whenStable();
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(TestBed.inject(Router).url).toBe(LIST_URL);
     expect(host.querySelector('app-transition-item-form')).toBeNull();
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')).toHaveLength(0);
-    expect(snackbar.open).toHaveBeenCalledWith('Script deleted', 'Undo', { duration: 5000 });
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ).toHaveLength(0);
   });
 
-  it('restores the deleted script when Undo is clicked on the snackbar', async () => {
-    const snackbar = fakeSnackbar();
-    const harness = await setUp({ snackbar });
+  it('restores the deleted script when DeleteWithUndo reports Undo', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
     await addScript(harness);
 
     (
@@ -206,15 +231,31 @@ describe('TransitionPage', () => {
         'app-transition-item-form .delete-button',
       ) as HTMLButtonElement
     ).click();
+    deleteWithUndo.calls[0].onConfirm();
+    harness.detectChanges();
     await harness.fixture.whenStable();
 
-    snackbar.action.next();
+    deleteWithUndo.calls[0].onUndo();
     harness.detectChanges();
     await harness.navigateByUrl(LIST_URL);
 
     expect(
-      harness.routeNativeElement?.querySelectorAll('app-exercise-list mat-nav-list button'),
+      harness.routeNativeElement?.querySelectorAll(
+        'app-exercise-list mat-nav-list .exercise-list__item',
+      ),
     ).toHaveLength(1);
+  });
+
+  it('deleting a script from its bin button in the list goes through the same DeleteWithUndo flow', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
+    await addScript(harness);
+    await closeEditor(harness);
+    const host = harness.routeNativeElement as HTMLElement;
+
+    (host.querySelector('.exercise-list__delete') as HTMLButtonElement).click();
+
+    expect(deleteWithUndo.calls).toHaveLength(1);
   });
 
   it('redirects to the list when :itemId is not a live script', async () => {
@@ -284,7 +325,9 @@ describe('TransitionPage', () => {
     search.dispatchEvent(new Event('input'));
     harness.detectChanges();
 
-    (host.querySelector('app-exercise-list mat-nav-list button') as HTMLButtonElement).click();
+    (
+      host.querySelector('app-exercise-list mat-nav-list .exercise-list__item') as HTMLButtonElement
+    ).click();
     await harness.fixture.whenStable();
     await closeEditor(harness);
 
@@ -323,14 +366,18 @@ describe('TransitionPage', () => {
     await addScript(harness);
     const host = harness.routeNativeElement as HTMLElement;
 
-    const subtitleBefore = host.querySelector('app-exercise-list mat-nav-list button')?.textContent;
+    const subtitleBefore = host.querySelector(
+      'app-exercise-list mat-nav-list .exercise-list__item',
+    )?.textContent;
     expect(subtitleBefore).toContain('Family');
     expect(subtitleBefore).toContain('Mixed');
 
     TestBed.inject(TranslocoService).setActiveLang('ar');
     harness.detectChanges();
 
-    const subtitleAfter = host.querySelector('app-exercise-list mat-nav-list button')?.textContent;
+    const subtitleAfter = host.querySelector(
+      'app-exercise-list mat-nav-list .exercise-list__item',
+    )?.textContent;
     expect(subtitleAfter).toContain('العائلة');
     expect(subtitleAfter).toContain('مختلط');
   });
@@ -346,9 +393,11 @@ describe('TransitionPage', () => {
     await harness.navigateByUrl(LIST_URL);
     const host = harness.routeNativeElement as HTMLElement;
 
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')).toHaveLength(1);
-    expect(host.querySelector('app-exercise-list mat-nav-list button')?.textContent).toContain(
-      'Silence means agreement',
-    );
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ).toHaveLength(1);
+    expect(
+      host.querySelector('app-exercise-list mat-nav-list .exercise-list__item')?.textContent,
+    ).toContain('Silence means agreement');
   });
 });

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input } f
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
@@ -11,6 +11,7 @@ import {
   previousAssessment,
   sortedByDateDesc,
 } from '../../shared/exercise-kit/assessment-history.logic';
+import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
@@ -25,6 +26,8 @@ import {
   liveAssessmentsOf,
   newAssessmentFields,
   overallProfile,
+  removeAssessment,
+  restoreAssessment,
   summarize,
 } from './maturity.logic';
 import {
@@ -69,6 +72,8 @@ import {
 export class MaturityPage {
   private readonly clock = inject(CLOCK);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
+  private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<MaturityAssessment[]>(MATURITY_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -179,6 +184,20 @@ export class MaturityPage {
 
   protected onAssessmentChanged(id: string, fields: Partial<MaturityAssessmentFields>): void {
     this.store.update((assessments) => editAssessment(assessments, id, fields));
+  }
+
+  /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). The
+   * redirect effect above closes the editor once the delete lands, since the id is then no longer
+   * a live assessment — this only owns confirm, the tombstone, and Undo. */
+  protected onAssessmentDeleted(id: string): void {
+    void this.deleteWithUndo.confirmAndDelete({
+      deletedMessage: this.transloco.translate('paradigmsMaturity.history.deleted'),
+      undoLabel: this.transloco.translate('paradigmsMaturity.history.undo'),
+      onConfirm: () =>
+        this.store.update((assessments) => removeAssessment(assessments, id, this.clock.now())),
+      onUndo: () =>
+        this.store.update((assessments) => restoreAssessment(assessments, id, this.clock.now())),
+    });
   }
 
   protected onToggleDone(): void {

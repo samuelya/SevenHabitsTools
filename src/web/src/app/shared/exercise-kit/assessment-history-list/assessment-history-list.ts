@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../../core/i18n/locale.pipe';
+import { SwipeToDeleteDirective } from '../swipe-to-delete.directive';
 import { parseIsoDate } from '../assessment-history.logic';
 
 /** One row `AssessmentHistoryList` renders. `date` is the raw `YYYY-MM-DD` the row is for —
@@ -26,7 +29,7 @@ export interface AssessmentHistoryItem {
  */
 @Component({
   selector: 'app-assessment-history-list',
-  imports: [AppDatePipe, MatListModule],
+  imports: [AppDatePipe, MatIconModule, MatListModule, SwipeToDeleteDirective, TranslocoPipe],
   templateUrl: './assessment-history-list.html',
   styleUrl: './assessment-history-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,12 +38,24 @@ export class AssessmentHistoryList<T extends AssessmentHistoryItem = AssessmentH
   readonly items = input.required<readonly T[]>();
   readonly selectedId = input<string | null>(null);
   readonly emptyMessage = input.required<string>();
+  /** Opt-in (issue #203), same reasoning as `ExerciseList.deletable` — off by default so a future
+   * caller that doesn't wire a delete handler doesn't grow one it never listens to. */
+  readonly deletable = input(false);
   readonly itemSelected = output<string>();
+  /** Requested by a bin-button click or a committed swipe on a deletable row (playbook's "Deleting
+   * entries"); the caller runs confirm → delete → undo (`DeleteWithUndo`). */
+  readonly deleteRequested = output<string>();
 
   /** Local midnight, not `new Date(item.date)`'s UTC midnight — see `AssessmentHistoryItem`'s own
    * doc comment on `date` for why a raw `YYYY-MM-DD` string can't go through `AppDatePipe`
    * directly. */
   protected localDate(date: string): Date {
     return parseIsoDate(date);
+  }
+
+  protected requestDelete(item: T): void {
+    if (this.deletable()) {
+      this.deleteRequested.emit(item.id);
+    }
   }
 }

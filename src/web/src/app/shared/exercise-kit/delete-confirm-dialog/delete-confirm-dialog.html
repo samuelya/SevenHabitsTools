@@ -1,0 +1,25 @@
+<h2 matDialogTitle>{{ 'deleteConfirm.title' | transloco }}</h2>
+
+<!-- `tabindex="0"`: `MatDialogContent`'s own `overflow-y: auto` can make this genuinely
+     scrollable for a longer translation (Arabic's own body copy wraps to more lines than
+     English's in the same width — axe's `scrollable-region-focusable`, caught by this dialog's
+     own e2e test), and a scrollable region with no focusable content of its own is otherwise
+     unreachable by keyboard (WCAG 2.1.1). -->
+<div matDialogContent tabindex="0" class="delete-confirm-dialog">
+  <p>{{ 'deleteConfirm.body' | transloco }}</p>
+</div>
+
+<div matDialogActions class="delete-confirm-dialog__actions">
+  <button #cancelButton mat-stroked-button type="button" matDialogClose>
+    {{ 'deleteConfirm.cancel' | transloco }}
+  </button>
+  <button
+    mat-flat-button
+    color="warn"
+    type="button"
+    class="delete-confirm-dialog__delete"
+    (click)="confirmDelete()"
+  >
+    {{ 'deleteConfirm.delete' | transloco }}
+  </button>
+</div>
