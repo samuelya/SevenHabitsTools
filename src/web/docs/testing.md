@@ -10,7 +10,7 @@ visited page. It runs once here; feature PRs only add a spec file under `e2e/`.
 | --- | --- |
 | Targeted unit tests while iterating (about 4 s) | `npm test -- --include='**/<feature>/**/*.spec.ts'` (repeat `--include` for more globs). Tests run through the Angular builder, so use `npm test`, not `npx vitest`. |
 | E2E in a worktree | `scripts/web/e2e-local.sh [--no-build] [spec files or Playwright args]` from the worktree root. It builds, serves this worktree's build on a free port, runs the line reporter and prints the tail. |
-| Wait for CI after a push | `scripts/gh/wait-ci.sh <pr>`: one blocking call that prints only the checks that aren't green, plus the failed log tail. Don't use sleep/poll loops. |
+| Wait for CI after a push | `scripts/gh/wait-ci.sh <pr>`: one blocking call (Bash timeout 600000) that prints progress, then the checks that aren't green plus the failed log tail. Exit 0 green, 1 failed, **2 still running: run the same command again** (PR runs take 5-14 min). Don't use sleep/poll loops. |
 
 - **Never run bare `npm run e2e` in a worktree.** Its built-in server uses port 4300 with
   `reuseExistingServer`, so it can silently test another worktree's build.
