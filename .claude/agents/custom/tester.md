@@ -33,6 +33,7 @@ Write only test artifacts (screenshots, reports) there or in the scratchpad. Add
 
 ## Checklist (scale it to the diff)
 A two-file fix doesn't get a new feature's matrix; a re-verification round checks the changed behaviour and the paths it touches, not everything again.
+- [ ] The PR's "Coder self-check": every ticked row re-verified (a ticked row that fails is a bug; note it as "self-check wrong")
 - [ ] Every acceptance criterion in the issue, one by one
 - [ ] 360×800 (mobile) and 1280×800 (desktop)
 - [ ] `en` and `ar`; RTL layout correct (alignment, icons, navigation direction)
