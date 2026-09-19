@@ -25,7 +25,9 @@
     [searchLabel]="'paradigmsTransition.list.searchLabel' | transloco"
     [emptyMessage]="'paradigmsTransition.list.empty' | transloco"
     [noMatchMessage]="'paradigmsTransition.list.noMatch' | transloco"
+    [deletable]="true"
     (itemSelected)="select($event)"
+    (deleteRequested)="onItemDeleted($event)"
   />
 
   <div editor>

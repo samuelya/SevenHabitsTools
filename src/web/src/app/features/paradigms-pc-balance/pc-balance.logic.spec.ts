@@ -13,6 +13,8 @@ import {
   isOverUsed,
   newAuditFields,
   removeAsset,
+  removeAudit,
+  restoreAudit,
   statusOf,
   summarize,
 } from './pc-balance.logic';
@@ -235,6 +237,32 @@ describe('addAudit/editAudit', () => {
   it('is a no-op copy when the id is not found', () => {
     const target = audit({ id: 'a1' });
     expect(editAudit([target], 'missing', { reflection: 'new' })).toEqual([target]);
+  });
+});
+
+describe('removeAudit/restoreAudit (issue #203)', () => {
+  const LATER = new Date('2026-01-02T00:00:00.000Z');
+
+  it('tombstones the matching audit, leaving others alone', () => {
+    const target = audit({ id: 'a1' });
+    const other = audit({ id: 'a2' });
+    const result = removeAudit([target, other], 'a1', LATER);
+
+    expect(result.find((a) => a.id === 'a1')?.deletedAt).toBe(LATER.toISOString());
+    expect(result.find((a) => a.id === 'a2')?.deletedAt).toBeUndefined();
+  });
+
+  it('restore clears the tombstone and bumps updatedAt', () => {
+    const deleted = audit({ id: 'a1', deletedAt: LATER.toISOString() });
+    const result = restoreAudit([deleted], 'a1', LATER);
+
+    expect(result[0].deletedAt).toBeUndefined();
+    expect(result[0].updatedAt).toBe(LATER.toISOString());
+  });
+
+  it('restore is a no-op for an id that was never deleted', () => {
+    const live = audit({ id: 'a1' });
+    expect(restoreAudit([live], 'a1', LATER)[0]).toBe(live);
   });
 });
 

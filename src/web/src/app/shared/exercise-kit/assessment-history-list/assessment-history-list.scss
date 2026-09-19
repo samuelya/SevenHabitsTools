@@ -9,10 +9,42 @@
   padding: 1rem;
 }
 
+// The swipe host (issue #203): the row button and the trailing bin button as siblings — same
+// layout `ExerciseList` uses for its own row wrapper (`exercise-list.scss`).
+.assessment-history-list__row {
+  display: flex;
+  align-items: stretch;
+}
+
+.assessment-history-list__row .assessment-history-list__item {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
 .assessment-history-list__item {
   position: relative;
   text-align: start;
   min-block-size: 48px;
+}
+
+// Always visible, not a reveal-on-swipe affordance — see `ExerciseList`'s own `.exercise-list
+// __delete` for the same reasoning. ≥ 44px in both dimensions for the touch target.
+.assessment-history-list__delete {
+  flex: 0 0 auto;
+  inline-size: 44px;
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant, gray);
+  cursor: pointer;
+}
+
+.assessment-history-list__delete:hover,
+.assessment-history-list__delete:focus-visible {
+  color: var(--mat-sys-error, darkred);
 }
 
 .assessment-history-list__item-accent {

@@ -31,42 +31,62 @@
   @if (visibleItems().length) {
     <mat-nav-list>
       @for (item of visibleItems(); track item.id) {
-        <!-- Not `aria-current`/`aria-selected`: `MatListItem` itself owns `aria-current` (its
-             `_getAriaCurrent()` host binding always overrides ours back to absent on a `<button>`
-             host, since it's `'page'`-or-`null` and gated on the host being an `<a>`), and
-             `aria-selected` isn't allowed on `role="button"` (axe `aria-allowed-attr`, #51).
-             `aria-pressed` is the one state MatListItem doesn't already manage. -->
-        <button
-          mat-list-item
-          type="button"
-          class="exercise-list__item"
-          [class.exercise-list__item--selected]="item.id === selectedId()"
-          [class.exercise-list__item--warning]="item.warning"
-          [activated]="item.id === selectedId()"
-          [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
-          (click)="itemSelected.emit(item.id)"
+        <!-- The swipe host (issue #203): a wrapper, not the row button itself — a bin `<button>`
+             can't nest inside another `<button>` (invalid HTML, broken a11y), so the row button
+             and the bin button are siblings here instead. -->
+        <div
+          class="exercise-list__row"
+          appSwipeToDelete
+          [appSwipeToDeleteDisabled]="!isRowDeletable(item)"
+          (swiped)="requestDelete(item)"
         >
-          <!-- A real element, not `::before`: `MatListItem`'s own ripple/state-layer already
-               owns a `::before` sized to the full row, which would otherwise win the cascade over
-               a narrow accent bar (#186). -->
-          <span class="exercise-list__item-accent" aria-hidden="true"></span>
-          <!-- The icon slot is always reserved (an empty span when neither done nor warning), so
-               titles align across every row (#186). `warning` wins when both are somehow true —
-               it's the one that needs the user to notice something, `done` is just status. -->
-          @if (item.warning) {
-            <mat-icon matListItemIcon class="exercise-list__item-warning-icon" aria-hidden="true"
-              >warning</mat-icon
+          <!-- Not `aria-current`/`aria-selected`: `MatListItem` itself owns `aria-current` (its
+               `_getAriaCurrent()` host binding always overrides ours back to absent on a `<button>`
+               host, since it's `'page'`-or-`null` and gated on the host being an `<a>`), and
+               `aria-selected` isn't allowed on `role="button"` (axe `aria-allowed-attr`, #51).
+               `aria-pressed` is the one state MatListItem doesn't already manage. -->
+          <button
+            mat-list-item
+            type="button"
+            class="exercise-list__item"
+            [class.exercise-list__item--selected]="item.id === selectedId()"
+            [class.exercise-list__item--warning]="item.warning"
+            [activated]="item.id === selectedId()"
+            [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
+            (click)="itemSelected.emit(item.id)"
+          >
+            <!-- A real element, not `::before`: `MatListItem`'s own ripple/state-layer already
+                 owns a `::before` sized to the full row, which would otherwise win the cascade over
+                 a narrow accent bar (#186). -->
+            <span class="exercise-list__item-accent" aria-hidden="true"></span>
+            <!-- The icon slot is always reserved (an empty span when neither done nor warning), so
+                 titles align across every row (#186). `warning` wins when both are somehow true —
+                 it's the one that needs the user to notice something, `done` is just status. -->
+            @if (item.warning) {
+              <mat-icon matListItemIcon class="exercise-list__item-warning-icon" aria-hidden="true"
+                >warning</mat-icon
+              >
+            } @else if (item.done) {
+              <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
+            } @else {
+              <span matListItemIcon aria-hidden="true"></span>
+            }
+            <span matListItemTitle>{{ item.title }}</span>
+            @if (item.subtitle; as subtitle) {
+              <span matListItemLine>{{ subtitle }}</span>
+            }
+          </button>
+          @if (isRowDeletable(item)) {
+            <button
+              type="button"
+              class="exercise-list__delete"
+              [attr.aria-label]="'exerciseKit.list.deleteAria' | transloco: { item: item.title }"
+              (click)="requestDelete(item)"
             >
-          } @else if (item.done) {
-            <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
-          } @else {
-            <span matListItemIcon aria-hidden="true"></span>
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
           }
-          <span matListItemTitle>{{ item.title }}</span>
-          @if (item.subtitle; as subtitle) {
-            <span matListItemLine>{{ subtitle }}</span>
-          }
-        </button>
+        </div>
       }
     </mat-nav-list>
   } @else {

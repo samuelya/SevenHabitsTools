@@ -17,6 +17,13 @@
   "placeholder": {
     "comingSoon": "Coming soon."
   },
+  "deleteConfirm": {
+    "title": "Delete this entry?",
+    "body": "You can undo this for a few seconds after deleting, using the Undo shown next.",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "dialogLoadError": "Couldn't load the delete dialog. Check your connection and try again."
+  },
   "titles": {
     "home": "Home",
     "habits": "Habits",

@@ -22,7 +22,9 @@
     [emptyMessage]="'paradigmsTeach.list.empty' | transloco"
     [noMatchMessage]="'paradigmsTeach.list.noMatch' | transloco"
     initialSort="none"
+    [deletable]="true"
     (itemSelected)="select($event)"
+    (deleteRequested)="onEntryDeleted($event)"
   />
 
   <div editor>

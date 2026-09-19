@@ -1,0 +1,25 @@
+.delete-confirm-dialog {
+  max-inline-size: 360px;
+}
+
+.delete-confirm-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-inline: 0;
+}
+
+// `mat-flat-button[color="warn"]` doesn't wire this Material version's filled-button colour
+// variables to `--mat-sys-error`/`--mat-sys-on-error` at all — `.mat-mdc-unelevated-button:not
+// (:disabled)` always reads `--mat-button-filled-container-color`/`-label-text-color`, falling
+// back to `--mat-sys-primary`/`-on-primary` when unset, and `color="warn"` never sets them (an
+// axe `color-contrast` scan on this exact button — issue #203's e2e delete test — caught it
+// rendering as the theme's ordinary blue primary colour, not red, well below the 4.5:1 minimum
+// against this dialog's white surface). Setting the two variables it actually reads is a targeted
+// fix scoped to this one button, not a change to the app's shared theme (`styles.scss`), which is
+// a bigger, separate fix for every other `color="warn"` button in the app (e.g.
+// `ImportConfirmDialog`'s "Yes, replace").
+.delete-confirm-dialog__delete {
+  --mat-button-filled-container-color: var(--mat-sys-error);
+  --mat-button-filled-label-text-color: var(--mat-sys-on-error);
+}

@@ -9,6 +9,10 @@ import { CLOCK } from '../../core/time/clock';
 // Side-effect only: `DoneToggle`'s "Completed <time>" caption renders through `AppDatePipe` —
 // see `transition-page.spec.ts`'s own import for the same reason.
 import '../../features/settings/settings.model';
+import {
+  ConfirmAndDeleteOptions,
+  DeleteWithUndo,
+} from '../../shared/exercise-kit/delete-with-undo';
 import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit.model';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { TeachItemForm } from './teach-item-form';
@@ -24,8 +28,26 @@ function testRoutes(): Routes {
   return [{ path: TEACH_ROUTE, children: teachRoutes }];
 }
 
+/** Same shape as `paradigms-transition/transition-page.spec.ts`'s own fake — see its doc comment
+ * for why the real `DeleteWithUndo` isn't used directly in a page spec. */
+function fakeDeleteWithUndo(): {
+  confirmAndDelete: ReturnType<typeof vi.fn>;
+  calls: ConfirmAndDeleteOptions[];
+} {
+  const calls: ConfirmAndDeleteOptions[] = [];
+  const confirmAndDelete = vi.fn(async (options: ConfirmAndDeleteOptions) => {
+    calls.push(options);
+  });
+  return { confirmAndDelete, calls };
+}
+
 async function setUp(
-  options: { now?: string; attached?: boolean; url?: string } = {},
+  options: {
+    now?: string;
+    attached?: boolean;
+    url?: string;
+    deleteWithUndo?: ReturnType<typeof fakeDeleteWithUndo>;
+  } = {},
 ): Promise<RouterTestingHarness> {
   // Vitest here runs with `isolate: false` — see `exercise-kit.model.spec.ts` for why these
   // re-assert their registration instead of resetting it.
@@ -40,6 +62,7 @@ async function setUp(
         useValue: { now: () => new Date(options.now ?? '2026-01-10T00:00:00.000Z') },
       },
       { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
+      { provide: DeleteWithUndo, useValue: options.deleteWithUndo ?? fakeDeleteWithUndo() },
     ],
   });
   const harness = await RouterTestingHarness.create(options.url ?? LIST_URL);
@@ -60,7 +83,7 @@ async function closeEditor(harness: RouterTestingHarness): Promise<void> {
 
 async function selectChapter(harness: RouterTestingHarness, index: number): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
-  const buttons = host.querySelectorAll('app-exercise-list mat-nav-list button');
+  const buttons = host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item');
   (buttons[index] as HTMLButtonElement).focus();
   (buttons[index] as HTMLButtonElement).click();
   await harness.fixture.whenStable();
@@ -76,7 +99,9 @@ describe('TeachPage', () => {
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(host.textContent).toContain('Teach it to learn it');
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')).toHaveLength(10);
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ).toHaveLength(10);
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.disabled).toBe(true);
   });
@@ -85,9 +110,9 @@ describe('TeachPage', () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
 
-    const titles = [...host.querySelectorAll('app-exercise-list mat-nav-list button')].map((el) =>
-      el.textContent?.trim(),
-    );
+    const titles = [
+      ...host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
+    ].map((el) => el.textContent?.trim());
     expect(titles[0]).toContain('Paradigms and principles');
     expect(titles[1]).toContain('Habit 1');
     expect(titles[8]).toContain('Paradigms of interdependence');
@@ -114,9 +139,9 @@ describe('TeachPage', () => {
     itemForm(harness).changed.emit({ status: 'shared' });
     harness.detectChanges();
 
-    expect(host.querySelectorAll('app-exercise-list mat-nav-list button')[1].textContent).toContain(
-      'Shared',
-    );
+    expect(
+      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item')[1].textContent,
+    ).toContain('Shared');
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.disabled).toBe(false);
   });
@@ -209,5 +234,66 @@ describe('TeachPage', () => {
     harness.detectChanges();
 
     expect(selectedRow()?.textContent).toContain('تمت المشاركة');
+  });
+
+  it('a chapter with no entry yet has no bin button — nothing to delete (issue #203)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelectorAll('.exercise-list__delete')).toHaveLength(0);
+  });
+
+  it('a chapter grows a bin button once it has an entry, and deleting it asks DeleteWithUndo to confirm', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
+    await selectChapter(harness, 1);
+    itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
+    harness.detectChanges();
+    await closeEditor(harness);
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelectorAll('.exercise-list__delete')).toHaveLength(1);
+    (host.querySelector('.exercise-list__delete') as HTMLButtonElement).click();
+
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].deletedMessage).toBe('Entry deleted');
+  });
+
+  it('deleting the entry open in the editor closes it, and the chapter row goes back to not deletable', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
+    await selectChapter(harness, 1);
+    itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
+    harness.detectChanges();
+
+    (
+      harness.routeNativeElement!.querySelector('.exercise-list__delete') as HTMLButtonElement
+    ).click();
+    deleteWithUndo.calls[0].onConfirm();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(harness.routeNativeElement?.querySelector('app-teach-item-form')).toBeNull();
+    expect(harness.routeNativeElement?.querySelectorAll('.exercise-list__delete')).toHaveLength(0);
+  });
+
+  it('restores the deleted entry when DeleteWithUndo reports Undo', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp({ deleteWithUndo });
+    await selectChapter(harness, 1);
+    itemForm(harness).changed.emit({ keyIdea: 'Choose your response', status: 'shared' });
+    harness.detectChanges();
+    (
+      harness.routeNativeElement!.querySelector('.exercise-list__delete') as HTMLButtonElement
+    ).click();
+    deleteWithUndo.calls[0].onConfirm();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    deleteWithUndo.calls[0].onUndo();
+    harness.detectChanges();
+
+    expect(harness.routeNativeElement?.querySelectorAll('.exercise-list__delete')).toHaveLength(1);
   });
 });

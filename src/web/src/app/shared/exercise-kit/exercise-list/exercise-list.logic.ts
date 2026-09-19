@@ -8,6 +8,12 @@ export interface ExerciseListItem {
   /** Visually highlights the row (issue #52's overdue teach-it commitments) — generic across any
    * future exercise with a row that needs the user's attention, not specific to what makes it so. */
   readonly warning?: boolean;
+  /** Opts this one row out of `ExerciseList`'s own `deletable` input (issue #203) — for a list
+   * whose rows aren't one-to-one with what a delete removes, e.g. `paradigms-teach`'s fixed
+   * chapter rows, only deletable once the user has actually filled one in. Ignored when the list's
+   * own `deletable` is `false`; defaults to `true` otherwise, so every existing caller (which never
+   * sets this) keeps every row deletable. */
+  readonly deletable?: boolean;
 }
 
 /** `'none'` (issue #52): the caller's own `items()` order, untouched — for a fixed, meaningfully

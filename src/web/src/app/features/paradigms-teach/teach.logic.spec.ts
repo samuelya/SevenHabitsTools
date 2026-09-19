@@ -9,6 +9,8 @@ import {
   isOverdue,
   isValidPlannedAt,
   labelsFrom,
+  removeEntry,
+  restoreEntry,
   sharedCount,
   summarize,
   toListItem,
@@ -199,19 +201,21 @@ describe('toListItem', () => {
     'Overdue',
   );
 
-  it('shows just the chapter title, not done, for a chapter with no entry', () => {
+  it('shows just the chapter title, not done, for a chapter with no entry — and not deletable (issue #203)', () => {
     expect(toListItem('h1', undefined, labels, NOW)).toEqual({
       id: 'h1',
       title: 'Habit 1',
       done: false,
+      deletable: false,
     });
   });
 
-  it('shows the status as the subtitle, and done once shared', () => {
+  it('shows the status as the subtitle, done once shared, and deletable once there is an entry', () => {
     const item = toListItem('h1', entry({ status: 'shared' }), labels, NOW);
     expect(item.subtitle).toBe('Shared');
     expect(item.warning).toBe(false);
     expect(item.done).toBe(true);
+    expect(item.deletable).toBe(true);
   });
 
   it('appends the overdue label once planned and past its date', () => {
@@ -223,6 +227,45 @@ describe('toListItem', () => {
     );
     expect(item.subtitle).toBe('Planned · Overdue');
     expect(item.warning).toBe(true);
+  });
+});
+
+describe('removeEntry/restoreEntry (issue #203)', () => {
+  const LATER = new Date('2026-01-11T00:00:00.000Z');
+
+  it('tombstones the matching entry, leaving others alone', () => {
+    const target = entry({ id: 'e1', chapter: 'h1' });
+    const other = entry({ id: 'e2', chapter: 'h2' });
+    const result = removeEntry([target, other], 'e1', LATER);
+
+    expect(result.find((e) => e.id === 'e1')?.deletedAt).toBe(LATER.toISOString());
+    expect(result.find((e) => e.id === 'e2')?.deletedAt).toBeUndefined();
+  });
+
+  it('restore clears the tombstone and bumps updatedAt', () => {
+    const deleted = entry({ id: 'e1', deletedAt: LATER.toISOString() });
+    const result = restoreEntry([deleted], 'e1', LATER);
+
+    expect(result[0].deletedAt).toBeUndefined();
+    expect(result[0].updatedAt).toBe(LATER.toISOString());
+  });
+
+  it('a chapter can be filled in again after its entry is deleted — upsertEntry creates a fresh one', () => {
+    const deleted = entry({ id: 'e1', chapter: 'h1', deletedAt: LATER.toISOString() });
+    const result = upsertEntry([deleted], 'h1', { keyIdea: 'New idea' }, LATER);
+
+    expect(result).toHaveLength(2);
+    const fresh = result.find((e) => e.id !== 'e1')!;
+    expect(fresh.keyIdea).toBe('New idea');
+    expect(fresh.deletedAt).toBeUndefined();
+  });
+
+  it('restore is a no-op when the chapter already has a different live entry (typed again, then Undo)', () => {
+    const deleted = entry({ id: 'e1', chapter: 'h1', deletedAt: LATER.toISOString() });
+    const fresh = entry({ id: 'e2', chapter: 'h1', keyIdea: 'New idea' });
+    const result = restoreEntry([deleted, fresh], 'e1', LATER);
+
+    expect(result).toEqual([deleted, fresh]);
   });
 });
 

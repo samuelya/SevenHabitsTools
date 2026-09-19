@@ -97,7 +97,7 @@ test.describe('teach-to-learn tracker', () => {
     });
     await page.goto('/habits/paradigms/teach');
 
-    await expect(page.locator('app-exercise-list mat-nav-list button')).toHaveCount(10);
+    await expect(page.locator('.exercise-list__item')).toHaveCount(10);
     await expect(page.locator('app-exercise-list .exercise-list__item--warning')).toHaveCount(1);
   });
 

@@ -2,26 +2,48 @@
   @if (items().length) {
     <mat-nav-list>
       @for (item of items(); track item.id) {
-        <!-- `aria-pressed`, not `aria-selected`/`aria-current`: same reasoning as `ExerciseList`'s
-             own item button (`exercise-list.html`) — `MatListItem` already owns `aria-current` and
-             `aria-selected` isn't allowed on `role="button"`. -->
-        <button
-          mat-list-item
-          type="button"
-          class="assessment-history-list__item"
-          [class.assessment-history-list__item--selected]="item.id === selectedId()"
-          [activated]="item.id === selectedId()"
-          [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
-          (click)="itemSelected.emit(item.id)"
+        <!-- The swipe host (issue #203), same shape as `ExerciseList`'s own row wrapper
+             (`exercise-list.html`): a bin `<button>` can't nest inside the row's own `<button>`. -->
+        <div
+          class="assessment-history-list__row"
+          appSwipeToDelete
+          [appSwipeToDeleteDisabled]="!deletable()"
+          (swiped)="requestDelete(item)"
         >
-          <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
-          <span matListItemTitle>{{
-            localDate(item.date) | appDate: { dateStyle: 'medium' }
-          }}</span>
-          @if (item.subtitle; as subtitle) {
-            <span matListItemLine>{{ subtitle }}</span>
+          <!-- `aria-pressed`, not `aria-selected`/`aria-current`: same reasoning as `ExerciseList`'s
+               own item button (`exercise-list.html`) — `MatListItem` already owns `aria-current` and
+               `aria-selected` isn't allowed on `role="button"`. -->
+          <button
+            mat-list-item
+            type="button"
+            class="assessment-history-list__item"
+            [class.assessment-history-list__item--selected]="item.id === selectedId()"
+            [activated]="item.id === selectedId()"
+            [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
+            (click)="itemSelected.emit(item.id)"
+          >
+            <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
+            <span matListItemTitle>{{
+              localDate(item.date) | appDate: { dateStyle: 'medium' }
+            }}</span>
+            @if (item.subtitle; as subtitle) {
+              <span matListItemLine>{{ subtitle }}</span>
+            }
+          </button>
+          @if (deletable()) {
+            <button
+              type="button"
+              class="assessment-history-list__delete"
+              [attr.aria-label]="
+                'exerciseKit.list.deleteAria'
+                  | transloco: { item: localDate(item.date) | appDate: { dateStyle: 'medium' } }
+              "
+              (click)="requestDelete(item)"
+            >
+              <mat-icon aria-hidden="true">delete</mat-icon>
+            </button>
           }
-        </button>
+        </div>
       }
     </mat-nav-list>
   } @else {

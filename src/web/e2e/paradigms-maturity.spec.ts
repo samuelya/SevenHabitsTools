@@ -14,16 +14,32 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<'en' | 'ar', { hubTitle: string; markDone: string; reopen: string }> = {
+const TEXT: Record<
+  'en' | 'ar',
+  {
+    hubTitle: string;
+    markDone: string;
+    reopen: string;
+    cancel: string;
+    delete: string;
+    undo: string;
+  }
+> = {
   en: {
     hubTitle: 'See where you stand on the growth continuum',
     markDone: 'Mark done',
     reopen: 'Reopen',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    undo: 'Undo',
   },
   ar: {
     hubTitle: 'اعرف موقعك على مسار النضج',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
+    cancel: 'إلغاء',
+    delete: 'حذف',
+    undo: 'تراجع',
   },
 };
 
@@ -70,7 +86,7 @@ test.describe('maturity continuum self-assessment', () => {
     // `e2e/multi-tab.spec.ts`'s own comment on the same wait before relying on persisted state.
     await page.waitForTimeout(1000);
     await page.reload();
-    await expect(page.locator('app-assessment-history-list mat-nav-list button')).toHaveCount(1);
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');
@@ -92,5 +108,45 @@ test.describe('maturity continuum self-assessment', () => {
     expect(
       editorResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
+  });
+
+  // Issue #203: the shared delete pattern via the history's own bin button — Cancel leaves the
+  // assessment in place, Delete tombstones it and offers Undo through the snackbar.
+  test('deletes an assessment from the history, with a confirm dialog and an Undo snackbar', async ({
+    page,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    const isMobile = testInfo.project.name.startsWith('mobile');
+    await page.goto('/habits/paradigms/maturity');
+
+    await page.locator('.add-button').click();
+    const form = page.locator('app-maturity-assessment-form');
+    await expect(form).toBeVisible();
+    if (isMobile) {
+      await page.goBack();
+    } else {
+      await page.locator('app-exercise-page .editor-close').click();
+    }
+    await expect(form).not.toBeVisible();
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
+
+    await page.locator('.assessment-history-list__delete').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Cancel leaves the assessment untouched.
+    await page.getByRole('button', { name: text.cancel }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
+
+    // Delete tombstones it and offers Undo.
+    await page.locator('.assessment-history-list__delete').click();
+    await page.getByRole('button', { name: text.delete, exact: true }).click();
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(0);
+    const undoButton = page.getByRole('button', { name: text.undo });
+    await expect(undoButton).toBeVisible();
+
+    await undoButton.click();
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
   });
 });

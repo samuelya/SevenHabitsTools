@@ -1,4 +1,4 @@
-import { newRecord, isLive } from '../../core/data/record';
+import { newRecord, isLive, softDelete, touch } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
 import {
   latestAssessment,
@@ -227,5 +227,31 @@ export function editAssessment(
 ): MaturityAssessment[] {
   return assessments.map((assessment) =>
     assessment.id === id && isLive(assessment) ? { ...assessment, ...fields } : assessment,
+  );
+}
+
+/** Tombstones the assessment `id` (never removed, architecture issue #1 §6) — issue #203's shared
+ * delete pattern, the same shape `removeScript()` gives `paradigms-transition`. */
+export function removeAssessment(
+  assessments: readonly MaturityAssessment[],
+  id: string,
+  now: Date,
+): MaturityAssessment[] {
+  return assessments.map((assessment) =>
+    assessment.id === id ? softDelete(assessment, now) : assessment,
+  );
+}
+
+/** Undoes `removeAssessment()`: clears the assessment `id`'s tombstone and bumps `updatedAt`
+ * (issue #203's Undo snackbar). A no-op copy if `id` is not found or was never deleted. */
+export function restoreAssessment(
+  assessments: readonly MaturityAssessment[],
+  id: string,
+  now: Date,
+): MaturityAssessment[] {
+  return assessments.map((assessment) =>
+    assessment.id === id && !isLive(assessment)
+      ? touch({ ...assessment, deletedAt: undefined }, now)
+      : assessment,
   );
 }

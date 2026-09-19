@@ -10,7 +10,9 @@
   },
   "history": {
     "newAssessment": "New assessment",
-    "empty": "No assessments yet. Start your first one."
+    "empty": "No assessments yet. Start your first one.",
+    "deleted": "Assessment deleted",
+    "undo": "Undo"
   },
   "area": {
     "work": "Work",

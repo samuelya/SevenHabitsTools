@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
-import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
+import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
@@ -15,6 +16,8 @@ import {
   draftFor,
   entryForChapter,
   labelsFrom,
+  removeEntry,
+  restoreEntry,
   summarize,
   toListItem,
   upsertEntry,
@@ -61,6 +64,8 @@ import {
 export class TeachPage {
   private readonly clock = inject(CLOCK);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
+  private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -186,6 +191,37 @@ export class TeachPage {
       return;
     }
     this.store.update((entries) => upsertEntry(entries, chapter, fields, this.clock.now()));
+  }
+
+  /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries").
+   * `chapterId` is `ExerciseList`'s row id — the chapter key here, not a record id, since every
+   * chapter is always a row whether or not it has an entry yet (`toListItem()`'s own doc comment).
+   * A chapter with no entry has nothing to delete: `ExerciseList` never offers a bin button or
+   * swipe for that row (`deletable: false`), and this bails the same way if it's ever reached by
+   * another path. Unlike every other exercise, deleting doesn't make the id itself stop
+   * resolving — the chapter is still a valid `:itemId` — so the redirect effect above can't close
+   * the editor on its own; this closes it explicitly exactly when the deleted entry was the one
+   * open, leaving the chapter free to be filled in again from a blank editor. */
+  protected onEntryDeleted(chapterId: string): void {
+    if (!isTeachChapter(chapterId)) {
+      return;
+    }
+    const entry = entryForChapter(this.entries(), chapterId);
+    if (!entry) {
+      return;
+    }
+    const id = entry.id;
+    void this.deleteWithUndo.confirmAndDelete({
+      deletedMessage: this.transloco.translate('paradigmsTeach.list.deleted'),
+      undoLabel: this.transloco.translate('paradigmsTeach.list.undo'),
+      onConfirm: () => {
+        this.store.update((entries) => removeEntry(entries, id, this.clock.now()));
+        if (this.selectedChapter() === chapterId) {
+          this.goToList();
+        }
+      },
+      onUndo: () => this.store.update((entries) => restoreEntry(entries, id, this.clock.now())),
+    });
   }
 
   protected onToggleDone(): void {

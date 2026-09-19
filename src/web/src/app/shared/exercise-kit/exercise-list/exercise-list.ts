@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { SwipeToDeleteDirective } from '../swipe-to-delete.directive';
 import {
   ExerciseListItem,
   ExerciseListSort,
@@ -30,6 +31,7 @@ import {
     MatIconModule,
     MatInputModule,
     MatListModule,
+    SwipeToDeleteDirective,
     TranslocoPipe,
   ],
   templateUrl: './exercise-list.html',
@@ -55,7 +57,16 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
    * PR: the "book order" fix silently didn't apply in exactly that harness).
    */
   readonly initialSort = input<ExerciseListSort>('title');
+  /** Opt-in (issue #203): off by default, so a future caller that doesn't wire a delete handler
+   * doesn't silently grow a bin button and a swipe gesture nobody listens to. A row can further
+   * opt itself out via its own `item.deletable` (`ExerciseListItem`'s own doc comment). */
+  readonly deletable = input(false);
   readonly itemSelected = output<string>();
+  /** Requested by a bin-button click or a committed swipe on a deletable row — never both for the
+   * same gesture (`SwipeToDeleteDirective` suppresses the click a swipe produces). The caller runs
+   * confirm → delete → undo (`DeleteWithUndo`, playbook's "Deleting entries"); this component only
+   * ever asks. */
+  readonly deleteRequested = output<string>();
 
   protected readonly query = signal('');
   /** `null` until the user picks a sort explicitly; `sort()` falls back to `initialSort()` until
@@ -83,5 +94,18 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
 
   protected onSortChange(sort: ExerciseListSort): void {
     this.sortOverride.set(sort);
+  }
+
+  /** Whether row `item` gets a bin button and swipe-to-delete: the list's own `deletable()` input,
+   * further narrowed by the row's own opt-out (`ExerciseListItem.deletable`, `paradigms-teach`'s
+   * chapters without an entry yet). */
+  protected isRowDeletable(item: T): boolean {
+    return this.deletable() && (item.deletable ?? true);
+  }
+
+  protected requestDelete(item: T): void {
+    if (this.isRowDeletable(item)) {
+      this.deleteRequested.emit(item.id);
+    }
   }
 }

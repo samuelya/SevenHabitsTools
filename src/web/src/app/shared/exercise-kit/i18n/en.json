@@ -10,7 +10,8 @@
   "list": {
     "sortLabel": "Sort",
     "sortByTitle": "By title",
-    "sortByStatus": "By status"
+    "sortByStatus": "By status",
+    "deleteAria": "Delete {{item}}"
   },
   "detail": {
     "close": "Back to list"

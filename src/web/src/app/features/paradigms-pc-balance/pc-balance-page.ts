@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input } f
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
@@ -10,6 +10,7 @@ import {
   localDateString,
   sortedByDateDesc,
 } from '../../shared/exercise-kit/assessment-history.logic';
+import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
@@ -23,6 +24,8 @@ import {
   editAudit,
   liveAudits,
   newAuditFields,
+  removeAudit,
+  restoreAudit,
   summarize,
 } from './pc-balance.logic';
 import { PC_BALANCE_MODEL_KEY, PC_BALANCE_ROUTE, PcAudit, PcAuditFields } from './pc-balance.model';
@@ -60,6 +63,8 @@ import { PC_BALANCE_MODEL_KEY, PC_BALANCE_ROUTE, PcAudit, PcAuditFields } from '
 export class PcBalancePage {
   private readonly clock = inject(CLOCK);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
+  private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<PcAudit[]>(PC_BALANCE_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -139,6 +144,16 @@ export class PcBalancePage {
 
   protected onAuditChanged(id: string, fields: Partial<PcAuditFields>): void {
     this.store.update((audits) => editAudit(audits, id, fields));
+  }
+
+  /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). */
+  protected onAuditDeleted(id: string): void {
+    void this.deleteWithUndo.confirmAndDelete({
+      deletedMessage: this.transloco.translate('paradigmsPcBalance.history.deleted'),
+      undoLabel: this.transloco.translate('paradigmsPcBalance.history.undo'),
+      onConfirm: () => this.store.update((audits) => removeAudit(audits, id, this.clock.now())),
+      onUndo: () => this.store.update((audits) => restoreAudit(audits, id, this.clock.now())),
+    });
   }
 
   protected onToggleDone(): void {

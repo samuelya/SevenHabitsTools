@@ -276,27 +276,8 @@ Both are "react to a change of value, not to a value" — `script()` is a new ob
 keystroke, so a plain `effect` would re-focus constantly. `transition-item-form.ts`'s local
 `onChange(source, react)` helper is the shape to copy.
 
-**Delete, with Undo.** A destructive action needs a way back:
-
-```ts
-protected onItemDeleted(id: string): void {
-  this.store.update((scripts) => removeScript(scripts, id, this.clock.now()));
-  void this.snackbar
-    .open(this.transloco.translate('<exerciseId>.list.deleted'), this.transloco.translate('<exerciseId>.list.undo'), { duration: 5000 })
-    .then((ref) => ref.onAction().subscribe(() => this.store.update((s) => restoreItem(s, id, this.clock.now()))));
-}
-```
-
-`restoreItem()` (a pure function alongside `removeScript()`/`editScript()` in `<slug>.logic.ts`)
-clears the tombstone and bumps `updatedAt`; a no-op copy if the id isn't found or was never
-deleted. `AppSnackbar` (`core/layout/app-snackbar.ts`) already carries `APP_SNACKBAR_CLASS`, so
-just inject and call `.open()` — don't set the panel class by hand. The editor closes on delete
-for free: the deleted id is no longer a live item, so the same "id isn't live, redirect to the
-list" effect above handles it, no separate close call needed. In a spec, stub `AppSnackbar` (the
-shape `app-update.service.spec.ts` uses) rather than letting the real one load
-`@angular/material/snack-bar` through its dynamic `import()` — that import can still be resolving
-after the test's `TestBed` has torn down, throwing an unrelated `NG0205` in whichever test runs
-next.
+**Delete, with Undo.** See "Deleting entries" below — the shared pattern every list/assessment
+exercise wires the same way.
 
 **Counts are plural-correct.** Every rendered count (a summary card, a "N scripts named" caption)
 goes through `appPlural` (`core/i18n/plural.pipe.ts`), not a plain `TranslocoPipe` interpolation:
@@ -339,6 +320,96 @@ quietly. A toggle group whose choice reveals more fields
 what each choice does, and moves focus into the first revealed field the same way the delete
 button above is deferred — an `afterNextRender` triggered by an `effect()` tracking the
 "revealed" transition (`false` → `true`), not every re-render while already revealed.
+
+**Deleting entries** (issue #203). Every list/assessment exercise deletes an item the same way —
+a shared pattern in `shared/exercise-kit/`, not something each feature re-implements:
+
+- **Bin icon + swipe, on the shared list components.** `ExerciseList` and `AssessmentHistoryList`
+  both take an opt-in `deletable` input (off by default) and emit `deleteRequested(id)`. Each row
+  is a wrapper `<div>` — never the row's own `<button mat-list-item>`, which can't nest a second
+  `<button>` inside it — holding the existing row button and a trailing, always-visible bin
+  `<button>` as siblings:
+
+  ```html
+  <div class="exercise-list__row" appSwipeToDelete [appSwipeToDeleteDisabled]="!isRowDeletable(item)"
+       (swiped)="requestDelete(item)">
+    <button mat-list-item ...>...</button>
+    @if (isRowDeletable(item)) {
+      <button type="button" class="exercise-list__delete"
+              [attr.aria-label]="'exerciseKit.list.deleteAria' | transloco: { item: item.title }"
+              (click)="requestDelete(item)">
+        <mat-icon aria-hidden="true">delete</mat-icon>
+      </button>
+    }
+  </div>
+  ```
+
+  A row can opt itself out even when the list is deletable: `ExerciseListItem.deletable` (default
+  `true`) is for a list whose rows aren't one-to-one with what a delete removes —
+  `paradigms-teach`'s ten chapter rows are fixed, so a chapter with no entry yet has nothing to
+  delete (`toListItem()` sets `deletable: false` for it) and gets neither a bin button nor a swipe.
+
+- **`SwipeToDeleteDirective`** (`shared/exercise-kit/swipe-to-delete.directive.ts`), applied to the
+  row wrapper: Pointer Events with `touch-action: pan-y` on the host, touch only (a mouse/pen drag
+  leaves desktop gestures alone — that's what the bin button is for). It only ever tracks a gesture
+  once `|dx| > |dy|` (`isHorizontalGesture`, `swipe-to-delete.logic.ts`), so the browser's own
+  vertical scroll keeps working and a vertical drag is never mistaken for a swipe attempt. A swipe
+  commits (`isSwipeToDelete`) once it's travelled past `swipeThreshold()` (30% of the row's own
+  width, floor 80px) *toward the row's own start edge* — left in LTR, right in Arabic RTL, read
+  from `getComputedStyle(row).direction`, never a hardcoded sign. A committed swipe snaps the row
+  back (skipped under `prefers-reduced-motion`) and emits `swiped`; it also suppresses the `click`
+  the pointer-up produces on the row's own button, through a **capture-phase** listener registered
+  on the wrapper — a bubble-phase `(click)` binding would run *after* the button's own click
+  handler has already fired, too late to stop it. Disable it per row with
+  `appSwipeToDeleteDisabled` (bound to `!isRowDeletable(item)`), not by omitting the attribute.
+
+- **`DeleteWithUndo`** (`shared/exercise-kit/delete-with-undo.ts`), injected by the page: the one
+  confirm → delete → undo flow every exercise's bin button and swipe share, so a page never
+  re-implements the dialog or the snackbar wiring itself.
+
+  ```ts
+  protected onItemDeleted(id: string): void {
+    void this.deleteWithUndo.confirmAndDelete({
+      deletedMessage: this.transloco.translate('<exerciseId>.list.deleted'),
+      undoLabel: this.transloco.translate('<exerciseId>.list.undo'),
+      onConfirm: () => this.store.update((items) => removeItem(items, id, this.clock.now())),
+      onUndo: () => this.store.update((items) => restoreItem(items, id, this.clock.now())),
+    });
+  }
+  ```
+
+  `confirmAndDelete()` opens the one shared `DeleteConfirmDialog` (lazy-loaded the same way
+  `ImportConfirmDialog` is, through a `DELETE_CONFIRM_DIALOG_LOADER` injection token seam) —
+  destructive styling on Delete, Cancel focused by default, Escape/backdrop both cancel (Angular
+  Material's own default, no extra wiring). The dialog carries no per-feature data and reads its
+  copy from the **root** i18n scope (`deleteConfirm.*`), the same root-not-feature-scope choice
+  `ImportConfirmDialog` makes, since `AppDialog.open()` opens it from the root environment
+  injector — the trigger's own aria-label already named the item, so the dialog's own copy stays
+  generic. Only on an explicit confirm does it call `onConfirm()` and open the "Deleted — Undo"
+  snackbar through `AppSnackbar`, wiring Undo to `onUndo()`.
+
+  `removeItem()`/`restoreItem()` (pure functions alongside the feature's other mutators in
+  `<slug>.logic.ts`) are `softDelete()`/clear-the-tombstone-and-`touch()`, exactly
+  `removeScript()`/`restoreScript()`'s shape from before this issue — never a hard delete
+  (architecture issue #1 §6). The editor closes on delete for free for a normal list/assessment
+  exercise: the deleted id is no longer live, so the same "id isn't live, redirect to the list"
+  effect (§5, above) handles it, no separate close call needed. A feature whose selection isn't
+  keyed by the deleted record's own id — `paradigms-teach`'s chapter rows stay valid `:itemId`s
+  whether or not they have an entry — has to close the editor itself in `onConfirm` when the
+  deleted entry was the one open, since that redirect effect has nothing to catch there.
+
+- **Tests.** Unit-test `removeItem()`/`restoreItem()` in `<slug>.logic.spec.ts` like any other
+  mutator. In a page spec, provide a fake `DeleteWithUndo` (`{ provide: DeleteWithUndo, useValue:
+  fakeDeleteWithUndo() }`) that just records each call's options rather than the real one, which
+  loads `@angular/material/dialog` through a dynamic `import()` — the same `NG0205`-after-teardown
+  risk documented for `AppSnackbar` above. Drive confirm/Undo in the test by calling the captured
+  `onConfirm()`/`onUndo()` directly; the dialog and the snackbar wiring are `DeleteWithUndo`'s own
+  spec's job, not every page's. `SwipeToDeleteDirective`'s own spec sets every input it reads
+  (`appSwipeToDeleteDisabled`, the host's `direction`) *before* the fixture's one `detectChanges()`
+  call, not by mutating a plain field and calling `detectChanges()` a second time — this project's
+  zoneless change detection only re-checks a template binding on an explicit
+  `detectChanges()`/scheduler tick that follows a real change, and a second `detectChanges()` after
+  mutating a plain (non-signal) host field doesn't reliably trigger one.
 
 ## 6. Component and logic split
 
