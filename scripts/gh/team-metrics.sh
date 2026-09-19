@@ -4,8 +4,9 @@
 # never rediscovers them:
 #   1. Tokens by model and by role, and the most expensive agent runs (turns, context per turn),
 #      from the local Claude Code transcripts in ~/.claude/projects/<this project>/.
-#   2. Merged PRs in the window with their round history (failed-round comments and escalation
-#      labels on the linked issues, tester bugs filed against the PR).
+#   2. Merged PRs in the window with their round history (failed-round comments, escalation
+#      comments and labels on the linked issues, tester bugs filed against the PR). Rounds are
+#      counted from the first line scripts/gh/round.sh writes.
 #   3. Derived rates: merged PRs/week, input tokens processed per merged PR, failed-round rate,
 #      escalation rate, bugs per PR, average CI minutes.
 # "Input processed" = uncached + cache write + cache read tokens: what every turn re-sends. It is
@@ -30,9 +31,9 @@ echo "Window: last $weeks week(s), since $since"
 echo
 
 echo "=== 1. Tokens (transcripts under $proj)"
-input_total=$(python3 - "$proj" "$since" <<'PY'
+input_total=$(python3 - "$proj" "$since" "$root" <<'PY'
 import sys, json, glob, os, re, collections, statistics
-proj, since = sys.argv[1], sys.argv[2]
+proj, since, root = sys.argv[1], sys.argv[2], sys.argv[3]
 files = glob.glob(os.path.join(proj, "*.jsonl")) + glob.glob(os.path.join(proj, "*", "subagents", "*.jsonl"))
 ROLES = (("tester", "tester"), (r"frontend|^afe\b|^afc\b|^afe-|^afc-", "frontend-coder"),
          (r"backend|^abe-|^abc-", "backend-coder"), (r"business|^aba-", "business-analyst"),
@@ -77,6 +78,18 @@ print(); print("Most expensive runs (by input processed):")
 print(f"{'agent':<40}{'role':<17}{'turns':>6}{'median ctx':>12}{'max ctx':>10}{'input processed':>17}{'output':>9}")
 for a, r in sorted(runs.items(), key=lambda x: -sum(x[1]["ctx"]))[:8]:
     c = r["ctx"]; print(f"{a[:39]:<40}{r['role']:<17}{len(c):>6}{k(statistics.median(c)):>12}{k(max(c)):>10}{k(sum(c)):>17}{k(r['out']):>9}")
+# Turn caps from the agent definitions' frontmatter (maxTurns), so the review sees runs that hit them.
+caps = {}
+for f in glob.glob(os.path.join(root, ".claude", "agents", "custom", "*.md")):
+    m2 = re.search(r"^maxTurns:\s*(\d+)", open(f, encoding="utf-8").read(), re.M)
+    if m2: caps[os.path.basename(f)[:-3]] = int(m2.group(1))
+print(); print("Runs per role (agents only): count, median turns, runs at or over maxTurns")
+for rl, cap_role in (("frontend-coder", "frontend-coder"), ("backend-coder", "backend-coder"), ("coder", "frontend-coder"), ("tester", "tester"), ("business-analyst", "business-analyst")):
+    t = [len(r["ctx"]) for a, r in runs.items() if a != "lead sessions" and r["role"] == rl]
+    if not t: continue
+    cap = caps.get(cap_role)
+    hit = sum(1 for n in t if cap and n >= cap)
+    print(f"{rl:<20} runs {len(t):>3}  median turns {statistics.median(t):>5.0f}  max {max(t):>4}  at cap ({cap or 'none'}): {hit}")
 print(f"TOTAL_INPUT_PROCESSED {sum(sum(r['ctx']) for r in runs.values())}")
 PY
 )
@@ -95,7 +108,11 @@ jq -r --argjson bugs "$bugs" '
   .data.search.nodes[] | select(.number != null)
   | .number as $n
   | (.closingIssuesReferences.nodes) as $is
-  | ([$is[].comments.nodes[].body | select(test("^Round [0-9]+/2 failed"; "i"))] | length) as $rounds
+  # Per issue: failed-round comments (any n/m, scripts/gh/round.sh format) or, if higher, the count
+  # an "Escalation: n/m" / "Escalation: n+" comment states; hand-written variants used both.
+  | ([$is[] | ([.comments.nodes[].body | select(test("^\\**Round [0-9]+/[0-9]+ failed"; "i"))] | length) as $rf
+      | ([.comments.nodes[].body | capture("^\\**Escalation:\\s*(?<n>[0-9]+)"; "i") | .n | tonumber] | max // 0) as $en
+      | ([$rf, $en] | max)] | add // 0) as $rounds
   | ([$is[].labels.nodes[].name | select(startswith("escalated:") or . == "needs-owner")] | unique | join(" ")) as $esc
   | ([$bugs[] | select(. == ($n | tostring))] | length) as $b
   | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)",

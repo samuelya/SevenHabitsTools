@@ -51,8 +51,8 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, CI state, anything needing a decision. Stop.
 
 ## Escalation (what you do; the ladder is in CLAUDE.md)
-- After a failed round, comment on the issue `Round <n>/2 failed on <your model>`: what failed (CI job and error, or bug numbers) and the planned fix. Then fix on the same branch and hand off as above.
-- After the 2nd failed round on your tier, or after round 1 when it failed on a scope/approach miss: push the work in progress, comment `Escalation: 2/2 rounds failed on <your model>` (what failed each round, what you tried, suspected root cause), message `team-lead` the same in 5 lines, leave the worktree in place, stop.
+- After a failed round, post `scripts/gh/round.sh <issue> failed <n>/2 <your model> "<what failed: CI job and error, or bug numbers; planned fix>"` (never hand-write the comment; the metrics count its first line). Then fix on the same branch and hand off as above.
+- After the 2nd failed round on your tier, or after round 1 when it failed on a scope/approach miss: push the work in progress, post `scripts/gh/round.sh <issue> escalation 2/2 <your model> "<what failed each round, what you tried, suspected root cause>"`, message `team-lead` the same in 5 lines, leave the worktree in place, stop.
 - Started as an escalation: read the round and escalation comments first; your count restarts at 1/2.
 - `needs-owner` (label, comment, message `team-lead`) when permissions block the work (Azure roles, deploys, secrets), a spec question would change an approved decision, or the fix changes scope or cost.
 - Spec unclear: ask on the issue in one comment before building (the business-analyst answers); a wrong round costs far more than a question.
