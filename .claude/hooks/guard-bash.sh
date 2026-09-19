@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# PreToolUse hook for Bash (see .claude/settings.json). Blocks the commands the team rules forbid,
+# deterministically and at zero token cost, so the agent definitions don't have to repeat them.
+# Exit 2 blocks the call; the message on stderr is what the agent sees. Exit 0 lets it through.
+# Test: echo '{"tool_input":{"command":"npm install -g x"}}' | .claude/hooks/guard-bash.sh
+set -uo pipefail
+cmd=$(jq -r '.tool_input.command // empty' 2>/dev/null)
+[[ -n "$cmd" ]] || exit 0
+
+# Match only what the shell would run: drop heredoc bodies (file content written with cat <<'EOF')
+# and quoted message payloads (--body/--title/-m "..."), so a doc or comment that merely mentions a
+# forbidden command is not blocked.
+cmd=$(perl -0pe '
+  s/<<-?\s*(["'"'"']?)(\w+)\1[^\n]*\n.*?\n\s*\2(\n|\z)/ <<HEREDOC_STRIPPED\n/sg;
+  s/(--body|--body-file|--title|-m|-F body=)\s*("(?:[^"\\]|\\.)*"|'"'"'[^'"'"']*'"'"')/$1 ""/g;
+' <<<"$cmd")
+
+block() { echo "Blocked by .claude/hooks/guard-bash.sh: $1" >&2; exit 2; }
+has() { grep -qE -- "$1" <<<"$cmd"; }
+
+# Global toolchain changes: use npx, project-local deps or the scratchpad; ask the lead otherwise.
+has '\bnpm (install|i|add)\b.*(-g\b|--global\b)|\bcorepack (enable|prepare)\b|\bbrew (install|upgrade|uninstall)\b|\bdotnet (workload install|tool install (-g|--global))|\bpip3? install\b.*(--user|-g\b)|\bsudo\b' \
+  && block "global toolchain or sudo change; use npx/project-local deps (agent rule: never change the machine's global toolchain)."
+
+# Git safety: shared stash stack, protected main, hooks.
+has '\bgit stash\b' && block "git stash is shared across worktrees; make a temporary WIP commit instead."
+has '\bgit push\b.*(--force\b|-f\b|--force-with-lease\b).*\bmain\b|\bgit push\b.*\bmain\b.*(--force\b|-f\b)' && block "force-push to main."
+has '\bgit push\b.*\borigin\b +(HEAD:)?main\b|\bgit push\b +origin +main\b' && block "direct push to main; open a PR."
+has '\bgit (commit|push|merge)\b.*--no-verify\b' && block "--no-verify skips hooks."
+has '\bgit checkout\b +main\b|\bgit switch\b +main\b' && has '\.claude/worktrees/' && block "switching a worktree to main."
+
+# Merging and closing are the owner's. Prefix OWNER_MERGE=1 when the owner asked the lead to merge.
+has '\bgh pr merge\b' && ! has '^OWNER_MERGE=1 ' && block "gh pr merge is the owner's step (lead: prefix OWNER_MERGE=1 when the owner asked for the merge)."
+has '\bgh (issue|pr) close\b' && ! has '^OWNER_MERGE=1 ' && block "closing issues/PRs is the owner's step."
+
+# GitHub reads go through the shared scripts (one call, nothing truncated, no wrong-flag surprises).
+has '\bgh issue view\b' && block "use scripts/gh/issue-context.sh <n> (gh issue view drops the body outside a terminal)."
+has '\bgh pr view\b' && ! has '\bgh pr view\b[^|;&]*--json\b' && block "use scripts/gh/pr-context.sh <pr> (or gh pr view --json <fields> --jq for one field)."
+has '\bgh pr checks\b.*--watch\b' && block "use scripts/gh/wait-ci.sh <pr> (bounded, prints progress)."
+has '\bgh run watch\b' && block "use scripts/gh/wait-ci.sh <pr>."
+
+# Test discipline: private port per worktree, small outputs, no poll loops.
+has '\bnpm run e2e\b' && ! has 'PLAYWRIGHT_BASE_URL=' && block "bare npm run e2e can test another worktree's build on port 4300; use scripts/web/e2e-local.sh <spec>."
+has '\bnpx playwright test\b' && ! has 'PLAYWRIGHT_BASE_URL=' && ! has 'e2e-local\.sh' && block "run Playwright through scripts/web/e2e-local.sh."
+has '\btail -n? ?([2-9][0-9]{2,}|[1-9][0-9]{3,})\b' && block "tail of 200+ lines; use tail -40 or grep for the message you need."
+has '\bsleep +([3-9][0-9]|[1-9][0-9]{2,})\b' && block "long sleep; use scripts/gh/wait-ci.sh or a bounded wait instead of a poll loop."
+has '\bwhile\b.*\bsleep\b' && has '\bgh (pr|run)\b' && block "poll loop over gh; use scripts/gh/wait-ci.sh <pr>."
+
+exit 0

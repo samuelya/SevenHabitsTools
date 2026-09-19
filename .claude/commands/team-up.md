@@ -5,22 +5,16 @@ description: Readiness check for the Seven Habits Tools agent team (business-ana
 
 # Team up — Seven Habits Tools
 
-Run this at the start of an implementation session.
+Run this at the start of an implementation session. One Bash call for the reads, then one table.
 
-1. `gh auth status`: confirm the scopes include `repo` and `project`.
-2. Confirm the four team definitions exist in `.claude/agents/custom/` (`business-analyst`, `backend-coder`, `frontend-coder`, `tester`) and read each one's `model:` line.
-3. List open escalations and report them to the owner first. Run once per label:
-   `gh issue list -R samuelya/SevenHabitsTools --label needs-owner`, then `--label escalated:opus`, then `--label escalated:fable`.
-4. List open PRs (`gh pr list -R samuelya/SevenHabitsTools`) and leftover worktrees (`git worktree list`). Flag any worktree whose PR is already merged.
-5. Print a table with the columns: agent | definition file | default model | escalation tiers.
+1. `gh auth status`: scopes include `repo` and `project`.
+2. `.claude/agents/custom/`: the four definitions exist (`business-analyst`, `backend-coder`, `frontend-coder`, `tester`); read each one's `model:` line only (`grep -m1 '^model:'`).
+3. Guard hook installed: `.claude/settings.json` has a `PreToolUse` entry for `Bash` pointing at `.claude/hooks/guard-bash.sh`, and the script is executable. If not, the mechanical rules are unenforced: say so first.
+4. Open escalations, reported to the owner first: `gh issue list -R samuelya/SevenHabitsTools --label needs-owner`, then `--label escalated:opus`, then `--label escalated:fable`.
+5. Open PRs (`gh pr list -R samuelya/SevenHabitsTools`) and leftover worktrees (`git worktree list`): flag any worktree whose PR is merged, and offer to remove it.
+6. This session's model: the lead runs on Opus by default (`.claude/settings.json`); switch to Fable with `/model` only for an escalation or a design decision, and back afterwards.
+7. Print a table: agent | default model | escalation tiers.
 
-Pipeline reminder:
-- The owner picks an issue.
-- `backend-coder` or `frontend-coder` implements it in its own worktree and opens a PR.
-- The owner runs `/code-review` (effort scaled to risk); the coder fixes the findings.
-- `tester` verifies the reviewed PR; bugs count as a failed round.
-- The owner merges.
+Pipeline reminder: owner picks an issue → coder (own worktree, one round) → PR → owner runs `/code-review` (effort scaled to risk) → fresh coder fixes findings → tester (feature PRs; skipped for small fixes, see CLAUDE.md "Tester scope") → owner merges. Escalation is 2 rounds per tier, Sonnet → Opus → Fable → owner. `business-analyst` curates the backlog independently on Opus.
 
-Escalation is 2 rounds per tier: Sonnet → Opus → Fable → owner (see `CLAUDE.md`). `business-analyst` curates the backlog independently.
-
-Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (options: `Backlog`, `Ready`, `In progress`, `In review`, `Done`).
+Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (`Backlog`, `Ready`, `In progress`, `In review`, `Done`).
