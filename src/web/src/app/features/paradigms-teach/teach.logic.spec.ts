@@ -259,6 +259,14 @@ describe('removeEntry/restoreEntry (issue #203)', () => {
     expect(fresh.keyIdea).toBe('New idea');
     expect(fresh.deletedAt).toBeUndefined();
   });
+
+  it('restore is a no-op when the chapter already has a different live entry (typed again, then Undo)', () => {
+    const deleted = entry({ id: 'e1', chapter: 'h1', deletedAt: LATER.toISOString() });
+    const fresh = entry({ id: 'e2', chapter: 'h1', keyIdea: 'New idea' });
+    const result = restoreEntry([deleted, fresh], 'e1', LATER);
+
+    expect(result).toEqual([deleted, fresh]);
+  });
 });
 
 describe('isKeyIdeaValid', () => {

@@ -209,9 +209,20 @@ export function removeEntry(entries: readonly TeachEntry[], id: string, now: Dat
 }
 
 /** Undoes `removeEntry()`: clears the entry `id`'s tombstone and bumps `updatedAt` (issue #203's
- * Undo snackbar). A no-op copy if `id` is not found or was never deleted. */
+ * Undo snackbar). A no-op copy if `id` is not found or was never deleted — and also if the chapter
+ * already has a different live entry by the time Undo is tapped (typing into the chapter again
+ * within the Undo window calls `upsertEntry()`, which creates one): restoring the old one on top
+ * would leave two live entries for one chapter, breaking `upsertEntry()`'s own "never a second live
+ * entry" invariant (review finding on #204's PR). */
 export function restoreEntry(entries: readonly TeachEntry[], id: string, now: Date): TeachEntry[] {
+  const target = entries.find((entry) => entry.id === id);
+  const chapterHasLiveEntry =
+    target !== undefined &&
+    entries.some((entry) => entry.chapter === target.chapter && entry.id !== id && isLive(entry));
+  if (!target || isLive(target) || chapterHasLiveEntry) {
+    return [...entries];
+  }
   return entries.map((entry) =>
-    entry.id === id && !isLive(entry) ? touch({ ...entry, deletedAt: undefined }, now) : entry,
+    entry.id === id ? touch({ ...entry, deletedAt: undefined }, now) : entry,
   );
 }

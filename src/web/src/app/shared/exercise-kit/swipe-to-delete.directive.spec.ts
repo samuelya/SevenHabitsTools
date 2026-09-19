@@ -142,6 +142,21 @@ describe('SwipeToDeleteDirective', () => {
     expect(fixture.componentInstance.rowClicked).toBe(false);
   });
 
+  it('stops suppressing once a new gesture starts, so a later tap still selects the row (e.g. after Cancel on the confirm dialog)', () => {
+    const { fixture, row } = setUp();
+
+    row.dispatchEvent(pointer('pointerdown', 1, 200, 100));
+    row.dispatchEvent(pointer('pointermove', 1, 40, 102));
+    row.dispatchEvent(pointer('pointerup', 1, 40, 102));
+    // A new gesture (e.g. the next tap, after the confirm dialog's own Cancel) clears the
+    // suppression left over from the swipe that opened it.
+    row.dispatchEvent(pointer('pointerdown', 2, 200, 100));
+    row.dispatchEvent(pointer('pointerup', 2, 200, 100));
+    row.querySelector('button')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(fixture.componentInstance.rowClicked).toBe(true);
+  });
+
   it('leaves an uncommitted gesture free to still click-select the row', () => {
     const { fixture, row } = setUp();
 

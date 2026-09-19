@@ -1,4 +1,5 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { AppDialog } from '../../core/layout/app-dialog';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
@@ -44,10 +45,25 @@ export interface ConfirmAndDeleteOptions {
 export class DeleteWithUndo {
   private readonly dialog = inject(AppDialog);
   private readonly snackbar = inject(AppSnackbar);
+  private readonly transloco = inject(TranslocoService);
   private readonly loadDialogComponent = inject(DELETE_CONFIRM_DIALOG_LOADER);
 
   async confirmAndDelete(options: ConfirmAndDeleteOptions): Promise<void> {
-    const { DeleteConfirmDialog } = await this.loadDialogComponent();
+    let dialogModule: DeleteConfirmDialogModule;
+    try {
+      dialogModule = await this.loadDialogComponent();
+    } catch {
+      // Most likely offline with this chunk not yet cached (the service worker's `chunks` group is
+      // `installMode: lazy`) — say so plainly rather than the bin button/swipe silently doing
+      // nothing, the same handling `BackupSection` gives its own lazy-loaded import dialog (review
+      // finding on #204's PR).
+      await this.snackbar.open(
+        this.transloco.translate('deleteConfirm.dialogLoadError'),
+        this.transloco.translate('data.snackbar.dismiss'),
+      );
+      return;
+    }
+    const { DeleteConfirmDialog } = dialogModule;
     const ref = await this.dialog.open<InstanceType<typeof DeleteConfirmDialog>, unknown, boolean>(
       DeleteConfirmDialog,
     );

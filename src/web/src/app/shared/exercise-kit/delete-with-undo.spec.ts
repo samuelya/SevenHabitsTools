@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of, Subject } from 'rxjs';
 import { AppDialog } from '../../core/layout/app-dialog';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import {
   ConfirmAndDeleteOptions,
   DELETE_CONFIRM_DIALOG_LOADER,
@@ -17,6 +18,7 @@ function setUp(
   options: {
     dialogResult?: boolean;
     snackbarAction?: Subject<void>;
+    dialogLoader?: () => Promise<{ DeleteConfirmDialog: unknown }>;
   } = {},
 ): {
   service: DeleteWithUndo;
@@ -28,11 +30,13 @@ function setUp(
   const snackbarOpen = vi.fn().mockResolvedValue({ onAction: () => action });
   TestBed.configureTestingModule({
     providers: [
+      provideTranslocoTesting(),
       { provide: AppDialog, useValue: { open: dialogOpen } },
       { provide: AppSnackbar, useValue: { open: snackbarOpen } },
       {
         provide: DELETE_CONFIRM_DIALOG_LOADER,
-        useValue: () => Promise.resolve({ DeleteConfirmDialog: class {} }),
+        useValue:
+          options.dialogLoader ?? (() => Promise.resolve({ DeleteConfirmDialog: class {} })),
       },
     ],
   });
@@ -100,5 +104,21 @@ describe('DeleteWithUndo', () => {
     await service.confirmAndDelete(options({ onUndo }));
 
     expect(onUndo).not.toHaveBeenCalled();
+  });
+
+  it('shows a load-error snackbar, and never opens the dialog or deletes, when the dialog chunk fails to load', async () => {
+    const { service, dialogOpen, snackbarOpen } = setUp({
+      dialogLoader: () => Promise.reject(new Error('chunk load failed')),
+    });
+    const onConfirm = vi.fn();
+
+    await service.confirmAndDelete(options({ onConfirm }));
+
+    expect(dialogOpen).not.toHaveBeenCalled();
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(snackbarOpen).toHaveBeenCalledWith(
+      "Couldn't load the delete dialog. Check your connection and try again.",
+      'Dismiss',
+    );
   });
 });

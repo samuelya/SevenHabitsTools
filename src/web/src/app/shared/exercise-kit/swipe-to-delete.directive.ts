@@ -10,6 +10,13 @@ const LOCK_SLOP_PX = 10;
  * (architecture issue #1 §7). */
 const SNAP_BACK_MS = 150;
 
+/** Ceiling on how long a committed swipe's click-suppression can outlive the gesture. A touch
+ * drag never fires a synthetic click in the first place (only a mouse drag does — Chrome/Safari),
+ * so in the touch case this flag is normally consumed by the very next `pointerdown` instead; this
+ * timeout is just a backstop so it can never survive to swallow an unrelated later tap, e.g. one
+ * made after the confirm dialog's own Cancel (review finding on #204's PR). */
+const SUPPRESS_CLICK_MS = 500;
+
 /**
  * Swipe-to-delete for one list row (issue #203). Applied to the row's own wrapper element, the
  * sibling of the row's select button and its trailing bin button (playbook's "Deleting entries").
@@ -48,6 +55,7 @@ export class SwipeToDeleteDirective {
   private startY = 0;
   private horizontal = false;
   private suppressNextClick = false;
+  private suppressClickTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor() {
     // A capture-phase listener, not the `(click)` host binding: a committed swipe's `pointerup`
@@ -57,12 +65,17 @@ export class SwipeToDeleteDirective {
     // `stopPropagation()` is what keeps a swipe from also selecting/opening the row (issue #203's
     // acceptance criteria).
     this.el.addEventListener('click', this.onCapturedClick, true);
-    inject(DestroyRef).onDestroy(() =>
-      this.el.removeEventListener('click', this.onCapturedClick, true),
-    );
+    inject(DestroyRef).onDestroy(() => {
+      this.el.removeEventListener('click', this.onCapturedClick, true);
+      this.clearSuppressNextClick();
+    });
   }
 
   protected onPointerDown(event: PointerEvent): void {
+    // Any new gesture — touch or not, on this row or elsewhere — means the tap a committed swipe
+    // was meant to suppress has already happened or never will; clear it up front rather than
+    // letting it swallow this one (review finding on #204's PR).
+    this.clearSuppressNextClick();
     if (event.pointerType !== 'touch' || this.appSwipeToDeleteDisabled()) {
       return;
     }
@@ -107,6 +120,7 @@ export class SwipeToDeleteDirective {
     this.reset();
     if (committed) {
       this.suppressNextClick = true;
+      this.suppressClickTimer = setTimeout(() => this.clearSuppressNextClick(), SUPPRESS_CLICK_MS);
       this.swiped.emit();
     }
   }
@@ -121,11 +135,19 @@ export class SwipeToDeleteDirective {
 
   private readonly onCapturedClick = (event: MouseEvent): void => {
     if (this.suppressNextClick) {
-      this.suppressNextClick = false;
+      this.clearSuppressNextClick();
       event.stopPropagation();
       event.preventDefault();
     }
   };
+
+  private clearSuppressNextClick(): void {
+    this.suppressNextClick = false;
+    if (this.suppressClickTimer !== undefined) {
+      clearTimeout(this.suppressClickTimer);
+      this.suppressClickTimer = undefined;
+    }
+  }
 
   private direction(): 'ltr' | 'rtl' {
     return getComputedStyle(this.el).direction === 'rtl' ? 'rtl' : 'ltr';
