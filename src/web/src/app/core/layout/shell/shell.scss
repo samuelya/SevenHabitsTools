@@ -79,6 +79,11 @@ a.side-nav__row:focus-visible {
 .page {
   flex: 1;
   overflow-y: auto;
+  // Reserve the scrollbar's width whether or not content currently overflows, so opening the
+  // split-mode editor — which makes `.page` stop overflowing, since both columns now scroll inside
+  // themselves instead — doesn't remove a classic (non-overlay) scrollbar and widen the content box
+  // by its width underneath both columns and the footer (issue #213 review).
+  scrollbar-gutter: stable;
   padding: 16px;
 }
 

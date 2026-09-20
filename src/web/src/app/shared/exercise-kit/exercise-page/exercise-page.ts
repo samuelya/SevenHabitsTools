@@ -168,16 +168,20 @@ export class ExercisePage implements EditorFocusHost {
   /** Scrolls the selected list row back into view inside the body column's brand-new scroll
    * container. `[aria-pressed="true"]` is the kit's one selection marker — `ExerciseList` and
    * `AssessmentHistoryList` both use it, for the reasons their own templates give — so this needs
-   * no knowledge of either. `block: 'nearest'` leaves an already-visible row (and every ancestor
-   * scroller, `.page` included) alone. The state is re-read here rather than captured when the
-   * hook was scheduled: a close that lands before the callback runs (fast open/close, or a route
-   * change that does both) must not scroll a column that is no longer a scroll container. */
+   * no knowledge of either. Scoped to `.content-slot`, not the whole body column: `.intro-slot`
+   * renders above it and projects whatever the page puts in `[intro]`, so an unscoped query would
+   * silently grab the first pressed toggle a future intro slot projects instead of the row.
+   * `block: 'nearest'` leaves an already-visible row (and every ancestor scroller, `.page`
+   * included) alone. The state is re-read here rather than captured when the hook was scheduled: a
+   * close that lands before the callback runs (fast open/close, or a route change that does both)
+   * must not scroll a column that is no longer a scroll container. */
   private revealSelectedRow(): void {
     if (!this.splitEditing()) {
       return;
     }
-    const selected =
-      this.bodyColumn()?.nativeElement.querySelector<HTMLElement>('[aria-pressed="true"]');
+    const selected = this.bodyColumn()?.nativeElement.querySelector<HTMLElement>(
+      '.content-slot [aria-pressed="true"]',
+    );
     selected?.scrollIntoView({ block: 'nearest' });
   }
 

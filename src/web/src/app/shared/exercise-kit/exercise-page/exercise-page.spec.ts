@@ -243,6 +243,28 @@ describe('ExercisePage', () => {
     expect(unselected.scrollIntoView).not.toHaveBeenCalled();
   });
 
+  it('ignores a pressed toggle projected into the intro slot, above the list (#213 review)', () => {
+    // `.intro-slot` renders above `.content-slot` in `.body`, so an unscoped query for the kit's
+    // selection marker would find a pressed toggle there first and scroll it instead of the
+    // selected row — silently, with no test failure, the first time a page projects one.
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(SelectedRowHostComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const introToggle = document.createElement('button');
+    introToggle.setAttribute('aria-pressed', 'true');
+    introToggle.scrollIntoView = vi.fn();
+    host.querySelector('.intro-slot')!.prepend(introToggle);
+    const selected = host.querySelector('.selected') as HTMLElement;
+    selected.scrollIntoView = vi.fn();
+
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    expect(introToggle.scrollIntoView).not.toHaveBeenCalled();
+    expect(selected.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+  });
+
   it('never scrolls the body column on handset, where the editor covers it entirely', () => {
     configureTestBed(true);
     const fixture = TestBed.createComponent(SelectedRowHostComponent);

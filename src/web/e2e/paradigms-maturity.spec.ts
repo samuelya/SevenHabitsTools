@@ -250,6 +250,7 @@ test.describe('maturity continuum self-assessment', () => {
     await seedDocument({ habits: { paradigms: { maturity: longHistory() } } });
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/habits/paradigms/maturity');
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(14);
 
     const scrollArea = page.locator('main.page');
     await scrollArea.evaluate((el) => el.scrollTo(0, el.scrollHeight));
