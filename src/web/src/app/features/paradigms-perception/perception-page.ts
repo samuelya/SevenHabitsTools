@@ -31,6 +31,7 @@ import {
   ChainKey,
   CHECKLIST_KEYS,
   checklistLabelsFrom,
+  checklistLoaded,
   doneChecklist,
   ensureExercise,
   isComplete,
@@ -181,9 +182,14 @@ export class PerceptionPage {
     undefined,
     'paradigms-perception',
   );
-  protected readonly checklist = computed(() =>
-    doneChecklist(this.exercise(), checklistLabelsFrom(this.checklistLabels())),
-  );
+  /** `null` until the scope has actually loaded (review finding on this PR), the same "gate on
+   * loaded content" `guideContent` below already does: `translateSignal` starts an array key at
+   * `['']`, so every label would otherwise be blank and `DoneToggle` would render five checklist
+   * rows with no text on a cold visit. */
+  protected readonly checklist = computed(() => {
+    const labels = checklistLabelsFrom(this.checklistLabels());
+    return checklistLoaded(labels) ? doneChecklist(this.exercise(), labels) : null;
+  });
 
   // The whole `guide` object at once (issue #212's "Data model"), not per-field keys: its shape
   // (an array of How-to steps, an array of example cards) doesn't fit `translateSignal`'s

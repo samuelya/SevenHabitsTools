@@ -210,6 +210,14 @@ export function checklistLabelsFrom(
   ) as Readonly<Record<PerceptionChecklistKey, string>>;
 }
 
+/** Whether `checklistLabelsFrom()`'s output is real translated text yet, not the placeholder
+ * `translateSignal` returns before the scope loads (review finding on this PR): `DoneToggle`
+ * would otherwise render all five checklist rows with blank labels on a cold visit, the same
+ * "gate on loaded content" `PerceptionPage.guideContent` already does with `howTo.length`. */
+export function checklistLoaded(labels: Readonly<Record<PerceptionChecklistKey, string>>): boolean {
+  return labels[CHECKLIST_KEYS[0]] !== '';
+}
+
 /** "Started" (issue #212's Implementation notes): a worksheet record exists only after the first
  * edit, so this needs no stored flag and no migration — a user who read the intro but typed
  * nothing sees it expanded again, which is the intended outcome. */

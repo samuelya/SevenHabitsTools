@@ -55,14 +55,25 @@ export interface GuidedStepDefinition {
  * changes which template embedded view exists) destroyed and recreated the projected content on
  * every `undefined ↔ true` flip — including the field the user was mid-keystroke in.
  *
- * On `step.done === true` this sets `completed = true`, an explicit override. On `undefined` —
- * the step regressed, e.g. the user deleted the text that completed it (review finding on this
- * PR) — it clears `_completedOverride` back to `null` instead of writing `completed = false`:
- * `false` is *also* an explicit override (`CdkStep`'s setter stores whatever it's given, `null` or
- * not), and would wrongly block `next()` exactly like the `booleanAttribute(undefined) === false`
- * coercion above. Clearing the override falls back to `CdkStep`'s own `interacted`-based state —
- * "no completion state", the same thing `undefined` means everywhere else in this contract — so
- * the header's tick and the checklist's "unmet" agree again.
+ * On `step.done === true` this sets `completed = true`, an explicit override — the only thing
+ * that ever makes `next()` skip a step under `linear` mode is the fallback below, never this
+ * write. On `undefined` it calls the public `reset()` (round-4 review finding on this PR, fixing
+ * a round-3 fix that didn't hold): clearing `_completedOverride` back to `null` alone isn't
+ * enough, because `CdkStep.interacted` latches `true` the moment the user *leaves* the step (e.g.
+ * pressing "Next" once, even to skip it) and is never cleared by that alone — so a step visited
+ * once, completed, then emptied out kept `completed` computing `true` off stale `interacted` state
+ * even with no override, the header's tick disagreeing with the checklist. `reset()` clears
+ * `interacted` too, and only demotes the override to `false` if one was already set (i.e. this
+ * step genuinely regressed from `done: true`) — a step that was never completed keeps its override
+ * at `reset()`'s own untouched initial `null`, so leaving it still lets the `interacted` fallback
+ * mark it complete, the "skipping ahead is allowed" contract intact for that case. A step that
+ * regresses, though, is pinned to an explicit `false` until `done` is `true` again: it no longer
+ * gets the free pass "leaving me marks me done" gives an untouched step, so it can't re-tick
+ * itself green on the next "Next" click while still empty (deliberate: this exercise's whole point
+ * is showing what's still missing, so a regressed step should ask to be redone, not stay
+ * skippable). `reset()` is `CdkStep`'s own public API — no private field access at all — and its
+ * `stepControl`/`_childForms`/`hasError` handling is a no-op here since no `<mat-step>` in this
+ * component ever binds a `stepControl`.
  */
 @Component({
   selector: 'app-guided-stepper',
@@ -89,9 +100,10 @@ export class GuidedStepper {
   protected readonly orientation = computed(() => (this.handset() ? 'vertical' : 'horizontal'));
 
   constructor() {
-    // Never assigns `completed = false` — see the class doc comment on why that's also a wrongly
-    // sticky override here. `MatStep.completed` is a plain accessor, not a template binding, so
-    // this bypasses the `booleanAttribute` transform entirely.
+    // `MatStep.completed`/`.reset()` are plain accessors and a plain method, not template
+    // bindings, so neither goes through the `booleanAttribute` transform that caused the original
+    // bug — see the class doc comment for why `reset()`, not an explicit `completed = false`, is
+    // the regression branch.
     effect(() => {
       const steps = this.steps();
       const instances = this.stepInstances();
@@ -103,7 +115,7 @@ export class GuidedStepper {
         if (step.done === true) {
           instance.completed = true;
         } else {
-          instance._completedOverride.set(null);
+          instance.reset();
         }
       });
     });

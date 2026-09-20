@@ -2,6 +2,7 @@ import {
   blankChangeAttempts,
   CHECKLIST_KEYS,
   checklistLabelsFrom,
+  checklistLoaded,
   doneChecklist,
   ensureExercise,
   isComplete,
@@ -198,6 +199,19 @@ describe('perception.logic', () => {
         difference: '',
         chains: '',
       });
+    });
+  });
+
+  describe('checklistLoaded', () => {
+    // Regression test for a review finding: `DoneToggle` used to render its checklist off
+    // `checklistLabelsFrom`'s output directly, so a cold visit showed five icon rows with no text
+    // for as long as the scope took to load (`translateSignal` starts an array key at `['']`).
+    it('is false while every label is still the pre-load placeholder', () => {
+      expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    });
+
+    it('is true once the scope has resolved real labels', () => {
+      expect(checklistLoaded(LABELS)).toBe(true);
     });
   });
 

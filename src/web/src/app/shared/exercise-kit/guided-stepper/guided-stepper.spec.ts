@@ -173,6 +173,59 @@ describe('GuidedStepper', () => {
     expect(stepIcon().className).toContain('mat-step-icon-state-number');
   });
 
+  it('un-ticks a regressed step even after leaving it once latched `interacted`', () => {
+    // Regression test for the round-4 review finding: the round-3 fix cleared `_completedOverride`
+    // to `null` on regression, but `CdkStep.interacted` latches `true` the moment the stepper
+    // *leaves* a step — including this step, on the "Next" click below — and is never reset by
+    // clearing the override alone, so `completed` fell back to `interacted && …` and stayed `true`.
+    // The test above never navigates, so `interacted` stays `false` throughout and never exercises
+    // that path; this one drives real "Next"/"Back" clicks to latch it for real.
+    const state: BreakpointState = { matches: false, breakpoints: {} };
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => of(state), isMatched: () => false },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(GuidedStepper);
+    fixture.componentRef.setInput('steps', [
+      { key: 'first', label: 'First' },
+      { key: 'second', label: 'Second' },
+      { key: 'third', label: 'Third', done: true },
+    ]);
+    fixture.detectChanges();
+    const thirdStepIcon = () =>
+      [...fixture.nativeElement.querySelectorAll('mat-step-header')][2].querySelector(
+        '.mat-step-icon',
+      ) as HTMLElement;
+
+    // Visit step 3 and leave it again, the way skipping ahead and coming back would — this is what
+    // latches its `interacted` flag. Its own header shows "number", not "done", the whole time
+    // it's the selected step (`CdkStep.indicatorType` always does that), so the tick is only
+    // observable once another step is selected.
+    buttonsWithText(fixture, 'Next')[0].click();
+    fixture.detectChanges();
+    buttonsWithText(fixture, 'Next')[1].click();
+    fixture.detectChanges();
+    buttonsWithText(fixture, 'Back')[1].click();
+    fixture.detectChanges();
+    expect(thirdStepIcon().className).not.toContain('mat-step-icon-state-number');
+
+    // The user deletes the content that completed step 3, while sitting elsewhere.
+    fixture.componentRef.setInput('steps', [
+      { key: 'first', label: 'First' },
+      { key: 'second', label: 'Second' },
+      { key: 'third', label: 'Third' },
+    ]);
+    fixture.detectChanges();
+
+    expect(thirdStepIcon().className).toContain('mat-step-icon-state-number');
+  });
+
   it('does not render "Back" on the first step', () => {
     const fixture = setUp(HostComponent, false);
 

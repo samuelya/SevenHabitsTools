@@ -23,6 +23,7 @@ function setUp(
     handset?: boolean;
     guideLoader?: () => Promise<{ ExerciseGuide: unknown }>;
     dialogOpen?: ReturnType<typeof vi.fn>;
+    snackbarOpen?: ReturnType<typeof vi.fn>;
   } = {},
 ): {
   service: ExerciseGuideOpener;
@@ -30,7 +31,7 @@ function setUp(
   snackbarOpen: ReturnType<typeof vi.fn>;
 } {
   const dialogOpen = options.dialogOpen ?? vi.fn().mockResolvedValue({});
-  const snackbarOpen = vi.fn().mockResolvedValue({});
+  const snackbarOpen = options.snackbarOpen ?? vi.fn().mockResolvedValue({});
   TestBed.configureTestingModule({
     providers: [
       provideTranslocoTesting(),
@@ -111,6 +112,21 @@ describe('ExerciseGuideOpener', () => {
     // surfaced as an unhandled promise rejection instead of the same load-error path.
     const { service, snackbarOpen } = setUp({
       dialogOpen: vi.fn().mockRejectedValue(new Error('dialog chunk load failed')),
+    });
+
+    await expect(service.open(CONTENT, fakeViewContainerRef())).resolves.toBeUndefined();
+
+    expect(snackbarOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('resolves quietly, instead of an unhandled rejection, when the load-error snackbar itself fails to load', async () => {
+    // Regression test for a round-4 review finding: `AppSnackbar.open()` lazy-loads
+    // `@angular/material/snack-bar`, so exactly the offline case this handler exists for can make
+    // the error snackbar's own load fail too. The caller does `void this.guideOpener.open(...)`
+    // with no further `.catch`, so `open()` must resolve rather than reject even then.
+    const { service, snackbarOpen } = setUp({
+      guideLoader: () => Promise.reject(new Error('chunk load failed')),
+      snackbarOpen: vi.fn().mockRejectedValue(new Error('snackbar chunk load failed')),
     });
 
     await expect(service.open(CONTENT, fakeViewContainerRef())).resolves.toBeUndefined();

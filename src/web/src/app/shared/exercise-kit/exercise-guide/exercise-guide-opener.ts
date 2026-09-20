@@ -55,10 +55,18 @@ export class ExerciseGuideOpener {
       // both the chunk load *and* `AppDialog.open()` itself (review finding on this PR): the caller
       // does `void this.guideOpener.open(...)`, so a rejection from `open()` that isn't caught here
       // becomes an unhandled promise rejection instead of ever reaching the user.
-      await this.snackbar.open(
-        this.transloco.translate('exerciseKit.guide.loadError'),
-        this.transloco.translate('data.snackbar.dismiss'),
-      );
+      try {
+        // Its own try/catch (round-4 review finding): `AppSnackbar.open()` lazy-loads
+        // `@angular/material/snack-bar` too, so in the exact offline case this handler exists for,
+        // that load can fail as well — without this, the rejection would itself go unhandled and
+        // the user would still see nothing.
+        await this.snackbar.open(
+          this.transloco.translate('exerciseKit.guide.loadError'),
+          this.transloco.translate('data.snackbar.dismiss'),
+        );
+      } catch {
+        // Nothing more we can do — both the guide and the error message failed to load.
+      }
     }
   }
 }
