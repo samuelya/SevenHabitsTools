@@ -47,6 +47,8 @@ ROLES = ((r"business|^aba-", "business-analyst"),
          (r"backend|^abe-|^abc-", "backend-coder"),
          (r"^acoder-", "coder"), ("guide", "claude-code-guide"), ("review", "code-review"))
 forked = {}  # agentId -> command name, from the launch records
+fork_src = {}  # agentId -> uuid of the assistant record that invoked the skill
+skill_args = {}  # assistant uuid -> args of its /code-review call ("high 234", "medium pull/170", "165")
 def role(agent):
     if not agent: return "lead"
     if agent in forked: return "code-review" if forked[agent] == "code-review" else f"skill:{forked[agent]}"
@@ -73,15 +75,19 @@ for f in files:
                 except ValueError: t = {}
                 if isinstance(t, dict) and t.get("status") == "forked" and t.get("agentId"):
                     forked[t["agentId"]] = t.get("commandName") or "?"
+                    fork_src[t["agentId"]] = json.loads(line).get("sourceToolAssistantUUID")
                 continue
             if '"usage"' not in line: continue
             try: r = json.loads(line)
             except ValueError: continue
             if r.get("type") != "assistant" or (r.get("timestamp") or "") < since: continue
             m = r.get("message") or {}; u = m.get("usage") or {}
+            for b in (m.get("content") or []) if isinstance(m.get("content"), list) else []:
+                if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Skill" and (b.get("input") or {}).get("skill") == "code-review":
+                    skill_args[r.get("uuid")] = (b["input"].get("args") or "").strip()
             k = r.get("requestId") or r.get("uuid")
             vals = [u.get("input_tokens", 0), u.get("cache_creation_input_tokens", 0), u.get("cache_read_input_tokens", 0), u.get("output_tokens", 0)]
-            cur = req.setdefault(k, {"model": m.get("model", "?"), "agent": r.get("agentId") or "", "v": [0, 0, 0, 0]})
+            cur = req.setdefault(k, {"model": m.get("model", "?"), "agent": r.get("agentId") or "", "v": [0, 0, 0, 0], "sid": r.get("sessionId") or "", "ts": r.get("timestamp") or ""})
             cur["v"] = [max(a, b) for a, b in zip(cur["v"], vals)]
 by_model = collections.defaultdict(lambda: [0, 0, 0, 0]); by_role = collections.defaultdict(lambda: [0, 0, 0, 0, 0])
 runs = collections.defaultdict(lambda: {"ctx": [], "out": 0})
@@ -90,6 +96,7 @@ for x in req.values():
     for i in range(4): by_model[x["model"]][i] += v[i]; by_role[rl][i] += v[i]
     by_role[rl][4] += 1
     run = runs[x["agent"] or "lead sessions"]; run["ctx"].append(v[0] + v[1] + v[2]); run["out"] += v[3]; run["role"] = rl
+    run["sid"] = x["sid"]; run["t0"] = min(run.get("t0") or x["ts"], x["ts"]); run["t1"] = max(run.get("t1") or x["ts"], x["ts"])
 def k(n): return f"{n/1000:,.0f}k"
 print(f"{'model':<26}{'uncached in':>13}{'cache write':>13}{'cache read':>14}{'output':>10}")
 for mdl, v in sorted(by_model.items(), key=lambda x: -sum(x[1])):
@@ -118,12 +125,31 @@ per_issue = collections.defaultdict(list)
 for a, r in runs.items():
     for n in issues_of(a, r["role"]): per_issue[n].append(a)
 print("ISSUE_RUNS " + json.dumps({str(n): ids for n, ids in sorted(per_issue.items())}))
+# /code-review cost per PR: a top-level review fork carries its /code-review args (level and PR);
+# the dimension forks it spawns (aangle-*) carry neither, so each is placed in the review fork that
+# was active in the same session when it started. Level "default" = the call named none.
+reviews = []
+tops = {a: r for a, r in runs.items() if a in forked and forked[a] == "code-review"}
+for a, r in tops.items():
+    args = skill_args.get(fork_src.get(a), "")
+    lvl = re.search(r"\b(low|medium|high|xhigh|max|ultra)\b", args)
+    pr = re.search(r"(?:pull/|#)(\d+)", args) or re.search(r"\b(\d{2,4})\b", args)
+    r["review"] = {"pr": int(pr.group(1)) if pr else None, "level": lvl.group(1) if lvl else "default", "turns": len(r["ctx"]), "input": sum(r["ctx"]), "agents": 1}
+for a, r in runs.items():
+    if r["role"] != "code-review" or a in tops: continue
+    host = [t for t in tops.values() if t["sid"] == r["sid"] and t["t0"] <= r["t0"] <= t["t1"]]
+    if host:
+        h = host[0]["review"]; h["turns"] += len(r["ctx"]); h["input"] += sum(r["ctx"]); h["agents"] += 1
+for r in tops.values(): reviews.append(r["review"])
+print("REVIEW_RUNS " + json.dumps(reviews))
 print(f"TOTAL_INPUT_PROCESSED {sum(sum(r['ctx']) for r in runs.values())}")
 PY
 )
-echo "$input_total" | grep -vE '^(TOTAL_INPUT_PROCESSED|ISSUE_RUNS)'
+echo "$input_total" | grep -vE '^(TOTAL_INPUT_PROCESSED|ISSUE_RUNS|REVIEW_RUNS)'
 issue_runs=$(grep '^ISSUE_RUNS' <<<"$input_total" | cut -d' ' -f2-)
 issue_runs=${issue_runs:-'{}'}
+review_runs=$(grep '^REVIEW_RUNS' <<<"$input_total" | cut -d' ' -f2-)
+review_runs=${review_runs:-'[]'}
 input_total=$(grep '^TOTAL_INPUT_PROCESSED' <<<"$input_total" | cut -d' ' -f2)
 echo
 
@@ -134,7 +160,7 @@ json=$(gql -f q="repo:$OWNER/$REPO is:pr is:merged merged:>=$day" -f query='
     closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } }
       comments(last: 60) { nodes { body } } } } } } } }')
 bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$day" --json body --jq '[.[].body | scan("PR #([0-9]+)")[]] ' 2>/dev/null || echo '[]')
-jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" '
+jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" --argjson reviews "$review_runs" '
   .data.search.nodes[] | select(.number != null)
   | .number as $n
   | (.closingIssuesReferences.nodes) as $is
@@ -143,12 +169,14 @@ jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" '
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**Round [0-9]+/[0-9]+ failed"; "i"))] | length) as $rf
       | ([.comments.nodes[].body | capture("^\\**Escalation:\\s*(?<n>[0-9]+)"; "i") | .n | tonumber] | max // 0) as $en
       | ([$rf, $en] | max)] | add // 0) as $rounds
+  | ([$reviews[] | select(.pr == $n)]) as $rv
+  | ([$rv[].input] | add // 0) as $rvin
   | ([$is[] | ($runs[(.number | tostring)] // [])] | add // [] | unique | length) as $cr
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**(Round [0-9]+/[0-9]+|Escalation:)"; "i"))] | length)] | add // 0) as $rc
   | ([$is[].labels.nodes[].name | select(startswith("escalated:") or . == "needs-owner")] | unique | join(" ")) as $esc
   | ([$bugs[] | select(. == ($n | tostring))] | length) as $b
-  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)\(if $cr > 0 or $rc > 0 then "\n    coder runs \($cr) (transcripts) vs \($rc) round comments\(if $cr > $rc then "  <- unrecorded rounds" else "" end)" else "" end)",
-    "ROW\t\($rounds)\t\($b)\t\(if $esc != "" then 1 else 0 end)\t\($cr)\t\($rc)"
+  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)\(if $cr > 0 or $rc > 0 then "\n    coder runs \($cr) (transcripts) vs \($rc) round comments\(if $cr > $rc then "  <- unrecorded rounds" else "" end)" else "" end)\(if ($rv | length) > 0 then "\n    /code-review \($rv | map("\(.level) \((.input / 1e6 * 10 | round) / 10)M") | join(", ")) = \((($rvin / 1e6 * 10) | round) / 10)M" else "" end)",
+    "ROW\t\($rounds)\t\($b)\t\(if $esc != "" then 1 else 0 end)\t\($cr)\t\($rc)\t\($rv | length)\t\($rvin)"
 ' <<<"$json" > /tmp/team-metrics.$$ || true
 grep -v '^ROW' /tmp/team-metrics.$$
 count=$(grep -c '^ROW' /tmp/team-metrics.$$ || true)
@@ -157,6 +185,11 @@ bugs_total=$(awk -F'\t' '/^ROW/{s+=$3} END{print s+0}' /tmp/team-metrics.$$)
 escalated=$(awk -F'\t' '/^ROW/{s+=$4} END{print s+0}' /tmp/team-metrics.$$)
 coder_runs=$(awk -F'\t' '/^ROW/{s+=$5} END{print s+0}' /tmp/team-metrics.$$)
 round_comments=$(awk -F'\t' '/^ROW/{s+=$6} END{print s+0}' /tmp/team-metrics.$$)
+reviewed_prs=$(awk -F'\t' '/^ROW/ && $7 > 0 {n++} END{print n+0}' /tmp/team-metrics.$$)
+review_input=$(awk -F'\t' '/^ROW/{s+=$8} END{print s+0}' /tmp/team-metrics.$$)
+# Review runs by level, over every merged PR in the window (input tokens per run, so effort has a price).
+review_levels=$(jq -r '[group_by(.level)[] | "\(.[0].level) \(length)x avg \(((map(.input) | add) / length / 1e6 * 10 | round) / 10)M"] | join(", ")' <<<"$review_runs")
+review_orphans=$(jq -r '[.[] | select(.pr == null)] | "\(length) runs, \(((map(.input) | add // 0) / 1e6 * 10 | round) / 10)M"' <<<"$review_runs")
 rm -f /tmp/team-metrics.$$
 echo
 
@@ -183,4 +216,7 @@ echo "merged PRs: $count ($(calc "f'{$count/$weeks:.1f}'")/week)"
 echo "input tokens processed per merged PR: $per_pr"
 echo "failed rounds per PR: $rounds_pr   escalated PRs: $escalated   tester bugs per PR: $bugs_pr"
 echo "average PR CI run: ${ci} min"
+if (( count > 0 )); then
+  echo "/code-review on merged PRs: $reviewed_prs of $count reviewed, $(calc "f'{$review_input/1e6:.1f}M'") input tokens ($(calc "f'{$review_input/max($reviewed_prs,1)/1e6:.1f}M'") per reviewed PR); by level: ${review_levels:-none}; no PR in the call: ${review_orphans}"
+fi
 echo "coder runs on merged PRs' issues: $coder_runs (transcripts) vs $round_comments round comments — every run should post one (scripts/gh/round.sh)"
