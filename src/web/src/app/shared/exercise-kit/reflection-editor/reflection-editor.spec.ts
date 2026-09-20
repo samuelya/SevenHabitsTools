@@ -38,23 +38,31 @@ describe('ReflectionEditor', () => {
     expect(textarea(fixture).value).toBe('What I noticed today.');
   });
 
-  it('shows the character count', () => {
-    const fixture = setUp('12345');
+  it('shows no status before the first keystroke of this session, even with a saved value already', () => {
+    const fixture = setUp('An older reflection.', '2026-01-02T10:00:00.000Z');
 
-    expect(fixture.nativeElement.textContent).toContain('5 characters');
+    expect(fixture.nativeElement.textContent).not.toContain('Saved');
+    expect(fixture.nativeElement.textContent).not.toContain('Saving');
+    expect(fixture.nativeElement.querySelector('#reflection-status')).toBeNull();
   });
 
-  it('shows "not saved yet" when there is no updatedAt', () => {
+  it('shows "Saving…" right after the first keystroke, before the debounce elapses', async () => {
     const fixture = setUp('');
 
-    expect(fixture.nativeElement.textContent).toContain('Not saved yet');
+    typeInto(fixture, 'a');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Saving');
   });
 
-  it('shows the formatted saved time when updatedAt is given', () => {
-    const fixture = setUp('', '2026-01-02T10:00:00.000Z');
+  it('shows "Saved" once the debounce elapses', async () => {
+    const fixture = setUp('');
+
+    typeInto(fixture, 'a new reflection');
+    await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+    fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Saved');
-    expect(fixture.nativeElement.textContent).not.toContain('Not saved yet');
   });
 
   it('does not emit valueChange before the debounce elapses', async () => {

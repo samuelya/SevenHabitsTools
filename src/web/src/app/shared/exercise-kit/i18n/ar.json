@@ -1,11 +1,23 @@
 {
   "promptCard": {
     "about": "حول هذا التمرين",
-    "whyItMatters": "لماذا يهم هذا"
+    "whyItMatters": "لماذا يهم هذا",
+    "readMore": "اقرأ المزيد",
+    "from": "من فصل: {{chapter}}"
+  },
+  "guide": {
+    "title": "إزاي تعمل التمرين ده",
+    "inShort": "باختصار",
+    "howTo": "تعمله إزاي",
+    "example": "مثال",
+    "afterwards": "وبعدين",
+    "close": "قفل",
+    "loadError": "مقدرناش نفتح الدليل. اتأكد من اتصالك وجرب تاني."
   },
   "stepper": {
     "back": "السابق",
-    "next": "التالي"
+    "next": "التالي",
+    "step": "خطوة {{number}}"
   },
   "list": {
     "sortLabel": "ترتيب",
@@ -29,6 +41,9 @@
   "doneToggle": {
     "markDone": "وضع علامة تم",
     "reopen": "إعادة فتح",
-    "completedAt": "اكتمل في {{time}}"
+    "completedAt": "اكتمل في {{time}}",
+    "toMarkDone": "عشان تعلّمه تم:",
+    "itemDone": "تم: ",
+    "itemToDo": "لسه: "
   }
 }

@@ -2,6 +2,24 @@
   margin-block-end: 1rem;
 }
 
+.visible-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-block-end: 0;
+}
+
+.read-more {
+  align-self: flex-end;
+  min-block-size: 44px;
+  padding-inline: 0.5rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+}
+
 // A plain button, not `mat-card-header`/`mat-card-title` (the card no longer has a title): one
 // row, at least the 44 px touch target, label at the inline-start and chevron at the inline-end —
 // both follow `direction` automatically in a flex row, so RTL needs no extra rule here (unlike

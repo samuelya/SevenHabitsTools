@@ -1,101 +1,149 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, ViewContainerRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
+import { ExerciseGuideContent } from '../exercise-guide/exercise-guide';
+import { ExerciseGuideOpener } from '../exercise-guide/exercise-guide-opener';
 import { ExercisePromptCard } from './exercise-prompt-card';
+
+const GUIDE: ExerciseGuideContent = {
+  inShort: 'In short.',
+  howTo: ['Step one.'],
+  examples: [],
+  afterwards: 'Afterwards.',
+};
 
 function setUp(inputs: {
   prompt: string;
   chapterReference?: string;
   whyItMatters?: string;
+  guide?: ExerciseGuideContent;
   expanded?: boolean;
+  collapsedByDefault?: boolean;
 }) {
+  const guideOpen = vi.fn().mockResolvedValue(undefined);
   TestBed.configureTestingModule({
-    providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
+    providers: [
+      provideTranslocoTesting(),
+      provideTranslocoScope('exercise-kit'),
+      { provide: ExerciseGuideOpener, useValue: { open: guideOpen } },
+    ],
   });
   const fixture = TestBed.createComponent(ExercisePromptCard);
   fixture.componentRef.setInput('prompt', inputs.prompt);
   fixture.componentRef.setInput('chapterReference', inputs.chapterReference ?? null);
   fixture.componentRef.setInput('whyItMatters', inputs.whyItMatters ?? null);
+  fixture.componentRef.setInput('guide', inputs.guide ?? null);
+  if (inputs.collapsedByDefault !== undefined) {
+    fixture.componentRef.setInput('collapsedByDefault', inputs.collapsedByDefault);
+  }
   if (inputs.expanded !== undefined) {
     fixture.componentRef.setInput('expanded', inputs.expanded);
   }
   fixture.detectChanges();
-  return fixture;
+  return { fixture, guideOpen };
 }
 
-function toggleButton(fixture: ReturnType<typeof setUp>): HTMLButtonElement {
-  return (fixture.nativeElement as HTMLElement).querySelector('.toggle') as HTMLButtonElement;
+function toggleButton(fixture: { nativeElement: HTMLElement }): HTMLButtonElement {
+  return fixture.nativeElement.querySelector('.toggle') as HTMLButtonElement;
+}
+
+function readMoreButton(fixture: { nativeElement: HTMLElement }): HTMLButtonElement | null {
+  return fixture.nativeElement.querySelector('.read-more');
 }
 
 describe('ExercisePromptCard', () => {
-  it('is expanded by default, showing the prompt', () => {
-    const fixture = setUp({ prompt: 'List what you can control.' });
+  it('always shows the prompt, expanded or not', () => {
+    const { fixture } = setUp({ prompt: 'List what you can control.', expanded: false });
 
-    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'List what you can control.',
-    );
+    expect(fixture.nativeElement.textContent).toContain('List what you can control.');
   });
 
-  it('renders the chapter reference when given and expanded', () => {
+  it('shows no Read more button when no guide is given', () => {
+    const { fixture } = setUp({ prompt: 'List what you can control.' });
+
+    expect(readMoreButton(fixture)).toBeNull();
+  });
+
+  it('shows the Read more button when a guide is given, and opens it through ExerciseGuideOpener', () => {
+    const { fixture, guideOpen } = setUp({ prompt: 'List what you can control.', guide: GUIDE });
+
+    const button = readMoreButton(fixture);
+    expect(button).not.toBeNull();
+    button?.click();
+
+    expect(guideOpen).toHaveBeenCalledTimes(1);
+    const [content, viewContainerRef] = guideOpen.mock.calls[0] as [
+      ExerciseGuideContent,
+      ViewContainerRef,
+    ];
+    expect(content).toBe(GUIDE);
+    expect(viewContainerRef).toBeInstanceOf(ViewContainerRef);
+  });
+
+  it('is expanded by default, showing "why this matters" and the chapter reference', () => {
     const fixture = setUp({
       prompt: 'List what you can control.',
       chapterReference: 'Habit 1',
-    });
-
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Habit 1');
-  });
-
-  it('shows the "why this matters" heading and text when given and expanded', () => {
-    const fixture = setUp({
-      prompt: 'List what you can control.',
       whyItMatters: 'Focusing here builds proactive habits.',
-    });
+    }).fixture;
 
-    const text = (fixture.nativeElement as HTMLElement).textContent as string;
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
+    const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('Why this matters');
     expect(text).toContain('Focusing here builds proactive habits.');
+    expect(text).toContain('From: Habit 1');
   });
 
-  it('omits the "why this matters" text entirely when not given', () => {
-    const fixture = setUp({ prompt: 'List what you can control.' });
+  it('renders the chapter reference as the last line, not under "About this exercise"', () => {
+    const fixture = setUp({
+      prompt: 'List what you can control.',
+      chapterReference: 'Habit 1',
+      whyItMatters: 'Focusing here builds proactive habits.',
+    }).fixture;
 
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Why this matters');
+    const content = fixture.nativeElement.querySelector('.content') as HTMLElement;
+    const children = [...content.children].map((el) => el.textContent);
+    expect(children[children.length - 1]).toContain('From: Habit 1');
   });
 
-  it('hides the subtitle, prompt and "why this matters" text entirely when collapsed', () => {
+  it('omits "why this matters" entirely when not given', () => {
+    const fixture = setUp({ prompt: 'List what you can control.' }).fixture;
+
+    expect(fixture.nativeElement.textContent).not.toContain('Why this matters');
+  });
+
+  it('hides "why this matters" and the chapter reference, but keeps the prompt, when collapsed', () => {
     const fixture = setUp({
       prompt: 'List what you can control.',
       chapterReference: 'Habit 1',
       whyItMatters: 'Focusing here builds proactive habits.',
       expanded: false,
-    });
+    }).fixture;
 
-    const text = (fixture.nativeElement as HTMLElement).textContent as string;
+    const text = fixture.nativeElement.textContent as string;
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
-    expect(text).not.toContain('List what you can control.');
+    expect(text).toContain('List what you can control.');
     expect(text).not.toContain('Habit 1');
     expect(text).not.toContain('Why this matters');
     expect(text).toContain('About this exercise');
   });
 
   it('expands and collapses when the toggle is clicked, with no page binding at all', () => {
-    const fixture = setUp({ prompt: 'List what you can control.' });
+    const fixture = setUp({
+      prompt: 'List what you can control.',
+      whyItMatters: 'Why it matters.',
+    }).fixture;
 
     toggleButton(fixture).click();
     fixture.detectChanges();
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
-      'List what you can control.',
-    );
+    expect(fixture.nativeElement.textContent).not.toContain('Why it matters.');
 
     toggleButton(fixture).click();
     fixture.detectChanges();
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
-      'List what you can control.',
-    );
+    expect(fixture.nativeElement.textContent).toContain('Why it matters.');
   });
 
   it('emits expandedChange when toggled, for a page that binds [(expanded)]', () => {
@@ -108,7 +156,11 @@ describe('ExercisePromptCard', () => {
       readonly expanded = signal(true);
     }
     TestBed.configureTestingModule({
-      providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        { provide: ExerciseGuideOpener, useValue: { open: vi.fn() } },
+      ],
     });
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
@@ -118,5 +170,36 @@ describe('ExercisePromptCard', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.expanded()).toBe(false);
+  });
+
+  it('starts collapsed when collapsedByDefault is true from the start', () => {
+    const fixture = setUp({
+      prompt: 'List what you can control.',
+      whyItMatters: 'Why it matters.',
+      collapsedByDefault: true,
+    }).fixture;
+
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('collapses once collapsedByDefault flips to true, but the user can still expand it afterwards', () => {
+    const { fixture } = setUp({
+      prompt: 'List what you can control.',
+      whyItMatters: 'Why it matters.',
+      collapsedByDefault: false,
+    });
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
+
+    fixture.componentRef.setInput('collapsedByDefault', true);
+    fixture.detectChanges();
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
+
+    toggleButton(fixture).click();
+    fixture.detectChanges();
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
+
+    // Still `true`, but already applied once — must not fight the user's own toggle again.
+    fixture.detectChanges();
+    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
   });
 });

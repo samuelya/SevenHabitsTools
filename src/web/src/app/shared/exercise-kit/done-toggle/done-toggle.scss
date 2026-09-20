@@ -14,3 +14,48 @@
   color: var(--mat-sys-on-surface-variant, gray);
   font-size: 0.75rem;
 }
+
+.done-checklist {
+  flex-basis: 100%;
+}
+
+.done-checklist-heading {
+  margin: 0 0 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.done-checklist-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.done-checklist-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.done-checklist-list mat-icon {
+  inline-size: 18px;
+  block-size: 18px;
+  font-size: 18px;
+}
+
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}

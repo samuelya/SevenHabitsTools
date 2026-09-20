@@ -1,0 +1,64 @@
+.exercise-guide-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 56px;
+  padding-inline: 0.5rem;
+  background: var(--mat-sys-surface);
+  border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.exercise-guide-close {
+  flex: none;
+  min-inline-size: 48px;
+  min-block-size: 48px;
+}
+
+.exercise-guide-title {
+  flex: 1 1 auto;
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.exercise-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-block: 1rem;
+}
+
+.exercise-guide h3 {
+  font: var(--mat-sys-title-small);
+  margin-block: 0 0.5rem;
+}
+
+.exercise-guide ol {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.example-card + .example-card {
+  margin-block-start: 0.75rem;
+}
+
+.example-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.example-field dt {
+  font-weight: 600;
+}
+
+.example-field dd {
+  margin-inline-start: 0;
+  color: var(--mat-sys-on-surface-variant, gray);
+}

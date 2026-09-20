@@ -6,22 +6,14 @@
       rows="6"
       [value]="draft()"
       (input)="onInput($event)"
-      [attr.aria-describedby]="'reflection-hint'"
+      [attr.aria-describedby]="status() ? 'reflection-status' : null"
     ></textarea>
   </mat-form-field>
-  <p id="reflection-hint" class="hint">
-    <span class="character-count">{{
-      'exerciseKit.reflection.characterCount' | transloco: { count: characterCount() }
-    }}</span>
-    <span class="saved-at">
-      @if (updatedAt(); as updatedAt) {
-        {{
-          'exerciseKit.reflection.savedAt'
-            | transloco: { time: updatedAt | appDate: { dateStyle: 'medium', timeStyle: 'short' } }
-        }}
-      } @else {
-        {{ 'exerciseKit.reflection.notSavedYet' | transloco }}
-      }
-    </span>
-  </p>
+  @if (status(); as status) {
+    <p id="reflection-status" class="status" aria-live="polite">
+      {{
+        (status === 'saving' ? 'exerciseKit.editor.saving' : 'exerciseKit.editor.saved') | transloco
+      }}
+    </p>
+  }
 </div>

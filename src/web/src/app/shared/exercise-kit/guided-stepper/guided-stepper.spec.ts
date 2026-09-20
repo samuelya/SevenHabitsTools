@@ -3,6 +3,7 @@ import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope } from '@jsverse/transloco';
 import { of } from 'rxjs';
+import '../../../features/settings/settings.model';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { GuidedStepContent } from './guided-step-content';
 import { GuidedStepDefinition, GuidedStepper } from './guided-stepper';
@@ -29,7 +30,31 @@ class HostComponent {
   selectedIndex = 0;
 }
 
-function setUp(handset: boolean) {
+@Component({
+  selector: 'app-three-step-host',
+  imports: [GuidedStepper, GuidedStepContent],
+  template: `
+    <app-guided-stepper
+      [steps]="steps"
+      [selectedIndex]="selectedIndex"
+      (selectedIndexChange)="selectedIndex = $event"
+    >
+      <ng-template appGuidedStep="first">First step content</ng-template>
+      <ng-template appGuidedStep="second">Second step content</ng-template>
+      <ng-template appGuidedStep="third">Third step content</ng-template>
+    </app-guided-stepper>
+  `,
+})
+class ThreeStepHostComponent {
+  readonly steps: GuidedStepDefinition[] = [
+    { key: 'first', label: 'First' },
+    { key: 'second', label: 'Second' },
+    { key: 'third', label: 'Third' },
+  ];
+  selectedIndex = 0;
+}
+
+function setUp<T>(component: new () => T, handset: boolean) {
   const state: BreakpointState = { matches: handset, breakpoints: {} };
   TestBed.configureTestingModule({
     providers: [
@@ -41,14 +66,20 @@ function setUp(handset: boolean) {
       },
     ],
   });
-  const fixture = TestBed.createComponent(HostComponent);
+  const fixture = TestBed.createComponent(component);
   fixture.detectChanges();
   return fixture;
 }
 
+function buttonsWithText(fixture: { nativeElement: HTMLElement }, text: string): HTMLElement[] {
+  return [...fixture.nativeElement.querySelectorAll('button')].filter(
+    (button) => button.textContent?.trim() === text,
+  );
+}
+
 describe('GuidedStepper', () => {
   it('renders every step label', () => {
-    const fixture = setUp(false);
+    const fixture = setUp(HostComponent, false);
 
     const labels = [...fixture.nativeElement.querySelectorAll('.mat-step-text-label')].map(
       (el: Element) => el.textContent?.trim(),
@@ -57,47 +88,72 @@ describe('GuidedStepper', () => {
   });
 
   it('projects each step content by its key, not by position', () => {
-    const fixture = setUp(false);
+    const fixture = setUp(HostComponent, false);
 
     const text = fixture.nativeElement.textContent as string;
     expect(text).toContain('First step content');
   });
 
   it('uses horizontal orientation on desktop', () => {
-    const fixture = setUp(false);
+    const fixture = setUp(HostComponent, false);
 
     expect(fixture.nativeElement.querySelector('.mat-stepper-horizontal')).not.toBeNull();
   });
 
   it('uses vertical orientation on a handset', () => {
-    const fixture = setUp(true);
+    const fixture = setUp(HostComponent, true);
 
     expect(fixture.nativeElement.querySelector('.mat-stepper-vertical')).not.toBeNull();
   });
 
   it('emits selectedIndexChange when the stepper advances', () => {
-    const fixture = setUp(false);
+    const fixture = setUp(HostComponent, false);
     const host = fixture.componentInstance;
 
-    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    const nextButton = buttons.find((button) => button.textContent?.trim() === 'Next');
-    nextButton?.click();
+    buttonsWithText(fixture, 'Next')[0].click();
     fixture.detectChanges();
 
     expect(host.selectedIndex).toBe(1);
   });
 
   it('does not block forward navigation from a step with no done tracking', () => {
-    const fixture = setUp(false);
+    const fixture = setUp(HostComponent, false);
     const host = fixture.componentInstance;
     host.steps[0] = { key: 'first', label: 'First' };
     fixture.detectChanges();
 
-    const buttons = [...fixture.nativeElement.querySelectorAll('button')] as HTMLButtonElement[];
-    const nextButton = buttons.find((button) => button.textContent?.trim() === 'Next');
-    nextButton?.click();
+    buttonsWithText(fixture, 'Next')[0].click();
     fixture.detectChanges();
 
     expect(host.selectedIndex).toBe(1);
+  });
+
+  it('does not render "Back" on the first step', () => {
+    const fixture = setUp(HostComponent, false);
+
+    // Every step's own body is in the DOM at once (CSS hides the unselected ones), so this counts
+    // across both steps: only the second (non-first) one renders "Back".
+    expect(buttonsWithText(fixture, 'Back')).toHaveLength(1);
+  });
+
+  it('does not render "Next" on the last step', () => {
+    const fixture = setUp(HostComponent, false);
+
+    expect(buttonsWithText(fixture, 'Next')).toHaveLength(1);
+  });
+
+  it('renders both "Back" and "Next" on a middle step', () => {
+    const fixture = setUp(ThreeStepHostComponent, false);
+
+    expect(buttonsWithText(fixture, 'Back')).toHaveLength(2);
+    expect(buttonsWithText(fixture, 'Next')).toHaveLength(2);
+  });
+
+  it('gives each step header an aria-label naming its number and its own label', () => {
+    const fixture = setUp(HostComponent, false);
+
+    const headers = [...fixture.nativeElement.querySelectorAll('mat-step-header')];
+    expect(headers[0].getAttribute('aria-label')).toBe('Step 1: First');
+    expect(headers[1].getAttribute('aria-label')).toBe('Step 2: Second');
   });
 });

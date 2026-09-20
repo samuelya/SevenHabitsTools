@@ -18,7 +18,7 @@
       mat-flat-button
       type="button"
       [disabled]="disabled()"
-      [attr.aria-describedby]="disabled() && disabledHint() ? hintId : null"
+      [attr.aria-describedby]="describedBy()"
       (click)="toggled.emit()"
     >
       <mat-icon aria-hidden="true">check_circle</mat-icon>
@@ -26,6 +26,25 @@
     </button>
     @if (disabled() && disabledHint(); as hint) {
       <span class="disabled-hint" [id]="hintId">{{ hint }}</span>
+    }
+    @if (unmetChecklist(); as items) {
+      <div class="done-checklist" [id]="checklistId">
+        <p class="done-checklist-heading">{{ 'exerciseKit.doneToggle.toMarkDone' | transloco }}</p>
+        <ul role="list" class="done-checklist-list">
+          @for (item of items; track item.label) {
+            <li>
+              <mat-icon aria-hidden="true">{{
+                item.met ? 'check_circle' : 'radio_button_unchecked'
+              }}</mat-icon>
+              <span class="visually-hidden">{{
+                (item.met ? 'exerciseKit.doneToggle.itemDone' : 'exerciseKit.doneToggle.itemToDo')
+                  | transloco
+              }}</span>
+              <span>{{ item.label }}</span>
+            </li>
+          }
+        </ul>
+      </div>
     }
   }
 </div>

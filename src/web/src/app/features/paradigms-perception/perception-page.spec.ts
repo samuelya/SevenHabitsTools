@@ -1,8 +1,10 @@
+import { BreakpointObserver, BreakpointState } from '@angular/cdk/layout';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatSliderThumb } from '@angular/material/slider';
 import { By } from '@angular/platform-browser';
 import { provideTranslocoScope } from '@jsverse/transloco';
+import { of } from 'rxjs';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
@@ -16,10 +18,14 @@ import {
   registerPerceptionModel,
 } from './perception.model';
 
-async function setUp(now = '2026-01-10T00:00:00.000Z'): Promise<ComponentFixture<PerceptionPage>> {
+async function setUp(
+  now = '2026-01-10T00:00:00.000Z',
+  handset = false,
+): Promise<ComponentFixture<PerceptionPage>> {
   // Vitest here runs with `isolate: false` (shared module state) — see `exercise-kit.model.spec.ts`.
   registerExerciseKitModel();
   registerPerceptionModel();
+  const state: BreakpointState = { matches: handset, breakpoints: {} };
   TestBed.configureTestingModule({
     providers: [
       provideTranslocoTesting(),
@@ -27,6 +33,10 @@ async function setUp(now = '2026-01-10T00:00:00.000Z'): Promise<ComponentFixture
       provideTranslocoScope('exercise-kit'),
       { provide: CLOCK, useValue: { now: () => new Date(now) } },
       { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
+      {
+        provide: BreakpointObserver,
+        useValue: { observe: () => of(state), isMatched: () => handset },
+      },
     ],
   });
   const fixture = TestBed.createComponent(PerceptionPage);
@@ -72,26 +82,37 @@ function record(): PerceptionExercise | null {
 }
 
 describe('PerceptionPage', () => {
-  it('renders the prompt title and creates no record until the first edit', async () => {
+  it('renders the prompt title, expanded, and creates no record until the first edit', async () => {
     const fixture = await setUp();
+    const host = fixture.nativeElement as HTMLElement;
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Notice your paradigm');
+    expect(host.textContent).toContain('Notice your paradigm');
+    // Whole "why it matters" copy is only shown once the intro card is expanded — this asserts
+    // the card starts expanded for a first-time visitor (issue #212's "started" rule).
+    expect(host.textContent).toContain('Two people can watch the same moment');
     expect(record()).toBeNull();
-    const markDone = (fixture.nativeElement as HTMLElement).querySelector(
-      'app-done-toggle button',
-    ) as HTMLButtonElement;
+    const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.disabled).toBe(true);
+  });
+
+  it('shows the still-unmet checklist next to the disabled Mark done button', async () => {
+    const fixture = await setUp();
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.textContent).toContain("Write why you think they didn't wave back");
+    expect(host.textContent).toContain('Trace the situation both ways');
   });
 
   it('does not reveal the alternative view until the reveal button is clicked', async () => {
     const fixture = await setUp();
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.textContent).not.toContain('The rest of the story');
+    expect(host.textContent).not.toContain('They never saw you.');
 
     const revealButton = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === 'Show what was really going on',
+      (button) => button.textContent?.trim() === 'Show the other side',
     ) as HTMLButtonElement;
     expect(revealButton.disabled).toBe(true);
+    expect(host.textContent).toContain('Write your guess first, then see the other side.');
 
     setText(textareas(fixture)[0], 'They must be upset with me');
     fixture.detectChanges();
@@ -99,7 +120,7 @@ describe('PerceptionPage', () => {
 
     revealButton.click();
     fixture.detectChanges();
-    expect(host.textContent).toContain('The rest of the story');
+    expect(host.textContent).toContain('They never saw you.');
     expect(record()?.firstView).toBe('They must be upset with me');
   });
 
@@ -114,7 +135,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show what was really going on',
+        (button) => button.textContent?.trim() === 'Show the other side',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
@@ -125,7 +146,7 @@ describe('PerceptionPage', () => {
     const recreated = TestBed.createComponent(PerceptionPage);
     recreated.detectChanges();
 
-    expect((recreated.nativeElement as HTMLElement).textContent).toContain('The rest of the story');
+    expect((recreated.nativeElement as HTMLElement).textContent).toContain('They never saw you.');
   });
 
   it('persists the switch-difficulty slider once revealed', async () => {
@@ -135,7 +156,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show what was really going on',
+        (button) => button.textContent?.trim() === 'Show the other side',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
@@ -158,7 +179,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show what was really going on',
+        (button) => button.textContent?.trim() === 'Show the other side',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
@@ -176,7 +197,7 @@ describe('PerceptionPage', () => {
     setText(step2Fields[2], 'Set a strict schedule');
     setText(step2Fields[3], 'One fades once effort stops; the other sticks.');
     fixture.detectChanges();
-    // Tag the second attempt "Character" (the group's second toggle option).
+    // Tag the second attempt "Real change" (the group's second toggle option).
     const kindGroups = host.querySelectorAll('.kind-toggle');
     (kindGroups[1].querySelectorAll('button')[1] as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -195,6 +216,8 @@ describe('PerceptionPage', () => {
     const doneToggleButton = () =>
       host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(doneToggleButton().disabled).toBe(false);
+    // The checklist disappears once every item is met, even before the button is clicked.
+    expect(host.querySelector('.done-checklist')).toBeNull();
 
     // `DoneToggle`'s template swaps to an entirely different `@else` button once `done()` flips
     // (`done-toggle.html`), so each click re-queries the button currently in the DOM rather than
@@ -221,5 +244,32 @@ describe('PerceptionPage', () => {
     expect(record()?.id).toBe(id);
     expect(record()?.createdAt).toBe(createdAt);
     expect(record()?.firstView).toBe('A later edit');
+  });
+
+  it('collapses the intro card by default once the exercise has been started', async () => {
+    const fixture = await setUp();
+    setText(textareas(fixture)[0], 'First edit');
+    fixture.detectChanges();
+
+    fixture.destroy();
+    const recreated = TestBed.createComponent(PerceptionPage);
+    recreated.detectChanges();
+    const host = recreated.nativeElement as HTMLElement;
+
+    // Collapsed: the "why it matters" paragraph (only shown when the card is expanded) is gone,
+    // but the always-visible prompt paragraph remains.
+    expect(host.textContent).toContain('Before you change what you do');
+    expect(host.textContent).not.toContain('Two people can watch the same moment');
+  });
+
+  it('collapses the intro card by default on a handset even before the exercise is started', async () => {
+    // The mandated copy alone runs long enough that an expanded card pushes the first field past
+    // an 800px viewport at 360px width (see the comment on issue #212) — a phone always starts
+    // collapsed, regardless of `started()`, so the first field stays reachable without scrolling.
+    const fixture = await setUp(undefined, true);
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.textContent).toContain('Before you change what you do');
+    expect(host.textContent).not.toContain('Two people can watch the same moment');
   });
 });

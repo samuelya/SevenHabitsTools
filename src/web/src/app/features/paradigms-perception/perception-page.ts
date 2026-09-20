@@ -1,15 +1,21 @@
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
-import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { translateObjectSignal, translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { map } from 'rxjs';
+import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { featureStore } from '../../core/data/feature-store';
+import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { CLOCK } from '../../core/time/clock';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
+import { ExerciseGuideContent } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -19,14 +25,19 @@ import {
   GuidedStepper,
 } from '../../shared/exercise-kit/guided-stepper/guided-stepper';
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
-import { PerceptionSummary } from './perception-summary';
 import {
   blankChain,
   blankChangeAttempts,
   ChainKey,
+  CHECKLIST_KEYS,
+  checklistLabelsFrom,
+  doneChecklist,
   ensureExercise,
   isComplete,
-  summarize,
+  isStarted,
+  isStepOneComplete,
+  isStepThreeComplete,
+  isStepTwoComplete,
   withChainField,
   withChangeAttempt,
   withDifference,
@@ -44,10 +55,11 @@ import {
   SWITCH_DIFFICULTY_MIN,
 } from './perception.model';
 
-/** The two chain sections step 3 renders, in display order, each with its own fixed legend key. */
-const CHAIN_SECTIONS: readonly { key: ChainKey; legendKey: string }[] = [
-  { key: 'chain', legendKey: 'currentLegend' },
-  { key: 'chainAlt', legendKey: 'altLegend' },
+/** The two chain sections step 3 renders, in display order, each with its own fixed legend key
+ * and the i18n namespace (`current`/`alt`) its own field placeholders live under. */
+const CHAIN_SECTIONS: readonly { key: ChainKey; legendKey: string; placeholderKey: string }[] = [
+  { key: 'chain', legendKey: 'currentLegend', placeholderKey: 'current' },
+  { key: 'chainAlt', legendKey: 'altLegend', placeholderKey: 'alt' },
 ];
 
 /** `[0]` is the `appGuidedStep` key the template's `<ng-template>`s use; `[1]` is the i18n
@@ -58,18 +70,23 @@ const STEPS = [
   ['seeDoGet', 'step3'],
 ] as const;
 
+/** Each step's own completeness check, in `STEPS`' order — the `GuidedStepDefinition.done` this
+ * page reports back to `GuidedStepper` per step (issue #212). */
+const STEP_COMPLETE = [isStepOneComplete, isStepTwoComplete, isStepThreeComplete] as const;
+
 /**
- * Paradigms & perception (issue #48): the reference **worksheet** exercise (playbook §4) — a
- * single record created on its first edit, filled through a fixed 3-step `GuidedStepper` with no
- * per-item selection and no focus-mode editor at all (playbook §5's "Worksheet pages" note). The
- * container: it reads `featureStore`, calls `ExerciseProgress`, and passes plain values down to
- * `PerceptionSummary`/`ReflectionEditor`/`DoneToggle` — none of which inject the store or a
- * service. No routing beyond the one fixed path (`perception.routes.ts`): there is nothing to
- * select or deep-link to inside a worksheet.
+ * Paradigms & perception (issue #48, reworked by #212): the reference **worksheet** exercise
+ * (playbook §4) — a single record created on its first edit, filled through a fixed 3-step
+ * `GuidedStepper` with no per-item selection and no focus-mode editor at all (playbook §5's
+ * "Worksheet pages" note). The container: it reads `featureStore`, calls `ExerciseProgress`, and
+ * passes plain values down to `ExercisePromptCard`/`ReflectionEditor`/`DoneToggle` — none of which
+ * inject the store or a service. No routing beyond the one fixed path (`perception.routes.ts`):
+ * there is nothing to select or deep-link to inside a worksheet.
  */
 @Component({
   selector: 'app-perception-page',
   imports: [
+    AppNumberPipe,
     CdkTextareaAutosize,
     DoneToggle,
     ExercisePage,
@@ -82,7 +99,6 @@ const STEPS = [
     MatFormFieldModule,
     MatInputModule,
     MatSliderModule,
-    PerceptionSummary,
     ReflectionEditor,
     TranslocoPipe,
   ],
@@ -92,6 +108,7 @@ const STEPS = [
 })
 export class PerceptionPage {
   private readonly clock = inject(CLOCK);
+  private readonly breakpoints = inject(BreakpointObserver);
   private readonly store = featureStore<PerceptionExercise | null>(PERCEPTION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -100,6 +117,18 @@ export class PerceptionPage {
   protected readonly sliderMax = SWITCH_DIFFICULTY_MAX;
 
   protected readonly exercise = computed(() => this.store.value());
+  /** Whether a record exists at all (issue #212's "started" rule): needs no stored flag, since a
+   * worksheet record is only ever created on its first edit (`ensureExercise`). */
+  protected readonly started = computed(() => isStarted(this.exercise()));
+  private readonly handset = toSignal(
+    this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
+    { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
+  );
+  /** The intro card collapses once started (issue #212's spec), but on a phone it always starts
+   * collapsed regardless — the mandated copy alone runs to about 520px expanded at 360px width,
+   * which by itself pushes the first field past an 800px viewport (see the comment on the issue).
+   * Desktop/tablet keeps the literal `started()`-only rule since there's room for it there. */
+  protected readonly collapsedByDefault = computed(() => this.started() || this.handset());
   protected readonly changeAttempts = computed(
     () => this.exercise()?.changeAttempts ?? blankChangeAttempts(),
   );
@@ -135,11 +164,39 @@ export class PerceptionPage {
     undefined,
     'paradigms-perception',
   );
-  protected readonly steps = computed<readonly GuidedStepDefinition[]>(() =>
-    STEPS.map(([key], index) => ({ key, label: this.stepLabels()[index] ?? '' })),
+  protected readonly steps = computed<readonly GuidedStepDefinition[]>(() => {
+    const exercise = this.exercise();
+    return STEPS.map(([key], index) => ({
+      key,
+      label: this.stepLabels()[index] ?? '',
+      // Never an explicit `false` (`GuidedStepper`'s own doc comment) — only `true` once the step
+      // is complete, `undefined` otherwise, so `CdkStep`'s own interacted-based tracking still
+      // allows skipping ahead.
+      done: exercise !== null && STEP_COMPLETE[index](exercise) ? true : undefined,
+    }));
+  });
+
+  private readonly checklistLabels = translateSignal(
+    CHECKLIST_KEYS.map((key) => `checklist.${key}`),
+    undefined,
+    'paradigms-perception',
+  );
+  protected readonly checklist = computed(() =>
+    doneChecklist(this.exercise(), checklistLabelsFrom(this.checklistLabels())),
   );
 
-  protected readonly summary = computed(() => summarize(this.exercise()));
+  // The whole `guide` object at once (issue #212's "Data model"), not per-field keys: its shape
+  // (an array of How-to steps, an array of example cards) doesn't fit `translateSignal`'s
+  // flat-key-list API. Reactive to a language switch the same way `translateSignal` is.
+  private readonly guideTranslation = translateObjectSignal(
+    'guide',
+    undefined,
+    'paradigms-perception',
+  );
+  protected readonly guideContent = computed(
+    () => this.guideTranslation() as unknown as ExerciseGuideContent,
+  );
+
   protected readonly readyToMarkDone = computed(() => isComplete(this.exercise()));
   protected readonly done = this.progress.isDone(PERCEPTION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(PERCEPTION_MODEL_KEY);

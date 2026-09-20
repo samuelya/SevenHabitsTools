@@ -24,10 +24,37 @@
   margin: 0;
 }
 
+.field-prompt,
+.step-intro {
+  margin: 0;
+}
+
+.reveal-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .slider-field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.slider-row mat-slider {
+  flex: 1 1 auto;
+}
+
+.slider-end-label {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
 }
 
 .attempt-row,
@@ -54,7 +81,7 @@
   --mat-button-toggle-height: 44px;
 }
 
-.summary-section {
+.footer-section {
   display: flex;
   flex-wrap: wrap;
   align-items: center;

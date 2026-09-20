@@ -16,6 +16,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
+import { AppNumberPipe } from '../../../core/i18n/locale.pipe';
 import { GuidedStepContent } from './guided-step-content';
 
 /** One step of a `GuidedStepper`; `label` is already-translated text from the calling feature's
@@ -32,10 +33,17 @@ export interface GuidedStepDefinition {
  * on mobile (issue #30). Purely presentational: it neither knows about nor saves the document —
  * `selectedIndex`/`selectedIndexChange` let the caller persist the current step through its own
  * `ExerciseProgress`/`featureStore`, the "saves per step" acceptance criterion.
+ *
+ * "Back" is hidden on the first step and "Next" on the last (issue #212) — both would otherwise
+ * render disabled-looking dead ends. "Next" itself is never disabled: a page should only ever set
+ * a step's `done` to `true` once complete and leave it `undefined` otherwise (never an explicit
+ * `false`), since binding `[completed]="false"` on `mat-step` overrides `CdkStepper`'s own
+ * `interacted`-based tracking and blocks `next()` under `linear` mode — the same "skipping ahead
+ * is allowed" acceptance criterion this issue calls out.
  */
 @Component({
   selector: 'app-guided-stepper',
-  imports: [MatButtonModule, MatStepperModule, NgTemplateOutlet, TranslocoPipe],
+  imports: [AppNumberPipe, MatButtonModule, MatStepperModule, NgTemplateOutlet, TranslocoPipe],
   templateUrl: './guided-stepper.html',
   styleUrl: './guided-stepper.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
