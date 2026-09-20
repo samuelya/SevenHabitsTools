@@ -5,33 +5,39 @@
   [selectedIndex]="selectedIndex()"
   (selectedIndexChange)="selectedIndexChange.emit($event)"
 >
-  @for (step of steps(); track step.key) {
-    @if (step.done === undefined) {
-      <mat-step [label]="step.label">
-        <ng-container
-          [ngTemplateOutlet]="stepBody"
-          [ngTemplateOutletContext]="{ $implicit: step }"
-        />
-      </mat-step>
-    } @else {
-      <mat-step [label]="step.label" [completed]="step.done">
-        <ng-container
-          [ngTemplateOutlet]="stepBody"
-          [ngTemplateOutletContext]="{ $implicit: step }"
-        />
-      </mat-step>
-    }
+  @for (step of steps(); track step.key; let i = $index) {
+    <!-- No `[completed]` binding here on purpose: the constructor's `effect` sets completion
+         imperatively, only on the matching `MatStep` instance — see the class doc comment.
+         Always exactly one `<mat-step>` per step, so `step.done` changing never swaps a template
+         branch and destroys/recreates the projected content the user may be typing into. -->
+    <mat-step
+      [label]="step.label"
+      [aria-label]="
+        ('exerciseKit.stepper.step' | transloco: { number: (i + 1 | appNumber) }) +
+        ': ' +
+        step.label
+      "
+    >
+      <ng-container
+        [ngTemplateOutlet]="stepBody"
+        [ngTemplateOutletContext]="{ $implicit: step, index: i }"
+      />
+    </mat-step>
   }
 
-  <ng-template #stepBody let-step>
+  <ng-template #stepBody let-step let-i="index">
     <ng-container [ngTemplateOutlet]="templateFor(step.key)" />
     <div class="step-actions">
-      <button mat-button matStepperPrevious type="button">
-        {{ 'exerciseKit.stepper.back' | transloco }}
-      </button>
-      <button mat-flat-button matStepperNext type="button">
-        {{ 'exerciseKit.stepper.next' | transloco }}
-      </button>
+      @if (i > 0) {
+        <button mat-button matStepperPrevious type="button">
+          {{ 'exerciseKit.stepper.back' | transloco }}
+        </button>
+      }
+      @if (i < steps().length - 1) {
+        <button mat-flat-button matStepperNext type="button">
+          {{ 'exerciseKit.stepper.next' | transloco }}
+        </button>
+      }
     </div>
   </ng-template>
 </mat-stepper>

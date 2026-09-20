@@ -1,19 +1,29 @@
 <mat-card class="prompt-card" appearance="outlined">
+  <mat-card-content class="visible-content">
+    <p class="prompt">{{ prompt() }}</p>
+    @if (guide(); as guide) {
+      <button type="button" class="read-more" (click)="openGuide()">
+        {{ 'exerciseKit.promptCard.readMore' | transloco }}
+      </button>
+    }
+  </mat-card-content>
+
   <button type="button" class="toggle" [attr.aria-expanded]="expanded()" (click)="toggle()">
     <span class="toggle-label">{{ 'exerciseKit.promptCard.about' | transloco }}</span>
     <mat-icon aria-hidden="true">{{ expanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
   </button>
   @if (expanded()) {
     <mat-card-content class="content">
-      @if (chapterReference(); as chapterReference) {
-        <p class="chapter-reference">{{ chapterReference }}</p>
-      }
-      <p class="prompt">{{ prompt() }}</p>
       @if (whyItMatters(); as whyItMatters) {
         <h3 class="why-it-matters-heading">
           {{ 'exerciseKit.promptCard.whyItMatters' | transloco }}
         </h3>
         <p>{{ whyItMatters }}</p>
+      }
+      @if (chapterReference(); as chapterReference) {
+        <p class="chapter-reference">
+          {{ 'exerciseKit.promptCard.from' | transloco: { chapter: chapterReference } }}
+        </p>
       }
     </mat-card-content>
   }

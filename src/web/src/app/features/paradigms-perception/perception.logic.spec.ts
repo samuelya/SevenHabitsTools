@@ -1,11 +1,15 @@
 import {
   blankChangeAttempts,
+  CHECKLIST_KEYS,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
   ensureExercise,
   isComplete,
+  isStarted,
   isStepOneComplete,
   isStepThreeComplete,
   isStepTwoComplete,
-  summarize,
   withChainField,
   withChangeAttempt,
   withDifference,
@@ -17,6 +21,14 @@ import {
 import { PerceptionExercise } from './perception.model';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
+
+const LABELS = checklistLabelsFrom([
+  'Write why you think they did not wave back',
+  'Rate how hard it was to drop your first guess',
+  'Fill in all three attempts',
+  'Write the one-sentence difference',
+  'Trace the situation both ways',
+]);
 
 function completeExercise(): PerceptionExercise {
   let exercise = ensureExercise(null, NOW);
@@ -133,20 +145,80 @@ describe('perception.logic', () => {
     });
   });
 
-  describe('summarize', () => {
-    it('counts 0 of 3 steps for a null exercise', () => {
-      expect(summarize(null)).toEqual({ completedSteps: 0, totalSteps: 3 });
+  describe('doneChecklist', () => {
+    it('lists all five items, unmet, for a null exercise', () => {
+      const items = doneChecklist(null, LABELS);
+      expect(items).toHaveLength(5);
+      expect(items.every((item) => !item.met)).toBe(true);
+      expect(items.map((item) => item.label)).toEqual(CHECKLIST_KEYS.map((key) => LABELS[key]));
     });
 
-    it('counts each completed step independently', () => {
+    it('flips each item independently as its own field is filled', () => {
       let exercise = ensureExercise(null, NOW);
+      const metFor = (key: (typeof CHECKLIST_KEYS)[number]) =>
+        doneChecklist(exercise, LABELS).find((item) => item.label === LABELS[key])?.met;
+
+      expect(CHECKLIST_KEYS.every((key) => metFor(key) === false)).toBe(true);
+
       exercise = withFirstView(exercise, 'x', NOW);
-      exercise = withSwitchDifficulty(exercise, 2, NOW);
-      expect(summarize(exercise)).toEqual({ completedSteps: 1, totalSteps: 3 });
+      expect(metFor('firstView')).toBe(true);
+      expect(metFor('difficulty')).toBe(false);
+
+      exercise = withSwitchDifficulty(exercise, 3, NOW);
+      expect(metFor('difficulty')).toBe(true);
+      expect(metFor('attempts')).toBe(false);
+
+      exercise = withChangeAttempt(exercise, 0, { text: 'a' }, NOW);
+      exercise = withChangeAttempt(exercise, 1, { text: 'b' }, NOW);
+      exercise = withChangeAttempt(exercise, 2, { text: 'c' }, NOW);
+      expect(metFor('attempts')).toBe(true);
+      expect(metFor('difference')).toBe(false);
+
+      exercise = withDifference(exercise, 'because', NOW);
+      expect(metFor('difference')).toBe(true);
+      expect(metFor('chains')).toBe(false);
+
+      exercise = withChainField(exercise, 'chain', { see: 'A', do: 'B', get: 'C' }, NOW);
+      exercise = withChainField(exercise, 'chainAlt', { see: 'D', do: 'E', get: 'F' }, NOW);
+      expect(metFor('chains')).toBe(true);
     });
 
-    it('counts all 3 steps for a fully completed exercise', () => {
-      expect(summarize(completeExercise())).toEqual({ completedSteps: 3, totalSteps: 3 });
+    it('agrees with isComplete: every item met exactly when isComplete is true', () => {
+      const exercise = completeExercise();
+      expect(doneChecklist(exercise, LABELS).every((item) => item.met)).toBe(true);
+      expect(isComplete(exercise)).toBe(true);
+    });
+  });
+
+  describe('checklistLabelsFrom', () => {
+    it('falls back to an empty string per key when the scope has not loaded yet', () => {
+      expect(checklistLabelsFrom([''])).toEqual({
+        firstView: '',
+        difficulty: '',
+        attempts: '',
+        difference: '',
+        chains: '',
+      });
+    });
+  });
+
+  describe('checklistLoaded', () => {
+    // Regression test for a review finding: `DoneToggle` used to render its checklist off
+    // `checklistLabelsFrom`'s output directly, so a cold visit showed five icon rows with no text
+    // for as long as the scope took to load (`translateSignal` starts an array key at `['']`).
+    it('is false while every label is still the pre-load placeholder', () => {
+      expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    });
+
+    it('is true once the scope has resolved real labels', () => {
+      expect(checklistLoaded(LABELS)).toBe(true);
+    });
+  });
+
+  describe('isStarted', () => {
+    it('is false for a null exercise and true once a record exists', () => {
+      expect(isStarted(null)).toBe(false);
+      expect(isStarted(ensureExercise(null, NOW))).toBe(true);
     });
   });
 });

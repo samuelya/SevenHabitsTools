@@ -1,11 +1,23 @@
 {
   "promptCard": {
     "about": "About this exercise",
-    "whyItMatters": "Why this matters"
+    "whyItMatters": "Why this matters",
+    "readMore": "Read more",
+    "from": "From: {{chapter}}"
+  },
+  "guide": {
+    "title": "How to do this exercise",
+    "inShort": "In short",
+    "howTo": "How to do it",
+    "example": "An example",
+    "afterwards": "Afterwards",
+    "close": "Close",
+    "loadError": "Couldn't open the guide. Check your connection and try again."
   },
   "stepper": {
     "back": "Back",
-    "next": "Next"
+    "next": "Next",
+    "step": "Step {{number}}"
   },
   "list": {
     "sortLabel": "Sort",
@@ -29,6 +41,9 @@
   "doneToggle": {
     "markDone": "Mark done",
     "reopen": "Reopen",
-    "completedAt": "Completed {{time}}"
+    "completedAt": "Completed {{time}}",
+    "toMarkDone": "To mark done:",
+    "itemDone": "Done: ",
+    "itemToDo": "To do: "
   }
 }

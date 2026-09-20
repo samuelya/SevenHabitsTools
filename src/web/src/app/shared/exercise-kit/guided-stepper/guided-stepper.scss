@@ -2,6 +2,20 @@
   --mat-stepper-container-color: transparent;
 }
 
+// Below `HANDSET_QUERY` this stepper is always vertical (`orientation`, above), so scoping to
+// Material's own `.mat-stepper-vertical` class needs no separate media query. No theming token
+// covers the connector's indent or line (only `--mat-stepper-line-color`, which just recolours
+// it), so this reaches into Material's internal classes with `::ng-deep` — see the design-check
+// comment on issue #212 for why this is CSS-only and leaves the step header/keyboard nav alone.
+:host ::ng-deep .mat-stepper-vertical .mat-vertical-content-container {
+  margin-inline-start: 0;
+  margin-inline-end: 0;
+}
+
+:host ::ng-deep .mat-stepper-vertical .mat-stepper-vertical-line::before {
+  display: none;
+}
+
 .step-actions {
   display: flex;
   gap: 0.5rem;

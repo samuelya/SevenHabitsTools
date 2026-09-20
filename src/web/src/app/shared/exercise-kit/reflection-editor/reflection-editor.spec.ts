@@ -4,7 +4,7 @@ import '../../../features/settings/settings.model';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { REFLECTION_DEBOUNCE_MS, ReflectionEditor } from './reflection-editor';
 
-function setUp(value: string, updatedAt: string | null = null) {
+function setUp(value: string, updatedAt: string | null = null, sessionStatus = false) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
   });
@@ -12,6 +12,7 @@ function setUp(value: string, updatedAt: string | null = null) {
   fixture.componentRef.setInput('value', value);
   fixture.componentRef.setInput('label', 'Your reflection');
   fixture.componentRef.setInput('updatedAt', updatedAt);
+  fixture.componentRef.setInput('sessionStatus', sessionStatus);
   fixture.detectChanges();
   return fixture;
 }
@@ -38,23 +39,106 @@ describe('ReflectionEditor', () => {
     expect(textarea(fixture).value).toBe('What I noticed today.');
   });
 
-  it('shows the character count', () => {
-    const fixture = setUp('12345');
+  describe('default caption (sessionStatus not set)', () => {
+    it('shows the character count', () => {
+      const fixture = setUp('12345');
 
-    expect(fixture.nativeElement.textContent).toContain('5 characters');
+      expect(fixture.nativeElement.textContent).toContain('5 characters');
+    });
+
+    it('shows "not saved yet" when there is no updatedAt', () => {
+      const fixture = setUp('');
+
+      expect(fixture.nativeElement.textContent).toContain('Not saved yet');
+    });
+
+    it('shows the formatted saved time when updatedAt is given', () => {
+      const fixture = setUp('', '2026-01-02T10:00:00.000Z');
+
+      expect(fixture.nativeElement.textContent).toContain('Saved');
+      expect(fixture.nativeElement.textContent).not.toContain('Not saved yet');
+    });
+
+    it('never renders the session-status live region', () => {
+      const fixture = setUp('');
+
+      expect(fixture.nativeElement.querySelector('#reflection-status')).toBeNull();
+    });
   });
 
-  it('shows "not saved yet" when there is no updatedAt', () => {
-    const fixture = setUp('');
+  describe('session status (sessionStatus opted in)', () => {
+    it('renders the live region from the start, empty, before the first keystroke of this session', () => {
+      const fixture = setUp('An older reflection.', '2026-01-02T10:00:00.000Z', true);
 
-    expect(fixture.nativeElement.textContent).toContain('Not saved yet');
+      const region = fixture.nativeElement.querySelector('#reflection-status');
+      expect(region).not.toBeNull();
+      expect(region?.getAttribute('aria-live')).toBe('polite');
+      expect(region?.textContent?.trim()).toBe('');
+      expect(fixture.nativeElement.textContent).not.toContain('Saved');
+      expect(fixture.nativeElement.textContent).not.toContain('Saving');
+    });
+
+    it('shows "Saving…" right after the first keystroke, before the debounce elapses', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Saving');
+    });
+
+    it('keeps showing "Saving…" once the debounce elapses until the caller confirms the write landed', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a new reflection');
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.detectChanges();
+
+      // Regression test for a review finding: this used to flip to "Saved" as soon as the
+      // debounce fired, regardless of whether the write actually landed.
+      expect(fixture.nativeElement.textContent).toContain('Saving');
+      expect(fixture.nativeElement.textContent).not.toContain('Saved');
+    });
+
+    it('shows "Saved" once the caller confirms the debounced write landed', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a new reflection');
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.componentInstance.reportSaveOutcome(true);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toContain('Saved');
+    });
+
+    it('never claims "Saved" when the caller reports the write was refused (a read-only tab)', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a new reflection');
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.componentInstance.reportSaveOutcome(false);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Saved');
+    });
   });
 
-  it('shows the formatted saved time when updatedAt is given', () => {
-    const fixture = setUp('', '2026-01-02T10:00:00.000Z');
+  describe('promptId', () => {
+    it('adds the caller-supplied prompt id alongside its own status id in aria-describedby', () => {
+      const fixture = setUp('', null, true);
+      fixture.componentRef.setInput('promptId', 'reflection-prompt');
+      fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Saved');
-    expect(fixture.nativeElement.textContent).not.toContain('Not saved yet');
+      expect(textarea(fixture).getAttribute('aria-describedby')).toBe(
+        'reflection-prompt reflection-status',
+      );
+    });
+
+    it('falls back to just its own id when no promptId is given', () => {
+      const fixture = setUp('', null, true);
+
+      expect(textarea(fixture).getAttribute('aria-describedby')).toBe('reflection-status');
+    });
   });
 
   it('does not emit valueChange before the debounce elapses', async () => {

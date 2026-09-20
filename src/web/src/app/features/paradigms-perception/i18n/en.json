@@ -1,48 +1,152 @@
 {
   "prompt": {
     "title": "Notice your paradigm",
-    "chapterReference": "Paradigms and principles",
-    "text": "The lens you look through decides what you see, and what you see decides what you do and what you get. This worksheet recreates that experience with two views of one event, three of your own past attempts to change something, and one situation traced through two different paradigms.",
-    "whyItMatters": "Two people can look at the exact same event and see two different stories, both convinced they're simply describing what happened. Noticing that gap in yourself is what makes it possible to question a paradigm before trying to change a behaviour built on top of it."
+    "text": "Before you change what you do, look at how you see things. This exercise catches you in the act: three short steps, about 15 minutes.",
+    "whyItMatters": "Two people can watch the same moment and tell two different stories, each sure they're just saying what happened. Once you've felt that gap in yourself, you can question the lens before you try to change a habit built on it. The book calls that lens a paradigm.",
+    "chapterReference": "Paradigms and principles"
   },
   "step1": {
     "stepLabel": "Two views",
-    "viewALabel": "What you saw first",
-    "viewA": "You wave to a coworker in the hallway. They walk past without responding, eyes fixed on their phone. You spend the rest of the day wondering what you did to upset them.",
-    "firstViewLabel": "Your first interpretation: why do you think they didn't respond?",
-    "revealButton": "Show what was really going on",
-    "viewBLabel": "The rest of the story",
-    "viewB": "That coworker had just gotten a message that their child's school was calling. They were reading it as they walked, already typing a reply, and never registered anyone else in the hallway at all.",
-    "switchDifficultyLabel": "How hard was it to let go of your first interpretation?",
-    "switchDifficultyUnrated": "Not yet rated"
+    "viewALabel": "A moment in the hallway",
+    "viewA": "You wave to a coworker in the hallway. They walk straight past, eyes on their phone. You spend the rest of the day wondering what you did wrong.",
+    "firstView": {
+      "prompt": "Why do you think they didn't wave back?",
+      "label": "Your first guess",
+      "placeholder": "e.g. They're annoyed about yesterday's meeting and are avoiding me."
+    },
+    "revealButton": "Show the other side",
+    "revealHint": "Write your guess first, then see the other side.",
+    "viewBLabel": "The other side",
+    "viewB": "Just before you waved, they got a message: their kid's school was calling. They were reading it and typing a reply as they walked. They never saw you.",
+    "switchDifficulty": {
+      "prompt": "How hard was it to drop your first guess?",
+      "label": "Difficulty",
+      "easy": "Easy",
+      "hard": "Hard",
+      "unrated": "Not rated yet"
+    }
   },
   "step2": {
-    "stepLabel": "Character or technique",
-    "attemptLabel": "Change attempt {{number}}",
-    "attemptTextLabel": "What you tried to change",
-    "kindLabel": "Was this a technique or a character change?",
-    "kind": {
-      "technique": "Technique (a quick fix)",
-      "character": "Character (a principle you built)"
+    "stepLabel": "Quick fix or real change",
+    "intro": "Think of three things you've tried to change about yourself. Some were quick fixes: a trick, a tool, a new rule. Some went deeper: you became a bit different. The book calls the first kind technique and the second character.",
+    "attemptLabel": "Attempt {{number}}",
+    "attempt": {
+      "prompt": "What did you try to change?",
+      "label": "What you tried",
+      "placeholder1": "e.g. Get up at six",
+      "placeholder2": "e.g. Stop interrupting people",
+      "placeholder3": "e.g. Put money aside every month"
     },
-    "differenceLabel": "In one sentence, what's the real difference between a technique and a character-based change, based on what you just noticed?"
+    "kind": {
+      "prompt": "Was it a quick fix or a real change?",
+      "technique": "Quick fix",
+      "character": "Real change"
+    },
+    "difference": {
+      "prompt": "Looking at your three, what's the real difference between a quick fix and a real change? One sentence.",
+      "label": "The difference",
+      "placeholder": "e.g. A quick fix works while I'm watching it. A real change keeps working when I'm not."
+    }
   },
   "step3": {
     "stepLabel": "See, do, get",
-    "currentLegend": "Your situation, as you see it now",
-    "altLegend": "The same situation, through a different paradigm",
-    "seeLabel": "What you currently see",
-    "doLabel": "What you do because of that",
-    "getLabel": "What you get as a result"
+    "intro": "How you see a situation shapes what you do, and what you do shapes what you get. Pick one situation that's bothering you and trace it twice: once as you see it now, once through a different lens.",
+    "currentLegend": "As you see it now",
+    "altLegend": "Through a different lens",
+    "see": { "label": "What you see" },
+    "do": { "label": "What you do" },
+    "get": { "label": "What you get" },
+    "current": {
+      "see": { "placeholder": "e.g. My teenager is lazy" },
+      "do": { "placeholder": "e.g. I nag and check their homework every night" },
+      "get": { "placeholder": "e.g. Arguments, and they do even less" }
+    },
+    "alt": {
+      "see": { "placeholder": "e.g. My teenager is overwhelmed and doesn't know where to start" },
+      "do": { "placeholder": "e.g. I ask what's hard and help them plan the first step" },
+      "get": { "placeholder": "e.g. Quieter evenings and a bit more done each day" }
+    }
   },
   "form": {
-    "reflectionLabel": "Reflection"
+    "reflection": {
+      "prompt": "Anything else you noticed?",
+      "label": "Notes"
+    }
   },
-  "summary": {
-    "stepsComplete": {
-      "one": "1 of {{total}} steps complete",
-      "other": "{{count}} of {{total}} steps complete"
-    },
-    "doneHint": "Complete all three steps first: your first interpretation and difficulty rating, all three change attempts with the difference sentence, and both see-do-get chains."
+  "checklist": {
+    "firstView": "Write why you think they didn't wave back",
+    "difficulty": "Rate how hard it was to drop your first guess",
+    "attempts": "Fill in all three attempts",
+    "difference": "Write the one-sentence difference",
+    "chains": "Trace the situation both ways"
+  },
+  "guide": {
+    "inShort": "You'll read a short scene and guess what happened, then see the other side. Then you'll sort three of your own change attempts into quick fixes and real changes. Last, you'll trace one situation through two lenses. About 15 minutes. You'll end with one situation you can look at differently this week.",
+    "howTo": [
+      "Read the hallway scene and write your first guess about why they didn't wave back.",
+      "Tap \"Show the other side\", then rate how hard it was to let go of your guess.",
+      "Write three things you've tried to change about yourself, and mark each one as a quick fix or a real change.",
+      "In one sentence, say what the difference is between the two.",
+      "Pick a situation that's bothering you. Write what you see, what you do, and what you get.",
+      "Write the same situation through a different lens: what you'd see, do, and get.",
+      "Mark done when all three steps are filled in. You can come back and edit any time."
+    ],
+    "examples": [
+      {
+        "title": "Step 1",
+        "fields": [
+          {
+            "label": "Your first guess",
+            "value": "\"They're still upset about the meeting and are giving me the cold shoulder.\""
+          },
+          {
+            "label": "Difficulty",
+            "value": "4 (Hard). \"Even after reading the other side I still felt a bit snubbed.\""
+          }
+        ]
+      },
+      {
+        "title": "Step 2",
+        "fields": [
+          { "label": "Attempt 1", "value": "\"Set an alarm to get up at six\" — Quick fix" },
+          {
+            "label": "Attempt 2",
+            "value": "\"Stopped interrupting people by really trying to hear them out\" — Real change"
+          },
+          { "label": "Attempt 3", "value": "\"A budgeting app for my spending\" — Quick fix" },
+          {
+            "label": "The difference",
+            "value": "\"A quick fix works while I'm watching it. A real change keeps working when I'm not.\""
+          }
+        ]
+      },
+      {
+        "title": "Step 3",
+        "fields": [
+          { "label": "As you see it now — What you see", "value": "\"My teenager is lazy\"" },
+          {
+            "label": "As you see it now — What you do",
+            "value": "\"I nag and check their homework every night\""
+          },
+          {
+            "label": "As you see it now — What you get",
+            "value": "\"Arguments, and they do even less\""
+          },
+          {
+            "label": "Through a different lens — What you see",
+            "value": "\"My teenager is overwhelmed and doesn't know where to start\""
+          },
+          {
+            "label": "Through a different lens — What you do",
+            "value": "\"I ask what's hard and help them plan the first step\""
+          },
+          {
+            "label": "Through a different lens — What you get",
+            "value": "\"Quieter evenings and a bit more done each day\""
+          }
+        ]
+      }
+    ],
+    "afterwards": "Over the next week, catch one moment where your first guess about someone turns out to be wrong. Come back and add it to your notes. Then go on to the next exercise on the list."
   }
 }

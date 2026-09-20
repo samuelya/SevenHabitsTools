@@ -12,7 +12,7 @@
 .step-see-do-get {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   padding-block: 0.5rem;
 }
 
@@ -20,14 +20,58 @@
   inline-size: 100%;
 }
 
+// A step's first screen (step 1's View A card, its field prompt and field) has to fit above an
+// 800px viewport alongside the collapsed intro card and the guided-stepper's own step header
+// (issue #212) — a plain heading instead of `mat-card-header` (which adds its own fixed padding)
+// keeps the card as compact as possible, with margin to spare against a fallback font's slightly
+// taller line-height (`en`'s stack has no bundled Roboto, so a runner without it installed renders
+// somewhat taller than this was tuned against locally).
+.view-card mat-card-content {
+  padding-block: 0.75rem;
+}
+
+.view-title {
+  margin: 0 0 0.25rem;
+  font: var(--mat-sys-title-medium);
+}
+
 .view-card p {
   margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.field-prompt,
+.step-intro {
+  margin: 0;
+}
+
+.reveal-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .slider-field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.slider-row mat-slider {
+  flex: 1 1 auto;
+}
+
+.slider-end-label {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
 }
 
 .attempt-row,
@@ -54,7 +98,7 @@
   --mat-button-toggle-height: 44px;
 }
 
-.summary-section {
+.footer-section {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
