@@ -380,6 +380,20 @@ test.describe('maturity continuum self-assessment', () => {
       wrapper.appendChild(host);
     });
 
+    // The intro card's prompt is now always visible, not only while expanded (issue #212) — on
+    // its own it's taller than the floor for this exercise's copy at the sidebar's capped 18rem
+    // width, regardless of the card's collapsed state (confirmed: collapsing it here changes
+    // nothing, since collapsing only ever removed the *optional* "why this matters"/chapter
+    // content, never the prompt). That's real and correct — #212 §4.5.1 wants it always
+    // shown — but it means an empty history's *own* column is no longer short enough to
+    // demonstrate this test's actual subject: whether the row floor, not the column's content,
+    // is what holds a too-short row open. Hiding it here isolates that subject from copy length
+    // (already covered by the perception page's own 360×800 viewport-budget tests) instead of
+    // quietly re-measuring it here too.
+    await page.locator('app-exercise-page .intro-slot').evaluate((el) => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
     const layout = await page.evaluate(() => {
       const el = (selector: string) => document.querySelector(selector) as HTMLElement;
       const panel = el('app-exercise-page .editor-panel');
@@ -395,12 +409,16 @@ test.describe('maturity continuum self-assessment', () => {
       };
     });
 
-    // The repro is real: an empty history is a column shorter than the floor (190px of content on
-    // `ba34b11`, which is exactly what the editor was clipped to), and the form inside the editor
+    // The repro is real: an empty history is a column shorter than the floor (196px of content
+    // measured here, hidden intro card included, close to the 190px measured on `ba34b11` before
+    // the intro card could ever contribute to this column at all), and the form inside the editor
     // is many times taller than it.
     expect(layout.bodyContent).toBeLessThan(256);
     expect(layout.panelContent).toBeGreaterThan(1000);
-    // The row floor holds the editor open even with no height coming down from `.page`.
+    // The row floor holds the editor open even with no height coming down from `.page`: measured
+    // with `--split-row-floor` forced to `0px` on a copy of this exact state, `panelHeight` drops
+    // to 116px (`bodyContent`'s own, un-floored size) instead of staying at 256px — so this
+    // assertion is a real floor effect, not a coincidence of the column's own height.
     expect(layout.panelHeight).toBeGreaterThanOrEqual(256);
   });
 
