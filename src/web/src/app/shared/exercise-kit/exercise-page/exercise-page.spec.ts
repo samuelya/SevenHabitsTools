@@ -165,6 +165,40 @@ describe('ExercisePage', () => {
     expect(getComputedStyle(footer).gridRow).toBe('2');
   });
 
+  it('marks its host `fills-page` only while the desktop split grid is up (#213)', () => {
+    // The whole of this component's side of the height contract: `shell.scss`'s
+    // `.page > *:has(> .fills-page)` rule gives the routed page host `.page`'s own height while
+    // this class is on, so the split grid has a definite height to divide into rows instead of
+    // growing past the scroll container. Handset focus mode is a full-screen fixed panel that
+    // needs none of it, and a page that isn't editing must keep growing with its content (#193).
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+    const page = fixture.debugElement.query(By.directive(ExercisePage))
+      .nativeElement as HTMLElement;
+    expect(page.classList).not.toContain('fills-page');
+
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+    expect(page.classList).toContain('fills-page');
+
+    fixture.componentInstance.editing.set(false);
+    fixture.detectChanges();
+    expect(page.classList).not.toContain('fills-page');
+  });
+
+  it('never marks its host `fills-page` on handset, where the editor is a full-screen panel', () => {
+    configureTestBed(true);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+    const page = fixture.debugElement.query(By.directive(ExercisePage))
+      .nativeElement as HTMLElement;
+
+    expect(page.querySelector('.editor-panel')).not.toBeNull();
+    expect(page.classList).not.toContain('fills-page');
+  });
+
   it('shows the saving and saved status text through the aria-live region', () => {
     configureTestBed(false);
     const fixture = TestBed.createComponent(HostComponent);

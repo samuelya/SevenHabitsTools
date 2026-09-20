@@ -1,6 +1,5 @@
 import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ViewportRuler } from '@angular/cdk/scrolling';
 import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
@@ -31,9 +30,10 @@ import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.direc
  * The one page scaffold every exercise page uses (issue #185, parent #184): a single visually
  * hidden `h1` (the toolbar title is the only visible one), the projected `[intro]`/body/`[footer]`
  * stacked in the page flow, and — while `editing` — a focus-mode editor that is a full-screen
- * panel on handset and a second grid column with no scroll of its own on desktop. Purely
- * presentational: routing (or a local signal) decides `editing`, and the page's own logic decides
- * what `editorClosed` does (clear a selection, navigate back to the list route).
+ * panel on handset and a second grid column, scrolling on its own inside the page area, on
+ * desktop (issue #213). Purely presentational: routing (or a local signal) decides `editing`, and
+ * the page's own logic decides what `editorClosed` does (clear a selection, navigate back to the
+ * list route).
  *
  * The focus-move-in-on-open/focus-return-on-close approach (`afterNextRender`, capture the
  * trigger element before moving focus away from it) is ported from `ExerciseDetail`
@@ -47,13 +47,17 @@ import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.direc
   styleUrl: './exercise-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{ provide: EDITOR_FOCUS_HOST, useExisting: forwardRef(() => ExercisePage) }],
+  // The whole of this component's "how tall is the space I have" logic (issue #213): while the
+  // desktop split grid is up, the routed page host above this one must stop growing with its
+  // content and be exactly as tall as `.page`, the shell's scroll container. `shell.scss` does
+  // that with one rule keyed on this class (`.page > *:has(> .fills-page)`); this component only
+  // states *when* it needs it, and never measures or reaches out of its own host.
+  host: { '[class.fills-page]': 'splitEditing()' },
 })
 export class ExercisePage implements EditorFocusHost {
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly document = inject(DOCUMENT);
   private readonly injector = inject(Injector);
-  private readonly viewportRuler = inject(ViewportRuler);
-  private readonly host = inject(ElementRef<HTMLElement>);
 
   /** Rendered as the page's only, visually hidden, `h1`; the toolbar title is the visible one. */
   readonly title = input.required<string>();
@@ -79,6 +83,10 @@ export class ExercisePage implements EditorFocusHost {
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
 
+  /** Focus mode as a second column beside the body, i.e. everywhere but handset (where it is a
+   * full-screen panel instead and needs none of this): the one state in which the scaffold is a
+   * grid that has to fit the page area rather than grow with its tallest column. */
+  protected readonly splitEditing = computed(() => this.editing() && !this.handset());
   /** Hidden entirely on handset while editing, so it never sits behind the full-screen panel. */
   protected readonly showFooter = computed(() => !(this.handset() && this.editing()));
   /** `inert`, not just visually behind the panel, so a screen reader can't land there either
@@ -129,37 +137,6 @@ export class ExercisePage implements EditorFocusHost {
         this.introCard()?.expanded.set(false);
       }
     });
-
-    // The desktop split grid (`.scaffold.editing:not(.handset)` in `exercise-page.scss`) needs a
-    // real ceiling on its own height, not just the "at least this tall" floor every page's own
-    // `:host` sets (`min-block-size: 100%`, kept loose so a short, non-split page's footer still
-    // reaches `.page`'s bottom — issue #193). Without one, a tall column just grows the whole
-    // scaffold past the viewport instead of scrolling in place (issue #213, review round 1). This
-    // measures it directly instead of hardcoding the shell's toolbar height in the stylesheet,
-    // which would silently drift the moment that height changes. `ViewportRuler`, not a hand-rolled
-    // `resize` listener: it already runs outside the Angular zone and de-duplicates listeners
-    // across every consumer.
-    effect((onCleanup) => {
-      if (!this.editing() || this.handset()) {
-        return;
-      }
-      const recompute = () => this.updateSplitBlockSize();
-      afterNextRender(recompute, { injector: this.injector });
-      const subscription = this.viewportRuler.change(100).subscribe(recompute);
-      onCleanup(() => {
-        subscription.unsubscribe();
-        this.host.nativeElement.style.removeProperty('--split-block-size');
-      });
-    });
-  }
-
-  /** Sets `--split-block-size` (read by `.scaffold.editing:not(.handset)`'s `block-size`) to this
-   * host's own distance from the bottom of the visual viewport — the space the split grid
-   * genuinely has, regardless of how tall either of its columns wants to be. */
-  private updateSplitBlockSize(): void {
-    const top = this.host.nativeElement.getBoundingClientRect().top;
-    const available = this.viewportRuler.getViewportSize().height - top;
-    this.host.nativeElement.style.setProperty('--split-block-size', `${Math.max(available, 0)}px`);
   }
 
   private moveFocus(editing: boolean): void {

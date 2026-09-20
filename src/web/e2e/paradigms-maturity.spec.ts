@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
@@ -42,6 +43,31 @@ const TEXT: Record<
     undo: 'تراجع',
   },
 };
+
+/** 14 saved assessments: review round 1's own measured repro for a history column taller than the
+ * page area at 1280x800. An empty or short history never reaches it. */
+function longHistory(): {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  date: string;
+  areas: [];
+}[] {
+  const now = '2026-01-01T00:00:00.000Z';
+  return Array.from({ length: 14 }, (_, i) => ({
+    id: `maturity-history-${i}`,
+    createdAt: now,
+    updatedAt: now,
+    date: `2026-01-${String(i + 1).padStart(2, '0')}`,
+    areas: [] as [],
+  }));
+}
+
+/** How much taller than its visible box `.page` (the shell's scroll container) is — 0 while the
+ * split editor is the whole page area, which is the guarantee issue #213 restores. */
+async function pageOverflow(page: Page): Promise<number> {
+  return page.locator('main.page').evaluate((el) => el.scrollHeight - el.clientHeight);
+}
 
 test.describe('maturity continuum self-assessment', () => {
   test('rates every area, sees the overall profile, marks the exercise done, and it survives a reload', async ({
@@ -160,14 +186,7 @@ test.describe('maturity continuum self-assessment', () => {
       testInfo.project.name.startsWith('mobile'),
       'split mode only exists at or above HANDSET_QUERY',
     );
-    const now = '2026-01-01T00:00:00.000Z';
-    const assessments = Array.from({ length: 14 }, (_, i) => ({
-      id: `maturity-history-${i}`,
-      createdAt: now,
-      updatedAt: now,
-      date: `2026-01-${String(i + 1).padStart(2, '0')}`,
-      areas: [],
-    }));
+    const assessments = longHistory();
     await seedDocument({ habits: { paradigms: { maturity: assessments } } });
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/habits/paradigms/maturity/${assessments[0].id}`);
@@ -202,6 +221,73 @@ test.describe('maturity continuum self-assessment', () => {
 
     const markDoneButton = page.locator('app-done-toggle button');
     await expect(markDoneButton).toBeInViewport();
+
+    // Review round 2's own finding, from the other direction: the split grid takes its height
+    // from `.page` (the shell's scroll container) itself, so opening the editor must not make the
+    // content area scrollable when it wasn't. A measured height that is even 16px too tall shows
+    // up here as a scrollbar on `.page` and the bottom of the footer row below the fold.
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+  });
+
+  // Review round 2, finding 2: the previous fix measured the *viewport*, not `.page`, so opening
+  // an item after scrolling the history column sized the grid to `viewportHeight + scrollTop` —
+  // the page stayed scrollable by that much and scrolling up carried the footer row, summary and
+  // "Mark done" included, out of view. Bounding the grid by the scroll container instead leaves
+  // nothing to overflow, so the browser clamps the scroll offset back to 0 on open.
+  test('desktop split mode: opening an item after scrolling the history keeps the footer on screen', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    await seedDocument({ habits: { paradigms: { maturity: longHistory() } } });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/habits/paradigms/maturity');
+
+    const scrollArea = page.locator('main.page');
+    await scrollArea.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    // The list alone really is taller than the page area, i.e. the repro is set up.
+    expect(await scrollArea.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+
+    await page.locator('.assessment-history-list__item').last().click();
+    await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
+
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+    expect(await scrollArea.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect(page.locator('app-exercise-page .footer-slot')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('app-done-toggle button')).toBeInViewport({ ratio: 1 });
+  });
+
+  // Review round 2, finding 3: the shell renders the offline indicator, the read-only banner and
+  // the PWA install banner above the toolbar, and all three appear and disappear at runtime —
+  // none of them a `ViewportRuler.change()` trigger. Losing the network mid-edit shrinks `.page`;
+  // the split grid has to follow, or the footer row is pushed below the fold. Taking the height
+  // from `.page` in CSS makes that a plain relayout, with nothing to subscribe to.
+  test('desktop split mode: the offline indicator appearing mid-edit keeps the footer on screen', async ({
+    page,
+    seedDocument,
+    goOffline,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    const history = longHistory();
+    await seedDocument({ habits: { paradigms: { maturity: history } } });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/habits/paradigms/maturity/${history[0].id}`);
+    await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
+
+    const indicator = page.locator('app-offline-indicator .offline-indicator');
+    await expect(indicator).toBeHidden();
+    await goOffline();
+    await expect(indicator).toBeVisible();
+
+    expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
+    await expect(page.locator('app-exercise-page .footer-slot')).toBeInViewport({ ratio: 1 });
+    await expect(page.locator('app-done-toggle button')).toBeInViewport({ ratio: 1 });
   });
 
   // Issue #203: the shared delete pattern via the history's own bin button — Cancel leaves the

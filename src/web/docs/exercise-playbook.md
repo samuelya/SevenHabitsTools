@@ -140,20 +140,28 @@ ad hoc markup:
   editor takes the rest of the width. Neither column can grow the split grid past the viewport and
   reopen issue #213 (a tall editor doing that put the sticky footer over the last field; a tall
   body/history column does it too, review round 1) — but that grid needs a *definite* height for
-  either column's own overflow rule to mean anything (a `1fr`/`auto` track only distributes real
-  free space once its container has one; every page's own `:host` only sets a *floor*
-  — `min-block-size: 100%` — on purpose, so a short page's footer still reaches `.page`'s bottom,
-  and nothing above that floor is genuinely fixed). `ExercisePage` measures its own distance from
-  the bottom of the visual viewport (`ViewportRuler`, recomputed on open and on every viewport
-  change) and sets `--split-block-size` accordingly; `.scaffold.editing:not(.handset)` uses that as
-  a real `block-size`, not a `max-block-size` (measured: a `max-` only clamps the *box* after
-  content-based tracks are already sized, so a tall column just overflows the clamp instead of
-  shrinking to it). With the grid genuinely bounded, `.editor-panel` is `position: absolute; inset:
-  0` inside the grid's own `position: relative`, so it makes no content contribution to row 1's
-  sizing and scrolls internally (`overflow-y: auto`) instead of growing it; `.body` is stretched to
-  fill row 1 (`align-items: stretch`) with `min-block-size: 0` (lifting the grid item's default
-  content-based minimum) plus its own `overflow-y: auto`, so it scrolls in place instead of
-  overflowing the now-real row. Either way the footer never overlaps the column. Both breakpoints
+  either column's own overflow rule to mean anything: a `1fr`/`auto` track only distributes real
+  free space once its container has one, and every page's own `:host` sets only a *floor*
+  (`min-block-size: 100%`, on purpose, so a short page's footer still reaches `.page`'s bottom,
+  issue #193). That height comes from `.page`, the shell's one scroll container, in CSS only:
+  while the split grid is up, `ExercisePage` marks its own host `.fills-page`, and `shell.scss`'s
+  `.page > *:has(> .fills-page)` rule gives the routed page host `block-size: 100%` of `.page`'s
+  content box; `min-block-size: 0` on the host and on the grid then lets the chain shrink to it.
+  **So the page's own host must be a flex column filling `.page` (the footer-slot SCSS below) and
+  `<app-exercise-page>` must be that host's own child** — wrap it in a `<div>` and the rule stops
+  matching and the scaffold falls back to content sizing (`/dev/kit` is deliberately in that
+  state). Don't reintroduce a measured height: round 2 of #213 measured the *layout viewport* with
+  `ViewportRuler` and was wrong by `.page`'s 16px padding on every open, wrong again by its scroll
+  offset when an item was opened after scrolling the list, and never recomputed at all for the
+  offline indicator, the read-only banner or the PWA install banner, which appear and disappear
+  above the toolbar at runtime. A percentage of `.page` handles all four as plain relayout. With
+  the grid genuinely bounded, `.editor-panel` is `position: absolute; inset: 0` inside the grid's
+  own `position: relative` (both grid lines spelled out), so it makes no content contribution to
+  row 1's sizing and scrolls internally (`overflow-y: auto`) instead of growing it; `.body` is
+  stretched to fill row 1 (`align-items: stretch`) with `min-block-size: 0` (lifting the grid
+  item's default content-based minimum) plus its own `overflow-y: auto`, so it scrolls in place
+  instead of overflowing the now-real row. Either way the footer never overlaps the column. Both
+  breakpoints
   share the same editor header (back/close button, `editorTitle()`, an `aria-live`
   "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
   inputs above.

@@ -4,12 +4,25 @@
   // `flex: 1 1 auto`, not `min-block-size: 100%`: a percentage resolves against the parent's
   // `height` *property*, which is `auto` for a host that is merely stretched, so it silently
   // computes to `auto` and the whole chain collapses to content height (issue #193, measured).
-  // **A page using this scaffold must make its own host a flex column that fills `.page`** —
-  // `:host { display: flex; flex-direction: column; min-block-size: 100%; }`, see
-  // `transition-page.scss` and the playbook's "Page layout" section.
+  // **A page using this scaffold must make its own host a flex column that fills `.page`, and
+  // render `<app-exercise-page>` as that host's own child** — `:host { display: flex;
+  // flex-direction: column; min-block-size: 100%; }`, see `transition-page.scss` and the
+  // playbook's "Page layout" section. The second half is what `shell.scss`'s
+  // `.page > *:has(> .fills-page)` rule keys on (issue #213, and the desktop split grid below).
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+}
+
+// Desktop focus mode only (`ExercisePage.splitEditing()` sets this class on the host). Two halves
+// of one contract with the shell: that class tells `shell.scss` to make the routed page host
+// exactly `.page`'s height, and `min-block-size: 0` here is what lets this flex item then *shrink*
+// to it — a flex item's automatic minimum size is its content size, so without this override the
+// scaffold would still push past the now-bounded host instead of scrolling inside it. Both are
+// scoped to the class, so a non-split page keeps #193's deliberately loose "grow with the
+// content" behaviour untouched.
+:host(.fills-page) {
+  min-block-size: 0;
 }
 
 .visually-hidden {
@@ -61,58 +74,63 @@
   padding-block-end: calc(1rem + env(safe-area-inset-bottom));
 }
 
-// Desktop, focus mode: the body column shrinks and the editor takes the rest of the width. The
-// body column scrolls on its own now too (below), same trick as the editor column (see
-// `.editor-panel`, issue #213), so the footer never overlaps either one. A CSS grid, not a
-// drawer: grid tracks are direction-aware, so the editor lands at the inline-end under `dir="rtl"`
-// with no extra rule.
+// Desktop, focus mode: the body column shrinks and the editor takes the rest of the width. Both
+// columns scroll on their own inside the page area, so the footer row never overlaps either one
+// (issue #213). A CSS grid, not a drawer: grid tracks are direction-aware, so the editor lands at
+// the inline-end under `dir="rtl"` with no extra rule.
 // Rows are pinned explicitly: DOM order is body, footer, editor (the footer's `@if` sits between
 // them in the template), so sparse auto-placement would otherwise put the editor in row 2, under
 // the sticky footer, instead of beside the body in row 1.
 // `position: relative`: makes this grid's own areas the containing block for the absolutely
 // positioned `.editor-panel` below (issue #213) — see that rule's comment for why.
 //
-// `block-size: var(--split-block-size, 100dvh)`, not `max-block-size`: without a *definite* size
-// here, `1fr`/`auto` tracks fall back to sizing each row by its content (there being no free
-// space to actually distribute), so this grid keeps growing with its tallest column instead —
-// past `.scaffold`'s "at least" convention (`min-block-size: 100%` on every page's own `:host`,
-// e.g. `maturity-page.scss` — a *floor*, kept loose on purpose so a short, non-split page's footer
-// still reaches `.page`'s bottom edge, issue #193) — there is no ancestor with a genuinely fixed
-// height for a plain CSS percentage to land on, only that floor. `max-block-size` alone doesn't
-// fix this either (measured): it only clamps the *box* after the (still content-based) tracks are
-// already sized, so a tall row simply overflows the clamped box instead of shrinking to it — grid
-// track sizing needs the container's size to be definite, not merely bounded, before `fr` actually
-// distributes free space. Review round 1 on issue #213 measured the resulting bug with a
-// 14-assessment history at 1280x800: `.body`'s `scrollHeight` equalled its `clientHeight` even
-// with its own `min-block-size: 0`/`overflow-y: auto` in place (below) — nothing ever gave it a
-// smaller available space to scroll within, so the grid, `.scaffold`, `:host` and the whole page
-// grew past the viewport instead, putting the sticky footer over the still-visible editor
-// underneath.
-// `ExercisePage.updateSplitBlockSize()` sets `--split-block-size` to `:host`'s own distance from
-// the bottom of the visual viewport (`ViewportRuler`, not a hand-rolled resize listener: it
-// already runs outside the Angular zone and de-duplicates listeners across every consumer),
-// recomputed on open and on every viewport change while a split editor is open. That measurement
-// is deliberately kept out of this stylesheet instead of hardcoding the shell's toolbar height
-// here, which would silently drift the moment `shell.scss`'s toolbar or `.page` padding changes;
-// `100dvh` is only the pre-measurement fallback for the one frame before the first measurement
-// lands.
+// **Where this grid's height comes from.** `1fr`/`auto` tracks only distribute free space when the
+// grid container's block size is *definite*; with an indefinite one they fall back to sizing each
+// row by its content, and the grid grows with its tallest column instead — past the viewport,
+// leaving the sticky footer painting over editor content that is still visible underneath (the
+// original #213 bug, and review round 1's long-history variant of it). Nothing in the ancestor
+// chain used to provide that definite size: every page's own `:host` sets only a
+// `min-block-size: 100%` *floor*, kept loose on purpose so a short, non-split page's footer still
+// reaches `.page`'s bottom edge (issue #193), and `max-block-size` doesn't help either (measured —
+// it clamps the box *after* content-based tracks are already sized, so a tall row just overflows
+// the clamped box).
+// It now comes from the one box that genuinely knows the answer: `.page`, the shell's scroll
+// container. While `ExercisePage.splitEditing()` is true it marks its host `.fills-page`, and
+// `shell.scss`'s `.page > *:has(> .fills-page)` rule sets the routed page host to
+// `block-size: 100%` of `.page`'s content box; `min-block-size: 0` on `:host(.fills-page)` (above)
+// and on this grid lets the chain shrink to it, at which point a flex item's post-flexing main
+// size in a definite-size container is itself definite (CSS Flexbox §9.8) and the tracks below get
+// real free space to divide. That is plain layout, so it is exact to the pixel (a percentage of
+// `.page`'s content box already excludes its `padding: 16px`) and self-correcting: the offline
+// indicator, read-only banner or PWA install banner appearing mid-edit shrinks `.page` and this
+// grid follows in the same layout pass, with nothing to subscribe to and no measurement to go
+// stale (round 2's `ViewportRuler` read the *layout viewport* instead, and was wrong by the
+// padding, by `.page`'s scroll offset, and for every one of those three banners).
+// Where a page doesn't meet that contract (`<app-exercise-page>` not a direct child of the routed
+// host — `/dev/kit` nests it inside a `<section>`), or in a browser without `:has()`, the rule
+// simply doesn't match and the grid falls back to content sizing: the pre-#213 layout, never a
+// collapsed one.
 .scaffold.editing:not(.handset) {
   display: grid;
   position: relative;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
-  // `1fr auto`, not `auto auto`: row 1 takes up whatever `block-size` above doesn't give to the
-  // footer's own (auto) row, so the footer row sits at the bottom edge regardless of either
-  // column's content (`margin-block-start: auto` does nothing to a grid item — issue #193).
+  // `1fr auto`, not `auto auto`: row 1 takes whatever this grid's (now definite, see above)
+  // height doesn't give to the footer's own (auto) row, so the footer row sits at the bottom edge
+  // regardless of either column's content (`margin-block-start: auto` does nothing to a grid
+  // item — issue #193).
   grid-template-rows: 1fr auto;
   // `stretch` (`normal`'s own effective default, spelled out): `.body` must actually be *given*
   // row 1's full, now-genuine height to have anything real to clip/scroll against below — `start`
   // would size it to its own content instead and let a tall one overflow the row visually, right
-  // past the now-pointless `block-size` above (measured). Nothing to see here for a short list
+  // past the height the grid was just given (measured). Nothing to see here for a short list
   // either way: `.body` has no background/border, so unused space at the bottom of the row
   // (`start`'s old effect) and unused scrollable space inside it (`stretch`'s) look identical.
   align-items: stretch;
   gap: 1rem;
-  block-size: var(--split-block-size, 100dvh);
+  // See "Where this grid's height comes from" above: the height arrives through the flex chain
+  // from `.page`, so this is `auto`; `min-block-size: 0` is what lets it actually shrink to the
+  // bounded host instead of being held open by its own content.
+  min-block-size: 0;
 }
 
 // `min-block-size: 0`, not the grid default `auto`: a grid item's implied minimum size is its
