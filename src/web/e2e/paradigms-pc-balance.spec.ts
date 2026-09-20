@@ -88,6 +88,32 @@ test.describe('P/PC balance audit', () => {
     await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
   });
 
+  // Issue #213: the shared fix on `exercise-page.scss` applies to every split-mode editor, not
+  // just the tall maturity form (`e2e/paradigms-maturity.spec.ts` has the primary repro).
+  test('desktop split mode: the footer never overlaps the editor column', async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    await page.setViewportSize({ width: 1280, height: 1500 });
+    await page.goto('/habits/paradigms/pc-balance');
+
+    await page.locator('.add-button').click();
+    const form = page.locator('app-pc-balance-audit-form');
+    await expect(form).toBeVisible();
+
+    const reflectionEditor = form.locator('app-reflection-editor');
+    await reflectionEditor.scrollIntoViewIfNeeded();
+
+    const footerBox = await page.locator('app-exercise-page .footer-slot').boundingBox();
+    const reflectionBox = await reflectionEditor.boundingBox();
+    expect(footerBox).not.toBeNull();
+    expect(reflectionBox).not.toBeNull();
+    expect(reflectionBox!.y + reflectionBox!.height).toBeLessThanOrEqual(footerBox!.y);
+  });
+
   test('accessibility: the audit page and its open editor have no serious or critical violations', async ({
     page,
   }) => {

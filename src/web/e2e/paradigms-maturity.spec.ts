@@ -110,6 +110,43 @@ test.describe('maturity continuum self-assessment', () => {
     ).toEqual([]);
   });
 
+  // Issue #213: desktop split mode used to let a tall editor grow the grid row past the
+  // viewport, putting the sticky footer over the last field. The six built-in areas with a
+  // filled-in note each (autosizing to its max rows, `cdkAutosizeMaxRows`) is the primary repro
+  // for the shared fix (`exercise-page.scss`) — an *empty* form isn't tall enough at 1280x1500 to
+  // reach the bug.
+  test('desktop split mode: the footer never overlaps the last area note field', async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    await page.setViewportSize({ width: 1280, height: 1500 });
+    await page.goto('/habits/paradigms/maturity');
+
+    await page.locator('.add-button').click();
+    const form = page.locator('app-maturity-assessment-form');
+    await expect(form).toBeVisible();
+
+    const noteFields = form.locator('.area-row .area-note textarea');
+    const areaCount = await noteFields.count();
+    for (let i = 0; i < areaCount; i++) {
+      await noteFields.nth(i).fill('one\ntwo\nthree\nfour\nfive\nsix\nseven');
+    }
+
+    const lastNote = form.locator('.area-row').last().locator('.area-note');
+    await lastNote.scrollIntoViewIfNeeded();
+    await expect(lastNote).toBeInViewport();
+
+    const footerBox = await page.locator('app-exercise-page .footer-slot').boundingBox();
+    const noteBox = await lastNote.boundingBox();
+    expect(footerBox).not.toBeNull();
+    expect(noteBox).not.toBeNull();
+    // The two boxes never intersect: the note field's bottom edge stays above the footer's top.
+    expect(noteBox!.y + noteBox!.height).toBeLessThanOrEqual(footerBox!.y);
+  });
+
   // Issue #203: the shared delete pattern via the history's own bin button — Cancel leaves the
   // assessment in place, Delete tombstones it and offers Undo through the snackbar.
   test('deletes an assessment from the history, with a confirm dialog and an Undo snackbar', async ({

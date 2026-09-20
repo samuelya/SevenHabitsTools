@@ -137,9 +137,13 @@ ad hoc markup:
   slot has content (`hasDetail()` for a list; a worksheet has no focus mode at all — see below).
   Below `HANDSET_QUERY` it's a full-screen panel over everything, including the bottom
   navigation; at or above it, the intro collapses, the body shrinks to a compact column and the
-  editor takes the rest of the width with no scroll of its own. Both breakpoints share the same
-  editor header (back/close button, `editorTitle()`, an `aria-live` "Saved"/"Saving…" status) —
-  the kit builds it; the page only supplies the three inputs above.
+  editor takes the rest of the width. The editor column scrolls on its own there (`overflow-y:
+  auto` on `.editor-panel`, `min-block-size: 0` so it doesn't grow the grid row past the viewport)
+  so the footer never overlaps it — issue #213 found the earlier "no scroll of its own" version
+  let a tall editor grow the row past the viewport, putting the sticky footer over the last field.
+  Both breakpoints share the same editor header (back/close button, `editorTitle()`, an
+  `aria-live` "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
+  inputs above.
 - **`editorStatus()`:** `'saved'` once `hasDetail()` — this page's `store.update()` calls are
   synchronous, so every applied edit (including creating the item) is "saved" the instant it
   lands; `null` otherwise. Only compute `'saving'` if a feature's own persistence genuinely has a

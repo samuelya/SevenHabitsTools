@@ -159,7 +159,9 @@ describe('ExercisePage', () => {
     const footer = host.querySelector('.footer-slot') as HTMLElement;
 
     expect(getComputedStyle(body).gridRow).toBe('1');
-    expect(getComputedStyle(editorPanel).gridRow).toBe('1');
+    // `1 / 2`, not `1`: the editor panel is absolutely positioned (issue #213), and an abspos grid
+    // item's containing block only clips to the track's far edge when both lines are given.
+    expect(getComputedStyle(editorPanel).gridRow).toBe('1/2');
     expect(getComputedStyle(footer).gridRow).toBe('2');
   });
 

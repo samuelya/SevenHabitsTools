@@ -61,14 +61,19 @@
   padding-block-end: calc(1rem + env(safe-area-inset-bottom));
 }
 
-// Desktop, focus mode: the body column shrinks and the editor takes the rest of the width, so the
-// page — not the editor — is the scroll container. A CSS grid, not a drawer: grid tracks are
-// direction-aware, so the editor lands at the inline-end under `dir="rtl"` with no extra rule.
+// Desktop, focus mode: the body column shrinks and the editor takes the rest of the width. The
+// body column still scrolls with the page, same as always; the editor column scrolls on its own
+// (see `.editor-panel` below, issue #213) so the footer never overlaps it. A CSS grid, not a
+// drawer: grid tracks are direction-aware, so the editor lands at the inline-end under `dir="rtl"`
+// with no extra rule.
 // Rows are pinned explicitly: DOM order is body, footer, editor (the footer's `@if` sits between
 // them in the template), so sparse auto-placement would otherwise put the editor in row 2, under
 // the sticky footer, instead of beside the body in row 1.
+// `position: relative`: makes this grid's own areas the containing block for the absolutely
+// positioned `.editor-panel` below (issue #213) — see that rule's comment for why.
 .scaffold.editing:not(.handset) {
   display: grid;
+  position: relative;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
   // `1fr auto`, not `auto auto`: row 1 takes the free space of a short page so the footer row sits
   // at the bottom edge (`margin-block-start: auto` does nothing to a grid item — issue #193).
@@ -106,10 +111,29 @@
   overflow-y: auto;
 }
 
-// Desktop: a normal grid column with no scroll of its own — the page scrolls.
+// Desktop: the editor column scrolls on its own (issue #213 — a tall editor used to grow row 1
+// (and the whole flex chain up to `.page`) past the viewport, which put `.footer-slot`'s sticky
+// row far below the still-visible editor content it then overlapped). `grid-column`/`grid-row`
+// still place this in row 1's column 2 *area*, but `position: absolute` takes it out of that
+// row's own *sizing*: an absolutely positioned grid item makes no content contribution to its
+// track (same reasoning as the handset panel below, whose `position: fixed` doesn't feed its
+// content height back into the layout it covers either), so row 1's height comes from `.body`
+// alone (a short compact column) instead of the editor, and `.scaffold` itself stays a normal,
+// boundable flex item — no longer forced taller than the viewport by the editor's content. `inset:
+// 0` then sizes this panel to that now-definite row 1 / column 2 area (`.scaffold`'s own
+// `position: relative` makes the grid area, not the viewport, the containing block), and
+// `overflow-y: auto` scrolls the overflow inside it instead of growing the row. Both lines of the
+// area are spelled out (`1 / 2`, `2 / 3`), not just the start line: a grid item's containing block
+// only clips to the *track's* far edge when both ends are given — a bare `grid-row: 1` leaves the
+// end line unspecified, so an absolutely positioned item falls back to the *grid container's* far
+// edge instead, undoing the whole point (measured: the panel then reached past row 1, in under the
+// footer's own row).
 .scaffold.editing:not(.handset) .editor-panel {
-  grid-column: 2;
-  grid-row: 1;
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
 }
 
 .editor-header {
