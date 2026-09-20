@@ -147,6 +147,63 @@ test.describe('maturity continuum self-assessment', () => {
     expect(noteBox!.y + noteBox!.height).toBeLessThanOrEqual(footerBox!.y);
   });
 
+  // Review round 1 on #213's PR: the first fix only bounded the *editor* column, so a `.body`
+  // column (the history list) taller than the viewport reopened the same bug from the other side
+  // — grew row 1 past the viewport and put the sticky footer over the still-visible editor
+  // underneath. 14 saved assessments at 1280x800 is the review's own measured repro; an empty or
+  // short history isn't tall enough to reach it.
+  test('desktop split mode with a long history: the footer never overlaps the editor underneath', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    const now = '2026-01-01T00:00:00.000Z';
+    const assessments = Array.from({ length: 14 }, (_, i) => ({
+      id: `maturity-history-${i}`,
+      createdAt: now,
+      updatedAt: now,
+      date: `2026-01-${String(i + 1).padStart(2, '0')}`,
+      areas: [],
+    }));
+    await seedDocument({ habits: { paradigms: { maturity: assessments } } });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/habits/paradigms/maturity/${assessments[0].id}`);
+
+    const form = page.locator('app-maturity-assessment-form');
+    await expect(form).toBeVisible();
+    await expect(page.locator('.assessment-history-list__item')).toHaveCount(14);
+
+    const body = page.locator('app-exercise-page .body');
+    // Confirms the repro is actually exercised — the list is taller than the space it's given, so
+    // it scrolls on its own instead of growing row 1 (a vacuous pass here would mean the test
+    // stopped reproducing the bug, the same trap review flagged on the transition/pc-balance
+    // tests).
+    const isBodyScrollable = await body.evaluate((el) => el.scrollHeight > el.clientHeight + 1);
+    expect(isBodyScrollable).toBe(true);
+
+    const footerBox = await page.locator('app-exercise-page .footer-slot').boundingBox();
+    expect(footerBox).not.toBeNull();
+    // Same hit-test review used to catch the bug: nothing at the footer's own bar, checked at its
+    // vertical mid-point and near its inline end, resolves to the editor form underneath it.
+    for (const fraction of [0.5, 0.85]) {
+      const point = {
+        x: footerBox!.x + footerBox!.width * fraction,
+        y: footerBox!.y + footerBox!.height / 2,
+      };
+      const hitsForm = await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('form') !== null,
+        point,
+      );
+      expect(hitsForm).toBe(false);
+    }
+
+    const markDoneButton = page.locator('app-done-toggle button');
+    await expect(markDoneButton).toBeInViewport();
+  });
+
   // Issue #203: the shared delete pattern via the history's own bin button — Cancel leaves the
   // assessment in place, Delete tombstones it and offers Undo through the snackbar.
   test('deletes an assessment from the history, with a confirm dialog and an Undo snackbar', async ({

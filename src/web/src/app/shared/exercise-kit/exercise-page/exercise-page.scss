@@ -62,8 +62,8 @@
 }
 
 // Desktop, focus mode: the body column shrinks and the editor takes the rest of the width. The
-// body column still scrolls with the page, same as always; the editor column scrolls on its own
-// (see `.editor-panel` below, issue #213) so the footer never overlaps it. A CSS grid, not a
+// body column scrolls on its own now too (below), same trick as the editor column (see
+// `.editor-panel`, issue #213), so the footer never overlaps either one. A CSS grid, not a
 // drawer: grid tracks are direction-aware, so the editor lands at the inline-end under `dir="rtl"`
 // with no extra rule.
 // Rows are pinned explicitly: DOM order is body, footer, editor (the footer's `@if` sits between
@@ -71,21 +71,63 @@
 // the sticky footer, instead of beside the body in row 1.
 // `position: relative`: makes this grid's own areas the containing block for the absolutely
 // positioned `.editor-panel` below (issue #213) — see that rule's comment for why.
+//
+// `block-size: var(--split-block-size, 100dvh)`, not `max-block-size`: without a *definite* size
+// here, `1fr`/`auto` tracks fall back to sizing each row by its content (there being no free
+// space to actually distribute), so this grid keeps growing with its tallest column instead —
+// past `.scaffold`'s "at least" convention (`min-block-size: 100%` on every page's own `:host`,
+// e.g. `maturity-page.scss` — a *floor*, kept loose on purpose so a short, non-split page's footer
+// still reaches `.page`'s bottom edge, issue #193) — there is no ancestor with a genuinely fixed
+// height for a plain CSS percentage to land on, only that floor. `max-block-size` alone doesn't
+// fix this either (measured): it only clamps the *box* after the (still content-based) tracks are
+// already sized, so a tall row simply overflows the clamped box instead of shrinking to it — grid
+// track sizing needs the container's size to be definite, not merely bounded, before `fr` actually
+// distributes free space. Review round 1 on issue #213 measured the resulting bug with a
+// 14-assessment history at 1280x800: `.body`'s `scrollHeight` equalled its `clientHeight` even
+// with its own `min-block-size: 0`/`overflow-y: auto` in place (below) — nothing ever gave it a
+// smaller available space to scroll within, so the grid, `.scaffold`, `:host` and the whole page
+// grew past the viewport instead, putting the sticky footer over the still-visible editor
+// underneath.
+// `ExercisePage.updateSplitBlockSize()` sets `--split-block-size` to `:host`'s own distance from
+// the bottom of the visual viewport (`ViewportRuler`, not a hand-rolled resize listener: it
+// already runs outside the Angular zone and de-duplicates listeners across every consumer),
+// recomputed on open and on every viewport change while a split editor is open. That measurement
+// is deliberately kept out of this stylesheet instead of hardcoding the shell's toolbar height
+// here, which would silently drift the moment `shell.scss`'s toolbar or `.page` padding changes;
+// `100dvh` is only the pre-measurement fallback for the one frame before the first measurement
+// lands.
 .scaffold.editing:not(.handset) {
   display: grid;
   position: relative;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
-  // `1fr auto`, not `auto auto`: row 1 takes the free space of a short page so the footer row sits
-  // at the bottom edge (`margin-block-start: auto` does nothing to a grid item — issue #193).
+  // `1fr auto`, not `auto auto`: row 1 takes up whatever `block-size` above doesn't give to the
+  // footer's own (auto) row, so the footer row sits at the bottom edge regardless of either
+  // column's content (`margin-block-start: auto` does nothing to a grid item — issue #193).
   grid-template-rows: 1fr auto;
-  align-items: start;
+  // `stretch` (`normal`'s own effective default, spelled out): `.body` must actually be *given*
+  // row 1's full, now-genuine height to have anything real to clip/scroll against below — `start`
+  // would size it to its own content instead and let a tall one overflow the row visually, right
+  // past the now-pointless `block-size` above (measured). Nothing to see here for a short list
+  // either way: `.body` has no background/border, so unused space at the bottom of the row
+  // (`start`'s old effect) and unused scrollable space inside it (`stretch`'s) look identical.
+  align-items: stretch;
   gap: 1rem;
+  block-size: var(--split-block-size, 100dvh);
 }
 
+// `min-block-size: 0`, not the grid default `auto`: a grid item's implied minimum size is its
+// content size, so without this override `.body` would refuse to shrink to row 1's now-genuine,
+// stretched height (above) and would overflow past it instead — the same "don't let content push
+// past a container that's supposed to clip it" reasoning as `.editor-panel`'s own
+// `position: absolute` below, just reached here through a plain minimum override instead, since
+// `.body` (unlike the editor panel) still needs to take part in row 1's sizing. `overflow-y: auto`
+// then scrolls `.body`'s own overflow inside that bounded height instead of growing it.
 .scaffold.editing:not(.handset) .body {
   grid-column: 1;
   grid-row: 1;
   min-inline-size: 0;
+  min-block-size: 0;
+  overflow-y: auto;
 }
 
 .scaffold.editing:not(.handset) .footer-slot {

@@ -137,12 +137,25 @@ ad hoc markup:
   slot has content (`hasDetail()` for a list; a worksheet has no focus mode at all — see below).
   Below `HANDSET_QUERY` it's a full-screen panel over everything, including the bottom
   navigation; at or above it, the intro collapses, the body shrinks to a compact column and the
-  editor takes the rest of the width. The editor column scrolls on its own there (`overflow-y:
-  auto` on `.editor-panel`, `min-block-size: 0` so it doesn't grow the grid row past the viewport)
-  so the footer never overlaps it — issue #213 found the earlier "no scroll of its own" version
-  let a tall editor grow the row past the viewport, putting the sticky footer over the last field.
-  Both breakpoints share the same editor header (back/close button, `editorTitle()`, an
-  `aria-live` "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
+  editor takes the rest of the width. Neither column can grow the split grid past the viewport and
+  reopen issue #213 (a tall editor doing that put the sticky footer over the last field; a tall
+  body/history column does it too, review round 1) — but that grid needs a *definite* height for
+  either column's own overflow rule to mean anything (a `1fr`/`auto` track only distributes real
+  free space once its container has one; every page's own `:host` only sets a *floor*
+  — `min-block-size: 100%` — on purpose, so a short page's footer still reaches `.page`'s bottom,
+  and nothing above that floor is genuinely fixed). `ExercisePage` measures its own distance from
+  the bottom of the visual viewport (`ViewportRuler`, recomputed on open and on every viewport
+  change) and sets `--split-block-size` accordingly; `.scaffold.editing:not(.handset)` uses that as
+  a real `block-size`, not a `max-block-size` (measured: a `max-` only clamps the *box* after
+  content-based tracks are already sized, so a tall column just overflows the clamp instead of
+  shrinking to it). With the grid genuinely bounded, `.editor-panel` is `position: absolute; inset:
+  0` inside the grid's own `position: relative`, so it makes no content contribution to row 1's
+  sizing and scrolls internally (`overflow-y: auto`) instead of growing it; `.body` is stretched to
+  fill row 1 (`align-items: stretch`) with `min-block-size: 0` (lifting the grid item's default
+  content-based minimum) plus its own `overflow-y: auto`, so it scrolls in place instead of
+  overflowing the now-real row. Either way the footer never overlaps the column. Both breakpoints
+  share the same editor header (back/close button, `editorTitle()`, an `aria-live`
+  "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
   inputs above.
 - **`editorStatus()`:** `'saved'` once `hasDetail()` — this page's `store.update()` calls are
   synchronous, so every applied edit (including creating the item) is "saved" the instant it
