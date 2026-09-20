@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Usage: scripts/gh/round.sh <issue> failed|passed|escalation <n>/<m> <model> [details|-] [--dry-run]
+# Usage: scripts/gh/round.sh <issue> failed|passed|review-fix|polish|escalation <n>/<m> <model> [details|-] [--dry-run]
 #   failed      posts "Round n/m failed on <model>" + details (what failed, planned fix)
 #   passed      posts "Round n/m passed on <model>" + details (verified SHA, evidence)
+#   review-fix  posts "Round n/m review-fix on <model>" + details (findings fixed, verified SHA)
+#   polish      posts "Round n/m polish on <model>" + details (what the owner asked for, verified SHA)
 #   escalation  posts "Escalation: n/m rounds failed on <model>" + details (each round, root cause)
+# Every coder run ends with one of these, not just the failures: #212 spent 4 runs and 107M input
+# tokens against 0 round comments, so the metrics read it as a clean one-round issue (#207).
 # Details come from the 5th argument, or from stdin when it is "-". --dry-run prints the comment.
 # One canonical first line, so scripts/gh/team-metrics.sh counts rounds instead of guessing at
 # hand-written variants (four formats across six issues broke the failed-round metric, #207).
@@ -26,8 +30,10 @@ details="${5:-}"
 case "$kind" in
   failed)     head="Round $round failed on $model" ;;
   passed)     head="Round $round passed on $model" ;;
+  review-fix) head="Round $round review-fix on $model" ;;
+  polish)     head="Round $round polish on $model" ;;
   escalation) head="Escalation: $round rounds failed on $model" ;;
-  *) echo "Kind must be failed, passed or escalation, got: '$kind'" >&2; exit 1 ;;
+  *) echo "Kind must be failed, passed, review-fix, polish or escalation, got: '$kind'" >&2; exit 1 ;;
 esac
 
 body="$head"

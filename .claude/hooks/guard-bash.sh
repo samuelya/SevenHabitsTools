@@ -44,7 +44,7 @@ if has '\bgh pr merge\b|\bgh (issue|pr) close\b'; then
 fi
 
 # GitHub reads go through the shared scripts (one call, nothing truncated, no wrong-flag surprises).
-has '\bgh issue view\b' && block "use scripts/gh/issue-context.sh <n> (gh issue view drops the body outside a terminal)."
+has '\bgh issue view\b' && ! has '\bgh issue view\b[^|;&]*--json\b' && block "use scripts/gh/issue-context.sh <n> (or gh issue view --json <fields> --jq for one field)."
 has '\bgh pr view\b' && ! has '\bgh pr view\b[^|;&]*--json\b' && block "use scripts/gh/pr-context.sh <pr> (or gh pr view --json <fields> --jq for one field)."
 has '\bgh pr checks\b.*--watch\b' && block "use scripts/gh/wait-ci.sh <pr> (bounded, prints progress)."
 has '\bgh run watch\b' && block "use scripts/gh/wait-ci.sh <pr>."
