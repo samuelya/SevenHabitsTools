@@ -36,18 +36,20 @@ import sys, json, glob, os, re, collections, statistics
 proj, since, root = sys.argv[1], sys.argv[2], sys.argv[3]
 files = glob.glob(os.path.join(proj, "*.jsonl")) + glob.glob(os.path.join(proj, "*", "subagents", "*.jsonl"))
 # Order matters: the first pattern that matches wins. Agent ids are the names the lead gives a
-# subagent, so these cover the spellings in use; anything unmatched lands in other-agent, which the
-# review reads as "an instrument gap", not "a mystery cost" (#207). Most of what lands there is a
-# subagent spawned without a name (the /code-review forks): the transcripts carry no agentId ->
-# subagent_type link, so naming every agent at spawn time is the only thing that attributes it.
+# subagent, so these cover the spellings in use; anything unmatched lands in unnamed-agent, which
+# the review reads as "an instrument gap", not "a mystery cost" (#207). A skill run as a fork
+# (/code-review) gets a bare hex id nobody named; the record of its launch in the parent transcript
+# (toolUseResult: status "forked", commandName, agentId) is the only link back, so it is read here.
 ROLES = ((r"business|^aba-", "business-analyst"),
-         (r"^aangle-|review", "code-review"),
+         (r"^aangle-", "code-review"),
          (r"tester|^aqa-|^atest", "tester"),
          (r"frontend|^afe\b|^afc\b|^afe-|^afc-", "frontend-coder"),
          (r"backend|^abe-|^abc-", "backend-coder"),
-         (r"^acoder-", "coder"), ("guide", "claude-code-guide"))
+         (r"^acoder-", "coder"), ("guide", "claude-code-guide"), ("review", "code-review"))
+forked = {}  # agentId -> command name, from the launch records
 def role(agent):
     if not agent: return "lead"
+    if agent in forked: return "code-review" if forked[agent] == "code-review" else f"skill:{forked[agent]}"
     for pat, name in ROLES:
         if re.search(pat, agent): return name
     return "unnamed-agent"
@@ -66,6 +68,12 @@ for f in files:
     except OSError: continue
     with fh:
         for line in fh:
+            if '"toolUseResult"' in line and '"forked"' in line:
+                try: t = json.loads(line).get("toolUseResult") or {}
+                except ValueError: t = {}
+                if isinstance(t, dict) and t.get("status") == "forked" and t.get("agentId"):
+                    forked[t["agentId"]] = t.get("commandName") or "?"
+                continue
             if '"usage"' not in line: continue
             try: r = json.loads(line)
             except ValueError: continue
@@ -106,10 +114,10 @@ for rl, cap_role in (("frontend-coder", "frontend-coder"), ("backend-coder", "ba
     cap = caps.get(cap_role)
     hit = sum(1 for n in t if cap and n >= cap)
     print(f"{rl:<20} runs {len(t):>3}  median turns {statistics.median(t):>5.0f}  max {max(t):>4}  at cap ({cap or 'none'}): {hit}")
-per_issue = collections.Counter()
+per_issue = collections.defaultdict(list)
 for a, r in runs.items():
-    for n in issues_of(a, r["role"]): per_issue[n] += 1
-print("ISSUE_RUNS " + json.dumps({str(n): c for n, c in sorted(per_issue.items())}))
+    for n in issues_of(a, r["role"]): per_issue[n].append(a)
+print("ISSUE_RUNS " + json.dumps({str(n): ids for n, ids in sorted(per_issue.items())}))
 print(f"TOTAL_INPUT_PROCESSED {sum(sum(r['ctx']) for r in runs.values())}")
 PY
 )
@@ -135,7 +143,7 @@ jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" '
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**Round [0-9]+/[0-9]+ failed"; "i"))] | length) as $rf
       | ([.comments.nodes[].body | capture("^\\**Escalation:\\s*(?<n>[0-9]+)"; "i") | .n | tonumber] | max // 0) as $en
       | ([$rf, $en] | max)] | add // 0) as $rounds
-  | ([$is[] | $runs[(.number | tostring)] // 0] | add // 0) as $cr
+  | ([$is[] | ($runs[(.number | tostring)] // [])] | add // [] | unique | length) as $cr
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**(Round [0-9]+/[0-9]+|Escalation:)"; "i"))] | length)] | add // 0) as $rc
   | ([$is[].labels.nodes[].name | select(startswith("escalated:") or . == "needs-owner")] | unique | join(" ")) as $esc
   | ([$bugs[] | select(. == ($n | tostring))] | length) as $b
