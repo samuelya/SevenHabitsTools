@@ -9,7 +9,6 @@ import {
   isStepOneComplete,
   isStepThreeComplete,
   isStepTwoComplete,
-  summarize,
   withChainField,
   withChangeAttempt,
   withDifference,
@@ -206,23 +205,6 @@ describe('perception.logic', () => {
     it('is false for a null exercise and true once a record exists', () => {
       expect(isStarted(null)).toBe(false);
       expect(isStarted(ensureExercise(null, NOW))).toBe(true);
-    });
-  });
-
-  describe('summarize', () => {
-    it('counts 0 of 3 steps for a null exercise', () => {
-      expect(summarize(null)).toEqual({ completedSteps: 0, totalSteps: 3 });
-    });
-
-    it('counts each completed step independently', () => {
-      let exercise = ensureExercise(null, NOW);
-      exercise = withFirstView(exercise, 'x', NOW);
-      exercise = withSwitchDifficulty(exercise, 2, NOW);
-      expect(summarize(exercise)).toEqual({ completedSteps: 1, totalSteps: 3 });
-    });
-
-    it('counts all 3 steps for a fully completed exercise', () => {
-      expect(summarize(completeExercise())).toEqual({ completedSteps: 3, totalSteps: 3 });
     });
   });
 });

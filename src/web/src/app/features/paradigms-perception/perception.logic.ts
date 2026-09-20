@@ -216,24 +216,3 @@ export function checklistLabelsFrom(
 export function isStarted(exercise: PerceptionExercise | null): boolean {
   return exercise !== null;
 }
-
-/** The footer summary card's progress (issue #48's acceptance criteria: a done state from the
- * kit) — how many of the 3 fixed steps are complete. */
-export interface PerceptionProgress {
-  readonly completedSteps: number;
-  readonly totalSteps: number;
-}
-
-const TOTAL_STEPS = 3;
-
-export function summarize(exercise: PerceptionExercise | null): PerceptionProgress {
-  if (exercise === null) {
-    return { completedSteps: 0, totalSteps: TOTAL_STEPS };
-  }
-  const completedSteps = [
-    isStepOneComplete(exercise),
-    isStepTwoComplete(exercise),
-    isStepThreeComplete(exercise),
-  ].filter(Boolean).length;
-  return { completedSteps, totalSteps: TOTAL_STEPS };
-}

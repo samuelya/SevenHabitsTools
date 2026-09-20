@@ -212,7 +212,7 @@
   <app-reflection-editor
     [value]="exercise()?.reflection ?? ''"
     [label]="'paradigmsPerception.form.reflection.label' | transloco"
-    [updatedAt]="exercise()?.updatedAt ?? null"
+    [sessionStatus]="true"
     (valueChange)="onReflectionChanged($event)"
   />
 

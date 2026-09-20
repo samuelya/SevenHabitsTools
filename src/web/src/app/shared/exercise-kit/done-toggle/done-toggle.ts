@@ -64,7 +64,10 @@ export class DoneToggle {
 
   protected readonly describedBy = computed(() => {
     const ids: string[] = [];
-    if (this.disabled() && this.disabledHint() !== null) {
+    // Matches the template's own truthiness test (`@if (disabled() && disabledHint(); as hint)`,
+    // not a `!== null` check) — review finding on this PR: a caller passing `''` used to get an id
+    // pushed here for a hint span the template never renders, a dangling `aria-describedby`.
+    if (this.disabled() && this.disabledHint()) {
       ids.push(this.hintId);
     }
     if (this.unmetChecklist() !== null) {

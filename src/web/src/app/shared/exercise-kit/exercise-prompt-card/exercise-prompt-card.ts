@@ -2,7 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ViewContainerRef,
-  effect,
+  afterNextRender,
   inject,
   input,
   model,
@@ -27,10 +27,14 @@ import { ExerciseGuideOpener } from '../exercise-guide/exercise-guide-opener';
  * no page binds it at all, while still letting `ExercisePage` collapse it imperatively on
  * entering focus mode (it holds a `contentChild` reference and calls `.set(false)` on it), and a
  * page bind `[(expanded)]` itself for its own extra control — all three are the same signal.
- * `collapsedByDefault` (issue #212) only sets that initial value, once, the first time it becomes
- * `true` — a page like `PerceptionPage` passes its own `isStarted()` so a returning user sees the
- * card collapsed, while the user's own toggle keeps working afterwards exactly as before (it never
- * fights a later toggle, since the write only ever happens on that one `false` → `true` edge).
+ * `collapsedByDefault` (issue #212) only sets that initial value, read once right after the first
+ * render — not reactively (review finding on this PR): `PerceptionPage` ORs its own `isStarted()`
+ * with the handset breakpoint, and `isStarted()` flips `false → true` on the very first keystroke
+ * of the user's first edit, so an `effect` re-checking the input on every change would collapse the
+ * card while the user is still typing into the field it just pulled out from under them. Reading it
+ * once, after the first render (`afterNextRender`, the same one-shot pattern `ExercisePage` uses),
+ * means only the value at mount matters; the user's own toggle keeps working afterwards exactly as
+ * before, and no later change to `collapsedByDefault` is ever observed again.
  */
 @Component({
   selector: 'app-exercise-prompt-card',
@@ -54,12 +58,9 @@ export class ExercisePromptCard {
   readonly collapsedByDefault = input(false);
   readonly expanded = model(true);
 
-  private appliedCollapsedByDefault = false;
-
   constructor() {
-    effect(() => {
-      if (this.collapsedByDefault() && !this.appliedCollapsedByDefault) {
-        this.appliedCollapsedByDefault = true;
+    afterNextRender(() => {
+      if (this.collapsedByDefault()) {
         this.expanded.set(false);
       }
     });

@@ -193,9 +193,16 @@ export class PerceptionPage {
     undefined,
     'paradigms-perception',
   );
-  protected readonly guideContent = computed(
-    () => this.guideTranslation() as unknown as ExerciseGuideContent,
-  );
+  /** `null` until the scope has actually loaded (review finding on this PR): `translateObjectSignal`
+   * starts at `{}`, which the cast alone makes look like real content, so `ExercisePromptCard`'s
+   * "Read more" button would appear — and open an empty-looking dialog if tapped — before the
+   * scope's `guide` key ever loads. Checking `howTo.length` (always non-empty once loaded, since
+   * this exercise's `guide` always has at least one how-to step) also makes the input meaningful
+   * for an exercise whose scope has no `guide` key at all. */
+  protected readonly guideContent = computed(() => {
+    const content = this.guideTranslation() as unknown as ExerciseGuideContent;
+    return content.howTo?.length ? content : null;
+  });
 
   protected readonly readyToMarkDone = computed(() => isComplete(this.exercise()));
   protected readonly done = this.progress.isDone(PERCEPTION_MODEL_KEY);

@@ -88,6 +88,14 @@ describe('DoneToggle', () => {
     expect((fixture.nativeElement as HTMLElement).querySelector('.disabled-hint')).toBeNull();
   });
 
+  it('does not point aria-describedby at a hint the template never renders, for an empty-string hint', () => {
+    const fixture = setUp(false, null, true, '');
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.disabled-hint')).toBeNull();
+    expect(button.getAttribute('aria-describedby')).toBeNull();
+  });
+
   const checklist: readonly DoneChecklistItem[] = [
     { label: 'Write your first guess', met: true },
     { label: 'Rate the difficulty', met: false },

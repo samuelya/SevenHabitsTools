@@ -5,14 +5,16 @@ import {
   TemplateRef,
   contentChildren,
   computed,
+  effect,
   inject,
   input,
   output,
+  viewChildren,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatStepperModule } from '@angular/material/stepper';
+import { MatStep, MatStepperModule } from '@angular/material/stepper';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
@@ -40,6 +42,19 @@ export interface GuidedStepDefinition {
  * `false`), since binding `[completed]="false"` on `mat-step` overrides `CdkStepper`'s own
  * `interacted`-based tracking and blocks `next()` under `linear` mode — the same "skipping ahead
  * is allowed" acceptance criterion this issue calls out.
+ *
+ * `done` is applied to the matching `MatStep` **imperatively** (`viewChildren`, not a template
+ * `[completed]` binding), and only on the `undefined → true` edge (review finding on this PR): a
+ * template binding calls the `completed` setter every change-detection run, and Angular's
+ * `booleanAttribute` input transform coerces a bound `undefined` back to `false` — the exact
+ * explicit-`false` override the paragraph above rules out. Never writing `false` also means a step
+ * that later becomes incomplete again (e.g. the user deletes the text that completed it) simply
+ * keeps its last-known "done" indicator rather than reverting, which is the trade-off for keeping
+ * one steady `<mat-step>` per step: the previous `@if (step.done === undefined) { … } @else { … }`
+ * swapped the whole step's `@if`/`@else` branch, and `@for`'s identity tracking (`track step.key`
+ * on the outer loop, but the branch swap still changes which template embedded view exists)
+ * destroyed and recreated the projected content on every `undefined ↔ true` flip — including the
+ * field the user was mid-keystroke in.
  */
 @Component({
   selector: 'app-guided-stepper',
@@ -57,12 +72,31 @@ export class GuidedStepper {
   readonly selectedIndexChange = output<number>();
 
   private readonly stepContents = contentChildren(GuidedStepContent);
+  private readonly stepInstances = viewChildren(MatStep);
 
   protected readonly handset = toSignal(
     this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
   protected readonly orientation = computed(() => (this.handset() ? 'vertical' : 'horizontal'));
+
+  constructor() {
+    // Never assigns `false`/`undefined` — see the class doc comment on why an explicit override in
+    // either direction is wrong here. `MatStep.completed` is a plain accessor, not a template
+    // binding, so this bypasses the `booleanAttribute` transform entirely.
+    effect(() => {
+      const steps = this.steps();
+      const instances = this.stepInstances();
+      steps.forEach((step, index) => {
+        if (step.done === true) {
+          const instance = instances[index];
+          if (instance) {
+            instance.completed = true;
+          }
+        }
+      });
+    });
+  }
 
   protected templateFor(step: string): TemplateRef<unknown> | null {
     return this.stepContents().find((content) => content.step() === step)?.templateRef ?? null;

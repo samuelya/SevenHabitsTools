@@ -6,40 +6,23 @@
   (selectedIndexChange)="selectedIndexChange.emit($event)"
 >
   @for (step of steps(); track step.key; let i = $index) {
-    <!-- `[completed]` is bound only when `step.done` is actually a boolean: Angular's own
-         `booleanAttribute` input transform coerces a bound `undefined` to `false`, which would
-         still override `CdkStep`'s natural "interacted" completion tracking and block `next()`
-         under `linear` mode — see the doc comment on this component. -->
-    @if (step.done === undefined) {
-      <mat-step
-        [label]="step.label"
-        [aria-label]="
-          ('exerciseKit.stepper.step' | transloco: { number: (i + 1 | appNumber) }) +
-          ': ' +
-          step.label
-        "
-      >
-        <ng-container
-          [ngTemplateOutlet]="stepBody"
-          [ngTemplateOutletContext]="{ $implicit: step, index: i }"
-        />
-      </mat-step>
-    } @else {
-      <mat-step
-        [label]="step.label"
-        [completed]="step.done"
-        [aria-label]="
-          ('exerciseKit.stepper.step' | transloco: { number: (i + 1 | appNumber) }) +
-          ': ' +
-          step.label
-        "
-      >
-        <ng-container
-          [ngTemplateOutlet]="stepBody"
-          [ngTemplateOutletContext]="{ $implicit: step, index: i }"
-        />
-      </mat-step>
-    }
+    <!-- No `[completed]` binding here on purpose: the constructor's `effect` sets it imperatively,
+         only ever to `true`, only on the matching `MatStep` instance — see the class doc comment.
+         Always exactly one `<mat-step>` per step, so `step.done` changing never swaps a template
+         branch and destroys/recreates the projected content the user may be typing into. -->
+    <mat-step
+      [label]="step.label"
+      [aria-label]="
+        ('exerciseKit.stepper.step' | transloco: { number: (i + 1 | appNumber) }) +
+        ': ' +
+        step.label
+      "
+    >
+      <ng-container
+        [ngTemplateOutlet]="stepBody"
+        [ngTemplateOutletContext]="{ $implicit: step, index: i }"
+      />
+    </mat-step>
   }
 
   <ng-template #stepBody let-step let-i="index">

@@ -172,34 +172,31 @@ describe('ExercisePromptCard', () => {
     expect(fixture.componentInstance.expanded()).toBe(false);
   });
 
-  it('starts collapsed when collapsedByDefault is true from the start', () => {
+  it('starts collapsed when collapsedByDefault is true from the start', async () => {
     const fixture = setUp({
       prompt: 'List what you can control.',
       whyItMatters: 'Why it matters.',
       collapsedByDefault: true,
     }).fixture;
+    await fixture.whenStable();
 
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('collapses once collapsedByDefault flips to true, but the user can still expand it afterwards', () => {
+  it('never collapses the card when collapsedByDefault flips to true after mount, e.g. mid-typing', async () => {
     const { fixture } = setUp({
       prompt: 'List what you can control.',
       whyItMatters: 'Why it matters.',
       collapsedByDefault: false,
     });
+    // `afterNextRender` reads the initial-render value asynchronously.
+    await fixture.whenStable();
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
 
     fixture.componentRef.setInput('collapsedByDefault', true);
     fixture.detectChanges();
-    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('false');
+    await fixture.whenStable();
 
-    toggleButton(fixture).click();
-    fixture.detectChanges();
-    expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
-
-    // Still `true`, but already applied once — must not fight the user's own toggle again.
-    fixture.detectChanges();
     expect(toggleButton(fixture).getAttribute('aria-expanded')).toBe('true');
   });
 });

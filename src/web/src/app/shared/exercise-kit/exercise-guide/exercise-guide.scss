@@ -23,11 +23,18 @@
   font: var(--mat-sys-title-medium);
 }
 
+// `.exercise-guide` is the same element `matDialogContent` puts `.mat-mdc-dialog-content` on, so
+// this two-class-selector rule (specificity 0,2,0) beats Material's own single-class 65vh cap
+// (review finding on this PR) without needing `::ng-deep`: the surface itself already scrolls
+// (`overflow-y: auto`) and is capped by `ExerciseGuideOpener`'s own `maxHeight` config
+// (`100vh` handset, `80vh` desktop), so removing the content's own inner cap lets it fill the
+// surface instead of leaving blank space below a short guide on a tall phone.
 .exercise-guide {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   padding-block: 1rem;
+  max-block-size: none;
 }
 
 .exercise-guide h3 {

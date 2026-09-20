@@ -59,7 +59,6 @@ export class ExerciseGuideOpener {
       height: handset ? '100%' : undefined,
       maxWidth: handset ? '100vw' : '560px',
       maxHeight: handset ? '100vh' : '80vh',
-      panelClass: handset ? 'exercise-guide-panel--fullscreen' : 'exercise-guide-panel',
     });
   }
 }
