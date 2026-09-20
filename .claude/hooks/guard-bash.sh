@@ -49,6 +49,13 @@ has '\bgh pr view\b' && ! has '\bgh pr view\b[^|;&]*--json\b' && block "use scri
 has '\bgh pr checks\b.*--watch\b' && block "use scripts/gh/wait-ci.sh <pr> (bounded, prints progress)."
 has '\bgh run watch\b' && block "use scripts/gh/wait-ci.sh <pr>."
 
+# wait-ci.sh blocks on purpose: its 540 s deadline sits under the Bash tool's 600 s cap, so the call
+# always returns. Backgrounding it ends the agent's turn instead, and the round then sits idle until
+# someone notices the PR is already green (#235).
+[[ "$(jq -r '.tool_input.run_in_background // empty' <<<"$input" 2>/dev/null)" == "true" ]] \
+  && has 'wait-ci\.sh' \
+  && block "run wait-ci.sh in the foreground (Bash timeout 600000); backgrounding it ends your turn and stalls the round."
+
 # Test discipline: private port per worktree, small outputs, no poll loops.
 has '\bnpm run e2e\b' && ! has 'PLAYWRIGHT_BASE_URL=' && block "bare npm run e2e can test another worktree's build on port 4300; use scripts/web/e2e-local.sh <spec>."
 has '\bnpx playwright test\b' && ! has 'PLAYWRIGHT_BASE_URL=' && ! has 'e2e-local\.sh' && block "run Playwright through scripts/web/e2e-local.sh."
