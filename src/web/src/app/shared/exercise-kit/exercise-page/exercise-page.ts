@@ -30,9 +30,10 @@ import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.direc
  * The one page scaffold every exercise page uses (issue #185, parent #184): a single visually
  * hidden `h1` (the toolbar title is the only visible one), the projected `[intro]`/body/`[footer]`
  * stacked in the page flow, and — while `editing` — a focus-mode editor that is a full-screen
- * panel on handset and a second grid column with no scroll of its own on desktop. Purely
- * presentational: routing (or a local signal) decides `editing`, and the page's own logic decides
- * what `editorClosed` does (clear a selection, navigate back to the list route).
+ * panel on handset and a second grid column, scrolling on its own inside the page area, on
+ * desktop (issue #213). Purely presentational: routing (or a local signal) decides `editing`, and
+ * the page's own logic decides what `editorClosed` does (clear a selection, navigate back to the
+ * list route).
  *
  * The focus-move-in-on-open/focus-return-on-close approach (`afterNextRender`, capture the
  * trigger element before moving focus away from it) is ported from `ExerciseDetail`
@@ -46,6 +47,12 @@ import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.direc
   styleUrl: './exercise-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [{ provide: EDITOR_FOCUS_HOST, useExisting: forwardRef(() => ExercisePage) }],
+  // The whole of this component's "how tall is the space I have" logic (issue #213): while the
+  // desktop split grid is up, the routed page host above this one must stop growing with its
+  // content and be exactly as tall as `.page`, the shell's scroll container. `shell.scss` does
+  // that with one rule keyed on this class (`.page > *:has(> .fills-page)`); this component only
+  // states *when* it needs it, and never measures or reaches out of its own host.
+  host: { '[class.fills-page]': 'splitEditing()' },
 })
 export class ExercisePage implements EditorFocusHost {
   private readonly breakpoints = inject(BreakpointObserver);
@@ -63,6 +70,9 @@ export class ExercisePage implements EditorFocusHost {
   readonly editorClosed = output<void>();
 
   private readonly editorHeading = viewChild<ElementRef<HTMLElement>>('editorHeading');
+  /** The list/body column — its own scroll container while the desktop split editor is up (see
+   * `revealSelectedRow`). */
+  private readonly bodyColumn = viewChild<ElementRef<HTMLElement>>('bodyColumn');
   /** Set by whichever `[appEditorInitialFocus]` marker is alive inside the open editor, wherever
    * it sits in the projected tree (see that directive on why this is a registration, not a
    * `contentChild` query). */
@@ -76,6 +86,10 @@ export class ExercisePage implements EditorFocusHost {
     { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
   );
 
+  /** Focus mode as a second column beside the body, i.e. everywhere but handset (where it is a
+   * full-screen panel instead and needs none of this): the one state in which the scaffold is a
+   * grid that has to fit the page area rather than grow with its tallest column. */
+  protected readonly splitEditing = computed(() => this.editing() && !this.handset());
   /** Hidden entirely on handset while editing, so it never sits behind the full-screen panel. */
   protected readonly showFooter = computed(() => !(this.handset() && this.editing()));
   /** `inert`, not just visually behind the panel, so a screen reader can't land there either
@@ -119,6 +133,18 @@ export class ExercisePage implements EditorFocusHost {
       afterNextRender(() => this.moveFocus(editing), { injector: this.injector });
     });
 
+    // Opening the split editor makes `.body` a scroll container (`exercise-page.scss`) that
+    // starts at `scrollTop: 0`, so the row the user just picked after scrolling the list would
+    // jump out of sight and take the master-detail context with it. Same render-hook reasoning as
+    // the focus move above: the class that creates that scroll container is applied by the render
+    // this effect is reacting to, so the scroll has to happen after it.
+    effect(() => {
+      if (!this.splitEditing()) {
+        return;
+      }
+      afterNextRender(() => this.revealSelectedRow(), { injector: this.injector });
+    });
+
     // Entering focus mode collapses the intro if it's expanded; exiting never re-expands it
     // (owner decision on #184) — this only ever calls `.set(false)`, never `true`.
     effect(() => {
@@ -137,6 +163,26 @@ export class ExercisePage implements EditorFocusHost {
       this.triggerElement?.focus();
       this.triggerElement = null;
     }
+  }
+
+  /** Scrolls the selected list row back into view inside the body column's brand-new scroll
+   * container. `[aria-pressed="true"]` is the kit's one selection marker — `ExerciseList` and
+   * `AssessmentHistoryList` both use it, for the reasons their own templates give — so this needs
+   * no knowledge of either. Scoped to `.content-slot`, not the whole body column: `.intro-slot`
+   * renders above it and projects whatever the page puts in `[intro]`, so an unscoped query would
+   * silently grab the first pressed toggle a future intro slot projects instead of the row.
+   * `block: 'nearest'` leaves an already-visible row (and every ancestor scroller, `.page`
+   * included) alone. The state is re-read here rather than captured when the hook was scheduled: a
+   * close that lands before the callback runs (fast open/close, or a route change that does both)
+   * must not scroll a column that is no longer a scroll container. */
+  private revealSelectedRow(): void {
+    if (!this.splitEditing()) {
+      return;
+    }
+    const selected = this.bodyColumn()?.nativeElement.querySelector<HTMLElement>(
+      '.content-slot [aria-pressed="true"]',
+    );
+    selected?.scrollIntoView({ block: 'nearest' });
   }
 
   registerInitialFocus(element: ElementRef<HTMLElement>): void {

@@ -168,6 +168,10 @@ test.describe('paradigms transition reflection', () => {
     expect(pageArea!.y + pageArea!.height - (footer!.y + footer!.height)).toBeLessThanOrEqual(24);
   });
 
+  // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but
+  // `e2e/paradigms-maturity.spec.ts` is the one regression test for it (review round 1: at
+  // 1280x1500 this page's own editor is far shorter than the viewport, so an equivalent check here
+  // passed unchanged against the unfixed bug and guarded nothing).
   test('accessibility: the exercise page has no serious or critical violations', async ({
     page,
   }) => {

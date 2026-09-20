@@ -79,7 +79,35 @@ a.side-nav__row:focus-visible {
 .page {
   flex: 1;
   overflow-y: auto;
+  // Reserve the scrollbar's width whether or not content currently overflows, so opening the
+  // split-mode editor — which makes `.page` stop overflowing, since both columns now scroll inside
+  // themselves instead — doesn't remove a classic (non-overlay) scrollbar and widen the content box
+  // by its width underneath both columns and the footer (issue #213 review).
+  scrollbar-gutter: stable;
   padding: 16px;
+}
+
+// The app's one scroll container lends its height to a routed page that asks for it (issue #213).
+// A routed page host normally grows with its content — `min-block-size: 100%` is a floor, not a
+// ceiling (issue #193) — which is right for a page that scrolls, and wrong for one whose own
+// layout has to *fit* the visible area and scroll inside itself (the exercise kit's desktop split
+// editor: two independently scrolling columns above a footer row that must stay on screen).
+// Such a component marks itself `.fills-page` while it needs that, and this rule turns `.page`'s
+// height — the only definite one in the chain, and the one the toolbar, the offline indicator, the
+// read-only banner and the PWA install banner have all already been subtracted from — into a
+// definite height for the host above it. Plain layout, so it follows every one of those banners
+// appearing or disappearing with no measurement, no listener and nothing to go stale; a component
+// that doesn't ask for it is untouched.
+// `::ng-deep`: the routed component's host element is created by the router, so it carries no
+// emulated-encapsulation attribute of this template's (the rule stays scoped to inside the shell
+// by the `:host` prefix). Direct-child combinators on both sides: this is the contract a page opts
+// into — its own host is a flex column filling `.page` and `<app-exercise-page>` is that host's
+// child (see `exercise-page.scss` and the playbook's "Page layout"). A page that nests it deeper
+// (`/dev/kit`) or a browser without `:has()` doesn't match and keeps content sizing; the two are
+// not equivalent, and what each one actually leaves on screen is measured in `exercise-page.scss`
+// next to the grid's own row floor.
+:host ::ng-deep .page > *:has(> .fills-page) {
+  block-size: 100%;
 }
 
 .shell--handset .page {

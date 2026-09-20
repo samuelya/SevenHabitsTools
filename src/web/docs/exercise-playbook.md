@@ -137,9 +137,57 @@ ad hoc markup:
   slot has content (`hasDetail()` for a list; a worksheet has no focus mode at all — see below).
   Below `HANDSET_QUERY` it's a full-screen panel over everything, including the bottom
   navigation; at or above it, the intro collapses, the body shrinks to a compact column and the
-  editor takes the rest of the width with no scroll of its own. Both breakpoints share the same
-  editor header (back/close button, `editorTitle()`, an `aria-live` "Saved"/"Saving…" status) —
-  the kit builds it; the page only supplies the three inputs above.
+  editor takes the rest of the width. Neither column can grow the split grid past the viewport and
+  reopen issue #213 (a tall editor doing that put the sticky footer over the last field; a tall
+  body/history column does it too, review round 1) — but that grid needs a *definite* height for
+  either column's own overflow rule to mean anything: a `1fr`/`auto` track only distributes real
+  free space once its container has one, and every page's own `:host` sets only a *floor*
+  (`min-block-size: 100%`, on purpose, so a short page's footer still reaches `.page`'s bottom,
+  issue #193). That height comes from `.page`, the shell's one scroll container, in CSS only:
+  while the split grid is up, `ExercisePage` marks its own host `.fills-page`, and `shell.scss`'s
+  `.page > *:has(> .fills-page)` rule gives the routed page host `block-size: 100%` of `.page`'s
+  content box; `min-block-size: 0` on the host and on the grid then lets the chain shrink to it.
+  **So the page's own host must be a flex column filling `.page` (the footer-slot SCSS below) and
+  `<app-exercise-page>` must be that host's own child.** Miss that contract and the rule stops
+  matching, which is *not* one single fallback (both measured at 1280x800, empty history, a
+  3149px-tall form, review round 3):
+  - **No `:has()` support**, scaffold still the routed host's own child: the host keeps its own
+    `min-block-size: 100%` floor and the scaffold is still stretched to it, so the grid keeps a
+    definite height while the content fits (a 597px editor column). Only the *ceiling* is gone, so
+    a column taller than `.page` grows the host and the page scrolls — the pre-#213 layout.
+  - **The scaffold nested deeper** (a `<div>`/`<section>` around it, as `/dev/kit` deliberately
+    has): the wrapper has no floor of its own, the grid is content-sized, and since the editor
+    panel is absolutely positioned and contributes nothing, row 1 is sized by the *body* column
+    alone — the editor gets clipped to the history list's height (a 190px panel around that
+    3149px form). Only the row floor below keeps that usable, so don't rely on this shape.
+
+  Don't reintroduce a measured height: round 2 of #213 measured the *layout viewport* with
+  `ViewportRuler` and was wrong by `.page`'s 16px padding on every open, wrong again by its scroll
+  offset when an item was opened after scrolling the list, and never recomputed at all for the
+  offline indicator, the read-only banner or the PWA install banner, which appear and disappear
+  above the toolbar at runtime. A percentage of `.page` handles all four as plain relayout. With
+  the grid genuinely bounded, `.editor-panel` is `position: absolute; inset: 0` inside the grid's
+  own `position: relative` (both grid lines spelled out), so it makes no content contribution to
+  row 1's sizing and scrolls internally (`overflow-y: auto`) instead of growing it; `.body` is
+  stretched to fill row 1 (`align-items: stretch`) with `min-block-size: 0` (lifting the grid
+  item's default content-based minimum) plus `overflow-y: auto`/`overflow-x: clip`, so it scrolls
+  in place instead of overflowing the now-real row. Either way the footer never overlaps the
+  column — and in split mode the footer is `position: static`, not the flow layout's sticky: its
+  row already sits at the bottom of a bounded scaffold, and where the scaffold *isn't* bounded
+  sticky lifted the bar back over the live editor, which is #213's original symptom.
+  **Row 1 has a floor** (`--split-row-floor: 16rem`, `grid-template-rows: minmax(…, 1fr) auto`,
+  plus `min-block-size: calc(floor + 1rem)` on the scaffold). Bounding the grid to `.page` makes a
+  *short* page area the mirror-image failure: the footer row plus the gap eat the whole grid, row 1
+  and the `inset: 0` panel collapse to 0 (measured at 900x220 and 844x210) and the bounded grid
+  leaves no page scroll to escape with — reachable on a landscape phone above `HANDSET_QUERY` once
+  the keyboard shrinks the viewport. Below the floor the scaffold overflows `.page` and the page
+  scrolls again. The floor is measured (`.editor-header` 57px + `.editor-body` padding 2x16px +
+  two 76px Material fields = 241px, rounded up); keep it a fixed length — `min-content` pulls the
+  history column's own max-content contribution back through the `1fr` track and overshoots
+  `.page` by that much on every ordinary open. Both breakpoints
+  share the same editor header (back/close button, `editorTitle()`, an `aria-live`
+  "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
+  inputs above.
 - **`editorStatus()`:** `'saved'` once `hasDetail()` — this page's `store.update()` calls are
   synchronous, so every applied edit (including creating the item) is "saved" the instant it
   lands; `null` otherwise. Only compute `'saving'` if a feature's own persistence genuinely has a
