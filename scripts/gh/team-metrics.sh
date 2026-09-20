@@ -35,14 +35,30 @@ input_total=$(python3 - "$proj" "$since" "$root" <<'PY'
 import sys, json, glob, os, re, collections, statistics
 proj, since, root = sys.argv[1], sys.argv[2], sys.argv[3]
 files = glob.glob(os.path.join(proj, "*.jsonl")) + glob.glob(os.path.join(proj, "*", "subagents", "*.jsonl"))
-ROLES = (("tester", "tester"), (r"frontend|^afe\b|^afc\b|^afe-|^afc-", "frontend-coder"),
-         (r"backend|^abe-|^abc-", "backend-coder"), (r"business|^aba-", "business-analyst"),
-         (r"^acoder-", "coder"), ("guide", "claude-code-guide"), ("review", "code-review"))
+# Order matters: the first pattern that matches wins. Agent ids are the names the lead gives a
+# subagent, so these cover the spellings in use; anything unmatched lands in other-agent, which the
+# review reads as "an instrument gap", not "a mystery cost" (#207). Most of what lands there is a
+# subagent spawned without a name (the /code-review forks): the transcripts carry no agentId ->
+# subagent_type link, so naming every agent at spawn time is the only thing that attributes it.
+ROLES = ((r"business|^aba-", "business-analyst"),
+         (r"^aangle-|review", "code-review"),
+         (r"tester|^aqa-|^atest", "tester"),
+         (r"frontend|^afe\b|^afc\b|^afe-|^afc-", "frontend-coder"),
+         (r"backend|^abe-|^abc-", "backend-coder"),
+         (r"^acoder-", "coder"), ("guide", "claude-code-guide"))
 def role(agent):
     if not agent: return "lead"
     for pat, name in ROLES:
         if re.search(pat, agent): return name
-    return "other-agent"
+    return "unnamed-agent"
+# A coder run's agent id carries the issue(s) it works: afe-212, afe-212-r4, afrontend-coder-28,
+# acoder-49-50. Counting runs per issue from the transcripts gives the review a number the issue's
+# round comments can be checked against: 4 coder runs against 0 round comments is the gap (#207).
+CODER_ID = re.compile(r"^a(?:frontend-coder|backend-coder|coder|fe|fc|be|bc)((?:-\d+)+)(?:-|$)")
+def issues_of(agent, rl):
+    if rl not in ("frontend-coder", "backend-coder", "coder"): return []
+    m3 = CODER_ID.match(agent or "")
+    return [int(n) for n in m3.group(1).split("-") if n] if m3 else []
 # One API request is stored as several streamed records sharing requestId; keep the max per field.
 req = {}
 for f in files:
@@ -90,10 +106,16 @@ for rl, cap_role in (("frontend-coder", "frontend-coder"), ("backend-coder", "ba
     cap = caps.get(cap_role)
     hit = sum(1 for n in t if cap and n >= cap)
     print(f"{rl:<20} runs {len(t):>3}  median turns {statistics.median(t):>5.0f}  max {max(t):>4}  at cap ({cap or 'none'}): {hit}")
+per_issue = collections.Counter()
+for a, r in runs.items():
+    for n in issues_of(a, r["role"]): per_issue[n] += 1
+print("ISSUE_RUNS " + json.dumps({str(n): c for n, c in sorted(per_issue.items())}))
 print(f"TOTAL_INPUT_PROCESSED {sum(sum(r['ctx']) for r in runs.values())}")
 PY
 )
-echo "$input_total" | grep -v '^TOTAL_INPUT_PROCESSED'
+echo "$input_total" | grep -vE '^(TOTAL_INPUT_PROCESSED|ISSUE_RUNS)'
+issue_runs=$(grep '^ISSUE_RUNS' <<<"$input_total" | cut -d' ' -f2-)
+issue_runs=${issue_runs:-'{}'}
 input_total=$(grep '^TOTAL_INPUT_PROCESSED' <<<"$input_total" | cut -d' ' -f2)
 echo
 
@@ -104,7 +126,7 @@ json=$(gql -f q="repo:$OWNER/$REPO is:pr is:merged merged:>=$day" -f query='
     closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } }
       comments(last: 60) { nodes { body } } } } } } } }')
 bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$day" --json body --jq '[.[].body | scan("PR #([0-9]+)")[]] ' 2>/dev/null || echo '[]')
-jq -r --argjson bugs "$bugs" '
+jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" '
   .data.search.nodes[] | select(.number != null)
   | .number as $n
   | (.closingIssuesReferences.nodes) as $is
@@ -113,16 +135,20 @@ jq -r --argjson bugs "$bugs" '
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**Round [0-9]+/[0-9]+ failed"; "i"))] | length) as $rf
       | ([.comments.nodes[].body | capture("^\\**Escalation:\\s*(?<n>[0-9]+)"; "i") | .n | tonumber] | max // 0) as $en
       | ([$rf, $en] | max)] | add // 0) as $rounds
+  | ([$is[] | $runs[(.number | tostring)] // 0] | add // 0) as $cr
+  | ([$is[] | ([.comments.nodes[].body | select(test("^\\**(Round [0-9]+/[0-9]+|Escalation:)"; "i"))] | length)] | add // 0) as $rc
   | ([$is[].labels.nodes[].name | select(startswith("escalated:") or . == "needs-owner")] | unique | join(" ")) as $esc
   | ([$bugs[] | select(. == ($n | tostring))] | length) as $b
-  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)",
-    "ROW\t\($rounds)\t\($b)\t\(if $esc != "" then 1 else 0 end)"
+  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)\(if $cr > 0 or $rc > 0 then "\n    coder runs \($cr) (transcripts) vs \($rc) round comments\(if $cr > $rc then "  <- unrecorded rounds" else "" end)" else "" end)",
+    "ROW\t\($rounds)\t\($b)\t\(if $esc != "" then 1 else 0 end)\t\($cr)\t\($rc)"
 ' <<<"$json" > /tmp/team-metrics.$$ || true
 grep -v '^ROW' /tmp/team-metrics.$$
 count=$(grep -c '^ROW' /tmp/team-metrics.$$ || true)
 rounds_total=$(awk -F'\t' '/^ROW/{s+=$2} END{print s+0}' /tmp/team-metrics.$$)
 bugs_total=$(awk -F'\t' '/^ROW/{s+=$3} END{print s+0}' /tmp/team-metrics.$$)
 escalated=$(awk -F'\t' '/^ROW/{s+=$4} END{print s+0}' /tmp/team-metrics.$$)
+coder_runs=$(awk -F'\t' '/^ROW/{s+=$5} END{print s+0}' /tmp/team-metrics.$$)
+round_comments=$(awk -F'\t' '/^ROW/{s+=$6} END{print s+0}' /tmp/team-metrics.$$)
 rm -f /tmp/team-metrics.$$
 echo
 
@@ -149,3 +175,4 @@ echo "merged PRs: $count ($(calc "f'{$count/$weeks:.1f}'")/week)"
 echo "input tokens processed per merged PR: $per_pr"
 echo "failed rounds per PR: $rounds_pr   escalated PRs: $escalated   tester bugs per PR: $bugs_pr"
 echo "average PR CI run: ${ci} min"
+echo "coder runs on merged PRs' issues: $coder_runs (transcripts) vs $round_comments round comments — every run should post one (scripts/gh/round.sh)"
