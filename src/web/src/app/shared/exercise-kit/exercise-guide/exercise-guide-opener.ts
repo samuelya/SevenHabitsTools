@@ -36,29 +36,29 @@ export class ExerciseGuideOpener {
   private readonly loadExerciseGuide = inject(EXERCISE_GUIDE_LOADER);
 
   async open(content: ExerciseGuideContent, viewContainerRef: ViewContainerRef): Promise<void> {
-    let guideModule: ExerciseGuideModule;
     try {
-      guideModule = await this.loadExerciseGuide();
+      const { ExerciseGuide } = await this.loadExerciseGuide();
+      const handset = this.breakpoints.isMatched(HANDSET_QUERY);
+      const data: ExerciseGuideData = { content };
+      await this.dialog.open<InstanceType<typeof ExerciseGuide>, ExerciseGuideData>(ExerciseGuide, {
+        viewContainerRef,
+        data,
+        width: handset ? '100%' : undefined,
+        height: handset ? '100%' : undefined,
+        maxWidth: handset ? '100vw' : '560px',
+        maxHeight: handset ? '100vh' : '80vh',
+      });
     } catch {
       // Most likely offline with this chunk not yet cached (the service worker's `chunks` group is
       // `installMode: lazy`) — say so plainly, the same handling `DeleteWithUndo`/`BackupSection`
-      // give their own lazy-loaded dialogs, rather than the button silently doing nothing.
+      // give their own lazy-loaded dialogs, rather than the button silently doing nothing. Wraps
+      // both the chunk load *and* `AppDialog.open()` itself (review finding on this PR): the caller
+      // does `void this.guideOpener.open(...)`, so a rejection from `open()` that isn't caught here
+      // becomes an unhandled promise rejection instead of ever reaching the user.
       await this.snackbar.open(
         this.transloco.translate('exerciseKit.guide.loadError'),
         this.transloco.translate('data.snackbar.dismiss'),
       );
-      return;
     }
-    const { ExerciseGuide } = guideModule;
-    const handset = this.breakpoints.isMatched(HANDSET_QUERY);
-    const data: ExerciseGuideData = { content };
-    await this.dialog.open<InstanceType<typeof ExerciseGuide>, ExerciseGuideData>(ExerciseGuide, {
-      viewContainerRef,
-      data,
-      width: handset ? '100%' : undefined,
-      height: handset ? '100%' : undefined,
-      maxWidth: handset ? '100vw' : '560px',
-      maxHeight: handset ? '100vh' : '80vh',
-    });
   }
 }

@@ -250,8 +250,11 @@ export class PerceptionPage {
     );
   }
 
-  protected onReflectionChanged(reflection: string): void {
-    this.updateExercise((exercise) => withReflection(exercise, reflection, this.clock.now()));
+  protected onReflectionChanged(reflection: string, editor: ReflectionEditor): void {
+    const saved = this.updateExercise((exercise) =>
+      withReflection(exercise, reflection, this.clock.now()),
+    );
+    editor.reportSaveOutcome(saved);
   }
 
   protected onToggleDone(): void {
@@ -262,7 +265,9 @@ export class PerceptionPage {
     }
   }
 
-  private updateExercise(apply: (exercise: PerceptionExercise) => PerceptionExercise): void {
-    this.store.update((current) => apply(ensureExercise(current, this.clock.now())));
+  /** Returns `false` when the write was refused (`FeatureStore.update()` — a read-only tab), so
+   * `onReflectionChanged` can tell `ReflectionEditor` not to claim "Saved" for it. */
+  private updateExercise(apply: (exercise: PerceptionExercise) => PerceptionExercise): boolean {
+    return this.store.update((current) => apply(ensureExercise(current, this.clock.now())));
   }
 }

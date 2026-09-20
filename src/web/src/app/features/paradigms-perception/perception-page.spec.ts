@@ -103,6 +103,26 @@ describe('PerceptionPage', () => {
     expect(host.textContent).toContain('Trace the situation both ways');
   });
 
+  it('links every field prompt to its control so a screen reader announces the question, not just the short label', async () => {
+    // Regression test for a review finding: `.field-prompt` questions ("Why do you think they
+    // didn't wave back?") used to sit unlinked next to their field, so a screen reader only ever
+    // announced the short `mat-label` ("Your first guess").
+    const fixture = await setUp();
+    const host = fixture.nativeElement as HTMLElement;
+
+    const firstViewPrompt = host.querySelector('#first-view-prompt') as HTMLElement;
+    expect(firstViewPrompt.textContent?.trim()).toBe("Why do you think they didn't wave back?");
+    expect(textareas(fixture)[0].getAttribute('aria-describedby')).toBe('first-view-prompt');
+
+    const attemptPrompt = host.querySelector('#attempt-prompt-0') as HTMLElement;
+    expect(attemptPrompt.textContent?.trim()).toBe('What did you try to change?');
+    const attemptTextarea = textareasIn(fixture, '.step-character-technique')[0];
+    expect(attemptTextarea.getAttribute('aria-describedby')).toBe('attempt-prompt-0');
+
+    const reflectionTextarea = host.querySelector('app-reflection-editor textarea') as HTMLElement;
+    expect(reflectionTextarea.getAttribute('aria-describedby')).toContain('reflection-prompt');
+  });
+
   it('does not reveal the alternative view until the reveal button is clicked', async () => {
     const fixture = await setUp();
     const host = fixture.nativeElement as HTMLElement;

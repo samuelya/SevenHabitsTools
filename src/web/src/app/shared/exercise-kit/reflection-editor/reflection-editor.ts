@@ -29,6 +29,17 @@ export const REFLECTION_DEBOUNCE_MS = 1000;
  * header uses. Scope call on this PR: the session-scoped behaviour is opt-in, not a replacement,
  * so it can't silently remove PC Balance's only reload feedback — #215 migrates the kit's other
  * callers deliberately, one at a time.
+ *
+ * The debounce only ever *asks* to save — this component has no visibility into whether the
+ * write actually landed (a read-only tab's `DocumentStore.update()` returns `false`). So it never
+ * sets `status` to `'saved'` itself; the caller calls `reportSaveOutcome()` once it knows the real
+ * result (review finding on this PR), the same "container knows, presentational component is
+ * told" split the rest of this kit follows.
+ *
+ * `promptId` (issue #212) lets a page's own visible question — a `.field-prompt` it renders right
+ * before this component, outside its template — reach the textarea's `aria-describedby` without
+ * this component needing to know the question's text: the id is the caller's, this component just
+ * adds it alongside its own status/hint id.
  */
 @Component({
   selector: 'app-reflection-editor',
@@ -44,6 +55,10 @@ export class ReflectionEditor implements OnDestroy {
   /** Opts into the session-scoped Saving/Saved status instead of the default character-count +
    * saved-at caption (issue #212) — see the class doc comment's scope call. */
   readonly sessionStatus = input(false);
+  /** An id the caller's own `.field-prompt` question already has, added to the textarea's
+   * `aria-describedby` alongside this component's own status/hint id (issue #212, review
+   * finding). */
+  readonly promptId = input<string | null>(null);
   readonly valueChange = output<string>();
 
   /** Resyncs to `value()` whenever it changes externally (initial load, a sync from another tab),
@@ -52,8 +67,13 @@ export class ReflectionEditor implements OnDestroy {
   protected readonly draft = linkedSignal(() => this.value());
   protected readonly characterCount = computed(() => this.draft().length);
   /** `null` until the first keystroke of this session; `'saving'` while the debounce is pending,
-   * `'saved'` once it has fired. Only rendered when `sessionStatus()` is `true`. */
+   * `'saved'` once the caller confirms the write landed (`reportSaveOutcome`). Only rendered when
+   * `sessionStatus()` is `true`. */
   protected readonly status = signal<'saving' | 'saved' | null>(null);
+  protected readonly describedBy = computed(() => {
+    const ids = [this.promptId(), this.sessionStatus() ? 'reflection-status' : 'reflection-hint'];
+    return ids.filter((id) => id !== null).join(' ');
+  });
 
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private pendingSave = false;
@@ -73,8 +93,17 @@ export class ReflectionEditor implements OnDestroy {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.pendingSave = false;
-      this.status.set('saved');
       this.valueChange.emit(this.draft());
     }, REFLECTION_DEBOUNCE_MS);
+  }
+
+  /** Called by the caller once it knows whether the debounced edit above was actually persisted
+   * (`DocumentStore.update()`'s return) — never report "Saved" for a write a read-only tab
+   * refused (review finding on this PR). Leaves `status` at `'saving'` on a refused write rather
+   * than claiming a state that didn't happen; there's no copy for a third "not saved" caption. */
+  reportSaveOutcome(saved: boolean): void {
+    if (saved) {
+      this.status.set('saved');
+    }
   }
 }

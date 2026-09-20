@@ -22,13 +22,14 @@ function setUp(
   options: {
     handset?: boolean;
     guideLoader?: () => Promise<{ ExerciseGuide: unknown }>;
+    dialogOpen?: ReturnType<typeof vi.fn>;
   } = {},
 ): {
   service: ExerciseGuideOpener;
   dialogOpen: ReturnType<typeof vi.fn>;
   snackbarOpen: ReturnType<typeof vi.fn>;
 } {
-  const dialogOpen = vi.fn().mockResolvedValue({});
+  const dialogOpen = options.dialogOpen ?? vi.fn().mockResolvedValue({});
   const snackbarOpen = vi.fn().mockResolvedValue({});
   TestBed.configureTestingModule({
     providers: [
@@ -101,6 +102,19 @@ describe('ExerciseGuideOpener', () => {
     await service.open(CONTENT, fakeViewContainerRef());
 
     expect(dialogOpen).not.toHaveBeenCalled();
+    expect(snackbarOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a load-error snackbar, instead of an unhandled rejection, when AppDialog.open() itself rejects', async () => {
+    // Regression test for a review finding: only the chunk load used to be in try/catch, so a
+    // rejection from `AppDialog.open()` (e.g. offline with the dialog chunk not yet cached)
+    // surfaced as an unhandled promise rejection instead of the same load-error path.
+    const { service, snackbarOpen } = setUp({
+      dialogOpen: vi.fn().mockRejectedValue(new Error('dialog chunk load failed')),
+    });
+
+    await expect(service.open(CONTENT, fakeViewContainerRef())).resolves.toBeUndefined();
+
     expect(snackbarOpen).toHaveBeenCalledTimes(1);
   });
 });

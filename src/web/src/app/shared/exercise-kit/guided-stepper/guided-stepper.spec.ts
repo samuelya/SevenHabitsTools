@@ -128,6 +128,51 @@ describe('GuidedStepper', () => {
     expect(host.selectedIndex).toBe(1);
   });
 
+  it('un-ticks a step when its done flag regresses back to undefined', () => {
+    // Regression test for a review finding: the effect only ever set `completed = true`, so a
+    // step that arrives already done (e.g. reloaded data, before the user has interacted with it
+    // this session) but is then emptied out kept its green check while the checklist correctly
+    // listed it as unmet. Drives `GuidedStepper` directly with `setInput` (rather than through a
+    // host component's template binding) so reassigning `steps` reliably updates the signal input
+    // between assertions.
+    const state: BreakpointState = { matches: false, breakpoints: {} };
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => of(state), isMatched: () => false },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(GuidedStepper);
+    const steps: GuidedStepDefinition[] = [
+      { key: 'first', label: 'First' },
+      { key: 'second', label: 'Second' },
+      { key: 'third', label: 'Third' },
+    ];
+    fixture.componentRef.setInput('steps', steps);
+    fixture.detectChanges();
+    const stepIcon = () =>
+      [...fixture.nativeElement.querySelectorAll('mat-step-header')][2].querySelector(
+        '.mat-step-icon',
+      ) as HTMLElement;
+
+    fixture.componentRef.setInput('steps', [
+      steps[0],
+      steps[1],
+      { key: 'third', label: 'Third', done: true },
+    ]);
+    fixture.detectChanges();
+    expect(stepIcon().className).not.toContain('mat-step-icon-state-number');
+
+    // The user deletes the content that completed the step.
+    fixture.componentRef.setInput('steps', [steps[0], steps[1], { key: 'third', label: 'Third' }]);
+    fixture.detectChanges();
+    expect(stepIcon().className).toContain('mat-step-icon-state-number');
+  });
+
   it('does not render "Back" on the first step', () => {
     const fixture = setUp(HostComponent, false);
 

@@ -81,6 +81,38 @@ describe('ExercisePromptCard', () => {
     expect(viewContainerRef).toBeInstanceOf(ViewContainerRef);
   });
 
+  it('does not open a second guide dialog on a double-tap before the first open resolves', async () => {
+    // Regression test for a review finding: `openGuide()` had no re-entrancy guard and `open()` is
+    // async, so a double-tap opened two dialogs and two focus traps.
+    let resolveOpen!: () => void;
+    const guideOpen = vi
+      .fn()
+      .mockReturnValue(new Promise<void>((resolve) => (resolveOpen = resolve)));
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        { provide: ExerciseGuideOpener, useValue: { open: guideOpen } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExercisePromptCard);
+    fixture.componentRef.setInput('prompt', 'List what you can control.');
+    fixture.componentRef.setInput('guide', GUIDE);
+    fixture.detectChanges();
+    const button = readMoreButton(fixture);
+
+    button?.click();
+    button?.click();
+
+    expect(guideOpen).toHaveBeenCalledTimes(1);
+
+    resolveOpen();
+    await fixture.whenStable();
+    button?.click();
+
+    expect(guideOpen).toHaveBeenCalledTimes(2);
+  });
+
   it('is expanded by default, showing "why this matters" and the chapter reference', () => {
     const fixture = setUp({
       prompt: 'List what you can control.',

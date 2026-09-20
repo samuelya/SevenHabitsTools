@@ -58,6 +58,11 @@ export class ExercisePromptCard {
   readonly collapsedByDefault = input(false);
   readonly expanded = model(true);
 
+  /** Guards `openGuide()` against a double-tap (review finding on this PR): `open()` is async, so
+   * without this a second tap before the first dialog opens starts a second one — two dialogs,
+   * two focus traps. */
+  private guideOpening = false;
+
   constructor() {
     afterNextRender(() => {
       if (this.collapsedByDefault()) {
@@ -72,8 +77,11 @@ export class ExercisePromptCard {
 
   protected openGuide(): void {
     const content = this.guide();
-    if (content !== null) {
-      void this.guideOpener.open(content, this.viewContainerRef);
+    if (content !== null && !this.guideOpening) {
+      this.guideOpening = true;
+      void this.guideOpener
+        .open(content, this.viewContainerRef)
+        .finally(() => (this.guideOpening = false));
     }
   }
 }

@@ -31,7 +31,7 @@
       <div class="done-checklist" [id]="checklistId">
         <p class="done-checklist-heading">{{ 'exerciseKit.doneToggle.toMarkDone' | transloco }}</p>
         <ul role="list" class="done-checklist-list">
-          @for (item of items; track item.label) {
+          @for (item of items; track $index) {
             <li>
               <mat-icon aria-hidden="true">{{
                 item.met ? 'check_circle' : 'radio_button_unchecked'

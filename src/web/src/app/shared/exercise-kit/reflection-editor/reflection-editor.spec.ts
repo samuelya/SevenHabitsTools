@@ -87,14 +87,57 @@ describe('ReflectionEditor', () => {
       expect(fixture.nativeElement.textContent).toContain('Saving');
     });
 
-    it('shows "Saved" once the debounce elapses', async () => {
+    it('keeps showing "Saving…" once the debounce elapses until the caller confirms the write landed', async () => {
       const fixture = setUp('', null, true);
 
       typeInto(fixture, 'a new reflection');
       await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
       fixture.detectChanges();
 
+      // Regression test for a review finding: this used to flip to "Saved" as soon as the
+      // debounce fired, regardless of whether the write actually landed.
+      expect(fixture.nativeElement.textContent).toContain('Saving');
+      expect(fixture.nativeElement.textContent).not.toContain('Saved');
+    });
+
+    it('shows "Saved" once the caller confirms the debounced write landed', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a new reflection');
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.componentInstance.reportSaveOutcome(true);
+      fixture.detectChanges();
+
       expect(fixture.nativeElement.textContent).toContain('Saved');
+    });
+
+    it('never claims "Saved" when the caller reports the write was refused (a read-only tab)', async () => {
+      const fixture = setUp('', null, true);
+
+      typeInto(fixture, 'a new reflection');
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.componentInstance.reportSaveOutcome(false);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).not.toContain('Saved');
+    });
+  });
+
+  describe('promptId', () => {
+    it('adds the caller-supplied prompt id alongside its own status id in aria-describedby', () => {
+      const fixture = setUp('', null, true);
+      fixture.componentRef.setInput('promptId', 'reflection-prompt');
+      fixture.detectChanges();
+
+      expect(textarea(fixture).getAttribute('aria-describedby')).toBe(
+        'reflection-prompt reflection-status',
+      );
+    });
+
+    it('falls back to just its own id when no promptId is given', () => {
+      const fixture = setUp('', null, true);
+
+      expect(textarea(fixture).getAttribute('aria-describedby')).toBe('reflection-status');
     });
   });
 

@@ -6,7 +6,7 @@
       rows="6"
       [value]="draft()"
       (input)="onInput($event)"
-      [attr.aria-describedby]="sessionStatus() ? 'reflection-status' : 'reflection-hint'"
+      [attr.aria-describedby]="describedBy()"
     ></textarea>
   </mat-form-field>
   @if (sessionStatus()) {
