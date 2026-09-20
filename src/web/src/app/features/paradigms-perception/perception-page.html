@@ -16,12 +16,8 @@
     <ng-template appGuidedStep="twoViews">
       <div class="step-two-views">
         <mat-card appearance="outlined" class="view-card">
-          <mat-card-header>
-            <mat-card-title>{{
-              'paradigmsPerception.step1.viewALabel' | transloco
-            }}</mat-card-title>
-          </mat-card-header>
           <mat-card-content>
+            <h3 class="view-title">{{ 'paradigmsPerception.step1.viewALabel' | transloco }}</h3>
             <p>{{ 'paradigmsPerception.step1.viewA' | transloco }}</p>
           </mat-card-content>
         </mat-card>
@@ -32,7 +28,7 @@
           <textarea
             matInput
             cdkTextareaAutosize
-            cdkAutosizeMinRows="3"
+            cdkAutosizeMinRows="2"
             cdkAutosizeMaxRows="10"
             [placeholder]="'paradigmsPerception.step1.firstView.placeholder' | transloco"
             [value]="exercise()?.firstView ?? ''"
@@ -51,12 +47,8 @@
 
         @if (revealed()) {
           <mat-card appearance="outlined" class="view-card">
-            <mat-card-header>
-              <mat-card-title>{{
-                'paradigmsPerception.step1.viewBLabel' | transloco
-              }}</mat-card-title>
-            </mat-card-header>
             <mat-card-content>
+              <h3 class="view-title">{{ 'paradigmsPerception.step1.viewBLabel' | transloco }}</h3>
               <p>{{ 'paradigmsPerception.step1.viewB' | transloco }}</p>
             </mat-card-content>
           </mat-card>
