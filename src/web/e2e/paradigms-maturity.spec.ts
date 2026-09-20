@@ -212,11 +212,16 @@ test.describe('maturity continuum self-assessment', () => {
         x: footerBox!.x + footerBox!.width * fraction,
         y: footerBox!.y + footerBox!.height / 2,
       };
-      const hitsForm = await page.evaluate(
-        ({ x, y }) => document.elementFromPoint(x, y)?.closest('form') !== null,
-        point,
-      );
-      expect(hitsForm).toBe(false);
+      const hit = await page.evaluate(({ x, y }) => {
+        const element = document.elementFromPoint(x, y);
+        return { hitsSomething: element !== null, hitsForm: element?.closest('form') != null };
+      }, point);
+      // Both halves asserted, and `!= null` rather than `!== null`: `elementFromPoint` returns
+      // `null` for a point outside the viewport, so the strict form turned `undefined !== null`
+      // into `true` and reported "the footer isn't on screen at all" as "the footer hit-tests
+      // into the editor form" (review round 3, finding 5).
+      expect(hit.hitsSomething).toBe(true);
+      expect(hit.hitsForm).toBe(false);
     }
 
     const markDoneButton = page.locator('app-done-toggle button');
@@ -258,6 +263,15 @@ test.describe('maturity continuum self-assessment', () => {
     expect(await scrollArea.evaluate((el) => el.scrollTop)).toBe(0);
     await expect(page.locator('app-exercise-page .footer-slot')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('app-done-toggle button')).toBeInViewport({ ratio: 1 });
+
+    // Review round 3, finding 4: the same open makes `.body` a brand-new scroll container at
+    // `scrollTop: 0` while `.page`'s own offset clamps back to 0, so the row just clicked was
+    // carried off screen and the master-detail context was lost on every open-after-scroll.
+    // `toBeInViewport` intersects with every ancestor clip, so a row scrolled out of `.body`
+    // fails here even though it is inside the viewport's rectangle.
+    const selectedRow = page.locator('.assessment-history-list__item[aria-pressed="true"]');
+    await expect(selectedRow).toHaveCount(1);
+    await expect(selectedRow).toBeInViewport({ ratio: 1 });
   });
 
   // Review round 2, finding 3: the shell renders the offline indicator, the read-only banner and
@@ -288,6 +302,105 @@ test.describe('maturity continuum self-assessment', () => {
     expect(await pageOverflow(page)).toBeLessThanOrEqual(1);
     await expect(page.locator('app-exercise-page .footer-slot')).toBeInViewport({ ratio: 1 });
     await expect(page.locator('app-done-toggle button')).toBeInViewport({ ratio: 1 });
+  });
+
+  // Review round 3, finding 1: with the grid strictly bounded to `.page`, a *short* page area let
+  // the footer row plus the 1rem gap eat the whole grid — row 1, and with it the `inset: 0`
+  // editor panel, collapsed to 0px while the user was typing into it, and the bounded grid left
+  // no page scroll to escape with. The real case is a landscape phone (844x390, above
+  // `HANDSET_QUERY`, so it gets split mode) whose on-screen keyboard shrinks the viewport to
+  // ~200px (`index.html`'s `interactive-widget=resizes-content`); 900x220 reproduces the same
+  // page-area height without driving a keyboard. `--split-row-floor` (16rem) is the fix.
+  test('desktop split mode: a short page area keeps the editor above its floor and the page scrollable', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    const history = longHistory();
+    await seedDocument({ habits: { paradigms: { maturity: history } } });
+    await page.setViewportSize({ width: 900, height: 220 });
+    await page.goto(`/habits/paradigms/maturity/${history[0].id}`);
+    await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) =>
+        (document.querySelector(selector) as HTMLElement).getBoundingClientRect();
+      const panel = rect('app-exercise-page .editor-panel');
+      const footer = rect('app-exercise-page .footer-slot');
+      const pageEl = document.querySelector('main.page') as HTMLElement;
+      return {
+        panelHeight: panel.height,
+        panelBottom: panel.bottom,
+        footerTop: footer.top,
+        pageOverflow: pageEl.scrollHeight - pageEl.clientHeight,
+        pageClient: pageEl.clientHeight,
+      };
+    });
+
+    // The repro is real: the page area itself is far shorter than the floor (measured 156px here,
+    // against a 151px footer), so this is the configuration that used to collapse row 1 to 0.
+    expect(layout.pageClient).toBeLessThan(256);
+    // 16rem, the measured floor (`exercise-page.scss`): the editor is still usable.
+    expect(layout.panelHeight).toBeGreaterThanOrEqual(256);
+    // And the escape hatch is back — the scaffold overflows `.page`, which scrolls again.
+    expect(layout.pageOverflow).toBeGreaterThan(0);
+    // The footer row starts below the editor instead of riding back over it: inside this grid its
+    // own row is its sticky containing block, so it has nowhere to shift to.
+    expect(layout.footerTop).toBeGreaterThanOrEqual(layout.panelBottom - 1);
+  });
+
+  // Review round 3, finding 2: the shell rule that lends the scaffold `.page`'s height
+  // (`shell.scss`) keys on `<app-exercise-page>` being the routed host's own child. When a page
+  // nests it deeper the rule stops matching and the grid is content-sized — and because the
+  // editor panel is absolutely positioned, row 1 is then sized by the history column *alone*, so
+  // the editor is clipped to that column's height (measured on `ba34b11`: a 190px panel around a
+  // 3149px form), not left in "the pre-#213 layout" as the code and the playbook both claimed.
+  // The only page in that shape is the dev-only `/dev/kit` route, which isn't registered in the
+  // build this suite runs against (`route-registry.ts`), so the nesting is reproduced here in the
+  // DOM: moving the routed host into a wrapper is exactly what makes `:has()` stop matching.
+  test('desktop split mode: a page that nests the scaffold still gets a usable editor', async ({
+    page,
+  }, testInfo) => {
+    test.skip(
+      testInfo.project.name.startsWith('mobile'),
+      'split mode only exists at or above HANDSET_QUERY',
+    );
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/habits/paradigms/maturity');
+    await page.locator('.add-button').click();
+    await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
+
+    await page.locator('app-maturity-page').evaluate((host) => {
+      const wrapper = document.createElement('div');
+      host.parentElement!.insertBefore(wrapper, host);
+      wrapper.appendChild(host);
+    });
+
+    const layout = await page.evaluate(() => {
+      const el = (selector: string) => document.querySelector(selector) as HTMLElement;
+      const panel = el('app-exercise-page .editor-panel');
+      const body = el('app-exercise-page .body');
+      const firstSlot = body.firstElementChild!.getBoundingClientRect();
+      const lastSlot = body.lastElementChild!.getBoundingClientRect();
+      return {
+        // Not `scrollHeight`: the column is stretched to the row, so that can never come out
+        // below the floor. The slots' own extent is what row 1 used to be sized by.
+        bodyContent: lastSlot.bottom - firstSlot.top,
+        panelHeight: panel.getBoundingClientRect().height,
+        panelContent: panel.scrollHeight,
+      };
+    });
+
+    // The repro is real: an empty history is a column shorter than the floor (190px of content on
+    // `ba34b11`, which is exactly what the editor was clipped to), and the form inside the editor
+    // is many times taller than it.
+    expect(layout.bodyContent).toBeLessThan(256);
+    expect(layout.panelContent).toBeGreaterThan(1000);
+    // The row floor holds the editor open even with no height coming down from `.page`.
+    expect(layout.panelHeight).toBeGreaterThanOrEqual(256);
   });
 
   // Issue #203: the shared delete pattern via the history's own bin button — Cancel leaves the

@@ -1,7 +1,7 @@
 <h1 class="visually-hidden" tabindex="-1">{{ title() }}</h1>
 
 <div class="scaffold" [class.editing]="editing()" [class.handset]="handset()">
-  <div class="body" [attr.inert]="bodyInert() ? '' : null">
+  <div #bodyColumn class="body" [attr.inert]="bodyInert() ? '' : null">
     <div class="intro-slot"><ng-content select="[intro]" /></div>
     <div class="content-slot"><ng-content /></div>
   </div>

@@ -106,19 +106,42 @@
 // grid follows in the same layout pass, with nothing to subscribe to and no measurement to go
 // stale (round 2's `ViewportRuler` read the *layout viewport* instead, and was wrong by the
 // padding, by `.page`'s scroll offset, and for every one of those three banners).
-// Where a page doesn't meet that contract (`<app-exercise-page>` not a direct child of the routed
-// host — `/dev/kit` nests it inside a `<section>`), or in a browser without `:has()`, the rule
-// simply doesn't match and the grid falls back to content sizing: the pre-#213 layout, never a
-// collapsed one.
+// Where a page doesn't meet that contract the rule doesn't match — and the two ways of missing it
+// do *not* degrade the same way (both measured at 1280x800, empty history, the 3149px-tall new
+// assessment form, review round 3):
+//   - **No `:has()` support**, with `<app-exercise-page>` still the routed host's own child: the
+//     host keeps its own `min-block-size: 100%` floor and the scaffold is still stretched to it,
+//     so the grid keeps a definite height while the content fits (a 597px editor column here).
+//     Only the *ceiling* is gone, so a column taller than `.page` grows the host and the page
+//     scrolls — the pre-#213 layout.
+//   - **`<app-exercise-page>` nested deeper** (`/dev/kit` puts it inside a `<section>`): the
+//     wrapper has no floor of its own, so the grid is content-sized and row 1 is sized by `.body`
+//     *alone* — the editor panel is absolutely positioned and contributes nothing to it — leaving
+//     the editor clipped to the history column's height (a 190px panel around that 3149px form).
+//     Not a collapse, but not the pre-#213 layout either; the row floor below is what keeps it
+//     usable.
 .scaffold.editing:not(.handset) {
   display: grid;
   position: relative;
   grid-template-columns: clamp(14rem, 25%, 18rem) 1fr;
-  // `1fr auto`, not `auto auto`: row 1 takes whatever this grid's (now definite, see above)
-  // height doesn't give to the footer's own (auto) row, so the footer row sits at the bottom edge
-  // regardless of either column's content (`margin-block-start: auto` does nothing to a grid
-  // item — issue #193).
-  grid-template-rows: 1fr auto;
+  // `minmax(floor, 1fr)`, not `auto auto` and not a bare `1fr`: row 1 takes whatever this grid's
+  // (now definite, see above) height doesn't give to the footer's own (auto) row, so the footer
+  // row sits at the bottom edge regardless of either column's content (`margin-block-start: auto`
+  // does nothing to a grid item — issue #193) — but never less than the floor.
+  // Without a floor, a short page area lets the footer row plus the gap consume the whole grid:
+  // row 1, and with it the `inset: 0` editor panel, collapses to nothing while the user is typing
+  // into it, and there is no page scroll left to escape with now that the grid is strictly
+  // bounded to `.page`. Reachable on a phone in landscape (844x390 is above `HANDSET_QUERY`, so
+  // it gets this split layout) once the on-screen keyboard shrinks the viewport to ~200px
+  // (`index.html`'s `interactive-widget=resizes-content`), and in any short desktop window or at
+  // large zoom — measured at 900x220 and 844x210: a 0px-tall editor panel.
+  // The floor itself is measured, not guessed (Chromium, 1280x800, the maturity form): the sticky
+  // `.editor-header` is 57px, `.editor-body`'s block padding 2 x 16px and one Material form field
+  // 76px, so a header plus two fields needs 241px. 16rem is the next whole rem up, which keeps
+  // the header and two controls on screen with the next one partly visible — enough to see what
+  // is being typed and that the panel scrolls.
+  --split-row-floor: 16rem;
+  grid-template-rows: minmax(var(--split-row-floor), 1fr) auto;
   // `stretch` (`normal`'s own effective default, spelled out): `.body` must actually be *given*
   // row 1's full, now-genuine height to have anything real to clip/scroll against below — `start`
   // would size it to its own content instead and let a tall one overflow the row visually, right
@@ -128,9 +151,19 @@
   align-items: stretch;
   gap: 1rem;
   // See "Where this grid's height comes from" above: the height arrives through the flex chain
-  // from `.page`, so this is `auto`; `min-block-size: 0` is what lets it actually shrink to the
-  // bounded host instead of being held open by its own content.
-  min-block-size: 0;
+  // from `.page`, so the block size itself stays `auto`; this minimum is what lets the scaffold
+  // actually shrink to the bounded host instead of being held open by its own content.
+  // The row floor plus the gap, rather than `0`: a flex item can be shrunk to whatever minimum
+  // its container asks for, so a `0` minimum is what turned a short `.page` into a collapsed
+  // row 1 instead of an overflowing scaffold. Below this the scaffold overflows `.page` again and
+  // the page scrolls, which is the escape hatch. Deliberately *not* `min-content`, which would
+  // also have to size row 1: under an intrinsic constraint a `1fr` track is resolved from its
+  // items' max-content contributions, so the whole history column's height would come back in
+  // and push the scaffold past `.page` on every ordinary open (measured: +241px at 1280x800 with
+  // 14 assessments). The footer's own row is left out for the same reason — its height is
+  // content-dependent — so below the floor it is the part that lands outside the scroll port,
+  // which is exactly what scrolling is for.
+  min-block-size: calc(var(--split-row-floor) + 1rem);
 }
 
 // `min-block-size: 0`, not the grid default `auto`: a grid item's implied minimum size is its
@@ -146,11 +179,24 @@
   min-inline-size: 0;
   min-block-size: 0;
   overflow-y: auto;
+  // Spelled out, because `overflow-y: auto` alone already made the inline axis a scrollport: CSS
+  // Overflow coerces a `visible`/non-`visible` pair, so `overflow-x` would compute to `auto` and
+  // this narrow (`clamp(14rem, 25%, 18rem)`) column could raise a horizontal scrollbar of its own
+  // on an unbreakable string. `clip` keeps the clipping and drops the scrollbar.
+  overflow-x: clip;
 }
 
+// `position: static`, dropping the flow layout's sticky pinning: inside this grid the footer row
+// already sits at the bottom edge of a scaffold bounded to `.page`, so while the grid fits there
+// is nothing for sticky to do — and when it doesn't fit (a page area shorter than the row floor
+// above, or a page that misses the `shell.scss` contract and is content-sized), sticky is
+// actively wrong: measured at 900x220, it lifted the footer bar off its own row and back over the
+// live editor panel underneath, which is issue #213's original symptom. Static leaves it below
+// the editor, one scroll away.
 .scaffold.editing:not(.handset) .footer-slot {
   grid-column: 1 / -1;
   grid-row: 2;
+  position: static;
 }
 
 .editor-panel {

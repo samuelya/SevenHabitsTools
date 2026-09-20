@@ -70,6 +70,9 @@ export class ExercisePage implements EditorFocusHost {
   readonly editorClosed = output<void>();
 
   private readonly editorHeading = viewChild<ElementRef<HTMLElement>>('editorHeading');
+  /** The list/body column — its own scroll container while the desktop split editor is up (see
+   * `revealSelectedRow`). */
+  private readonly bodyColumn = viewChild<ElementRef<HTMLElement>>('bodyColumn');
   /** Set by whichever `[appEditorInitialFocus]` marker is alive inside the open editor, wherever
    * it sits in the projected tree (see that directive on why this is a registration, not a
    * `contentChild` query). */
@@ -130,6 +133,18 @@ export class ExercisePage implements EditorFocusHost {
       afterNextRender(() => this.moveFocus(editing), { injector: this.injector });
     });
 
+    // Opening the split editor makes `.body` a scroll container (`exercise-page.scss`) that
+    // starts at `scrollTop: 0`, so the row the user just picked after scrolling the list would
+    // jump out of sight and take the master-detail context with it. Same render-hook reasoning as
+    // the focus move above: the class that creates that scroll container is applied by the render
+    // this effect is reacting to, so the scroll has to happen after it.
+    effect(() => {
+      if (!this.splitEditing()) {
+        return;
+      }
+      afterNextRender(() => this.revealSelectedRow(), { injector: this.injector });
+    });
+
     // Entering focus mode collapses the intro if it's expanded; exiting never re-expands it
     // (owner decision on #184) — this only ever calls `.set(false)`, never `true`.
     effect(() => {
@@ -148,6 +163,22 @@ export class ExercisePage implements EditorFocusHost {
       this.triggerElement?.focus();
       this.triggerElement = null;
     }
+  }
+
+  /** Scrolls the selected list row back into view inside the body column's brand-new scroll
+   * container. `[aria-pressed="true"]` is the kit's one selection marker — `ExerciseList` and
+   * `AssessmentHistoryList` both use it, for the reasons their own templates give — so this needs
+   * no knowledge of either. `block: 'nearest'` leaves an already-visible row (and every ancestor
+   * scroller, `.page` included) alone. The state is re-read here rather than captured when the
+   * hook was scheduled: a close that lands before the callback runs (fast open/close, or a route
+   * change that does both) must not scroll a column that is no longer a scroll container. */
+  private revealSelectedRow(): void {
+    if (!this.splitEditing()) {
+      return;
+    }
+    const selected =
+      this.bodyColumn()?.nativeElement.querySelector<HTMLElement>('[aria-pressed="true"]');
+    selected?.scrollIntoView({ block: 'nearest' });
   }
 
   registerInitialFocus(element: ElementRef<HTMLElement>): void {

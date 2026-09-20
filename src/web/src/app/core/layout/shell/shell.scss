@@ -98,7 +98,9 @@ a.side-nav__row:focus-visible {
 // by the `:host` prefix). Direct-child combinators on both sides: this is the contract a page opts
 // into — its own host is a flex column filling `.page` and `<app-exercise-page>` is that host's
 // child (see `exercise-page.scss` and the playbook's "Page layout"). A page that nests it deeper
-// (`/dev/kit`) or a browser without `:has()` simply doesn't match and keeps content sizing.
+// (`/dev/kit`) or a browser without `:has()` doesn't match and keeps content sizing; the two are
+// not equivalent, and what each one actually leaves on screen is measured in `exercise-page.scss`
+// next to the grid's own row floor.
 :host ::ng-deep .page > *:has(> .fills-page) {
   block-size: 100%;
 }

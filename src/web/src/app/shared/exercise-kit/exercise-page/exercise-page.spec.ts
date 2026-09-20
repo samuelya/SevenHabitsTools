@@ -39,6 +39,24 @@ class HostComponent {
   }
 }
 
+/** A body column with a selected row, the kit's one selection marker (`aria-pressed="true"`, as
+ * `ExerciseList` and `AssessmentHistoryList` both render it). */
+@Component({
+  selector: 'app-selected-row-host',
+  imports: [ExercisePage],
+  template: `
+    <app-exercise-page title="Circle of Influence" [editing]="editing()" editorTitle="Editing">
+      <button type="button" class="row" aria-pressed="false">First</button>
+      <button type="button" class="row selected" aria-pressed="true">Last</button>
+      <div editor><input class="editor-field" /></div>
+      <div footer>Footer content</div>
+    </app-exercise-page>
+  `,
+})
+class SelectedRowHostComponent {
+  readonly editing = signal(false);
+}
+
 @Component({
   selector: 'app-initial-focus-host',
   imports: [ExercisePage, EditorInitialFocus],
@@ -197,6 +215,46 @@ describe('ExercisePage', () => {
 
     expect(page.querySelector('.editor-panel')).not.toBeNull();
     expect(page.classList).not.toContain('fills-page');
+  });
+
+  it('scrolls the selected row back into view when the desktop split editor opens (#213)', () => {
+    // Opening the editor turns the body column into its own scroll container at `scrollTop: 0`,
+    // so a row picked after scrolling the list would otherwise be carried out of sight along with
+    // the master-detail context. `scrollIntoView` isn't implemented in this DOM, so the selected
+    // row carries its own.
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(SelectedRowHostComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const selected = host.querySelector('.selected') as HTMLElement;
+    const scrollIntoView = vi.fn();
+    selected.scrollIntoView = scrollIntoView;
+    const unselected = host.querySelector('.row:not(.selected)') as HTMLElement;
+    unselected.scrollIntoView = vi.fn();
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    // `block: 'nearest'`: an already-visible row, and every ancestor scroller (`.page` included),
+    // are left exactly where they are.
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(unselected.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it('never scrolls the body column on handset, where the editor covers it entirely', () => {
+    configureTestBed(true);
+    const fixture = TestBed.createComponent(SelectedRowHostComponent);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const selected = host.querySelector('.selected') as HTMLElement;
+    selected.scrollIntoView = vi.fn();
+
+    fixture.componentInstance.editing.set(true);
+    fixture.detectChanges();
+
+    expect(selected.scrollIntoView).not.toHaveBeenCalled();
   });
 
   it('shows the saving and saved status text through the aria-live region', () => {
