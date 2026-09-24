@@ -278,6 +278,8 @@ describe('chapterStatus (issue #224)', () => {
 
   it('is "not planned" for a planned entry without a valid date (never a permanent "Overdue")', () => {
     expect(chapterStatus(entry({ plannedAt: '' }), NOW)).toEqual({ kind: 'notPlanned' });
+    expect(chapterStatus(entry({ plannedAt: '2026-13-01' }), NOW)).toEqual({ kind: 'notPlanned' });
+    expect(chapterStatus(entry({ plannedAt: '2026-02-30' }), NOW)).toEqual({ kind: 'notPlanned' });
   });
 });
 
@@ -435,6 +437,11 @@ describe('isValidPlannedAt', () => {
   it('rejects a partial or malformed value', () => {
     expect(isValidPlannedAt('2026-01')).toBe(false);
     expect(isValidPlannedAt('not-a-date')).toBe(false);
+  });
+
+  it('rejects a pattern-valid but impossible date', () => {
+    expect(isValidPlannedAt('2026-13-01')).toBe(false);
+    expect(isValidPlannedAt('2026-02-30')).toBe(false);
   });
 });
 
