@@ -32,8 +32,11 @@ describe('ContinueCard (#220)', () => {
 
     expect(links).toHaveLength(1);
     expect(links[0].getAttribute('href')).toBe('/habits/paradigms/perception');
-    expect(links[0].textContent?.replace(/\s+/g, ' ').trim()).toBe(
-      'play_circle Continue: Your paradigm Paradigms',
+    // The accessible name leaves out aria-hidden content and needs real spaces between the parts.
+    const named = links[0].cloneNode(true) as HTMLElement;
+    named.querySelectorAll('[aria-hidden="true"]').forEach((el) => el.remove());
+    expect(named.textContent?.replace(/\s+/g, ' ').trim()).toBe(
+      'Continue: Your paradigm Paradigms',
     );
     expect(links[0].querySelector('mat-icon')?.getAttribute('aria-hidden')).toBe('true');
   });

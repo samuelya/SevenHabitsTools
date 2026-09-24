@@ -11,10 +11,11 @@ import { RouterLink } from '@angular/router';
     <a class="continue-card" [routerLink]="link()">
       <mat-icon class="continue-card__icon flip-in-rtl" aria-hidden="true">play_circle</mat-icon>
       <span class="continue-card__text">
-        <span class="continue-card__label">{{ label() }}</span>
+        <span class="continue-card__label">{{ label() }}</span
+        >&ngsp;
         <span class="continue-card__habit">{{ habitTitle() }}</span>
         @if (detail(); as detail) {
-          <span class="continue-card__detail">{{ detail }}</span>
+          &ngsp;<span class="continue-card__detail">{{ detail }}</span>
         }
       </span>
     </a>
