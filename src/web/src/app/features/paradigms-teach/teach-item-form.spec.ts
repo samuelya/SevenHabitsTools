@@ -24,6 +24,22 @@ function setUp(value: TeachEntryFields, sharedAt: string | null = null) {
 }
 
 describe('TeachItemForm', () => {
+  it('gives every free-text field an example placeholder (#230)', () => {
+    const fixture = setUp(draft());
+    const element = fixture.nativeElement as HTMLElement;
+    const placeholders = [
+      ...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        'textarea, input[type="text"]',
+      ),
+    ].map((field) => field.placeholder);
+
+    expect(placeholders).toEqual([
+      'e.g. How I see a problem shapes what I do about it, so I check how I see it first.',
+      'e.g. My sister',
+      "e.g. Explaining it showed me I couldn't give an example from my own life yet.",
+    ]);
+  });
+
   it('renders the key idea', () => {
     const fixture = setUp(draft({ keyIdea: 'Choose your response' }));
 

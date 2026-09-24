@@ -19,6 +19,12 @@
     <p>{{ data.content.inShort }}</p>
   </section>
 
+  @if (data.extra) {
+    <section class="exercise-guide-extra">
+      <ng-container [ngTemplateOutlet]="data.extra" />
+    </section>
+  }
+
   @if (data.content.howTo.length) {
     <section>
       <h3>{{ 'exerciseKit.guide.howTo' | transloco }}</h3>
@@ -33,22 +39,48 @@
   @if (data.content.examples.length) {
     <section>
       <h3>{{ 'exerciseKit.guide.example' | transloco }}</h3>
-      @for (example of data.content.examples; track example.title) {
-        <mat-card appearance="outlined" class="example-card">
-          <mat-card-header>
-            <mat-card-title>{{ example.title }}</mat-card-title>
-          </mat-card-header>
-          <mat-card-content>
-            <dl class="example-fields">
-              @for (field of example.fields; track field.label) {
-                <div class="example-field">
-                  <dt>{{ field.label }}</dt>
-                  <dd>{{ field.value }}</dd>
-                </div>
-              }
-            </dl>
-          </mat-card-content>
-        </mat-card>
+      @for (example of data.content.examples; track $index) {
+        @if (example.kind === 'card') {
+          <!-- A read-only mock of the exercise's own list row (issue #230): icon slot, title,
+               subtitle line — the same shape `ExerciseList` renders — then the item's fields. -->
+          <mat-card appearance="outlined" class="example-card example-card--item">
+            <div class="example-item-row">
+              <span class="example-item-icon">
+                @if (example.done) {
+                  <mat-icon
+                    role="img"
+                    [attr.aria-label]="'exerciseKit.guide.exampleDone' | transloco"
+                    >check_circle</mat-icon
+                  >
+                }
+              </span>
+              <span class="example-item-text">
+                <span class="example-item-title">{{ example.title }}</span>
+                @if (example.subtitle) {
+                  <span class="example-item-subtitle">{{ example.subtitle }}</span>
+                }
+              </span>
+            </div>
+            <mat-card-content>
+              <ng-container
+                [ngTemplateOutlet]="exampleFields"
+                [ngTemplateOutletContext]="{ $implicit: example.fields }"
+              />
+            </mat-card-content>
+          </mat-card>
+        } @else {
+          <mat-card appearance="outlined" class="example-card">
+            <mat-card-header>
+              <mat-card-title>{{ example.title }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <ng-container
+                [ngTemplateOutlet]="exampleFields"
+                [ngTemplateOutletContext]="{ $implicit: example.fields }"
+              />
+            </mat-card-content>
+          </mat-card>
+        }
       }
     </section>
   }
@@ -60,3 +92,14 @@
     </section>
   }
 </div>
+
+<ng-template #exampleFields let-fields>
+  <dl class="example-fields">
+    @for (field of fields; track $index) {
+      <div class="example-field">
+        <dt>{{ field.label }}</dt>
+        <dd>{{ field.value }}</dd>
+      </div>
+    }
+  </dl>
+</ng-template>

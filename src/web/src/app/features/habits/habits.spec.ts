@@ -1,4 +1,4 @@
-import { Signal, signal } from '@angular/core';
+import { Signal, TemplateRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
@@ -423,9 +423,49 @@ describe('Habits feature', () => {
       about.click();
 
       expect(open).toHaveBeenCalledTimes(1);
-      const [content, , title] = open.mock.calls[0] as [{ inShort: string }, unknown, string];
-      expect(content.inShort).toBe(transloco.translate('habits.hub.intro.h1'));
-      expect(title).toBe('About this habit');
+      const [content, , options] = open.mock.calls[0] as [
+        { inShort: string },
+        unknown,
+        { title: string; extra: unknown },
+      ];
+      expect(content.inShort).toBe(transloco.translate('habits.about.h1.inShort'));
+      expect(content.inShort).not.toBe('habits.about.h1.inShort');
+      expect(options.title).toBe('About this habit');
+      expect(options.extra).toBeInstanceOf(TemplateRef);
+    });
+
+    it('About this habit lists the exercises in order with their hub status (#230)', async () => {
+      h4('second', { order: 20, shortTitleKey: 'titles.about', isStarted: () => signal(true) });
+      h4('first', { order: 10 });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h4');
+      const host = fixture.nativeElement as HTMLElement;
+
+      (host.querySelector('app-habit-hub-page .hub-about') as HTMLButtonElement).click();
+      const dialog = await vi.waitFor(() => {
+        const found = document.querySelector('app-exercise-guide');
+        expect(found?.querySelector('.about-exercise')).toBeTruthy();
+        return found as HTMLElement;
+      });
+      fixture.detectChanges();
+
+      const rowTitles = Array.from(host.querySelectorAll('.hub-exercise .hub-exercise-title')).map(
+        (title) => title.textContent?.trim(),
+      );
+      const aboutTitles = Array.from(
+        dialog.querySelectorAll('.about-exercise .hub-exercise-title'),
+      ).map((title) => title.textContent?.trim());
+      expect(aboutTitles).toEqual(rowTitles);
+      const rowStatuses = Array.from(host.querySelectorAll('.hub-exercise .hub-row-status')).map(
+        (status) => status.textContent?.trim(),
+      );
+      const aboutStatuses = Array.from(
+        dialog.querySelectorAll('.about-exercise .hub-row-status'),
+      ).map((status) => status.textContent?.trim());
+      expect(aboutStatuses).toEqual(rowStatuses);
+      expect(dialog.querySelector('.about-exercises-title')?.textContent?.trim()).toBe(
+        'Exercises in this habit',
+      );
     });
   });
 });

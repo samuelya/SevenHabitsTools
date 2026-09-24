@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ViewContainerRef } from '@angular/core';
+import { TemplateRef, ViewContainerRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { AppDialog } from '../../../core/layout/app-dialog';
 import { AppSnackbar } from '../../../core/layout/app-snackbar';
@@ -137,9 +137,28 @@ describe('ExerciseGuideOpener', () => {
   it('passes a given title through to the dialog (#219)', async () => {
     const { service, dialogOpen } = setUp();
 
-    await service.open(CONTENT, fakeViewContainerRef(), 'About this habit');
+    await service.open(CONTENT, fakeViewContainerRef(), { title: 'About this habit' });
 
     const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: unknown }];
     expect(config.data).toEqual({ content: CONTENT, title: 'About this habit' });
+  });
+
+  it('passes a caller-rendered extra section through to the dialog (#230)', async () => {
+    const { service, dialogOpen } = setUp();
+    const extra = {} as TemplateRef<unknown>;
+
+    await service.open(CONTENT, fakeViewContainerRef(), { title: 'About', extra });
+
+    const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: { extra: unknown } }];
+    expect(config.data.extra).toBe(extra);
+  });
+
+  it('passes content alone when no options are given', async () => {
+    const { service, dialogOpen } = setUp();
+
+    await service.open(CONTENT, fakeViewContainerRef());
+
+    const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: unknown }];
+    expect(config.data).toEqual({ content: CONTENT });
   });
 });

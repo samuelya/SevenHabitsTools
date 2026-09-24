@@ -93,6 +93,7 @@
     ],
     "examples": [
       {
+        "kind": "fields",
         "title": "Step 1",
         "fields": [
           {
@@ -106,6 +107,7 @@
         ]
       },
       {
+        "kind": "fields",
         "title": "Step 2",
         "fields": [
           { "label": "Attempt 1", "value": "\"Set an alarm to get up at six\" — Quick fix" },
@@ -121,6 +123,7 @@
         ]
       },
       {
+        "kind": "fields",
         "title": "Step 3",
         "fields": [
           { "label": "As you see it now — What you see", "value": "\"My teenager is lazy\"" },

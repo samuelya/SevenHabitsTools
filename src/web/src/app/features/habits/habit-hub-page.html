@@ -25,32 +25,14 @@
 } @else {
   <mat-nav-list class="hub-list">
     @for (exercise of exercises(); track exercise.exerciseId) {
-      @let status = rowStatusFor(exercise);
       <a mat-list-item class="hub-exercise" [routerLink]="'/' + exercise.route">
         <span matListItemTitle class="hub-row">
           <span class="hub-number" aria-hidden="true">{{ $index + 1 }}</span>
           <span class="hub-exercise-title">{{ exercise.shortTitleKey | transloco }}</span>
-          @if (status.kind === 'done') {
-            <span class="hub-row-status hub-status">
-              <mat-icon aria-hidden="true">check_circle</mat-icon>
-              {{
-                'habits.hub.completedAt'
-                  | transloco: { time: status.completedAt | appDate: { dateStyle: 'medium' } }
-              }}
-            </span>
-          } @else if (status.kind === 'progress') {
-            <span class="hub-row-status hub-exercise-status">
-              {{ status.status.key | appPlural: status.status.count : status.status.params }}
-            </span>
-          } @else if (status.kind === 'started') {
-            <span class="hub-row-status hub-in-progress">{{
-              'habits.hub.inProgress' | transloco
-            }}</span>
-          } @else {
-            <span class="hub-row-status hub-not-started">{{
-              'habits.hub.notStarted' | transloco
-            }}</span>
-          }
+          <ng-container
+            [ngTemplateOutlet]="rowStatus"
+            [ngTemplateOutletContext]="{ $implicit: rowStatusFor(exercise) }"
+          />
         </span>
       </a>
     }
@@ -81,3 +63,56 @@
     }
   </div>
 }
+
+<!-- One status renderer for the list rows and "About this habit" (#219, #230). -->
+<ng-template #rowStatus let-status>
+  @if (status.kind === 'done') {
+    <span class="hub-row-status hub-status">
+      <mat-icon aria-hidden="true">check_circle</mat-icon>
+      {{
+        'habits.hub.completedAt'
+          | transloco: { time: status.completedAt | appDate: { dateStyle: 'medium' } }
+      }}
+    </span>
+  } @else if (status.kind === 'progress') {
+    <span class="hub-row-status hub-exercise-status">
+      {{ status.status.key | appPlural: status.status.count : status.status.params }}
+    </span>
+  } @else if (status.kind === 'started') {
+    <span class="hub-row-status hub-in-progress">{{ 'habits.hub.inProgress' | transloco }}</span>
+  } @else {
+    <span class="hub-row-status hub-not-started">{{ 'habits.hub.notStarted' | transloco }}</span>
+  }
+</ng-template>
+
+<!-- "About this habit"'s own section (#230), rendered inside the guide dialog: the habit's
+     exercises in chapter order, short titles, each with the same status as its hub row. -->
+<ng-template #aboutExercises>
+  <h3 class="about-exercises-title">{{ 'habits.hub.aboutExercisesTitle' | transloco }}</h3>
+  @if (isEmpty()) {
+    <p class="about-exercises-empty">{{ 'habits.hub.noExercises' | transloco }}</p>
+  } @else {
+    <!-- The `<li>` keeps its list marker (a flex `<li>` would lose it); the row inside wraps. -->
+    <ol class="about-exercises">
+      @for (exercise of exercises(); track exercise.exerciseId) {
+        <li class="about-exercise">
+          <span class="hub-row">
+            <span class="hub-exercise-title">{{ exercise.shortTitleKey | transloco }}</span>
+            <ng-container
+              [ngTemplateOutlet]="rowStatus"
+              [ngTemplateOutletContext]="{ $implicit: rowStatusFor(exercise) }"
+            />
+          </span>
+        </li>
+      }
+      @for (entry of comingSoon(); track entry.shortTitleKey + '-' + $index) {
+        <li class="about-exercise">
+          <span class="hub-row">
+            <span class="hub-exercise-title">{{ entry.shortTitleKey | transloco }}</span>
+            <span class="hub-row-status">{{ 'habits.hub.comingSoon' | transloco }}</span>
+          </span>
+        </li>
+      }
+    </ol>
+  }
+</ng-template>

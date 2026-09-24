@@ -78,6 +78,26 @@ describe('PcBalanceAuditForm', () => {
     expect(emitted).toHaveLength(0);
   });
 
+  it('gives every free-text field an example placeholder, per group for asset names (#230)', () => {
+    const fixture = setUp(audit({ assets: [asset({ p: 5, pc: 1, name: '' })] }));
+    const element = fixture.nativeElement as HTMLElement;
+    const placeholders = (selector: string) =>
+      [...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(selector)].map(
+        (field) => field.placeholder,
+      );
+
+    expect(placeholders('.asset-row .asset-name input')).toEqual(['e.g. My back']);
+    expect(placeholders('.add-asset-row input')).toEqual([
+      'e.g. My back',
+      'e.g. My savings',
+      'e.g. My friendship with Sam',
+    ]);
+    expect(placeholders('.asset-action textarea')).toEqual([
+      'e.g. A 20-minute walk before work, three days a week.',
+    ]);
+    expect(placeholders('app-reflection-editor textarea')[0]).toContain('e.g. ');
+  });
+
   it('shows the balance indicator and hides the action field while not over-used', () => {
     const fixture = setUp(audit({ assets: [asset({ p: 3, pc: 3 })] }));
     const row = fixture.nativeElement.querySelector('.asset-row') as HTMLElement;

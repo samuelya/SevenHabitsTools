@@ -10,6 +10,7 @@
     "inShort": "In short",
     "howTo": "How to do it",
     "example": "An example",
+    "exampleDone": "Done",
     "afterwards": "Afterwards",
     "close": "Close",
     "loadError": "Couldn't open the guide. Check your connection and try again."

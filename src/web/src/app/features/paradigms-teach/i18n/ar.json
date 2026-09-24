@@ -25,7 +25,10 @@
     "plannedAtLabel": "متى تخطط لمشاركتها",
     "statusLabel": "الحالة",
     "sharedAt": "تمت المشاركة {{date}}",
-    "learnedLabel": "ماذا تعلمت من تعليمها"
+    "learnedLabel": "ماذا تعلمت من تعليمها",
+    "keyIdeaPlaceholder": "مثلاً: الطريقة اللي بشوف بيها المشكلة بتحدد هعمل إيه فيها، فبراجع نظرتي الأول.",
+    "personPlaceholder": "مثلاً: أختي",
+    "learnedPlaceholder": "مثلاً: لما شرحتها اكتشفت إني لسه مش عارف أدي مثال من حياتي."
   },
   "chapter": {
     "paradigms": "الأطر الذهنية والمبادئ",

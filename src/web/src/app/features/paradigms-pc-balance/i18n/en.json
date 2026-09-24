@@ -35,7 +35,12 @@
     "removeAsset": "Remove this asset",
     "newAssetLabel": "New asset name",
     "addAsset": "Add asset",
-    "reflectionLabel": "Reflection"
+    "reflectionLabel": "Reflection",
+    "physicalAssetPlaceholder": "e.g. My back",
+    "financialAssetPlaceholder": "e.g. My savings",
+    "humanAssetPlaceholder": "e.g. My friendship with Sam",
+    "actionPlaceholder": "e.g. A 20-minute walk before work, three days a week.",
+    "reflectionPlaceholder": "e.g. I've been living off my savings and my sleep. This month I'll put some back into both."
   },
   "status": {
     "overUsed": "Over-used",

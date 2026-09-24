@@ -151,17 +151,39 @@ test.describe('habits list and hub', () => {
     expect(actionBelowList).toBe(true);
   });
 
-  test('About this habit opens the intro in a dialog', async ({ page }, testInfo) => {
+  test('About this habit shows In short and the exercises in order with their status', async ({
+    page,
+  }, testInfo) => {
     const text = TEXT[localeFor(testInfo.project.name)];
     await page.goto('/habits/paradigms');
+    const hubTitles = page.locator('app-habit-hub-page .hub-exercise .hub-exercise-title');
+    await expect(hubTitles).toHaveCount(PARADIGMS_ORDER.length);
+    await expect(hubTitles.first()).not.toBeEmpty();
 
-    await page.getByRole('button', { name: text.aboutHabit }).click();
+    const about = page.getByRole('button', { name: text.aboutHabit });
+    await about.click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(text.aboutHabit);
     await expect(dialog.locator('p').first()).not.toBeEmpty();
+
+    // #230: the same short titles and statuses as the hub rows, in the same order.
+    const items = dialog.locator('.about-exercises > li');
+    await expect(items).toHaveCount(PARADIGMS_ORDER.length);
+    await expect(dialog.locator('.about-exercise .hub-exercise-title')).toHaveText(
+      await hubTitles.allTextContents(),
+    );
+    await expect(items.first().locator('.hub-row-status')).toHaveText(text.notStarted);
+
+    // Nothing spills sideways at 360 px or on desktop, in either direction.
+    const overflow = await dialog
+      .locator('.exercise-guide')
+      .evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
+    await expect(about).toBeFocused();
   });
 
   test('a habit hub without exercises shows the empty state and Teach this chapter only', async ({

@@ -10,6 +10,7 @@
       cdkAutosizeMaxRows="10"
       required
       [attr.maxlength]="maxKeyIdeaLength"
+      [placeholder]="'paradigmsTeach.form.keyIdeaPlaceholder' | transloco"
       [value]="entry().keyIdea"
       [attr.aria-describedby]="
         isTouched('keyIdea') && keyIdeaInvalid() ? 'key-idea-error' : 'key-idea-count'
@@ -34,7 +35,13 @@
 
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ 'paradigmsTeach.form.personLabel' | transloco }}</mat-label>
-    <input matInput type="text" [value]="entry().person ?? ''" (input)="onPersonInput($event)" />
+    <input
+      matInput
+      type="text"
+      [placeholder]="'paradigmsTeach.form.personPlaceholder' | transloco"
+      [value]="entry().person ?? ''"
+      (input)="onPersonInput($event)"
+    />
   </mat-form-field>
 
   <mat-form-field appearance="outline" class="field">
@@ -72,6 +79,7 @@
       cdkTextareaAutosize
       cdkAutosizeMinRows="3"
       cdkAutosizeMaxRows="10"
+      [placeholder]="'paradigmsTeach.form.learnedPlaceholder' | transloco"
       [value]="entry().learned ?? ''"
       (input)="onLearnedInput($event)"
     ></textarea>

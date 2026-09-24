@@ -55,6 +55,20 @@ describe('TransitionItemForm', () => {
     expect(emitted).toEqual([{ text: 'New text' }]);
   });
 
+  it('gives every free-text field an example placeholder (#230)', () => {
+    const fixture = setUp(script({ decision: 'rewrite' }));
+    const element = fixture.nativeElement as HTMLElement;
+    const placeholders = [
+      ...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('textarea, input'),
+    ].map((field) => field.placeholder);
+
+    expect(placeholders).toEqual([
+      "e.g. When I'm stressed I go quiet and shut everyone out.",
+      "e.g. When I'm stressed I say so, and ask for ten minutes to think.",
+      "e.g. Thursday's talk about the bills with my partner.",
+    ]);
+  });
+
   it('hides the new-script and situation fields when the decision is keep', () => {
     const fixture = setUp(script({ decision: 'keep' }));
 

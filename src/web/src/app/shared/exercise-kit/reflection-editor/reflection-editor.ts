@@ -53,6 +53,9 @@ export class ReflectionEditor implements OnDestroy {
 
   readonly value = input.required<string>();
   readonly label = input.required<string>();
+  /** A worked example shown while the field is empty (issue #230's `label`/`prompt`/`placeholder`
+   * pattern) — never the only label. */
+  readonly placeholder = input<string | null>(null);
   readonly updatedAt = input<string | null>(null);
   /** Opts into the session-scoped Saving/Saved status instead of the default character-count +
    * saved-at caption (issue #212) — see the class doc comment's scope call. */

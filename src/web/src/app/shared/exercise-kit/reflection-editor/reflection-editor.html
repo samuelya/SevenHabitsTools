@@ -4,6 +4,7 @@
     <textarea
       matInput
       rows="6"
+      [placeholder]="placeholder() ?? ''"
       [value]="draft()"
       (input)="onInput($event)"
       [attr.aria-describedby]="describedBy()"

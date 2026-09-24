@@ -49,20 +49,39 @@
     "continueButton": "Continue: {{title}}",
     "completedAt": "Completed {{time}}",
     "comingSoon": "Coming soon",
-    "intro": {
-      "paradigms": "Before you change habits, it helps to notice the lens you're already looking through. This section explores how your paradigms shape what you see, and why looking at yourself first opens the door to real change.",
-      "h1": "Habit 1 is about owning your responses instead of waiting for circumstances to decide them for you. These exercises help you notice where your influence actually reaches, and practise choosing on purpose.",
-      "h2": "Habit 2 asks you to picture where you're headed before you get moving. Here you'll shape a personal mission and the roles that matter most to you, so your daily choices point somewhere on purpose.",
-      "h3": "Habit 3 turns intention into a weekly rhythm. These exercises help you protect time for what matters most, not just what shouts loudest.",
-      "h4": "Habit 4 looks for outcomes that work for everyone at the table, not just one side. Use these exercises to practise agreements built on mutual benefit rather than compromise or defeat.",
-      "h5": "Habit 5 starts with really listening before making your case. These exercises build the habit of understanding someone else's view fully before asking to be understood in return.",
-      "h6": "Habit 6 is about combining different perspectives into something better than any one of you could produce alone. These exercises practise valuing differences as a source of creative solutions.",
-      "h7": "Habit 7 is about renewing yourself across the areas that keep you effective — body, mind, heart and spirit. These exercises help you build habits of renewal instead of running on empty.",
-      "interdependence": "Moving from independence to interdependence means investing deliberately in the relationships around you. These exercises track the small deposits and withdrawals that build or erode trust over time."
-    },
     "aboutHabit": "About this habit",
     "notStarted": "Not started",
-    "inProgress": "In progress"
+    "inProgress": "In progress",
+    "aboutExercisesTitle": "Exercises in this habit"
+  },
+  "about": {
+    "paradigms": {
+      "inShort": "Before you change habits, it helps to notice the lens you're already looking through. This section explores how your paradigms shape what you see, and why looking at yourself first opens the door to real change."
+    },
+    "h1": {
+      "inShort": "Habit 1 is about owning your responses instead of waiting for circumstances to decide them for you. These exercises help you notice where your influence actually reaches, and practise choosing on purpose."
+    },
+    "h2": {
+      "inShort": "Habit 2 asks you to picture where you're headed before you get moving. Here you'll shape a personal mission and the roles that matter most to you, so your daily choices point somewhere on purpose."
+    },
+    "h3": {
+      "inShort": "Habit 3 turns intention into a weekly rhythm. These exercises help you protect time for what matters most, not just what shouts loudest."
+    },
+    "h4": {
+      "inShort": "Habit 4 looks for outcomes that work for everyone at the table, not just one side. Use these exercises to practise agreements built on mutual benefit rather than compromise or defeat."
+    },
+    "h5": {
+      "inShort": "Habit 5 starts with really listening before making your case. These exercises build the habit of understanding someone else's view fully before asking to be understood in return."
+    },
+    "h6": {
+      "inShort": "Habit 6 is about combining different perspectives into something better than any one of you could produce alone. These exercises practise valuing differences as a source of creative solutions."
+    },
+    "h7": {
+      "inShort": "Habit 7 is about renewing yourself across the areas that keep you effective — body, mind, heart and spirit. These exercises help you build habits of renewal instead of running on empty."
+    },
+    "interdependence": {
+      "inShort": "Moving from independence to interdependence means investing deliberately in the relationships around you. These exercises track the small deposits and withdrawals that build or erode trust over time."
+    }
   },
   "exercises": {
     "paradigms-transition": {
