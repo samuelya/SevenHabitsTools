@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input } f
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
+import { isLive } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
@@ -12,7 +13,11 @@ import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.se
 import { TeachItemForm } from './teach-item-form';
 import { TeachSummary } from './teach-summary';
 import {
-  canMarkDone,
+  CHECKLIST_KEYS,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
+  isComplete,
   draftFor,
   entryForChapter,
   labelsFrom,
@@ -134,8 +139,24 @@ export class TeachPage {
   protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
     this.hasDetail() ? 'saved' : null,
   );
-  protected readonly summary = computed(() => summarize(this.entries(), this.clock.now()));
-  protected readonly readyToMarkDone = computed(() => canMarkDone(this.entries()));
+  /** `null` until the first chapter has an entry (issue #215): no "0 of 10 chapters shared"
+   * card before the user has touched any chapter. */
+  protected readonly summary = computed(() =>
+    this.entries().some(isLive) ? summarize(this.entries(), this.clock.now()) : null,
+  );
+  protected readonly readyToMarkDone = computed(() => isComplete(this.entries()));
+
+  private readonly checklistLabels = translateSignal(
+    CHECKLIST_KEYS.map((key) => `checklist.${key}`),
+    undefined,
+    'paradigms-teach',
+  );
+  /** `null` until the scope has loaded, so `DoneToggle` never renders blank rows on a cold visit
+   * (`perception-page.ts`'s same gate). */
+  protected readonly checklist = computed(() => {
+    const labels = checklistLabelsFrom(this.checklistLabels());
+    return checklistLoaded(labels) ? doneChecklist(this.entries(), labels) : null;
+  });
 
   protected readonly done = this.progress.isDone(TEACH_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(TEACH_MODEL_KEY);

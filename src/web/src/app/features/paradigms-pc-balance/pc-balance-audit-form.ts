@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -43,6 +44,10 @@ import {
  * presentational — `audit` is the current value, `changed` emits the edited field(s) so the page
  * persists through `featureStore` immediately, the same autosave-on-edit convention
  * `TransitionItemForm` uses.
+ *
+ * The reflection uses `ReflectionEditor`'s session status (issue #215): nothing until the first
+ * keystroke, then "Saving…"/"Saved". Only the page knows whether a write landed, so it reports
+ * back through `reportReflectionSaveOutcome()` after persisting a `reflection` change.
  */
 @Component({
   selector: 'app-pc-balance-audit-form',
@@ -65,6 +70,8 @@ import {
 export class PcBalanceAuditForm {
   readonly audit = input.required<PcAudit>();
   readonly changed = output<Partial<PcAuditFields>>();
+
+  private readonly reflectionEditor = viewChild(ReflectionEditor);
 
   protected readonly sliderMin = SLIDER_MIN;
   protected readonly sliderMax = SLIDER_MAX;
@@ -151,6 +158,11 @@ export class PcBalanceAuditForm {
 
   protected onReflectionChanged(reflection: string): void {
     this.changed.emit({ reflection });
+  }
+
+  /** Forwards the page's save outcome for a `reflection` change to the editor's status. */
+  reportReflectionSaveOutcome(saved: boolean): void {
+    this.reflectionEditor()?.reportSaveOutcome(saved);
   }
 
   private onAssetChanged(key: string, fields: Partial<Omit<PcAsset, 'key'>>): void {

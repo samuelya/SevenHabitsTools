@@ -134,6 +134,23 @@ describe('PcBalanceAuditForm', () => {
     expect(emitted).toEqual([{ reflection: 'Noticing a pattern.' }]);
   });
 
+  it('shows no reflection status until the first keystroke, then the reported outcome (#215)', () => {
+    const fixture = setUp(audit({ reflection: 'An older reflection.' }));
+    const host = fixture.nativeElement as HTMLElement;
+    const status = () => host.querySelector('app-reflection-editor .status')?.textContent?.trim();
+
+    expect(status()).toBe('');
+    expect(host.querySelector('app-reflection-editor .hint')).toBeNull();
+
+    const textarea = host.querySelector('app-reflection-editor textarea') as HTMLTextAreaElement;
+    textarea.value = 'A new reflection.';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.componentInstance.reportReflectionSaveOutcome(true);
+    fixture.detectChanges();
+
+    expect(status()).toBe('Saved');
+  });
+
   it('resets touched state when a different audit is bound', () => {
     const fixture = setUp(audit({ id: 'a1', assets: [asset({ key: 'k1', p: 5, pc: 1 })] }));
     (fixture.nativeElement.querySelector('textarea') as HTMLTextAreaElement).dispatchEvent(

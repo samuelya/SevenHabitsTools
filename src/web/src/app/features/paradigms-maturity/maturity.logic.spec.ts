@@ -2,11 +2,14 @@ import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
   addArea,
   addAssessment,
-  canMarkDone,
+  checklistLabelsFrom,
+  checklistLoaded,
   deltaFor,
+  doneChecklist,
   displayName,
   editAssessment,
   isAssessmentComplete,
+  isComplete,
   newAssessmentFields,
   overallProfile,
   removeArea,
@@ -37,7 +40,7 @@ function assessment(overrides: Partial<MaturityAssessment> = {}): MaturityAssess
   };
 }
 
-describe('isAssessmentComplete/canMarkDone', () => {
+describe('isAssessmentComplete/isComplete', () => {
   it('is false with no areas', () => {
     expect(isAssessmentComplete(assessment({ areas: [] }))).toBe(false);
   });
@@ -52,18 +55,50 @@ describe('isAssessmentComplete/canMarkDone', () => {
     expect(isAssessmentComplete(assessment({ areas }))).toBe(true);
   });
 
-  it('canMarkDone ignores a tombstoned assessment', () => {
+  it('isComplete ignores a tombstoned assessment', () => {
     const complete = assessment({
       areas: [area({ level: 1 })],
       deletedAt: NOW.toISOString(),
     });
-    expect(canMarkDone([complete])).toBe(false);
+    expect(isComplete([complete])).toBe(false);
   });
 
-  it('canMarkDone is true once at least one live assessment is fully rated', () => {
+  it('isComplete is true once at least one live assessment is fully rated', () => {
     const incomplete = assessment({ id: 'a1', areas: [] });
     const complete = assessment({ id: 'a2', areas: [area({ level: 3 })] });
-    expect(canMarkDone([incomplete, complete])).toBe(true);
+    expect(isComplete([incomplete, complete])).toBe(true);
+  });
+});
+
+const LABELS = checklistLabelsFrom(['Rate every area']);
+
+describe('doneChecklist', () => {
+  it('is one unmet item with no assessments', () => {
+    expect(doneChecklist([], LABELS)).toEqual([{ label: 'Rate every area', met: false }]);
+  });
+
+  it('stays unmet while any area of the closest assessment is unrated', () => {
+    const areas = [area({ id: 'a1', level: 1 }), area({ id: 'a2', key: 'family' })];
+    expect(doneChecklist([assessment({ areas })], LABELS)[0].met).toBe(false);
+  });
+
+  it('is all met exactly when isComplete is true', () => {
+    const cases: MaturityAssessment[][] = [
+      [],
+      [assessment({ areas: [] })],
+      [assessment({ areas: [area({ level: 2 })] })],
+      [assessment({ areas: [area({ level: 2 })], deletedAt: NOW.toISOString() })],
+    ];
+    for (const assessments of cases) {
+      expect(doneChecklist(assessments, LABELS).every((item) => item.met)).toBe(
+        isComplete(assessments),
+      );
+    }
+  });
+
+  it("checklistLoaded is false for translateSignal's before-load [''] only", () => {
+    expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    expect(checklistLoaded(LABELS)).toBe(true);
   });
 });
 

@@ -46,6 +46,12 @@
     "rewrite": "Rewrite",
     "stop": "Stop"
   },
+  "checklist": {
+    "pattern": "Add at least one pattern you learned at home",
+    "decision": "Decide what to do with it",
+    "newScript": "For Rewrite/Stop: write what you'll do instead",
+    "situation": "For Rewrite/Stop: name a situation this week"
+  },
   "summary": {
     "total": {
       "one": "1 script named",
@@ -58,7 +64,6 @@
     "rewritten": {
       "one": "1 rewritten",
       "other": "{{count}} rewritten"
-    },
-    "doneHint": "Complete at least one script first: the script text, and for Rewrite or Stop also the new script and a situation."
+    }
   }
 }

@@ -41,12 +41,15 @@
     "balanced": "Balanced",
     "underUsed": "Under-used"
   },
+  "checklist": {
+    "rated": "Rate at least one asset",
+    "actions": "Name a maintenance action for any over-used asset"
+  },
   "summary": {
     "totalAudits": {
       "one": "1 audit taken",
       "other": "{{count}} audits taken"
     },
-    "latestBalance": "Latest average balance: {{value}}",
-    "doneHint": "Complete at least one audit first: it needs at least one asset, and every over-used asset needs a maintenance action."
+    "latestBalance": "Latest average balance: {{value}}"
   }
 }

@@ -28,17 +28,23 @@
 
   <div editor>
     @if (selectedAudit(); as audit) {
-      <app-pc-balance-audit-form [audit]="audit" (changed)="onAuditChanged(audit.id, $event)" />
+      <app-pc-balance-audit-form
+        #auditForm
+        [audit]="audit"
+        (changed)="onAuditChanged(audit.id, $event, auditForm)"
+      />
     }
   </div>
 
   <div footer class="summary-section">
-    <app-pc-balance-summary [summary]="summary()" />
+    @if (summary(); as summary) {
+      <app-pc-balance-summary [summary]="summary" />
+    }
     <app-done-toggle
       [done]="done()"
       [completedAt]="completedAt()"
       [disabled]="!readyToMarkDone()"
-      [disabledHint]="'paradigmsPcBalance.summary.doneHint' | transloco"
+      [checklist]="checklist()"
       (toggled)="onToggleDone()"
     />
   </div>

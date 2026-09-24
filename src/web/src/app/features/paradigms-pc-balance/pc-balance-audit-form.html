@@ -149,7 +149,7 @@
   <app-reflection-editor
     [value]="audit().reflection"
     [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
-    [updatedAt]="audit().updatedAt"
+    [sessionStatus]="true"
     (valueChange)="onReflectionChanged($event)"
   />
 </form>

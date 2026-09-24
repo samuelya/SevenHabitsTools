@@ -62,7 +62,7 @@ describe('ReflectionEditor', () => {
     it('never renders the session-status live region', () => {
       const fixture = setUp('');
 
-      expect(fixture.nativeElement.querySelector('#reflection-status')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.status')).toBeNull();
     });
   });
 
@@ -70,7 +70,7 @@ describe('ReflectionEditor', () => {
     it('renders the live region from the start, empty, before the first keystroke of this session', () => {
       const fixture = setUp('An older reflection.', '2026-01-02T10:00:00.000Z', true);
 
-      const region = fixture.nativeElement.querySelector('#reflection-status');
+      const region = fixture.nativeElement.querySelector('.status');
       expect(region).not.toBeNull();
       expect(region?.getAttribute('aria-live')).toBe('polite');
       expect(region?.textContent?.trim()).toBe('');
@@ -129,15 +129,34 @@ describe('ReflectionEditor', () => {
       fixture.componentRef.setInput('promptId', 'reflection-prompt');
       fixture.detectChanges();
 
+      const statusId = fixture.nativeElement.querySelector('.status').id;
       expect(textarea(fixture).getAttribute('aria-describedby')).toBe(
-        'reflection-prompt reflection-status',
+        `reflection-prompt ${statusId}`,
       );
     });
 
     it('falls back to just its own id when no promptId is given', () => {
       const fixture = setUp('', null, true);
 
-      expect(textarea(fixture).getAttribute('aria-describedby')).toBe('reflection-status');
+      const statusId = fixture.nativeElement.querySelector('.status').id;
+      expect(textarea(fixture).getAttribute('aria-describedby')).toBe(statusId);
+    });
+  });
+
+  describe('ids', () => {
+    it('gives each instance its own status and hint ids, so aria-describedby never collides', () => {
+      const withStatus = [setUp('', null, true), TestBed.createComponent(ReflectionEditor)];
+      withStatus[1].componentRef.setInput('value', '');
+      withStatus[1].componentRef.setInput('label', 'Another reflection');
+      withStatus[1].componentRef.setInput('sessionStatus', true);
+      withStatus[1].detectChanges();
+
+      const [first, second] = withStatus.map((fixture) => {
+        const describedBy = textarea(fixture).getAttribute('aria-describedby') ?? '';
+        expect(fixture.nativeElement.querySelector(`#${describedBy}`)).not.toBeNull();
+        return describedBy;
+      });
+      expect(first).not.toBe(second);
     });
   });
 

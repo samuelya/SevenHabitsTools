@@ -9,8 +9,7 @@
   min-block-size: 44px;
 }
 
-.completed-at,
-.disabled-hint {
+.completed-at {
   color: var(--mat-sys-on-surface-variant, gray);
   font-size: 0.75rem;
 }

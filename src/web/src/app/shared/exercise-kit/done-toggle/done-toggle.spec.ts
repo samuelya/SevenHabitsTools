@@ -8,7 +8,6 @@ function setUp(
   done: boolean,
   completedAt: string | null = null,
   disabled = false,
-  disabledHint: string | null = null,
   checklist: readonly DoneChecklistItem[] | null = null,
 ) {
   TestBed.configureTestingModule({
@@ -18,7 +17,6 @@ function setUp(
   fixture.componentRef.setInput('done', done);
   fixture.componentRef.setInput('completedAt', completedAt);
   fixture.componentRef.setInput('disabled', disabled);
-  fixture.componentRef.setInput('disabledHint', disabledHint);
   fixture.componentRef.setInput('checklist', checklist);
   fixture.detectChanges();
   return fixture;
@@ -49,50 +47,37 @@ describe('DoneToggle', () => {
     expect(emitted).toHaveLength(1);
   });
 
-  it('disables "Mark done" when disabled is set', () => {
+  it('gates "Mark done" with aria-disabled, keeping it focusable, when disabled is set', () => {
     const fixture = setUp(false, null, true);
-    expect((fixture.nativeElement.querySelector('button') as HTMLButtonElement).disabled).toBe(
-      true,
-    );
-  });
-
-  it('never disables "Reopen", even when disabled is set', () => {
-    const fixture = setUp(true, '2026-01-02T10:00:00.000Z', true);
-    expect((fixture.nativeElement.querySelector('button') as HTMLButtonElement).disabled).toBe(
-      false,
-    );
-  });
-
-  it('renders the disabled hint and links it to the button, when disabled and a hint is given', () => {
-    const fixture = setUp(false, null, true, 'Complete at least one item first.');
-    const host = fixture.nativeElement as HTMLElement;
-    const button = host.querySelector('button') as HTMLButtonElement;
-    const hint = host.querySelector('.disabled-hint') as HTMLElement;
-
-    expect(hint.textContent).toContain('Complete at least one item first.');
-    expect(button.getAttribute('aria-describedby')).toBe(hint.id);
-  });
-
-  it('omits the hint when a hint is given but the button is not disabled', () => {
-    const fixture = setUp(false, null, false, 'Complete at least one item first.');
-    const host = fixture.nativeElement as HTMLElement;
-
-    expect(host.querySelector('.disabled-hint')).toBeNull();
-    expect(
-      (host.querySelector('button') as HTMLButtonElement).getAttribute('aria-describedby'),
-    ).toBeNull();
-  });
-
-  it('omits the hint when disabled but no hint is given', () => {
-    const fixture = setUp(false, null, true);
-    expect((fixture.nativeElement as HTMLElement).querySelector('.disabled-hint')).toBeNull();
-  });
-
-  it('does not point aria-describedby at a hint the template never renders, for an empty-string hint', () => {
-    const fixture = setUp(false, null, true, '');
     const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
 
-    expect((fixture.nativeElement as HTMLElement).querySelector('.disabled-hint')).toBeNull();
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+    expect(button.disabled).toBe(false);
+    expect(button.tabIndex).toBe(0);
+  });
+
+  it('does not emit toggled when the gated "Mark done" is clicked', () => {
+    const fixture = setUp(false, null, true);
+    const emitted: void[] = [];
+    fixture.componentInstance.toggled.subscribe(() => emitted.push(undefined));
+
+    (fixture.nativeElement.querySelector('button') as HTMLButtonElement).click();
+
+    expect(emitted).toHaveLength(0);
+  });
+
+  it('never gates "Reopen", even when disabled is set', () => {
+    const fixture = setUp(true, '2026-01-02T10:00:00.000Z', true);
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('has no aria-describedby when disabled without a checklist', () => {
+    const fixture = setUp(false, null, true);
+    const button = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
     expect(button.getAttribute('aria-describedby')).toBeNull();
   });
 
@@ -102,7 +87,7 @@ describe('DoneToggle', () => {
   ];
 
   it('renders the checklist under "To mark done:" while disabled, with a check for met items', () => {
-    const fixture = setUp(false, null, true, null, checklist);
+    const fixture = setUp(false, null, true, checklist);
     const host = fixture.nativeElement as HTMLElement;
 
     expect(host.textContent).toContain('To mark done:');
@@ -113,7 +98,7 @@ describe('DoneToggle', () => {
   });
 
   it('links the button to the checklist through aria-describedby', () => {
-    const fixture = setUp(false, null, true, null, checklist);
+    const fixture = setUp(false, null, true, checklist);
     const host = fixture.nativeElement as HTMLElement;
     const button = host.querySelector('button') as HTMLButtonElement;
     const list = host.querySelector('.done-checklist') as HTMLElement;
@@ -122,7 +107,7 @@ describe('DoneToggle', () => {
   });
 
   it('omits the checklist once every item is met', () => {
-    const fixture = setUp(false, null, true, null, [
+    const fixture = setUp(false, null, true, [
       { label: 'Write your first guess', met: true },
       { label: 'Rate the difficulty', met: true },
     ]);
@@ -131,13 +116,13 @@ describe('DoneToggle', () => {
   });
 
   it('omits the checklist once the exercise is done, even if items are still unmet', () => {
-    const fixture = setUp(true, '2026-01-02T10:00:00.000Z', false, null, checklist);
+    const fixture = setUp(true, '2026-01-02T10:00:00.000Z', false, checklist);
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.done-checklist')).toBeNull();
   });
 
   it('omits the checklist when the button is enabled (no checklist given, or all met)', () => {
-    const fixture = setUp(false, null, false, null, checklist);
+    const fixture = setUp(false, null, false, checklist);
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.done-checklist')).toBeNull();
   });

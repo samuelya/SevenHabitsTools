@@ -92,7 +92,7 @@ describe('PerceptionPage', () => {
     expect(host.textContent).toContain('Two people can watch the same moment');
     expect(record()).toBeNull();
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(markDone.disabled).toBe(true);
+    expect(markDone.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
   it('shows the still-unmet checklist next to the disabled Mark done button', async () => {
@@ -235,7 +235,7 @@ describe('PerceptionPage', () => {
 
     const doneToggleButton = () =>
       host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(doneToggleButton().disabled).toBe(false);
+    expect(doneToggleButton().getAttribute('aria-disabled') === 'true').toBe(false);
     // The checklist disappears once every item is met, even before the button is clicked.
     expect(host.querySelector('.done-checklist')).toBeNull();
 

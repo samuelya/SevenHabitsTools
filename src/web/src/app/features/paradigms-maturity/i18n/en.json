@@ -52,12 +52,14 @@
     "newArea": "New",
     "removedArea": "Removed"
   },
+  "checklist": {
+    "rated": "Rate every area in one assessment"
+  },
   "summary": {
     "totalAssessments": {
       "one": "1 assessment taken",
       "other": "{{count}} assessments taken"
     },
-    "latestProfile": "Latest profile: {{profile}}",
-    "doneHint": "Complete at least one assessment first: every area needs a rating."
+    "latestProfile": "Latest profile: {{profile}}"
   }
 }

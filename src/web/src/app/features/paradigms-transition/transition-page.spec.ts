@@ -119,6 +119,21 @@ describe('TransitionPage', () => {
     expect(host.textContent).toContain('inherited');
   });
 
+  it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('app-transition-summary')).toBeNull();
+    expect(host.querySelector('app-done-toggle .done-checklist')?.textContent).toContain(
+      'Add at least one pattern you learned at home',
+    );
+
+    await addScript(harness);
+    harness.detectChanges();
+
+    expect(host.querySelector('app-transition-summary')).not.toBeNull();
+  });
+
   it('starts empty, with Mark done disabled', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
@@ -127,7 +142,7 @@ describe('TransitionPage', () => {
       host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
     ).toHaveLength(0);
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(markDone.disabled).toBe(true);
+    expect(markDone.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
   it('adding a script navigates to its child route and opens the full-screen editor', async () => {
@@ -154,7 +169,7 @@ describe('TransitionPage', () => {
       host.querySelector('app-exercise-list mat-nav-list .exercise-list__item')?.textContent,
     ).toContain('Silence means agreement');
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(markDone.disabled).toBe(false);
+    expect(markDone.getAttribute('aria-disabled') === 'true').toBe(false);
   });
 
   it('requires a new script and situation before Mark done is enabled once the decision is to stop it', async () => {
@@ -164,17 +179,27 @@ describe('TransitionPage', () => {
 
     itemForm(harness).changed.emit({ text: 'Silence means agreement', decision: 'stop' });
     harness.detectChanges();
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
 
     itemForm(harness).changed.emit({ newScript: 'Pause and ask first' });
     harness.detectChanges();
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
 
     itemForm(harness).changed.emit({ situation: "Tonight's dinner conversation" });
     harness.detectChanges();
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(false);
   });
 
   it('marks done and reopens through DoneToggle', async () => {

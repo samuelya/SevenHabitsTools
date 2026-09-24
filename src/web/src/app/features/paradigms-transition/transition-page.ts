@@ -15,8 +15,12 @@ import { TransitionItemForm } from './transition-item-form';
 import { TransitionSummary } from './transition-summary';
 import {
   addScript,
-  canMarkDone,
+  CHECKLIST_KEYS,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
   editScript,
+  isComplete,
   labelsFrom,
   liveScripts,
   removeScript,
@@ -133,8 +137,24 @@ export class TransitionPage {
   protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
     this.hasDetail() ? 'saved' : null,
   );
-  protected readonly summary = computed(() => summarize(this.store.value()));
-  protected readonly readyToMarkDone = computed(() => canMarkDone(this.store.value()));
+  /** `null` until the first script exists (issue #215): no "0 scripts named" card next to the
+   * list's own empty-state text. */
+  protected readonly summary = computed(() =>
+    this.scripts().length > 0 ? summarize(this.store.value()) : null,
+  );
+  protected readonly readyToMarkDone = computed(() => isComplete(this.store.value()));
+
+  private readonly checklistLabels = translateSignal(
+    CHECKLIST_KEYS.map((key) => `checklist.${key}`),
+    undefined,
+    'paradigms-transition',
+  );
+  /** `null` until the scope has loaded, so `DoneToggle` never renders blank rows on a cold visit
+   * (`perception-page.ts`'s same gate). */
+  protected readonly checklist = computed(() => {
+    const labels = checklistLabelsFrom(this.checklistLabels());
+    return checklistLoaded(labels) ? doneChecklist(this.store.value(), labels) : null;
+  });
 
   protected readonly done = this.progress.isDone(TRANSITION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(TRANSITION_MODEL_KEY);

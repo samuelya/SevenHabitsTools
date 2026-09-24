@@ -43,12 +43,14 @@
   </div>
 
   <div footer class="summary-section">
-    <app-maturity-summary [summary]="summary()" [profileLabels]="profileLabels()" />
+    @if (summary(); as summary) {
+      <app-maturity-summary [summary]="summary" [profileLabels]="profileLabels()" />
+    }
     <app-done-toggle
       [done]="done()"
       [completedAt]="completedAt()"
       [disabled]="!readyToMarkDone()"
-      [disabledHint]="'paradigmsMaturity.summary.doneHint' | transloco"
+      [checklist]="checklist()"
       (toggled)="onToggleDone()"
     />
   </div>

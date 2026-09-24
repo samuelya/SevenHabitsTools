@@ -21,7 +21,11 @@ import { MaturityResult } from './maturity-result';
 import { MaturitySummary } from './maturity-summary';
 import {
   addAssessment,
-  canMarkDone,
+  CHECKLIST_KEYS,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
+  isComplete,
   editAssessment,
   liveAssessmentsOf,
   newAssessmentFields,
@@ -130,8 +134,24 @@ export class MaturityPage {
   protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
     this.hasDetail() ? 'saved' : null,
   );
-  protected readonly summary = computed(() => summarize(this.store.value()));
-  protected readonly readyToMarkDone = computed(() => canMarkDone(this.store.value()));
+  /** `null` until the first assessment exists (issue #215): no "0 assessments taken" card next
+   * to the history's own empty-state text. */
+  protected readonly summary = computed(() =>
+    this.assessments().length > 0 ? summarize(this.store.value()) : null,
+  );
+  protected readonly readyToMarkDone = computed(() => isComplete(this.store.value()));
+
+  private readonly checklistLabels = translateSignal(
+    CHECKLIST_KEYS.map((key) => `checklist.${key}`),
+    undefined,
+    'paradigms-maturity',
+  );
+  /** `null` until the scope has loaded, so `DoneToggle` never renders a blank row on a cold visit
+   * (`perception-page.ts`'s same gate). */
+  protected readonly checklist = computed(() => {
+    const labels = checklistLabelsFrom(this.checklistLabels());
+    return checklistLoaded(labels) ? doneChecklist(this.store.value(), labels) : null;
+  });
 
   protected readonly done = this.progress.isDone(MATURITY_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(MATURITY_MODEL_KEY);

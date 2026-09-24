@@ -94,6 +94,22 @@ function itemForm(harness: RouterTestingHarness): TeachItemForm {
 }
 
 describe('TeachPage', () => {
+  it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('app-teach-summary')).toBeNull();
+    expect(host.querySelector('app-done-toggle .done-checklist')?.textContent).toContain(
+      'Plan one chapter with a date',
+    );
+
+    await selectChapter(harness, 1);
+    itemForm(harness).changed.emit({ keyIdea: 'Choose your response' });
+    harness.detectChanges();
+
+    expect(host.querySelector('app-teach-summary')).not.toBeNull();
+  });
+
   it('renders the prompt card title and all ten chapters, with Mark done disabled', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
@@ -103,7 +119,7 @@ describe('TeachPage', () => {
       host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
     ).toHaveLength(10);
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(markDone.disabled).toBe(true);
+    expect(markDone.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
   it('shows the chapters in book order, not alphabetically (review finding on this PR)', async () => {
@@ -143,7 +159,7 @@ describe('TeachPage', () => {
       host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item')[1].textContent,
     ).toContain('Shared');
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
-    expect(markDone.disabled).toBe(false);
+    expect(markDone.getAttribute('aria-disabled') === 'true').toBe(false);
   });
 
   it('marks done and reopens through DoneToggle', async () => {
