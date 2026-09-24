@@ -37,6 +37,8 @@ import { HABIT_HUB_COMING_SOON } from './features/habits/habit-hub-coming-soon';
 // `registerModel()` call), unlike `./core/pwa/pwa-runtime` below, so both stay static imports.
 import './model-registry';
 import './core/pwa/pwa.model';
+// Side-effect only: registers the shipped main-nav destinations the shell reads on creation.
+import './nav-registry';
 import { ROUTE_REGISTRY } from './route-registry';
 import { registerGithubIcon } from './shared/ui/github-link/github-icon';
 import { provideServiceWorker } from '@angular/service-worker';

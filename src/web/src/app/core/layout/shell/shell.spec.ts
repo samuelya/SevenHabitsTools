@@ -11,24 +11,51 @@ describe('Shell', () => {
   describe('on a handset (below 600 px)', () => {
     beforeEach(() => configureApp({ handset: true }));
 
-    it('shows bottom navigation with the five destinations', async () => {
+    it('shows bottom navigation with the three shipped destinations', async () => {
       const fixture = await renderShellAt('/');
       const host = fixture.nativeElement as HTMLElement;
 
       const links = [...host.querySelectorAll('.bottom-nav a')].map((link) =>
         text(link.querySelector('.bottom-nav__label')),
       );
-      expect(links).toEqual(['Home', 'Habits', 'Plan', 'Journal', 'Settings']);
+      expect(links).toEqual(['Home', 'Habits', 'Settings']);
       expect(host.querySelector('mat-sidenav')?.classList).not.toContain('mat-drawer-opened');
     });
 
     it('marks the active destination with aria-current', async () => {
-      const fixture = await renderShellAt('/plan');
+      const fixture = await renderShellAt('/settings');
       const host = fixture.nativeElement as HTMLElement;
 
       const current = host.querySelectorAll('.bottom-nav a[aria-current="page"]');
       expect(current.length).toBe(1);
-      expect(text(current[0])).toContain('Plan');
+      expect(text(current[0])).toContain('Settings');
+    });
+
+    it.each([
+      ['/plan', 'Plan'],
+      ['/journal', 'Journal'],
+    ])('still resolves the unlisted %s route for deep links', async (url, title) => {
+      const fixture = await renderShellAt(url);
+      const host = fixture.nativeElement as HTMLElement;
+
+      expect(TestBed.inject(Router).url).toBe(url);
+      expect(host.querySelector('app-placeholder-page')).not.toBeNull();
+      expect(text(host.querySelector('[data-testid="page-title"]'))).toBe(title);
+      expect(host.querySelector('.bottom-nav a[aria-current="page"]')).toBeNull();
+    });
+
+    it.each([
+      ['/', 'Seven Habits Tools'],
+      ['/habits', 'Habits'],
+      ['/settings', 'Settings'],
+    ])("keeps %s's h1 for screen readers but hidden on screen", async (url, heading) => {
+      const fixture = await renderShellAt(url);
+      const host = fixture.nativeElement as HTMLElement;
+
+      const h1s = host.querySelectorAll('main h1');
+      expect(h1s.length).toBe(1);
+      expect(text(h1s[0])).toBe(heading);
+      expect(h1s[0].classList).toContain('visually-hidden');
     });
   });
 
@@ -41,7 +68,10 @@ describe('Shell', () => {
 
       expect(host.querySelector('.bottom-nav')).toBeNull();
       expect(host.querySelector('mat-sidenav')?.classList).toContain('mat-drawer-opened');
-      expect(host.querySelectorAll('mat-sidenav .side-nav__main a').length).toBe(5);
+      const links = [...host.querySelectorAll('mat-sidenav .side-nav__main a')].map((link) =>
+        text(link.querySelector('[matListItemTitle]')),
+      );
+      expect(links).toEqual(['Home', 'Habits', 'Settings']);
     });
 
     it('links to the About page from the side navigation footer', async () => {

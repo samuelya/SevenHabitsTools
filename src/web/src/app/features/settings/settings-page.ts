@@ -17,7 +17,7 @@ const NUMERALS: readonly Numerals[] = ['western', 'arabic'];
   selector: 'app-settings-page',
   imports: [RouterLink, MatButtonToggleModule, TranslocoPipe, BackupSection],
   template: `
-    <h1 class="page-heading">{{ 'nav.settings' | transloco }}</h1>
+    <h1 class="visually-hidden">{{ 'nav.settings' | transloco }}</h1>
     <section id="language">
       <h2>{{ 'language.label' | transloco }}</h2>
       <mat-button-toggle-group
