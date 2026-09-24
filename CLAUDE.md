@@ -19,11 +19,11 @@ Read the pinned GitHub issue "Architecture & conventions (read first)" before an
 
 | Agent | Model | Owns | Never |
 |---|---|---|---|
-| `business-analyst` | claude-opus-5 (Fable when the lead starts it for an epic's design) | GitHub backlog: issues, epics, sub-issues, Project fields, "BA log" | edits code, closes issues |
-| `backend-coder` | claude-sonnet-5 (escalates) | `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**` | touches `src/web`, merges |
-| `frontend-coder` | claude-sonnet-5 (escalates) | `src/web/**` | touches api/infra, merges |
-| `tester` | claude-sonnet-5 (Opus for escalated/risky PRs) | PR verification, `type:bug` issues | fixes code, merges |
-| lead (this session) | claude-opus-5; `/model` Fable only for an escalation or a design decision, then back | orchestration, `/code-review`, merges on the owner's say-so | codes in an agent's worktree |
+| `business-analyst` | claude-opus-5-5 (Fable when the lead starts it for an epic's design) | GitHub backlog: issues, epics, sub-issues, Project fields, "BA log" | edits code, closes issues |
+| `backend-coder` | claude-sonnet-5; claude-opus-5-5 first on risky issues (see Model routing); escalates | `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**` | touches `src/web`, merges |
+| `frontend-coder` | claude-sonnet-5; claude-opus-5-5 first on risky issues (see Model routing); escalates | `src/web/**` | touches api/infra, merges |
+| `tester` | claude-sonnet-5 (Opus 5.5 for escalated/risky PRs) | PR verification, `type:bug` issues | fixes code, merges |
+| lead (this session) | claude-opus-5-5; `/model` Fable only for an escalation or a design decision, then back | orchestration, `/code-review`, merges on the owner's say-so | codes in an agent's worktree |
 
 Agent definitions live in `.claude/agents/custom/`. They are short on purpose: this file is in every agent's context, so shared rules live here, once.
 
@@ -39,12 +39,14 @@ Pipeline: owner picks an issue → coder in its own worktree (`feat/<issue>-<slu
 
 **Tester start gate.** Start the tester only once the coder's round is closed on the exact PR head it will verify. If the lead sent that coder anything after its "done" report, wait for its next report (or `gh pr view <pr> --json headRefOid` for a new SHA plus green CI) before spawning. If the head moves mid-run, `TaskStop` the tester and restart it once CI is green on the final SHA.
 
+**Model routing (lead-run, at the coder's first round).** Start the coder on Opus 5.5 (`model: "opus"`) when the issue touches data (model, migration, storage, import/export, sync) or security, needs a design check (list under Cost discipline), or is size L; otherwise on its Sonnet default. The 4 weeks to 2026-09-24 put every failed round on such issues (#122, #147, #148, #165, #234), each burning two Sonnet rounds before the Opus escalation, while small fixes passed first time on Sonnet; Opus 5.5 costs about 30% more per run at this team's cache-heavy mix, so it pays only where a Sonnet round is likely to fail. The lead names the chosen model and reason in the start message; the coder's `round.sh` comment records it.
+
 **Escalation (lead-run; agents can't change their own model):**
 - **Failed round:** CI red after "done", tester files bugs, or the coder is stuck. The coder posts `scripts/gh/round.sh <issue> failed <n>/2 <model> "<what failed, planned fix>"` (the canonical comment the metrics count; never hand-write it) and fixes it on the same branch.
-- **2 attempts per tier.** Sonnet ×2 → **Opus** ×2 (label `escalated:opus`) → **Fable** ×2 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 2nd failure the coder posts `scripts/gh/round.sh <issue> escalation 2/2 <model> "…"`, messages `team-lead` and stops; the lead starts a fresh agent with `model` set to the next tier, same branch and worktree, pointed at those comments.
+- **2 attempts per tier.** Sonnet ×2 → **Opus 5.5** ×2 (label `escalated:opus`) → **Fable** ×2 (label `escalated:fable`) → **owner** (label `needs-owner`). After a tier's 2nd failure the coder posts `scripts/gh/round.sh <issue> escalation 2/2 <model> "…"`, messages `team-lead` and stops; the lead starts a fresh agent with `model` set to the next tier, same branch and worktree, pointed at those comments. An issue routed to Opus 5.5 starts at that tier: Opus ×2 → Fable ×2 → owner, and `escalated:opus` is not added for routing alone.
 - **Skip round 2 when round 1 failed on a clear scope/approach miss** rather than a fixable bug: a same-tier retry will repeat the mistake.
 - **Early escalation:** the owner may cut a round short when a coder is clearly struggling or burning tokens; the lead stops the agent and records the round history on the issue.
-- **Tester:** Sonnet by default; Opus when the issue is `escalated:*`, the PR touches security or data integrity, or a Sonnet run was inconclusive. Rounds belong to the coder: a clear failure is recorded once and sent back, never re-tested on Opus.
+- **Tester:** Sonnet by default; Opus 5.5 when the issue is `escalated:*`, the PR touches security or data integrity, or a Sonnet run was inconclusive. Rounds belong to the coder: a clear failure is recorded once and sent back, never re-tested on Opus.
 - **Owner escalation (`needs-owner`)** for permission-blocked actions (Azure roles, deploys, secrets, global toolchain), changes to approved decisions, and scope or cost changes.
 - **Record of rounds:** the round and escalation comments on the issue, plus the tester's checklist on the PR, are the record.
 - **Every coder run ends with a `round.sh` comment** (`passed`, `failed`, `review-fix`, `polish`, `escalation`), not just the failures: `team-metrics.sh` prints coder runs from the transcripts next to the round comments per merged PR, so an unrecorded run shows as a gap (#212: 4 runs, 107M tokens, 0 comments).
@@ -62,7 +64,7 @@ Token cost is a first-class constraint: the owner pays per token and has hit a m
 - **Don't let a round sit idle.** The prompt cache expires after a gap (about an hour normally, ~5 minutes in usage overage) and the next message re-bills the whole context. Send follow-ups as soon as they are ready.
 - **Short messages.** Detail goes in the issue or PR comment; agent-to-agent and agent-to-lead messages are at most 5 lines. The lead reports to the owner only decisions, failures, merge-ready PRs and things needing a choice.
 - **Cap the rounds.** Two attempts per tier is the ceiling; escalate a tier or split the rest into a follow-up issue instead of iterating further.
-- **Model tiers.** Sonnet for coders and the tester; Opus for the lead and the BA; Fable only for escalations, design decisions and an epic's BA design. Switch the lead with `/model` per task, not per session.
+- **Model tiers.** Sonnet 5 for coders (except risky issues, see Model routing) and the tester; Opus 5.5 for the lead and the BA; Fable only for escalations, design decisions and an epic's BA design. Switch the lead with `/model` per task, not per session.
 - **Test cadence.** Coders run lint, targeted unit tests and the feature's own e2e spec locally (`src/web/docs/testing.md`, "Commands for agents"), then push and run `scripts/gh/wait-ci.sh <pr>`. CI is the full unit, build and e2e run; red CI inside the coder's own round is fixed before hand-off, not a failed round.
 - **Never duplicate CI.** The tester relies on CI and spends its round on the acceptance criteria and what CI cannot do (RTL, keyboard, offline, two tabs, exploratory). If CI is already red, the tester doesn't start: the round has failed.
 - **Scale review effort to risk.** `/code-review medium` for a small bug fix; `high`/`max` only for data integrity, security, migrations or sync. A re-review targets the delta plus the files it touches.
