@@ -25,8 +25,10 @@ import { isValidIsoDate } from '../assessment-history.logic';
  * The value is committed when the user leaves the field (blur, or Enter), not on every `input`:
  * Chromium fires `input` *and* `change` for each segment typed, so typing 31 Aug over 25 Sep
  * passes through 2026-09-03 and years 0002…2026 on the way, and each of those would be stored.
- * A `change` while the input isn't focused (a picker that doesn't leave focus on the field) is
- * committed at once, since no blur will follow. A pending value is also committed when the field
+ * `change` is deliberately not a commit point, focused or not: when a typed segment auto-advances
+ * to the next one, Chromium fires `change` with `document.activeElement` on `<body>` (bug #271), so
+ * the field's focus can't tell a keystroke from a calendar pick. A picked date is stored on the
+ * next blur or Enter, like a typed one. A pending value is also committed when the field
  * is destroyed (the editor closes): Safari/iOS doesn't focus a tapped button, so "change the date,
  * tap Done" removes a still-focused input without a blur. That runs in `ngOnDestroy`, which
  * Angular calls before it drops the parent's output listeners (a `DestroyRef` callback runs
@@ -78,13 +80,6 @@ export class AssessmentDateField implements OnDestroy {
       }
       refused = count;
     });
-  }
-
-  protected onChange(): void {
-    const element = this.field().nativeElement;
-    if (element.ownerDocument.activeElement !== element) {
-      this.commit();
-    }
   }
 
   /** Leaving the field stores a valid new date, or shows the stored one again. */

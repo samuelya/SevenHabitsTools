@@ -78,11 +78,12 @@ describe('AssessmentDateField (issue #226)', () => {
     expect(fixture.componentInstance.emitted).toEqual(['2026-09-01']);
   });
 
-  it('commits a change made while the field is not focused (a picker)', () => {
+  it('does not commit on change, even with focus elsewhere (bug #271: segment auto-advance)', () => {
+    // Chromium's `change` on a segment auto-advance sees `document.activeElement` on `<body>`.
     field.blur();
     field.value = '2026-09-02';
     field.dispatchEvent(new Event('change'));
-    expect(fixture.componentInstance.emitted).toEqual(['2026-09-02']);
+    expect(fixture.componentInstance.emitted).toEqual([]);
   });
 
   it('caps the date at max and never emits a later one', () => {

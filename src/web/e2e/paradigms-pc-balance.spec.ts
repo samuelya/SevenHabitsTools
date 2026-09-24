@@ -163,6 +163,34 @@ test.describe('P/PC balance audit', () => {
     await expect(dateInput).toHaveValue(typed);
   });
 
+  // Bug #271: typing digits auto-advances to the next segment, and Chromium fires that `change`
+  // with focus on `<body>`, so a "commit an unfocused change" path stored the in-between dates.
+  // `01 01 2025` is 1 Jan 2025 in either day/month order, and each in-between date is in the past.
+  test('a date typed digit by digit is stored once, when the user leaves the field', async ({
+    page,
+  }) => {
+    await page.goto('/habits/paradigms/pc-balance');
+    await page.locator('.add-button').click();
+    const form = page.locator('app-pc-balance-audit-form');
+    await form.locator('.add-asset-row input[type="text"]').first().fill('Sleep');
+    await form.locator('.add-asset-row button').first().click();
+
+    const dateInput = form.locator('app-assessment-date-field input');
+    const original = await dateInput.inputValue();
+    await expect.poll(() => storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.focus();
+    await page.keyboard.type('01012025', { delay: 100 });
+    await expect(dateInput).toHaveValue('2025-01-01');
+
+    // Longer than the 500 ms save debounce: nothing in between has been stored.
+    await page.waitForTimeout(1000);
+    expect(await storedAuditDates(page)).toEqual([original]);
+
+    await page.keyboard.press('Enter');
+    await expect.poll(() => storedAuditDates(page)).toEqual(['2025-01-01']);
+  });
+
   // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but
   // `e2e/paradigms-maturity.spec.ts` is the one regression test for it (review round 1: at
   // 1280x1500 an empty audit's own editor is far shorter than the viewport, so an equivalent check
