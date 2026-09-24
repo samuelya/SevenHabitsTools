@@ -4,7 +4,23 @@ import { TranslocoService } from '@jsverse/transloco';
 import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 import { AppDialog } from '../../../core/layout/app-dialog';
 import { AppSnackbar } from '../../../core/layout/app-snackbar';
-import { ExerciseGuideContent, ExerciseGuideData } from './exercise-guide';
+// Types only (erased at build time): a value import from './exercise-guide' would pull the dialog
+// component into every page's initial bundle and defeat the lazy load below.
+import type {
+  ExerciseGuideContent,
+  ExerciseGuideData,
+  ExerciseGuideResult,
+  ExerciseGuideSample,
+} from './exercise-guide';
+
+/** Whether a dialog close `result` is "Try this example" (`ExerciseGuideResult`). */
+export function isTryExampleResult(result: unknown): result is ExerciseGuideResult {
+  if (typeof result !== 'object' || result === null) {
+    return false;
+  }
+  const tryExample = (result as Record<string, unknown>)['tryExample'];
+  return typeof tryExample === 'object' && tryExample !== null;
+}
 
 type ExerciseGuideModule = typeof import('./exercise-guide');
 
@@ -37,24 +53,41 @@ export class ExerciseGuideOpener {
 
   /** `options.title` (already translated) replaces the dialog's generic heading, e.g. "About this
    * habit" on the habit hub (issue #219); `options.extra` is a caller-rendered section shown after
-   * "In short" (issue #230). */
+   * "In short" (issue #230). `onTryExample` receives a card example's `sample` when the guide was
+   * closed with "Try this example" (issue #232). It runs from `afterClosed()`, which CDK emits only
+   * after it has disposed the overlay and returned focus to the opener's button, so a caller that
+   * opens its editor there never races the dialog's own focus return. Resolves once the dialog is
+   * open, not when it closes. */
   async open(
     content: ExerciseGuideContent,
     viewContainerRef: ViewContainerRef,
-    options: Omit<ExerciseGuideData, 'content'> = {},
+    options: Omit<ExerciseGuideData, 'content'> & {
+      readonly onTryExample?: (sample: ExerciseGuideSample) => void;
+    } = {},
   ): Promise<void> {
     try {
       const { ExerciseGuide } = await this.loadExerciseGuide();
       const handset = this.breakpoints.isMatched(HANDSET_QUERY);
-      const data: ExerciseGuideData = { content, ...options };
-      await this.dialog.open<InstanceType<typeof ExerciseGuide>, ExerciseGuideData>(ExerciseGuide, {
-        viewContainerRef,
-        data,
-        width: handset ? '100%' : undefined,
-        height: handset ? '100%' : undefined,
-        maxWidth: handset ? '100vw' : '560px',
-        maxHeight: handset ? '100vh' : '80vh',
-      });
+      const { onTryExample, ...dataOptions } = options;
+      const data: ExerciseGuideData = { content, ...dataOptions };
+      const ref = await this.dialog.open<InstanceType<typeof ExerciseGuide>, ExerciseGuideData>(
+        ExerciseGuide,
+        {
+          viewContainerRef,
+          data,
+          width: handset ? '100%' : undefined,
+          height: handset ? '100%' : undefined,
+          maxWidth: handset ? '100vw' : '560px',
+          maxHeight: handset ? '100vh' : '80vh',
+        },
+      );
+      if (onTryExample) {
+        ref.afterClosed().subscribe((result) => {
+          if (isTryExampleResult(result)) {
+            onTryExample(result.tryExample);
+          }
+        });
+      }
     } catch {
       // Most likely offline with this chunk not yet cached (the service worker's `chunks` group is
       // `installMode: lazy`) — say so plainly, the same handling `DeleteWithUndo`/`BackupSection`

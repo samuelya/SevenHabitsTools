@@ -1,4 +1,5 @@
 import { softDelete, touch, isLive } from '../../core/data/record';
+import { isOneOf } from '../../core/data/record-validators';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
@@ -10,8 +11,15 @@ import {
   labelsLoaded,
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
+import { isCounted, withoutSample } from '../../shared/exercise-kit/sample-record.logic';
 import {
+  ExerciseListChip,
+  ExerciseListItem,
+} from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
+import {
+  SCRIPT_DECISIONS,
+  SCRIPT_EFFECTS,
+  SCRIPT_SOURCES,
   Script,
   ScriptDecision,
   ScriptEffect,
@@ -40,15 +48,21 @@ export function liveScripts(scripts: readonly Script[]): Script[] {
   return scripts.filter(isLive);
 }
 
-/** Started once any live script exists (issue #216) — the hub's "started" and the intro card's
- * collapse both read this. */
-export function isStarted(scripts: readonly Script[]): boolean {
-  return scripts.some(isLive);
+/** The live scripts that count toward progress, summaries and the done gate (`isCounted()`). */
+export function countedScripts(scripts: readonly Script[]): Script[] {
+  return scripts.filter(isCounted);
 }
 
-/** The hub's in-progress text (issue #219): "3 patterns", one per live script; `null` with none. */
+/** Started once any counted script exists (issues #216, #232) — the hub's "started", Today's
+ * Continue and the intro card's collapse all read this. */
+export function isStarted(scripts: readonly Script[]): boolean {
+  return scripts.some(isCounted);
+}
+
+/** The hub's in-progress text (issue #219): "3 patterns", one per counted script; `null` with
+ * none. */
 export function hubStatus(scripts: readonly Script[]): ExerciseHubStatus | null {
-  const count = liveScripts(scripts).length;
+  const count = countedScripts(scripts).length;
   return count > 0 ? { key: 'habits.exercises.paradigms-transition.patternCount', count } : null;
 }
 
@@ -74,7 +88,7 @@ function scriptMet(script: Script): ChecklistMet<TransitionChecklistKey> {
 /** The checklist describes the live script closest to complete (`closestMet()`), so "Mark done"
  * and the list it shows reduce the same map and can never disagree. */
 function checklistMet(scripts: readonly Script[]): ChecklistMet<TransitionChecklistKey> {
-  return closestMet(liveScripts(scripts), CHECKLIST_KEYS, scriptMet);
+  return closestMet(countedScripts(scripts), CHECKLIST_KEYS, scriptMet);
 }
 
 /** Whether `DoneToggle` should be enabled: at least one live script is complete (issue #51's
@@ -103,8 +117,9 @@ export function checklistLoaded(labels: ChecklistLabels<TransitionChecklistKey>)
   return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
-/** The summary card's counts (issue #51's acceptance criteria): how many live scripts are
- * decided to stop or be rewritten, out of how many live scripts total. */
+/** The summary card's counts (issue #51's acceptance criteria): how many counted scripts are
+ * decided to stop or be rewritten, out of how many counted scripts total (samples excluded,
+ * issue #232). */
 export interface TransitionSummary {
   readonly stopped: number;
   readonly rewritten: number;
@@ -112,7 +127,7 @@ export interface TransitionSummary {
 }
 
 export function summarize(scripts: readonly Script[]): TransitionSummary {
-  const live = liveScripts(scripts);
+  const live = countedScripts(scripts);
   return {
     stopped: live.filter((script) => script.decision === 'stop').length,
     rewritten: live.filter((script) => script.decision === 'rewrite').length,
@@ -125,6 +140,8 @@ export function summarize(scripts: readonly Script[]): TransitionSummary {
 export interface ScriptLabels {
   readonly source: Record<ScriptSource, string>;
   readonly effect: Record<ScriptEffect, string>;
+  /** The "Example" chip on a sample's row (issue #232). */
+  readonly example?: string;
 }
 
 /** Builds `ScriptLabels` from Transloco's `translateSignal` output for each enum. `translateSignal`
@@ -136,8 +153,10 @@ export function labelsFrom(
   sourceLabels: readonly (string | undefined)[],
   effects: readonly ScriptEffect[],
   effectLabels: readonly (string | undefined)[],
+  exampleLabel?: string,
 ): ScriptLabels {
   return {
+    ...(exampleLabel === undefined ? {} : { example: exampleLabel }),
     source: Object.fromEntries(
       sources.map((source, index) => [source, sourceLabels[index] ?? '']),
     ) as Record<ScriptSource, string>,
@@ -161,16 +180,21 @@ function firstLine(text: string | undefined): string {
  * title (its first line; the list clamps it at two lines), with its source and effect as chips
  * under it. The title falls back to the new script, else the situation: a draft is saved from any
  * of them (issue #217). With all three blank it is `''`, which `ExerciseList` shows as
- * "Untitled". */
+ * "Untitled". A sample (issue #232) leads with an "Example" chip and never shows the done check:
+ * it counts toward nothing. */
 export function toListItem(script: Script, labels: ScriptLabels): ExerciseListItem {
+  const chips: ExerciseListChip[] = [
+    { label: labels.source[script.source] },
+    { label: labels.effect[script.effect] },
+  ];
   return {
     id: script.id,
     title:
       [script.text, script.newScript, script.situation]
         .map(firstLine)
         .find((text) => text !== '') ?? '',
-    chips: [{ label: labels.source[script.source] }, { label: labels.effect[script.effect] }],
-    done: isItemComplete(script),
+    chips: script.sample ? [{ label: labels.example ?? '' }, ...chips] : chips,
+    done: !script.sample && isItemComplete(script),
   };
 }
 
@@ -184,15 +208,50 @@ export function isDraftWorthSaving(
 }
 
 /** Replaces the fields of the live script `id` with `fields`, leaving every other script alone;
- * a no-op copy if `id` is not found or already tombstoned. */
+ * a no-op copy if `id` is not found or already tombstoned. Any edit makes a sample the user's own
+ * (issue #232): its `sample` flag is removed, whichever field changed. */
 export function editScript(
   scripts: readonly Script[],
   id: string,
   fields: Partial<ScriptFields>,
 ): Script[] {
-  return scripts.map((script) =>
-    script.id === id && isLive(script) ? { ...script, ...fields } : script,
-  );
+  return scripts.map((script) => {
+    if (script.id !== id || !isLive(script)) {
+      return script;
+    }
+    return withoutSample({ ...script, ...fields });
+  });
+}
+
+const isSource = isOneOf(SCRIPT_SOURCES);
+const isEffect = isOneOf(SCRIPT_EFFECTS);
+const isDecision = isOneOf(SCRIPT_DECISIONS);
+const optionalText = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() !== '' ? value : undefined;
+
+/** A guide example's `sample` payload (the scope's `guide.examples[].sample`, issue #232) as the
+ * fields of a new script, or `null` when it isn't a complete, valid one — the i18n JSON is an
+ * input boundary, so its enum keys are checked, never trusted. The caller adds `sample: true`. */
+export function scriptFromExample(value: unknown): ScriptFields | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const example = value as Record<string, unknown>;
+  const text = optionalText(example['text']);
+  const { source, effect, decision } = example;
+  if (text === undefined || !isSource(source) || !isEffect(effect) || !isDecision(decision)) {
+    return null;
+  }
+  const newScript = optionalText(example['newScript']);
+  const situation = optionalText(example['situation']);
+  return {
+    text,
+    source,
+    effect,
+    decision,
+    ...(newScript === undefined ? {} : { newScript }),
+    ...(situation === undefined ? {} : { situation }),
+  };
 }
 
 /** Tombstones the script `id` (never removed, architecture issue #1 §6). */

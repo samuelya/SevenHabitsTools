@@ -33,6 +33,20 @@ export interface ExerciseGuideCardExample {
   readonly subtitle?: string;
   readonly done?: boolean;
   readonly fields: readonly ExerciseGuideExampleField[];
+  /** The example as the stored values of a new item (issue #232): its enum keys and its free text
+   * in the active language. Only list exercises give one, and the dialog shows "Try this example"
+   * only for a card that has it. Opaque to the kit: the exercise validates it
+   * (`<slug>.logic.ts`'s `…FromExample()`), since the i18n JSON is an input boundary. */
+  readonly sample?: ExerciseGuideSample;
+}
+
+/** A card example's `sample` payload, handed back unread to the exercise that owns it. */
+export type ExerciseGuideSample = Readonly<Record<string, unknown>>;
+
+/** What `ExerciseGuide` closes with when "Try this example" is pressed; any other close (the X,
+ * Escape, the backdrop) gives no result. */
+export interface ExerciseGuideResult {
+  readonly tryExample: ExerciseGuideSample;
 }
 
 /** One finished example the guide shows. Generic label/value pairs whatever the exercise, so this
@@ -70,7 +84,8 @@ export interface ExerciseGuideData {
  * content is empty (the habit hub's "About this habit" has "In short" and its own `extra` section);
  * `MatDialog`/CDK give the focus
  * trap, Escape-to-close and focus return to the "Read more" button for free (see the design-check
- * comment on the issue).
+ * comment on the issue). A card example with a `sample` gets "Try this example" (issue #232), which
+ * closes the dialog with an `ExerciseGuideResult` for `ExerciseGuideOpener` to hand on.
  */
 @Component({
   selector: 'app-exercise-guide',

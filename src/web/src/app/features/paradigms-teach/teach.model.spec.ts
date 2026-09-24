@@ -104,6 +104,13 @@ describe('paradigms-teach model', () => {
     expect(registration().validate?.([{ ...FULL_ENTRY, status: 'ignored' }])).toBe(false);
   });
 
+  it('accepts an optional boolean sample flag and rejects any other type (issue #232)', () => {
+    expect(registration().validate?.([{ ...FULL_ENTRY, sample: true }])).toBe(true);
+    expect(registration().validate?.([{ ...FULL_ENTRY, sample: false }])).toBe(true);
+    expect(registration().validate?.([{ ...FULL_ENTRY, sample: 'yes' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL_ENTRY, sample: 1 }])).toBe(false);
+  });
+
   it('rejects a non-array value', () => {
     expect(registration().validate?.({})).toBe(false);
   });

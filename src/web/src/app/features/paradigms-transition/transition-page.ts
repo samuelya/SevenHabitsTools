@@ -8,6 +8,7 @@ import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
+import type { ExerciseGuideSample } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
@@ -20,6 +21,7 @@ import { TransitionSummary } from './transition-summary';
 import {
   CHECKLIST_KEYS,
   checklistLabelsFrom,
+  countedScripts,
   checklistLoaded,
   doneChecklist,
   editScript,
@@ -28,6 +30,7 @@ import {
   liveScripts,
   removeScript,
   restoreScript,
+  scriptFromExample,
   summarize,
   toListItem,
   isStarted,
@@ -133,8 +136,19 @@ export class TransitionPage {
   // `labelsFrom` falls back to `''` for a missing index — `translateSignal` with an array key
   // starts at `['']` (fesm2022/jsverse-transloco.mjs), not one empty string per key, so every
   // index past 0 is `undefined` until the scope loads.
+  private readonly exampleLabel = translateSignal(
+    'list.example',
+    undefined,
+    'paradigms-transition',
+  );
   private readonly labels = computed(() =>
-    labelsFrom(SCRIPT_SOURCES, this.sourceLabels(), SCRIPT_EFFECTS, this.effectLabels()),
+    labelsFrom(
+      SCRIPT_SOURCES,
+      this.sourceLabels(),
+      SCRIPT_EFFECTS,
+      this.effectLabels(),
+      this.exampleLabel(),
+    ),
   );
 
   protected readonly scripts = computed(() => liveScripts(this.store.value()));
@@ -154,10 +168,10 @@ export class TransitionPage {
   /** Drives the editor header's title (issue #187's acceptance criteria): a draft, or a saved
    * script whose text was cleared again, is still "new". */
   protected readonly isNewScript = computed(() => !this.draft.selected()?.text.trim());
-  /** `null` until the first script exists (issue #215): no "0 scripts named" card next to the
-   * list's own empty-state text. */
+  /** `null` until the first counted script exists (issues #215, #232): no "0 scripts named" card
+   * next to the list's own empty-state text, nor one for a sample alone. */
   protected readonly summary = computed(() =>
-    this.scripts().length > 0 ? summarize(this.store.value()) : null,
+    countedScripts(this.store.value()).length > 0 ? summarize(this.store.value()) : null,
   );
   protected readonly readyToMarkDone = computed(() => isComplete(this.store.value()));
 
@@ -204,6 +218,21 @@ export class TransitionPage {
   /** Opens the editor on a fresh in-memory draft; nothing is stored yet (issue #217). */
   protected onAddScript(): void {
     this.draft.start();
+  }
+
+  /** "Try this example" in the guide (issue #232): the user asked for this item, so it is a real
+   * record at once (draft before record's principle 5), flagged `sample` until its first edit. The
+   * editor opens on its id, not on `new`, so `recordDraft()` has no draft to track. Refused, like
+   * any edit, in a read-only tab — the store reports why — and then nothing opens. */
+  protected onExampleTried(sample: ExerciseGuideSample): void {
+    const fields = scriptFromExample(sample);
+    if (fields === null) {
+      return;
+    }
+    const record: Script = { ...newRecord(fields, this.clock.now()), sample: true };
+    if (this.store.update((scripts) => [...scripts, record])) {
+      this.goTo([record.id]);
+    }
   }
 
   /** The first typed text saves a draft (`recordDraft()`), which then moves the URL to its id. */

@@ -14,8 +14,23 @@ import {
   labelsLoaded,
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
-import { TEACH_CHAPTERS, TeachChapter, TeachEntry, TeachEntryFields } from './teach.model';
+import type {
+  ExerciseGuideContent,
+  ExerciseGuideSample,
+} from '../../shared/exercise-kit/exercise-guide/exercise-guide';
+import {
+  ExerciseListChip,
+  ExerciseListItem,
+} from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
+import { isCounted, withoutSample } from '../../shared/exercise-kit/sample-record.logic';
+import {
+  isTeachChapter,
+  isTeachStatus,
+  TEACH_CHAPTERS,
+  TeachChapter,
+  TeachEntry,
+  TeachEntryFields,
+} from './teach.model';
 
 /** Every entry starts here; the chapter, and any fields the caller supplies, are applied on top. */
 const DEFAULT_FIELDS: Omit<TeachEntryFields, 'chapter' | 'plannedAt'> = {
@@ -63,10 +78,10 @@ export function entryForChapter(
   return entries.find((entry) => entry.chapter === chapter && isLive(entry));
 }
 
-/** Started once any chapter has a live entry (issue #216) — the hub's "started" and the intro
- * card's collapse both read this. */
+/** Started once any chapter has a counted entry (issues #216, #232: a sample counts toward
+ * nothing) — the hub's "started", Today's Continue and the intro card's collapse all read this. */
 export function isStarted(entries: readonly TeachEntry[]): boolean {
-  return entries.some(isLive);
+  return entries.some(isCounted);
 }
 
 /** Creates `chapter`'s entry on first edit, or edits its existing live one — never a second live
@@ -87,7 +102,12 @@ export function upsertEntry(
     );
     return [...entries, withSharedAt(created, undefined, now)];
   }
-  const updated: TeachEntry = { ...existing, ...fields, updatedAt: now.toISOString() };
+  // Any edit makes a sample the user's own (issue #232), whichever field changed.
+  const updated: TeachEntry = withoutSample({
+    ...existing,
+    ...fields,
+    updatedAt: now.toISOString(),
+  });
   return entries.map((entry) =>
     entry === existing ? withSharedAt(updated, existing, now) : entry,
   );
@@ -113,10 +133,11 @@ export function isOverdue(entry: Pick<TeachEntry, 'status' | 'plannedAt'>, now: 
   return entry.status === 'planned' && entry.plannedAt < localDateString(now);
 }
 
-/** How many live entries are `'shared'` — the count shown on the Paradigms hub (issue #52's
- * acceptance criteria; `teach.model.ts`'s `statusFactory` reads this). */
+/** How many counted entries are `'shared'` — the count shown on the Paradigms hub (issue #52's
+ * acceptance criteria; `teach.model.ts`'s `statusFactory` reads this). A sample is not counted
+ * (issue #232). */
 export function sharedCount(entries: readonly TeachEntry[]): number {
-  return entries.filter((entry) => isLive(entry) && entry.status === 'shared').length;
+  return entries.filter((entry) => isCounted(entry) && entry.status === 'shared').length;
 }
 
 /** The hub's in-progress text (issues #52, #219): "2 chapters shared"; `null` before the first one
@@ -140,7 +161,7 @@ function entryMet(entry: TeachEntry): ChecklistMet<TeachChecklistKey> {
 
 /** The checklist describes the live entry closest to complete (`closestMet()`). */
 function checklistMet(entries: readonly TeachEntry[]): ChecklistMet<TeachChecklistKey> {
-  return closestMet(entries.filter(isLive), CHECKLIST_KEYS, entryMet);
+  return closestMet(entries.filter(isCounted), CHECKLIST_KEYS, entryMet);
 }
 
 /** Whether `DoneToggle` should be enabled: at least one live entry is `'shared'` (issue #52's
@@ -180,7 +201,7 @@ export interface TeachSummary {
 export function summarize(entries: readonly TeachEntry[], now: Date): TeachSummary {
   return {
     shared: sharedCount(entries),
-    overdue: entries.filter((entry) => isLive(entry) && isOverdue(entry, now)).length,
+    overdue: entries.filter((entry) => isCounted(entry) && isOverdue(entry, now)).length,
     total: TEACH_CHAPTERS.length,
   };
 }
@@ -231,6 +252,8 @@ export const DATE_SLOT = '%date%';
 export interface TeachLabels {
   readonly chapter: Record<TeachChapter, string>;
   readonly status: Record<ChapterStatusKind, string>;
+  /** The "Example" chip on a sample's row (issue #232). */
+  readonly example?: string;
 }
 
 /** Builds `TeachLabels` from `translateSignal` output (chapters in `chapters` order, statuses in
@@ -242,8 +265,10 @@ export function labelsFrom(
   chapters: readonly TeachChapter[],
   chapterLabels: readonly (string | undefined)[],
   statusLabels: readonly (string | undefined)[],
+  exampleLabel?: string,
 ): TeachLabels {
   return {
+    ...(exampleLabel === undefined ? {} : { example: exampleLabel }),
     chapter: Object.fromEntries(
       chapters.map((chapter, index) => [chapter, chapterLabels[index] ?? '']),
     ) as Record<TeachChapter, string>,
@@ -293,7 +318,8 @@ export function draftFor(
  * `formatDate` turns an ISO `plannedAt` into the short, localised date the chip shows ("22 Sep").
  * `deletable: false` for a chapter with no entry yet (issue #203): the rows are the ten fixed
  * chapters, not one-to-one with what a delete removes, so a chapter with nothing filled in yet has
- * nothing to delete (playbook's "Deleting entries"). */
+ * nothing to delete (playbook's "Deleting entries"). A sample (issue #232) leads with an "Example"
+ * chip and never shows the done check: it counts toward nothing. */
 export function toListItem(
   chapter: TeachChapter,
   entry: TeachEntry | undefined,
@@ -306,12 +332,13 @@ export function toListItem(
   const chipLabel =
     'plannedAt' in status ? label.replace(DATE_SLOT, formatDate(status.plannedAt)) : label;
   const keyIdea = firstLine(entry?.keyIdea);
+  const statusChip: ExerciseListChip = { label: chipLabel, warning: status.kind === 'overdue' };
   return {
     id: chapter,
     title: labels.chapter[chapter],
     ...(keyIdea ? { subtitle: keyIdea } : {}),
-    chips: [{ label: chipLabel, warning: status.kind === 'overdue' }],
-    done: status.kind === 'shared',
+    chips: entry?.sample ? [{ label: labels.example ?? '' }, statusChip] : [statusChip],
+    done: !entry?.sample && status.kind === 'shared',
     warning: status.kind === 'overdue',
     deletable: entry !== undefined,
   };
@@ -342,4 +369,78 @@ export function restoreEntry(entries: readonly TeachEntry[], id: string, now: Da
   return entries.map((entry) =>
     entry.id === id ? touch({ ...entry, deletedAt: undefined }, now) : entry,
   );
+}
+
+/** A guide example's `sample` payload (the scope's `guide.examples[].sample`, issue #232) as the
+ * chapter it is for and the fields of its new entry, or `null` when it isn't a valid one — the i18n
+ * JSON is an input boundary, so its keys are checked, never trusted. `plannedAt` is left to
+ * `upsertEntry()`'s usual default: the example's "This Saturday" is display text, not a date. */
+export function teachSampleFromExample(
+  value: unknown,
+): { readonly chapter: TeachChapter; readonly fields: Partial<TeachEntryFields> } | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const example = value as Record<string, unknown>;
+  const { chapter, keyIdea, status } = example;
+  if (
+    !isTeachChapter(chapter) ||
+    typeof keyIdea !== 'string' ||
+    !isKeyIdeaValid(keyIdea) ||
+    !isTeachStatus(status)
+  ) {
+    return null;
+  }
+  const optional = (key: 'person' | 'learned'): Partial<TeachEntryFields> => {
+    const text = example[key];
+    return typeof text === 'string' && text.trim() !== '' ? { [key]: text } : {};
+  };
+  return {
+    chapter,
+    fields: { keyIdea, status, ...optional('person'), ...optional('learned') },
+  };
+}
+
+/** Creates `chapter`'s entry from a guide example, flagged `sample` (issue #232) — or, when the
+ * chapter already has a live entry, leaves `entries` as they are: the example never overwrites
+ * the user's own work, nor becomes a second entry for one chapter. */
+export function addSampleEntry(
+  entries: readonly TeachEntry[],
+  chapter: TeachChapter,
+  fields: Partial<TeachEntryFields>,
+  now: Date,
+): TeachEntry[] {
+  if (entryForChapter(entries, chapter)) {
+    return [...entries];
+  }
+  return upsertEntry(entries, chapter, fields, now).map((entry) =>
+    entry.chapter === chapter && isLive(entry) ? { ...entry, sample: true } : entry,
+  );
+}
+
+/** The guide as "Read more" should show it (issue #232): an example whose chapter already has a
+ * live entry loses its `sample`, so the dialog offers no "Try this example" that could only
+ * overwrite the user's work or do nothing. `content` itself is returned when nothing changes. */
+export function guideForEntries(
+  content: ExerciseGuideContent | null,
+  entries: readonly TeachEntry[],
+): ExerciseGuideContent | null {
+  if (content === null) {
+    return null;
+  }
+  const taken = (sample: ExerciseGuideSample | undefined): boolean => {
+    const chapter = sample?.['chapter'];
+    return isTeachChapter(chapter) && entryForChapter(entries, chapter) !== undefined;
+  };
+  if (!content.examples.some((example) => example.kind === 'card' && taken(example.sample))) {
+    return content;
+  }
+  return {
+    ...content,
+    examples: content.examples.map((example) =>
+      example.kind === 'card' && taken(example.sample)
+        ? { ...example, sample: undefined }
+        : example,
+    ),
+  };
 }

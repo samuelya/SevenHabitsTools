@@ -86,6 +86,13 @@ describe('paradigms-transition model', () => {
     expect(registration().validate?.([{ ...FULL_SCRIPT, decision: 'ignore' }])).toBe(false);
   });
 
+  it('accepts an optional boolean sample flag and rejects any other type (issue #232)', () => {
+    expect(registration().validate?.([{ ...FULL_SCRIPT, sample: true }])).toBe(true);
+    expect(registration().validate?.([{ ...FULL_SCRIPT, sample: false }])).toBe(true);
+    expect(registration().validate?.([{ ...FULL_SCRIPT, sample: 'yes' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL_SCRIPT, sample: 1 }])).toBe(false);
+  });
+
   it('rejects a non-array value', () => {
     expect(registration().validate?.({})).toBe(false);
   });

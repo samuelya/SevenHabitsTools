@@ -17,6 +17,7 @@
     [whyItMatters]="'paradigmsTransition.prompt.whyItMatters' | transloco"
     [guide]="guideContent()"
     [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
   />
 
   <button mat-flat-button type="button" class="add-button" (click)="onAddScript()">

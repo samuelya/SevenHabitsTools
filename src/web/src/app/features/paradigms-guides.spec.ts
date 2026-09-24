@@ -9,6 +9,8 @@ import teachAr from './paradigms-teach/i18n/ar.json';
 import teachEn from './paradigms-teach/i18n/en.json';
 import transitionAr from './paradigms-transition/i18n/ar.json';
 import transitionEn from './paradigms-transition/i18n/en.json';
+import { teachSampleFromExample } from './paradigms-teach/teach.logic';
+import { scriptFromExample } from './paradigms-transition/transition.logic';
 
 /**
  * Every Paradigms exercise's "Read more" guide, loaded from its own i18n JSON (issue #231's
@@ -42,7 +44,12 @@ function guideProblems(value: unknown): string[] {
     const at = `examples[${index}]`;
     const kind = example['kind'];
     if (kind !== undefined && kind !== 'fields' && kind !== 'card') problems.push(`${at}.kind`);
-    const allowed = ['kind', 'title', 'fields', ...(kind === 'card' ? ['subtitle', 'done'] : [])];
+    const allowed = [
+      'kind',
+      'title',
+      'fields',
+      ...(kind === 'card' ? ['subtitle', 'done', 'sample'] : []),
+    ];
     const extra = Object.keys(example).filter((key) => !allowed.includes(key));
     if (extra.length) problems.push(`${at} unknown keys: ${extra.join(', ')}`);
     if (!isText(example['title'])) problems.push(`${at}.title`);
@@ -75,12 +82,25 @@ const EXERCISES: readonly {
   readonly ar: Scope;
   /** The in-form placeholders the guide's example must show word for word (#231 AC). */
   readonly placeholders: readonly (readonly [section: 'form' | 'areas', key: string])[];
+  /** A list exercise's parser for a card example's "Try this example" payload (issue #232), and
+   * the example text its stored key idea or pattern must repeat; absent for worksheets and
+   * assessments, which must not offer the button. */
+  readonly sample?: {
+    readonly parse: (value: unknown) => object | null;
+    readonly shownAs: (example: { title: string; subtitle?: string }) => string | undefined;
+    readonly stored: (parsed: object) => string | undefined;
+  };
 }[] = [
   { id: 'paradigms-perception', en: perceptionEn, ar: perceptionAr, placeholders: [] },
   {
     id: 'paradigms-transition',
     en: transitionEn,
     ar: transitionAr,
+    sample: {
+      parse: scriptFromExample,
+      shownAs: (example) => example.title,
+      stored: (parsed) => (parsed as { text?: string }).text,
+    },
     placeholders: [
       ['form', 'textPlaceholder'],
       ['form', 'newScriptPlaceholder'],
@@ -112,6 +132,11 @@ const EXERCISES: readonly {
     id: 'paradigms-teach',
     en: teachEn,
     ar: teachAr,
+    sample: {
+      parse: teachSampleFromExample,
+      shownAs: (example) => example.subtitle,
+      stored: (parsed) => (parsed as { fields: { keyIdea?: string } }).fields.keyIdea,
+    },
     placeholders: [
       ['form', 'keyIdeaPlaceholder'],
       ['form', 'personPlaceholder'],
@@ -140,6 +165,25 @@ describe('Paradigms exercise guides (i18n JSON)', () => {
         expect(guideProblems(exercise[lang].guide)).toEqual([]);
       });
 
+      it(`${exercise.id} ${lang}: "Try this example" only on a list exercise, with a valid sample`, () => {
+        const examples = (exercise[lang].guide as ExerciseGuideContent).examples;
+        const samples = examples.map((example) =>
+          example.kind === 'card' ? example.sample : undefined,
+        );
+        const sample = exercise.sample;
+        if (!sample) {
+          expect(samples.every((value) => value === undefined)).toBe(true);
+          return;
+        }
+        examples.forEach((example, index) => {
+          const parsed = sample.parse(samples[index]);
+          expect(parsed).not.toBeNull();
+          expect(sample.stored(parsed as object)).toBe(
+            sample.shownAs(example as { title: string; subtitle?: string }),
+          );
+        });
+      });
+
       for (const [section, key] of exercise.placeholders) {
         it(`${exercise.id} ${lang}: ${section}.${key} matches the guide example`, () => {
           const placeholder = exercise[lang][section]?.[key];
@@ -159,6 +203,18 @@ describe('Paradigms exercise guides (i18n JSON)', () => {
           done: example.kind === 'card' ? example.done : undefined,
           subtitle: example.kind === 'card' && example.subtitle !== undefined,
           fields: example.fields.length,
+          // The stored enum keys (not the translated text) must match across languages.
+          sample:
+            example.kind === 'card' && example.sample
+              ? Object.fromEntries(
+                  Object.entries(example.sample).filter(
+                    ([key]) =>
+                      !['text', 'newScript', 'situation', 'keyIdea', 'person', 'learned'].includes(
+                        key,
+                      ),
+                  ),
+                )
+              : undefined,
         })),
       });
       expect(shape(exercise.ar.guide as ExerciseGuideContent)).toEqual(

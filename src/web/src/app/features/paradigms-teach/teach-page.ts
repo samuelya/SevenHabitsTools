@@ -11,7 +11,6 @@ import {
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
-import { isLive } from '../../core/data/record';
 import { LanguageStore } from '../../core/i18n/language-store';
 import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { CLOCK } from '../../core/time/clock';
@@ -20,13 +19,16 @@ import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
 import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import type { ExerciseGuideSample } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
+import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { TeachItemForm } from './teach-item-form';
 import { TeachSummary } from './teach-summary';
 import {
+  addSampleEntry,
   CHAPTER_STATUS_KINDS,
   CHECKLIST_KEYS,
   DATE_SLOT,
@@ -37,10 +39,12 @@ import {
   draftFor,
   isDraftWorthSaving,
   entryForChapter,
+  guideForEntries,
   labelsFrom,
   removeEntry,
   restoreEntry,
   summarize,
+  teachSampleFromExample,
   toListItem,
   upsertEntry,
   isStarted,
@@ -97,7 +101,7 @@ export class TeachPage {
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly progress = inject(ExerciseProgress);
   /** The scope's `guide` key for "Read more", `null` until it loads (issue #231). */
-  protected readonly guideContent = exerciseGuideSignal('paradigms-teach');
+  private readonly guideSource = exerciseGuideSignal('paradigms-teach');
 
   /** The `:itemId` route param — the selected chapter key, absent while the list, not a chapter,
    * is showing. Bound through `withComponentInputBinding`. */
@@ -123,8 +127,9 @@ export class TeachPage {
     { date: DATE_SLOT },
     'paradigms-teach',
   );
+  private readonly exampleLabel = translateSignal('list.example', undefined, 'paradigms-teach');
   private readonly labels = computed(() =>
-    labelsFrom(TEACH_CHAPTERS, this.chapterLabels(), this.statusLabels()),
+    labelsFrom(TEACH_CHAPTERS, this.chapterLabels(), this.statusLabels(), this.exampleLabel()),
   );
   /** "22 Sep" in the active language and numerals (`AppDatePipe`'s locale rule). English reads
    * day-first, as en-GB (the app's English is British, #218; plain `en` would give "Sep 22"). */
@@ -138,6 +143,11 @@ export class TeachPage {
   });
 
   protected readonly entries = computed(() => this.store.value());
+  /** "Read more"'s guide, offering "Try this example" only for a chapter with no entry yet (issue
+   * #232, `guideForEntries()`). */
+  protected readonly guideContent = computed(() =>
+    guideForEntries(this.guideSource(), this.entries()),
+  );
   protected readonly items = computed(() =>
     TEACH_CHAPTERS.map((chapter) =>
       toListItem(
@@ -191,7 +201,7 @@ export class TeachPage {
   /** `null` until the first chapter has an entry (issue #215): no "0 of 10 chapters shared"
    * card before the user has touched any chapter. */
   protected readonly summary = computed(() =>
-    this.entries().some(isLive) ? summarize(this.entries(), this.clock.now()) : null,
+    this.entries().some(isCounted) ? summarize(this.entries(), this.clock.now()) : null,
   );
   protected readonly readyToMarkDone = computed(() => isComplete(this.entries()));
 
@@ -286,6 +296,25 @@ export class TeachPage {
       this.pending.set(null);
     } else {
       this.pending.set({ chapter, fields: merged });
+    }
+  }
+
+  /** "Try this example" in the guide (issue #232): fills the example's own chapter (both are the
+   * Paradigms chapter) with a real entry flagged `sample` — the user asked for it (draft before
+   * record's principle 5) — and opens that chapter's editor. The guide never offers it for a
+   * chapter that already has an entry (`guideForEntries()`); if one appeared meanwhile, the
+   * user's entry is left alone and nothing opens. Refused, like any edit, in a read-only tab. */
+  protected onExampleTried(sample: ExerciseGuideSample): void {
+    const example = teachSampleFromExample(sample);
+    if (example === null || entryForChapter(this.entries(), example.chapter)) {
+      return;
+    }
+    const { chapter, fields } = example;
+    if (
+      this.store.update((entries) => addSampleEntry(entries, chapter, fields, this.clock.now()))
+    ) {
+      this.pending.set(null);
+      this.goTo([chapter]);
     }
   }
 

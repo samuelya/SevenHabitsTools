@@ -13,6 +13,7 @@
     [whyItMatters]="'paradigmsTeach.prompt.whyItMatters' | transloco"
     [guide]="guideContent()"
     [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
   />
 
   <app-exercise-list
