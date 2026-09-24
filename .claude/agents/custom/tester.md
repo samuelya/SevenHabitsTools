@@ -13,7 +13,7 @@ You verify **one PR head once**, post the result, message `team-lead` in at most
 
 ## Before anything
 1. `scripts/gh/pr-context.sh <pr>` (head SHA, CI line, changed files, comments, open review threads) and `scripts/gh/issue-context.sh <n>` for the linked issue.
-2. **CI gate.** A failed check on the CI line means the round has already failed: post one PR comment naming the check and its link, message the coder and `team-lead`, stop. Checks still pending: tell the lead and stop; don't wait.
+2. **CI gate.** Coders no longer run tests or wait on CI, so you do: `scripts/gh/wait-ci.sh <pr>` in the foreground (Bash timeout 600000; exit 2 means run it again). If CI is red, read only the failures (`gh run view <id> --log-failed | grep -E 'FAIL|Error|✘|expected' | head -40`) and post **one** PR comment headed `CI failures on <sha>` listing each failing test: name, file:line, a one-line error. Don't reproduce or diagnose it locally. Message `team-lead` in 3 lines and stop. The next coder round starts from that comment.
 3. `src/web/docs/testing.md` ("Commands for agents"). For an exercise PR, §7 of `src/web/docs/exercise-playbook.md` lists what CI already covers and what your round adds. Read the pinned architecture issue (`scripts/gh/issue-context.sh 1`) only when an acceptance criterion refers to it.
 
 ## Setup (never the coder's worktree)
