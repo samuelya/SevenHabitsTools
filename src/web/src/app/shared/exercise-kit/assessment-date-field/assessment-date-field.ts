@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   Injector,
+  OnDestroy,
   afterNextRender,
   computed,
   effect,
@@ -25,7 +26,11 @@ import { isValidIsoDate } from '../assessment-history.logic';
  * Chromium fires `input` *and* `change` for each segment typed, so typing 31 Aug over 25 Sep
  * passes through 2026-09-03 and years 0002…2026 on the way, and each of those would be stored.
  * A `change` while the input isn't focused (a picker that doesn't leave focus on the field) is
- * committed at once, since no blur will follow.
+ * committed at once, since no blur will follow. A pending value is also committed when the field
+ * is destroyed (the editor closes): Safari/iOS doesn't focus a tapped button, so "change the date,
+ * tap Done" removes a still-focused input without a blur. That runs in `ngOnDestroy`, which
+ * Angular calls before it drops the parent's output listeners (a `DestroyRef` callback runs
+ * after), so the parent's handler still gets it, bound to the record the editor was showing.
  *
  * Only a real calendar date no later than `max` is ever emitted (`isValidIsoDate`): a cleared,
  * impossible or future value is dropped, so the stored date keeps its previous value, and the
@@ -42,7 +47,7 @@ import { isValidIsoDate } from '../assessment-history.logic';
   styleUrl: './assessment-date-field.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AssessmentDateField {
+export class AssessmentDateField implements OnDestroy {
   private readonly injector = inject(Injector);
 
   /** The stored `YYYY-MM-DD`. */
@@ -60,6 +65,8 @@ export class AssessmentDateField {
   protected readonly shownDate = computed(() => (isValidIsoDate(this.date()) ? this.date() : ''));
 
   private readonly field = viewChild.required<ElementRef<HTMLInputElement>>('dateInput');
+  /** The last date emitted, so a blur fired while the input is removed isn't emitted twice. */
+  private lastEmitted: string | null = null;
 
   constructor() {
     // The baseline is the first value the effect sees, i.e. the bound one, not the default.
@@ -85,15 +92,28 @@ export class AssessmentDateField {
     this.commit();
   }
 
+  /** The editor closing with a valid date still in the field stores it, as leaving it would. */
+  ngOnDestroy(): void {
+    const value = this.field().nativeElement.value;
+    if (this.isAllowed(value) && value !== this.date() && value !== this.lastEmitted) {
+      this.emit(value);
+    }
+  }
+
   protected commit(): void {
     const value = this.field().nativeElement.value;
     if (this.isAllowed(value)) {
       if (value !== this.date()) {
-        this.dateChanged.emit(value);
+        this.emit(value);
       }
     } else {
       this.showStoredDate();
     }
+  }
+
+  private emit(value: string): void {
+    this.lastEmitted = value;
+    this.dateChanged.emit(value);
   }
 
   private isAllowed(value: string): boolean {

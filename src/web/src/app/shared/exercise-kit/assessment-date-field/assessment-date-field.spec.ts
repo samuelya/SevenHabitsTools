@@ -5,19 +5,22 @@ import { AssessmentDateField } from './assessment-date-field';
 @Component({
   imports: [AssessmentDateField],
   template: `
-    <app-assessment-date-field
-      [date]="date()"
-      label="Date"
-      [max]="max()"
-      [refusedEdits]="refused()"
-      (dateChanged)="emitted.push($event)"
-    />
+    @if (shown()) {
+      <app-assessment-date-field
+        [date]="date()"
+        label="Date"
+        [max]="max()"
+        [refusedEdits]="refused()"
+        (dateChanged)="emitted.push($event)"
+      />
+    }
   `,
 })
 class HostComponent {
   readonly date = signal('2026-09-25');
   readonly max = signal<string | null>('2026-09-30');
   readonly refused = signal(0);
+  readonly shown = signal(true);
   readonly emitted: string[] = [];
 }
 
@@ -132,5 +135,43 @@ describe('AssessmentDateField (issue #226)', () => {
     leave();
 
     expect(field.value).toBe('2026-09-01');
+  });
+
+  describe('when the editor closes with the date still in the field (Safari/iOS: no blur)', () => {
+    /** The editor closing: the field is removed while the input still has focus. */
+    function close(): void {
+      fixture.componentInstance.shown.set(false);
+      fixture.detectChanges();
+    }
+
+    it('emits the pending date', () => {
+      type('2026-09-01');
+      close();
+      expect(fixture.componentInstance.emitted).toEqual(['2026-09-01']);
+    });
+
+    it('emits nothing for an unchanged, cleared or future date', () => {
+      close();
+      fixture.componentInstance.shown.set(true);
+      fixture.detectChanges();
+      field = fixture.nativeElement.querySelector('input');
+
+      type('');
+      close();
+      fixture.componentInstance.shown.set(true);
+      fixture.detectChanges();
+      field = fixture.nativeElement.querySelector('input');
+
+      type('2062-09-25');
+      close();
+      expect(fixture.componentInstance.emitted).toEqual([]);
+    });
+
+    it('does not emit a date already committed on blur a second time', () => {
+      type('2026-09-01');
+      leave();
+      close();
+      expect(fixture.componentInstance.emitted).toEqual(['2026-09-01']);
+    });
   });
 });

@@ -136,4 +136,28 @@ describe('MaturityPage editable date (issue #226)', () => {
     expect(storedAssessments()[0].date).toBe('2025-10-01');
     expect(dateInput(harness).value).toBe('2025-10-01');
   });
+
+  it('stores a date still in the field when Done closes a saved assessment (Safari/iOS: no blur)', async () => {
+    const harness = await setUp();
+    const record = rated('2025-10-01', [2]);
+    seed(record);
+    await harness.navigateByUrl(`${LIST_URL}/${record.id}`);
+    await harness.fixture.whenStable();
+
+    const input = dateInput(harness);
+    input.focus();
+    input.value = '2025-12-01';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+    expect(storedAssessments()[0].date).toBe('2025-10-01');
+
+    (host(harness).querySelector('.editor-done') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(storedAssessments()[0].date).toBe('2025-12-01');
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(host(harness).querySelector('app-maturity-assessment-form')).toBeNull();
+  });
 });

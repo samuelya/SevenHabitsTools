@@ -247,4 +247,43 @@ describe('PcBalancePage editable date (issue #226)', () => {
     expect(storedAudits()[0].date).toBe('2026-01-01');
     expect(dateInput(harness).value).toBe('2026-01-01');
   });
+
+  /** Safari/iOS: a tapped button isn't focused, so Done removes the still-focused date input
+   * without a blur. The date is typed (`input`/`change` while focused) but never left. */
+  function typeDateWithoutLeaving(harness: RouterTestingHarness, value: string): void {
+    const input = dateInput(harness);
+    input.focus();
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('change'));
+    harness.detectChanges();
+  }
+
+  it('stores a date still in the field when Done closes a saved audit', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+    await harness.fixture.whenStable();
+    const id = storedAudits()[0].id;
+
+    typeDateWithoutLeaving(harness, '2025-11-02');
+    expect(storedAudits()[0].date).toBe('2026-01-01');
+    await click(harness, '.editor-done');
+
+    expect(storedAudits().map((audit) => [audit.id, audit.date])).toEqual([[id, '2025-11-02']]);
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(host(harness).querySelector('app-pc-balance-audit-form')).toBeNull();
+  });
+
+  it('stores nothing when Done closes a new draft with only its date changed', async () => {
+    const harness = await setUp();
+    const before = currentDocument();
+    await click(harness, '.add-button');
+
+    typeDateWithoutLeaving(harness, '2025-11-02');
+    await click(harness, '.editor-done');
+
+    expect(currentDocument()).toBe(before);
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+  });
 });
