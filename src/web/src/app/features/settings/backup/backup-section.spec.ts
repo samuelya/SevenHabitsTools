@@ -283,7 +283,7 @@ describe('BackupSection', () => {
 
     expect(replaceWithImport).toHaveBeenCalledTimes(1);
     expect(snackbarOpen).not.toHaveBeenCalledWith(
-      expect.stringContaining('Import complete'),
+      expect.stringContaining('Import done'),
       expect.any(String),
       expect.any(Object),
     );
