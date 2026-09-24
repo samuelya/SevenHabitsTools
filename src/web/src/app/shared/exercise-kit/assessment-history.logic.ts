@@ -68,9 +68,10 @@ export function localDateString(now: Date): string {
 }
 
 /** Whether `value` is a real calendar date in `YYYY-MM-DD` form — the only value an editable
- * assessment date (issue #226) may store. The pattern alone lets an impossible date through
- * (`2026-13-01` parses to Invalid Date and makes `Intl.DateTimeFormat.format` throw, taking the
- * history list down), and a `NaN` check isn't enough either: `2026-02-30` rolls over to 2 March
+ * assessment date (issue #226) may store, and the one a history row can format (anything else,
+ * such as an imported `''` or `2026-13-01`, is titled "No date"). The pattern alone lets an
+ * impossible date through (`2026-13-01` parses to Invalid Date, which `AppDatePipe` renders as an
+ * empty string), and a `NaN` check isn't enough either: `2026-02-30` rolls over to 2 March
  * (#224). So the value must round-trip through `parseIsoDate` → `localDateString` unchanged. A
  * native `<input type="date">` emits `''` when cleared, which fails here too. */
 export function isValidIsoDate(value: string): boolean {
@@ -97,15 +98,15 @@ export interface AssessmentHistoryItem {
   readonly summary?: AssessmentResultSummary;
 }
 
-/** The "date + summary" rows every assessment's history shows (issue #226): live assessments,
- * newest first by their (editable) `date` (`sortedByDateDesc`), each labelled by the exercise's
- * own result rule `summaryOf`. Two assessments on the same day are then told apart by their
- * result, not only by their position. */
+/** The "date + summary" rows every assessment's history shows (issue #226): one per entry of
+ * `history`, in its order, each labelled by the exercise's own result rule `summaryOf`. `history`
+ * is the page's own already-ordered list (live, `sortedByDateDesc`), so the rows and the "latest"
+ * the page copies from never disagree, and the list isn't filtered and sorted twice. */
 export function assessmentHistoryItems<T extends DatedAssessment>(
-  assessments: readonly T[],
+  history: readonly T[],
   summaryOf: (assessment: T) => AssessmentResultSummary | null,
 ): AssessmentHistoryItem[] {
-  return sortedByDateDesc(liveAssessments(assessments)).map((assessment) => {
+  return history.map((assessment) => {
     const summary = summaryOf(assessment);
     return summary === null
       ? { id: assessment.id, date: assessment.date }

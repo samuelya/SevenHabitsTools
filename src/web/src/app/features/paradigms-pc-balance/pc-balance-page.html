@@ -37,6 +37,7 @@
           [audit]="audit"
           [unsaved]="draft.unsaved()"
           [builtInLabels]="labels"
+          [today]="today()"
           [refusedEdits]="refusedEdits()"
           (changed)="onAuditChanged(audit.id, $event)"
           (assetRemoveRequested)="onAssetRemoveRequested(audit.id, $event, auditForm)"

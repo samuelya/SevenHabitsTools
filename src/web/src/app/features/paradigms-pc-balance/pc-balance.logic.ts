@@ -212,11 +212,13 @@ export function summarize(audits: readonly PcAudit[]): PcBalanceSummaryData {
   };
 }
 
-/** A new audit dated today, pre-filling asset names and groups from the latest audit with sliders
- * reset to 3 and no carried-over action (issue #49's implementation notes) — an empty asset list
- * when there is no previous audit. A suggested asset keeps its built-in key (issue #223); any
- * other gets a fresh one. */
-export function newAuditFields(latest: PcAudit | null, today: string): PcAuditFields {
+/** A new audit dated today, pre-filling asset names and groups from the latest audit that has any
+ * assets, with sliders reset to 3 and no carried-over action (issue #49's implementation notes) —
+ * an empty asset list without one. A newer audit whose assets were all removed isn't the template
+ * (#226 review; maturity's `newAssessmentFields` rule). A suggested asset keeps its built-in key
+ * (issue #223); any other gets a fresh one. `history` is newest first. */
+export function newAuditFields(history: readonly PcAudit[], today: string): PcAuditFields {
+  const latest = history.find((audit) => audit.assets.length > 0);
   return {
     date: today,
     assets: latest

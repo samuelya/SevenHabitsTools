@@ -3,6 +3,7 @@
     class="audit-date"
     [date]="audit().date"
     [label]="'paradigmsPcBalance.editor.dateLabel' | transloco"
+    [max]="today()"
     [refusedEdits]="refusedEdits()"
     (dateChanged)="changed.emit({ date: $event })"
   />

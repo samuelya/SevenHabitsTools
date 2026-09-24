@@ -61,6 +61,7 @@ describe('PcBalanceAuditForm', () => {
 
     input.value = '2025-12-31';
     input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
 
     expect(changes).toEqual([{ date: '2025-12-31' }]);
   });

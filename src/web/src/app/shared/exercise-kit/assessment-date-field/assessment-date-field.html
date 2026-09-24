@@ -5,8 +5,10 @@
     matInput
     type="date"
     required
-    [value]="date()"
-    (input)="onInput($event)"
+    [value]="shownDate()"
+    [attr.max]="max()"
+    (change)="onChange()"
     (blur)="onBlur()"
+    (keydown.enter)="commit()"
   />
 </mat-form-field>

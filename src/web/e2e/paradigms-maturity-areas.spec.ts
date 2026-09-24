@@ -133,6 +133,8 @@ test.describe('maturity continuum: areas and rating (#222)', () => {
 
     // The date is editable on a saved assessment too (issue #226).
     await form.locator('app-assessment-date-field input').fill('2026-03-14');
+    // Stored when the user leaves the field (issue #226 review), not on each keystroke.
+    await form.locator('app-assessment-date-field input').blur();
 
     // Unpressing a rated area's chip asks first; Cancel keeps it (#222 review).
     await form.locator('.change-areas').click();

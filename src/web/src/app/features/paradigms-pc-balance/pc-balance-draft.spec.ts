@@ -188,6 +188,8 @@ describe('PcBalancePage editable date (issue #226)', () => {
     const input = dateInput(harness);
     input.value = value;
     input.dispatchEvent(new Event('input'));
+    // Committed when the user leaves the field (issue #226 review).
+    input.dispatchEvent(new Event('blur'));
     harness.detectChanges();
   }
 

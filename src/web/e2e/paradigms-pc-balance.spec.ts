@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
@@ -8,6 +9,27 @@ import { expect, test } from './fixtures';
  * call, so each project renders whichever language its own locale defaults to (`mobile-ar`/
  * `desktop-ar`, per `playwright.config.ts`), same as `e2e/paradigms-transition.spec.ts`.
  */
+
+/** The stored audits' dates, as IndexedDB holds them (the document the JSON export writes). */
+async function storedAuditDates(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () =>
+      new Promise<string[]>((resolve, reject) => {
+        const open = indexedDB.open('sevenhabits');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const get = db.transaction('documents').objectStore('documents').get('current');
+          get.onsuccess = () => {
+            db.close();
+            const audits: { date: string }[] = get.result?.habits?.paradigms?.pcAudits ?? [];
+            resolve(audits.map((audit) => audit.date));
+          };
+          get.onerror = () => reject(get.error);
+        };
+      }),
+  );
+}
 
 function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
@@ -78,6 +100,8 @@ test.describe('P/PC balance audit', () => {
 
     // The date is editable (issue #226): a native date input, filled as ISO `YYYY-MM-DD`.
     await form.locator('app-assessment-date-field input').fill('2026-03-14');
+    // Stored when the user leaves the field (issue #226 review), not on each keystroke.
+    await form.locator('app-assessment-date-field input').blur();
 
     if (isMobile) {
       await page.goBack();
@@ -105,6 +129,38 @@ test.describe('P/PC balance audit', () => {
 
     await page.goto('/habits/paradigms');
     await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
+  });
+
+  // Issue #226 review: Chromium fires `input` and `change` for every segment typed, so saving on
+  // those stored each in-between date (typing 31 Aug over 25 Sep passes through 3 Sep). Arrow keys
+  // step the focused segment in every locale's field order, and every step is a valid past date.
+  test('a date edited segment by segment is stored once, when the user leaves the field', async ({
+    page,
+  }) => {
+    await page.goto('/habits/paradigms/pc-balance');
+    await page.locator('.add-button').click();
+    const form = page.locator('app-pc-balance-audit-form');
+    await form.locator('.add-asset-row input[type="text"]').first().fill('Sleep');
+    await form.locator('.add-asset-row button').first().click();
+
+    const dateInput = form.locator('app-assessment-date-field input');
+    const original = await dateInput.inputValue();
+    await expect.poll(() => storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.focus();
+    for (let step = 0; step < 3; step++) {
+      await dateInput.press('ArrowDown');
+    }
+    const typed = await dateInput.inputValue();
+    expect(typed).not.toBe(original);
+
+    // Longer than the 500 ms save debounce: nothing in between has been stored.
+    await page.waitForTimeout(1000);
+    expect(await storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.blur();
+    await expect.poll(() => storedAuditDates(page)).toEqual([typed]);
+    await expect(dateInput).toHaveValue(typed);
   });
 
   // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but

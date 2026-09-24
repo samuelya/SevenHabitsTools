@@ -104,6 +104,8 @@ export class PcBalanceAuditForm {
   /** Each built-in asset key's translated label (issue #223). */
   readonly builtInLabels = input.required<Readonly<Record<string, string>>>();
   /** How many edits the page's store has refused (a read-only tab). */
+  /** Today's `YYYY-MM-DD`, the latest date the date field accepts (issue #226). */
+  readonly today = input<string | null>(null);
   readonly refusedEdits = input(0);
   readonly changed = output<Partial<PcAuditFields>>();
   readonly reflectionChanged = output<PcReflectionChange>();

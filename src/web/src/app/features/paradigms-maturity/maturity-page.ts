@@ -141,11 +141,16 @@ export class MaturityPage {
   /** Date + "Mostly independence" per row (issue #226), in the same date order as `history()`;
    * the summary is a key the list translates, so it follows a language switch on its own. */
   protected readonly historyItems = computed(() =>
-    assessmentHistoryItems(this.assessments(), assessmentHistorySummary),
+    assessmentHistoryItems(this.history(), assessmentHistorySummary),
   );
   /** Bumped each time the store refuses an area edit (a read-only tab), so the form drops its own
    * copy of the areas and shows the stored ones again (#222 re-review R2). */
   protected readonly refusedEdits = signal(0);
+  /** The latest date an assessment may carry (issue #226), read from the clock at each render so
+   * a tab left open overnight moves on with the day. */
+  protected today(): string {
+    return localDateString(this.clock.now());
+  }
   /** The draft the user pressed Continue on: `isDraftWorthSaving()`'s signal to store it. */
   private continuedDraftId: string | null = null;
   protected readonly draft = recordDraft<MaturityAssessment>({

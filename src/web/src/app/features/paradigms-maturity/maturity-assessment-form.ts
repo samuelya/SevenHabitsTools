@@ -112,6 +112,8 @@ export class MaturityAssessmentForm {
   readonly areaRemoveRequested = output<string>();
   /** How many edits the page's store has refused (a read-only tab): each one drops the form's own
    * copy of the areas for the stored ones, so nothing looks saved that wasn't (#222 re-review R2). */
+  /** Today's `YYYY-MM-DD`, the latest date the date field accepts (issue #226). */
+  readonly today = input<string | null>(null);
   readonly refusedEdits = input(0);
 
   protected readonly levels = MATURITY_LEVELS;

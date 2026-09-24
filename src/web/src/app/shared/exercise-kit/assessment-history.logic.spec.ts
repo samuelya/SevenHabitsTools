@@ -134,12 +134,11 @@ describe('isValidIsoDate (issue #226)', () => {
 });
 
 describe('assessmentHistoryItems (issue #226)', () => {
-  it('lists live assessments newest first by date, each with its summary', () => {
+  it('maps the given history to rows in its order, each with its summary', () => {
     const items = assessmentHistoryItems(
       [
-        assessment({ id: 'old', date: '2026-01-01' }),
-        assessment({ id: 'gone', date: '2026-05-01', deletedAt: '2026-05-02T00:00:00.000Z' }),
         assessment({ id: 'new', date: '2026-03-01' }),
+        assessment({ id: 'old', date: '2026-01-01' }),
       ],
       (entry) => ({ key: `summary.${entry.id}`, count: 2 }),
     );
@@ -147,18 +146,6 @@ describe('assessmentHistoryItems (issue #226)', () => {
       { id: 'new', date: '2026-03-01', summary: { key: 'summary.new', count: 2 } },
       { id: 'old', date: '2026-01-01', summary: { key: 'summary.old', count: 2 } },
     ]);
-  });
-
-  it('follows an edited date, not creation order', () => {
-    const items = assessmentHistoryItems(
-      [
-        assessment({ id: 'first', date: '2026-06-01', createdAt: '2026-01-01T00:00:00.000Z' }),
-        // Created later but back-dated: it sorts below the first one.
-        assessment({ id: 'backdated', date: '2026-02-01', createdAt: '2026-06-02T00:00:00.000Z' }),
-      ],
-      () => null,
-    );
-    expect(items.map((item) => item.id)).toEqual(['first', 'backdated']);
   });
 
   it('leaves the summary out while an assessment has no result', () => {

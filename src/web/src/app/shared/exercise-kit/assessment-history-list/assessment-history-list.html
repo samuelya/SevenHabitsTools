@@ -4,7 +4,12 @@
       @for (item of items(); track item.id) {
         <!-- "Date + summary" (issue #226): two same-day assessments are told apart by their
              result, in the row and in its delete button's name. -->
-        @let dateText = localDate(item.date) | appDate: { dateStyle: 'medium' };
+        <!-- An imported record can carry an invalid date (''/'2026-13-01'): the model allows it,
+             so the row says "No date" instead of a blank title. -->
+        @let dateText =
+          isValidDate(item.date)
+            ? (localDate(item.date) | appDate: { dateStyle: 'medium' })
+            : ('exerciseKit.history.noDate' | transloco);
         @let summaryText =
           item.summary
             ? item.summary.count !== undefined
@@ -44,8 +49,10 @@
               type="button"
               class="assessment-history-list__delete"
               [attr.aria-label]="
-                'exerciseKit.list.deleteAria'
-                  | transloco: { item: summaryText ? dateText + ', ' + summaryText : dateText }
+                summaryText
+                  ? ('exerciseKit.history.deleteAria'
+                    | transloco: { date: dateText, summary: summaryText })
+                  : ('exerciseKit.list.deleteAria' | transloco: { item: dateText })
               "
               (click)="requestDelete(item)"
             >

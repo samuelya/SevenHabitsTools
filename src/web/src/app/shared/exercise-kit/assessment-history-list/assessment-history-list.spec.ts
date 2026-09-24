@@ -99,6 +99,32 @@ describe('AssessmentHistoryList', () => {
     expect(label).toContain('2 over-used');
   });
 
+  it('builds the bin button name from a translation, with the Arabic comma in ar', () => {
+    fixture.componentInstance.items = [
+      { id: 'a1', date: '2026-09-18', summary: { key: OVER_USED, count: 2 } },
+    ];
+    fixture.componentInstance.deletable = true;
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    fixture.detectChanges();
+
+    const label = deleteButtons(fixture)[0].getAttribute('aria-label') ?? '';
+    expect(label).toContain('،');
+    expect(label).not.toContain(', ');
+  });
+
+  it('titles a row with an invalid stored date "No date", not a blank', () => {
+    fixture.componentInstance.items = [
+      { id: 'a1', date: '' },
+      { id: 'a2', date: '2026-13-01' },
+    ];
+    fixture.detectChanges();
+
+    const titles = [...fixture.nativeElement.querySelectorAll('[matListItemTitle]')].map(
+      (element) => (element as HTMLElement).textContent?.trim(),
+    );
+    expect(titles).toEqual(['No date', 'No date']);
+  });
+
   it('marks the selected item pressed', () => {
     fixture.componentInstance.items = [{ id: 'a1', date: '2026-09-18' }];
     fixture.componentInstance.selectedId = 'a1';

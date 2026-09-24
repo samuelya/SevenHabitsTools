@@ -105,7 +105,7 @@ export class PcBalancePage {
   protected readonly history = computed(() => sortedByDateDesc(this.audits()));
   /** Date + "2 over-used" per row (issue #226), in the same date order as `history()`. */
   protected readonly historyItems = computed(() =>
-    assessmentHistoryItems(this.audits(), auditHistorySummary),
+    assessmentHistoryItems(this.history(), auditHistorySummary),
   );
   // Reactive labels (playbook §6): a cold load or a language switch updates the suggested chips
   // and the built-in asset titles. `null` until the scope has loaded, so the form (and a remove
@@ -121,13 +121,18 @@ export class PcBalancePage {
    * edit that doesn't land for another reason (an Undo after its audit was deleted) doesn't reset
    * the audit that is open. */
   protected readonly refusedEdits = this.documentStore.refusedEdits;
+  /** The latest date an assessment may carry (issue #226), read from the clock at each render so
+   * a tab left open overnight moves on with the day. */
+  protected today(): string {
+    return localDateString(this.clock.now());
+  }
   protected readonly draft = recordDraft<PcAudit>({
     itemId: this.itemId,
     records: this.audits,
-    // Read when the draft opens: the latest audit's assets, sliders reset (`newAuditFields`).
+    // Read when the draft opens: the latest assets, sliders reset (`newAuditFields`).
     create: () => {
       const now = this.clock.now();
-      return newRecord(newAuditFields(this.history()[0] ?? null, localDateString(now)), now);
+      return newRecord(newAuditFields(this.history(), localDateString(now)), now);
     },
     isWorthSaving: isDraftWorthSaving,
     save: (record) => this.store.update((audits) => [...audits, record]),

@@ -5,7 +5,11 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../../core/i18n/plural.pipe';
 import { SwipeToDeleteDirective } from '../swipe-to-delete.directive';
-import { parseIsoDate, type AssessmentHistoryItem } from '../assessment-history.logic';
+import {
+  isValidIsoDate,
+  parseIsoDate,
+  type AssessmentHistoryItem,
+} from '../assessment-history.logic';
 
 /** Rows are built by `assessmentHistoryItems()` (`assessment-history.logic.ts`, issue #226): the
  * raw `YYYY-MM-DD` date plus a result summary as a translation key. Both are resolved here, in the
@@ -54,6 +58,10 @@ export class AssessmentHistoryList<T extends AssessmentHistoryItem = AssessmentH
    * raw `YYYY-MM-DD` string can't go through `AppDatePipe` directly. */
   protected localDate(date: string): Date {
     return parseIsoDate(date);
+  }
+
+  protected isValidDate(date: string): boolean {
+    return isValidIsoDate(date);
   }
 
   protected requestDelete(item: T): void {
