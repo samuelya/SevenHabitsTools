@@ -19,9 +19,10 @@ import { ExerciseGuideOpener } from '../exercise-guide/exercise-guide-opener';
  * matters" and a `From: <chapter>` line (issue #30, reworked by #185 and #212). Purely
  * presentational — the calling feature passes already-translated strings (its own Transloco
  * scope), not keys, since this kit's own `exercise-kit` scope only owns its generic chrome
- * ("About this exercise", "Read more", "Why this matters"). The exercise page itself renders the
- * title once, as a visually hidden `h1` (`ExercisePage`) — this card no longer repeats it (issue
- * #184's "one title" decision).
+ * ("About this exercise", "Read more", "Why this matters"). The exercise page renders the title as a
+ * visually hidden `h1` (`ExercisePage`) for screen readers; since the chrome shows only the short
+ * title (issue #218), `heading` shows the long teaching title visibly here, hidden from assistive
+ * tech so it is still announced once (issue #184's "one title" decision).
  *
  * `expanded` is a `model()`, not a plain input, so the card manages its own collapse state when
  * no page binds it at all, while still letting `ExercisePage` collapse it imperatively on
@@ -47,6 +48,9 @@ export class ExercisePromptCard {
   private readonly guideOpener = inject(ExerciseGuideOpener);
   private readonly viewContainerRef = inject(ViewContainerRef);
 
+  /** The exercise's long title, shown visibly at the top of the card (issue #218: the long title
+   * appears in the intro card, the chrome shows the short one). */
+  readonly heading = input<string | null>(null);
   readonly prompt = input.required<string>();
   /** A first-use gloss for a book term the prompt uses, as a grey line right under it, in the
    * part that is always visible (issue #218: an inline line, never a tooltip). */

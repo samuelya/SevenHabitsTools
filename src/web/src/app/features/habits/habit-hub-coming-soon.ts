@@ -5,7 +5,9 @@ import { HabitId } from '../../core/habits/habits';
  * habit hub as "coming soon" (issue #31). */
 export interface ComingSoonExercise {
   readonly habit: HabitId;
-  readonly titleKey: string;
+  /** The short title (≤ 3 words, issue #218), as every hub list shows; a root `titles.*` key
+   * works, since an unregistered exercise has no `habits.exercises.<id>.shortTitle` yet. */
+  readonly shortTitleKey: string;
 }
 
 /**

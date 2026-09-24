@@ -60,7 +60,7 @@ test.describe('short titles fit without truncation (#218)', () => {
     await expectNotTruncated(page.locator('app-habit-hub-page .hub-continue'));
   });
 
-  test('every exercise title in the app bar, with the long title kept in the h1', async ({
+  test('every exercise title in the app bar, with the long title kept in the h1 and intro card', async ({
     page,
   }) => {
     for (const route of EXERCISE_ROUTES) {
@@ -70,6 +70,10 @@ test.describe('short titles fit without truncation (#218)', () => {
       const short = (await page.getByTestId('page-title').textContent())?.trim() ?? '';
       const long = (await page.locator('app-exercise-page h1').textContent())?.trim() ?? '';
       expect(long.length).toBeGreaterThan(0);
+      // The h1 is visually hidden; the intro card shows the same long title to sighted users.
+      const visibleLong = page.locator('app-exercise-prompt-card .prompt-heading');
+      await expect(visibleLong).toBeVisible();
+      await expect(visibleLong).toHaveText(long);
       expect(await page.title()).toContain(short);
     }
   });

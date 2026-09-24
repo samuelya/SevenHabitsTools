@@ -271,7 +271,7 @@ describe('Habits feature', () => {
   });
 
   describe('coming soon', () => {
-    const comingSoon: ComingSoonExercise[] = [{ habit: 'h3', titleKey: 'titles.journal' }];
+    const comingSoon: ComingSoonExercise[] = [{ habit: 'h3', shortTitleKey: 'titles.journal' }];
 
     it('previews a feature-flagged, unregistered exercise as coming soon', async () => {
       configureApp({

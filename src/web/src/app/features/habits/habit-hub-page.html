@@ -59,10 +59,10 @@
         }
       </a>
     }
-    @for (entry of comingSoon(); track entry.titleKey + '-' + $index) {
+    @for (entry of comingSoon(); track entry.shortTitleKey + '-' + $index) {
       <div mat-list-item class="hub-coming-soon">
         <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
-        <span matListItemTitle>{{ entry.titleKey | transloco }}</span>
+        <span matListItemTitle>{{ entry.shortTitleKey | transloco }}</span>
         <span matListItemLine>{{ 'habits.hub.comingSoon' | transloco }}</span>
       </div>
     }
