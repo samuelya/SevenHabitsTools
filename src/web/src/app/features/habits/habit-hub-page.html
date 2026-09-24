@@ -32,9 +32,11 @@
   <mat-nav-list>
     @for (exercise of exercises(); track exercise.exerciseId) {
       @let done = progress.isDone(exercise.exerciseId)();
-      <a mat-list-item [routerLink]="'/' + exercise.route">
+      <a mat-list-item class="hub-exercise" [routerLink]="'/' + exercise.route">
         <mat-icon matListItemIcon aria-hidden="true">{{ exercise.icon }}</mat-icon>
-        <span matListItemTitle>{{ exercise.shortTitleKey | transloco }}</span>
+        <span matListItemTitle class="hub-exercise-title">{{
+          exercise.shortTitleKey | transloco
+        }}</span>
         <span matListItemLine>{{ exercise.summaryKey | transloco }}</span>
         @if (done) {
           <span matListItemMeta class="hub-status">
@@ -60,9 +62,11 @@
       </a>
     }
     @for (entry of comingSoon(); track entry.shortTitleKey + '-' + $index) {
-      <div mat-list-item class="hub-coming-soon">
+      <div mat-list-item class="hub-exercise hub-coming-soon">
         <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
-        <span matListItemTitle>{{ entry.shortTitleKey | transloco }}</span>
+        <span matListItemTitle class="hub-exercise-title">{{
+          entry.shortTitleKey | transloco
+        }}</span>
         <span matListItemLine>{{ 'habits.hub.comingSoon' | transloco }}</span>
       </div>
     }

@@ -3,9 +3,9 @@
 <mat-nav-list>
   @for (habit of habits; track habit.id) {
     @let progress = progressFor(habit.id)();
-    <a mat-list-item [routerLink]="habit.id">
+    <a mat-list-item class="habit-item" [routerLink]="habit.id">
       <mat-icon matListItemIcon aria-hidden="true">{{ habit.icon }}</mat-icon>
-      <span matListItemTitle>{{ habit.shortTitleKey | transloco }}</span>
+      <span matListItemTitle class="habit-title">{{ habit.shortTitleKey | transloco }}</span>
       @if (progress.total > 0) {
         <span matListItemMeta class="habit-progress">
           <mat-progress-spinner
