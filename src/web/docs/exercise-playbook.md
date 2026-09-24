@@ -115,9 +115,9 @@ those decisions so building another one needs none of its own.
 
 - `ExercisePromptCard`'s visible part is always the one-paragraph prompt plus, once the exercise
   has one, a "Read more" button; its expandable part (behind "About this exercise") is "Why this
-  matters" then a `From: <chapter>` line, in that order. It starts expanded on desktop/tablet
-  once the exercise has been started, but always starts collapsed on handset regardless — the
-  visible part alone must carry what a first-time phone user needs.
+  matters" then a `From: <chapter>` line, in that order. On desktop/tablet it starts expanded and
+  collapses once the exercise has been started; on handset it always starts collapsed regardless —
+  the visible part alone must carry what a first-time phone user needs.
 - "Read more" opens `ExerciseGuide`, a `MatDialog`: full-screen below `HANDSET_QUERY`, centred and
   capped at 560px above it. Four sections, same headings on every exercise: In short, How to do it
   (numbered), An example (§4's "Guide example" column), Afterwards.
@@ -196,7 +196,7 @@ those decisions so building another one needs none of its own.
 | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `<slug>.model.spec.ts`     | registration exists; `defaults()` and a fully filled record pass `validate()`; a wrong shape fails; a document containing the slice passes `validateDocument()` (this is the export/import guarantee)                                                                                                                                                                                                                                         |
 | `<slug>.logic.spec.ts`     | every pure function, edge cases included (empty, boundaries, tombstoned items)                                                                                                                                                                                                                                                                                                                                                                |
-| `<slug>-page.spec.ts`      | creating, editing, deleting and completing through the page with a fixed `CLOCK`; a list exercise's selection is a route param (§5), so drive it through a real `Router` — `RouterTestingHarness`, mounting `<slug>.routes.ts` at its own `<EXERCISE_ID>_ROUTE` prefix (`[{ path: <EXERCISE_ID>_ROUTE, children: <slug>Routes }]`), not the harness root, or the nesting-depth bug §5 describes goes uncaught — see `transition-page.spec.ts` |
+| `<slug>-page.spec.ts`      | creating, editing, deleting and completing through the page with a fixed `CLOCK`; a list exercise's selection is a route param (§5), so drive it through a real `Router` — `RouterTestingHarness`, mounting `<slug>.routes.ts` at its own `<EXERCISE_ID>_ROUTE` prefix (`[{ path: <EXERCISE_ID>_ROUTE, children: <slug>Routes }]`), not the harness root, or the nesting-depth bug `exercise-layout.md` describes goes uncaught — see `transition-page.spec.ts` |
 | `e2e/<exerciseId>.spec.ts` | one happy path from the hub: open the exercise, fill it, reload, data still there, hub shows done. Plus an axe scan. The Playwright projects already run it at 360/1280 in `en`/`ar`; don't loop over them yourself                                                                                                                                                                                                                           |
 
 - Seed data in e2e with `seedDocument()` from `e2e/fixtures.ts`, not by clicking through setup.
@@ -214,7 +214,7 @@ convention to follow, not a component to add.
 | Ships | Where (reference file) |
 | --- | --- |
 | **Short title:** the route title (`titles.<exerciseId>`) and hub title (`habits.exercises.<exerciseId>.title`) values are each ≤ 3 words, since chrome (top app bar, hub card) renders them as-is — no separate registry field yet (§1; a `shortTitleKey` field is deferred to #218) | `perception.model.ts`'s `registerExercise()`; `public/assets/i18n/en.json`'s `titles.paradigms-perception`; `features/habits/i18n/en.json`'s `exercises.paradigms-perception.title` |
-| `doneChecklist(exercise, labels)` in `<slug>.logic.ts`, reducing the same per-item `met` map `isComplete()` reduces, so the gate button and the checklist it shows can never disagree | `perception.logic.ts`'s `checklistMet()`, `doneChecklist()`, `isComplete()` |
+| `doneChecklist(exercise, labels)` in `<slug>.logic.ts`, reducing the same per-item `met` map `isComplete()` reduces, so the gate button and the checklist it shows can never disagree — gate its rendering on `checklistLoaded(labels)`, the same load gate as the guide row below (`translateSignal` starts array keys at `['']`, so a naive read renders blank rows on a first, uncached visit) | `perception.logic.ts`'s `checklistMet()`, `doneChecklist()`, `checklistLoaded()`, `isComplete()` |
 | `DoneToggle`'s `checklist` input for a new exercise, not `disabledHint` (`disabledHint` stays as-is for an exercise built before #212) | `done-toggle.ts`'s `checklist` input; `perception-page.html`'s `<app-done-toggle [checklist]="checklist()">` |
 | A `guide` block in the exercise's own i18n scope — `inShort`, `howTo` (numbered steps), `examples` (§4's "Guide example" column: one card per step/item type/branch), `afterwards` — read with `translateObjectSignal` and gated on real content (`howTo.length`, since the signal starts at an empty object before the scope loads) | `features/paradigms-perception/i18n/en.json`'s `guide` key; `perception-page.ts`'s `guideContent`; `exercise-guide.ts`/`.html` |
 | A `label`/`prompt`/`placeholder` triple per free-text field: `mat-label` = a short noun, a `<p class="field-prompt">` above the field = the question, `placeholder` = a worked example — never the only label | `perception-page.html`'s `step1.firstView.{label,prompt,placeholder}` and every other field |
@@ -226,13 +226,17 @@ convention to follow, not a component to add.
 
 The writing standard — English register, the Arabic فصحى/عامية split, the glossary — is
 `CONTENT.md`'s "Writing standard" section (#227; that PR is the lead's, not a coder's, since
-`CONTENT.md` is a root file). Until it lands, the mechanical boundary by i18n key suffix (#227's
-list, which has more suffixes than #212's shorter one) is:
+`CONTENT.md` is a root file). Its "Key-suffix boundary" subsection has the full precedence order
+(#251); in short, by last key segment:
 
 - **فصحى** (formal): a key ending `label`, `title`, `stepLabel`, `stepTitle`, `legend`, `button`,
   `kind.*`, `status.*`.
 - **عامية مصرية** (colloquial): a key ending `prompt`, `placeholder`, `hint`, `intro`, `text`,
   `whyItMatters`, `checklist.*`, `guide.*`, `empty*`.
+
+Don't guess at a key that matches more than one row — `CONTENT.md`'s rule 1 (last-segment suffix
+wins) already settles it: `guide.examples[].title` and `guide.examples[].fields[].label` are both
+فصحى, because `title`/`label` is the key's last segment even though it sits inside `guide.*`.
 
 Both keep `CONTENT.md`'s content rule (original paraphrase, never book text beyond a short term).
 

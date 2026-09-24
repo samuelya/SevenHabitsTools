@@ -39,7 +39,7 @@ import {
  * `upsertEntry()`).
  *
  * **Routing:** same `optionalParamMatcher('itemId')` pattern as the reference implementation
- * (`paradigms-transition`, playbook §5) — `itemId` is the chapter key, so opening/closing the
+ * (`paradigms-transition`, `exercise-layout.md`) — `itemId` is the chapter key, so opening/closing the
  * editor is a param change on one route, not a sibling-route rebuild. This page also reads a
  * `chapter` *query* param, which `?chapter=<habitId>` hub-action links
  * (`shared/exercise-kit/hub-action-registry.ts`) set to pre-select a chapter; the constructor
@@ -146,7 +146,7 @@ export class TeachPage {
       if (id != null) {
         // An id that isn't one of the fixed chapter keys — a typo'd/stale deep link — redirects
         // to the list, the same "id isn't valid" guard `paradigms-transition` uses for a
-        // tombstoned record (playbook §5).
+        // tombstoned record (`exercise-layout.md`).
         if (!isTeachChapter(id)) {
           this.goToList();
         }

@@ -38,9 +38,12 @@ ad hoc markup:
   done", #212's shipped resolution): the mandated copy for a worksheet's intro alone can run past
   an 800px viewport at 360px width, so "expanded when not started" and "first input visible
   without scrolling at 360×800" can't both hold there. Pass `[collapsedByDefault]` as the page's
-  own `isStarted()` OR'd with the handset breakpoint (`HANDSET_QUERY`); desktop/tablet keeps the
-  literal "expanded until the first edit" rule. The scaffold also collapses the card itself on
-  entering focus mode (`editing()` turning `true`) for a list/assessment page — the page doesn't
+  own `isStarted()` OR'd with the handset breakpoint (`HANDSET_QUERY`). `ExercisePromptCard` reads
+  `collapsedByDefault` once, after first render, and never reacts to it again, so on desktop/tablet
+  the card stays open through the whole session the user starts typing in — it only starts
+  collapsed on a later visit, once `isStarted()` is already true when the page first renders. The
+  scaffold also collapses the card itself on entering focus mode (`editing()` turning `true`) for
+  a list/assessment page — the page doesn't
   manage that transition. The user's own toggle still works at any time, on any breakpoint.
 - **Focus mode** is `editing()`, computed from the same thing that decides whether the editor
   slot has content (`hasDetail()` for a list; a worksheet has no focus mode at all — see below).
@@ -389,7 +392,7 @@ a shared pattern in `shared/exercise-kit/`, not something each feature re-implem
   mutator. In a page spec, provide a fake `DeleteWithUndo` (`{ provide: DeleteWithUndo, useValue:
   fakeDeleteWithUndo() }`) that just records each call's options rather than the real one, which
   loads `@angular/material/dialog` through a dynamic `import()` — the same `NG0205`-after-teardown
-  risk documented for `AppSnackbar` above. Drive confirm/Undo in the test by calling the captured
+  risk a real `DeleteWithUndo` carries. Drive confirm/Undo in the test by calling the captured
   `onConfirm()`/`onUndo()` directly; the dialog and the snackbar wiring are `DeleteWithUndo`'s own
   spec's job, not every page's. `SwipeToDeleteDirective`'s own spec sets every input it reads
   (`appSwipeToDeleteDisabled`, the host's `direction`) *before* the fixture's one `detectChanges()`

@@ -7,7 +7,7 @@ import { PcBalanceSummaryData } from './pc-balance.logic';
 /** The footer's counts card (issue #49's acceptance criteria: "history of past audits"): how many
  * audits exist and the most recent one's overall balance. Purely presentational — `summary` is
  * computed by the page from `pc-balance.logic.ts`'s `summarize()`. Plural-correct through
- * `AppPluralPipe`, not a plain `TranslocoPipe` interpolation (playbook §5). */
+ * `AppPluralPipe`, not a plain `TranslocoPipe` interpolation (`exercise-layout.md`). */
 @Component({
   selector: 'app-pc-balance-summary',
   imports: [MatCardModule, AppPluralPipe, TranslocoPipe],

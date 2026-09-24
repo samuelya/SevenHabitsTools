@@ -29,7 +29,7 @@ import { TEACH_STATUSES, TeachEntryFields, TeachStatus } from './teach.model';
  * yet), `changed` emits the edited field(s) on every change so the page can persist through
  * `featureStore` immediately, the same autosave-on-edit convention as `transition-item-form.ts`.
  *
- * **Who moves focus, and when** (playbook §5): the kit focuses the key-idea field when the editor
+ * **Who moves focus, and when** (`exercise-layout.md`): the kit focuses the key-idea field when the editor
  * *opens* (it carries `appEditorInitialFocus`). This form only moves focus for the one transition
  * the kit cannot see — switching to a *different* chapter while the editor stays open (the compact
  * desktop list stays clickable in focus mode, reusing this instance) — keyed on `entry().chapter`,
@@ -75,7 +75,7 @@ export class TeachItemForm {
         if (previous === undefined) {
           // First render: the kit's own `appEditorInitialFocus` handling focuses the key-idea
           // field on editor open. Focusing it here too would be a second writer for the same
-          // moment (playbook §5).
+          // moment (`exercise-layout.md`).
           return;
         }
         queueMicrotask(() => this.keyIdeaField()?.nativeElement.focus());
