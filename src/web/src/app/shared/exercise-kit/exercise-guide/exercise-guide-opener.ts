@@ -35,11 +35,17 @@ export class ExerciseGuideOpener {
   private readonly transloco = inject(TranslocoService);
   private readonly loadExerciseGuide = inject(EXERCISE_GUIDE_LOADER);
 
-  async open(content: ExerciseGuideContent, viewContainerRef: ViewContainerRef): Promise<void> {
+  /** `title` (already translated) replaces the dialog's generic heading, e.g. "About this habit"
+   * on the habit hub (issue #219). */
+  async open(
+    content: ExerciseGuideContent,
+    viewContainerRef: ViewContainerRef,
+    title?: string,
+  ): Promise<void> {
     try {
       const { ExerciseGuide } = await this.loadExerciseGuide();
       const handset = this.breakpoints.isMatched(HANDSET_QUERY);
-      const data: ExerciseGuideData = { content };
+      const data: ExerciseGuideData = title === undefined ? { content } : { content, title };
       await this.dialog.open<InstanceType<typeof ExerciseGuide>, ExerciseGuideData>(ExerciseGuide, {
         viewContainerRef,
         data,

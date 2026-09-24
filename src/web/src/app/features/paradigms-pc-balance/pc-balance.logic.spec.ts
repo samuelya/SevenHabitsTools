@@ -22,6 +22,7 @@ import {
   summarize,
   isStarted,
 } from './pc-balance.logic';
+import { hubStatus } from './pc-balance.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
 
@@ -356,5 +357,19 @@ describe('isDraftWorthSaving (issue #217)', () => {
     ];
     expect(isDraftWorthSaving({ ...initial, assets: added }, initial)).toBe(true);
     expect(isDraftWorthSaving({ ...initial, reflection: 'Rest more' }, initial)).toBe(true);
+  });
+});
+
+describe('hubStatus (#219)', () => {
+  it('is null with no live audit', () => {
+    expect(hubStatus([])).toBeNull();
+    expect(hubStatus([audit({ deletedAt: NOW.toISOString() })])).toBeNull();
+  });
+
+  it('counts live audits', () => {
+    expect(hubStatus([audit()])).toEqual({
+      key: 'habits.exercises.paradigms-pc-balance.auditCount',
+      count: 1,
+    });
   });
 });

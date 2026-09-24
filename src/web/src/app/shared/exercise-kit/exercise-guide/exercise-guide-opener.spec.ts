@@ -133,4 +133,13 @@ describe('ExerciseGuideOpener', () => {
 
     expect(snackbarOpen).toHaveBeenCalledTimes(1);
   });
+
+  it('passes a given title through to the dialog (#219)', async () => {
+    const { service, dialogOpen } = setUp();
+
+    await service.open(CONTENT, fakeViewContainerRef(), 'About this habit');
+
+    const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: unknown }];
+    expect(config.data).toEqual({ content: CONTENT, title: 'About this habit' });
+  });
 });

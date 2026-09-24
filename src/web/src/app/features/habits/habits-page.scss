@@ -1,3 +1,26 @@
+// A row wraps rather than ending in an ellipsis (#218, #219: no truncated title at 360 px, whatever
+// the platform's font metrics). Material fixes a one-line item's height, so let the item grow.
+.mat-mdc-list-item.habit-item {
+  block-size: auto;
+  min-block-size: var(--mat-list-list-item-one-line-container-height, 48px);
+  padding-block: 8px;
+}
+
+// Title and trailing progress/chip share one line when they fit and wrap onto two when they don't
+// (Linux renders text a few % wider than macOS, #218).
+.habit-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  white-space: normal;
+}
+
+.habit-title {
+  white-space: normal;
+}
+
 .habit-progress {
   display: inline-flex;
   align-items: center;
@@ -9,14 +32,24 @@
   font-size: 0.75rem;
 }
 
-// A title wraps rather than ending in an ellipsis (#218: no truncated title at 360 px, whatever
-// the platform's font metrics). Material fixes a one-line item's height, so let the item grow.
-.mat-mdc-list-item.habit-item {
-  block-size: auto;
-  min-block-size: var(--mat-list-list-item-one-line-container-height, 48px);
-  padding-block: 8px;
+.habit-next-up .habit-title,
+.habit-later .habit-title,
+.habit-later-toggle .habit-title {
+  color: var(--mat-sys-on-surface-variant, gray);
 }
 
-.habit-title {
-  white-space: normal;
+// A muted, non-interactive "Coming soon" chip (plain markup: Material chips would add a module
+// for one label).
+.habit-coming-soon-chip {
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--mat-sys-outline-variant, lightgray);
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.habits-later {
+  padding-block-start: 0;
 }

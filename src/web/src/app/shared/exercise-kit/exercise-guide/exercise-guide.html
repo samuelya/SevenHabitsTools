@@ -8,7 +8,9 @@
   >
     <mat-icon aria-hidden="true">close</mat-icon>
   </button>
-  <h2 matDialogTitle class="exercise-guide-title">{{ 'exerciseKit.guide.title' | transloco }}</h2>
+  <h2 matDialogTitle class="exercise-guide-title">
+    {{ data.title ?? ('exerciseKit.guide.title' | transloco) }}
+  </h2>
 </header>
 
 <div matDialogContent tabindex="0" class="exercise-guide">
@@ -17,38 +19,44 @@
     <p>{{ data.content.inShort }}</p>
   </section>
 
-  <section>
-    <h3>{{ 'exerciseKit.guide.howTo' | transloco }}</h3>
-    <ol>
-      @for (step of data.content.howTo; track $index) {
-        <li>{{ step }}</li>
+  @if (data.content.howTo.length) {
+    <section>
+      <h3>{{ 'exerciseKit.guide.howTo' | transloco }}</h3>
+      <ol>
+        @for (step of data.content.howTo; track $index) {
+          <li>{{ step }}</li>
+        }
+      </ol>
+    </section>
+  }
+
+  @if (data.content.examples.length) {
+    <section>
+      <h3>{{ 'exerciseKit.guide.example' | transloco }}</h3>
+      @for (example of data.content.examples; track example.title) {
+        <mat-card appearance="outlined" class="example-card">
+          <mat-card-header>
+            <mat-card-title>{{ example.title }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <dl class="example-fields">
+              @for (field of example.fields; track field.label) {
+                <div class="example-field">
+                  <dt>{{ field.label }}</dt>
+                  <dd>{{ field.value }}</dd>
+                </div>
+              }
+            </dl>
+          </mat-card-content>
+        </mat-card>
       }
-    </ol>
-  </section>
+    </section>
+  }
 
-  <section>
-    <h3>{{ 'exerciseKit.guide.example' | transloco }}</h3>
-    @for (example of data.content.examples; track example.title) {
-      <mat-card appearance="outlined" class="example-card">
-        <mat-card-header>
-          <mat-card-title>{{ example.title }}</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <dl class="example-fields">
-            @for (field of example.fields; track field.label) {
-              <div class="example-field">
-                <dt>{{ field.label }}</dt>
-                <dd>{{ field.value }}</dd>
-              </div>
-            }
-          </dl>
-        </mat-card-content>
-      </mat-card>
-    }
-  </section>
-
-  <section>
-    <h3>{{ 'exerciseKit.guide.afterwards' | transloco }}</h3>
-    <p>{{ data.content.afterwards }}</p>
-  </section>
+  @if (data.content.afterwards) {
+    <section>
+      <h3>{{ 'exerciseKit.guide.afterwards' | transloco }}</h3>
+      <p>{{ data.content.afterwards }}</p>
+    </section>
+  }
 </div>

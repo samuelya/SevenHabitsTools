@@ -36,7 +36,6 @@ describe('registered exercise routes', () => {
       habit: 'h1',
       titleKey: 'fixture.title',
       shortTitleKey: 'fixture.shortTitle',
-      summaryKey: 'fixture.summary',
       icon: 'flag',
       route: 'habits/h1',
     });
@@ -54,7 +53,6 @@ describe('registered exercise routes', () => {
       habit: 'h1',
       titleKey: 'fixture.title',
       shortTitleKey: 'fixture.shortTitle',
-      summaryKey: 'fixture.summary',
       icon: 'flag',
       route: 'habits/not-a-real-habit',
     });

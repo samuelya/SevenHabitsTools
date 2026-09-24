@@ -49,10 +49,12 @@ describe('paradigms-transition model', () => {
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-transition.title',
       shortTitleKey: 'habits.exercises.paradigms-transition.shortTitle',
-      summaryKey: 'habits.exercises.paradigms-transition.summary',
       icon: 'compare_arrows',
       route: 'habits/paradigms/transition',
       // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      // Issue #219: chapter order on the hub, and the status column's in-progress text.
+      order: 20,
+      statusFactory: expect.any(Function),
       isStarted: expect.any(Function),
     });
   });

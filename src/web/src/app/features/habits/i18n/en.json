@@ -1,18 +1,49 @@
 {
   "intro": "Pick a habit to see its exercises.",
   "progress": "{{done}} of {{total}} done",
-  "paradigms": { "title": "Paradigms and principles", "shortTitle": "Paradigms" },
-  "h1": { "title": "Habit 1: Be proactive", "shortTitle": "1 · Be proactive" },
-  "h2": { "title": "Habit 2: Begin with the end in mind", "shortTitle": "2 · Begin with the end" },
-  "h3": { "title": "Habit 3: Put first things first", "shortTitle": "3 · First things first" },
-  "h4": { "title": "Habit 4: Think win-win", "shortTitle": "4 · Think win-win" },
+  "list": {
+    "laterRange": "Habits {{from}}–{{to}} and Interdependence: coming soon",
+    "laterCount": {
+      "one": "1 more habit: coming soon",
+      "other": "{{count}} more habits: coming soon"
+    }
+  },
+  "paradigms": {
+    "title": "Paradigms and principles",
+    "shortTitle": "Paradigms"
+  },
+  "h1": {
+    "title": "Habit 1: Be proactive",
+    "shortTitle": "1 · Be proactive"
+  },
+  "h2": {
+    "title": "Habit 2: Begin with the end in mind",
+    "shortTitle": "2 · Begin with the end"
+  },
+  "h3": {
+    "title": "Habit 3: Put first things first",
+    "shortTitle": "3 · First things first"
+  },
+  "h4": {
+    "title": "Habit 4: Think win-win",
+    "shortTitle": "4 · Think win-win"
+  },
   "h5": {
     "title": "Habit 5: Seek first to understand, then to be understood",
     "shortTitle": "5 · Understand first"
   },
-  "h6": { "title": "Habit 6: Synergize", "shortTitle": "6 · Synergize" },
-  "h7": { "title": "Habit 7: Sharpen the saw", "shortTitle": "7 · Sharpen the saw" },
-  "interdependence": { "title": "Paradigms of interdependence", "shortTitle": "Interdependence" },
+  "h6": {
+    "title": "Habit 6: Synergize",
+    "shortTitle": "6 · Synergize"
+  },
+  "h7": {
+    "title": "Habit 7: Sharpen the saw",
+    "shortTitle": "7 · Sharpen the saw"
+  },
+  "interdependence": {
+    "title": "Paradigms of interdependence",
+    "shortTitle": "Interdependence"
+  },
   "hub": {
     "noExercises": "Exercises for this habit are coming soon.",
     "continueButton": "Continue: {{title}}",
@@ -28,28 +59,39 @@
       "h6": "Habit 6 is about combining different perspectives into something better than any one of you could produce alone. These exercises practise valuing differences as a source of creative solutions.",
       "h7": "Habit 7 is about renewing yourself across the areas that keep you effective — body, mind, heart and spirit. These exercises help you build habits of renewal instead of running on empty.",
       "interdependence": "Moving from independence to interdependence means investing deliberately in the relationships around you. These exercises track the small deposits and withdrawals that build or erode trust over time."
-    }
+    },
+    "aboutHabit": "About this habit",
+    "notStarted": "Not started",
+    "inProgress": "In progress"
   },
   "exercises": {
     "paradigms-transition": {
       "title": "Become a transition person",
       "shortTitle": "Transition person",
-      "summary": "Name the scripts you inherited and decide which ones stop with you."
+      "patternCount": {
+        "one": "1 pattern",
+        "other": "{{count}} patterns"
+      }
     },
     "paradigms-pc-balance": {
       "title": "Audit your results and capacity",
       "shortTitle": "Results and capacity",
-      "summary": "Rate your physical, financial and human assets and name a maintenance action for anything over-used."
+      "auditCount": {
+        "one": "1 audit",
+        "other": "{{count}} audits"
+      }
     },
     "paradigms-maturity": {
       "title": "See where you stand on the growth continuum",
       "shortTitle": "Growth continuum",
-      "summary": "Rate a few life areas from dependence to interdependence and see which habits to focus on."
+      "assessmentCount": {
+        "one": "1 assessment",
+        "other": "{{count}} assessments"
+      }
     },
     "paradigms-teach": {
       "title": "Teach it to learn it",
       "shortTitle": "Teach a chapter",
-      "summary": "Put each chapter's key idea in your own words and share it with someone within two days.",
       "hubActionLabel": "Teach this chapter",
       "sharedCount": {
         "one": "1 chapter shared",
@@ -59,7 +101,9 @@
     "paradigms-perception": {
       "title": "Notice your paradigm",
       "shortTitle": "Your paradigm",
-      "summary": "Catch yourself seeing one side of a story, then look again."
+      "stepsDone": {
+        "other": "{{count}} of {{total}} steps"
+      }
     }
   }
 }

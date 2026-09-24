@@ -32,13 +32,17 @@ export interface ExerciseGuideContent {
 
 export interface ExerciseGuideData {
   readonly content: ExerciseGuideContent;
+  /** An already-translated heading replacing the generic "How to do this exercise" — e.g. the
+   * habit hub's "About this habit" (issue #219), which reuses this dialog for its intro. */
+  readonly title?: string;
 }
 
 /**
  * The "Read more" guide every exercise can offer (issue #212), opened by `ExerciseGuideOpener`
  * from `ExercisePromptCard`: the same four sections, headed by the kit's own generic copy
  * (`exerciseKit.guide.*`), around one exercise's own already-translated content. Purely
- * presentational — it renders `MAT_DIALOG_DATA` and nothing else; `MatDialog`/CDK give the focus
+ * presentational — it renders `MAT_DIALOG_DATA` and nothing else, skipping any section whose
+ * content is empty (the habit hub's "About this habit" has only "In short" until #231); `MatDialog`/CDK give the focus
  * trap, Escape-to-close and focus return to the "Read more" button for free (see the design-check
  * comment on the issue).
  */

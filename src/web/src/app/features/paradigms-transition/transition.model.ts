@@ -7,8 +7,9 @@ import {
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { storeStatusFactory } from '../../shared/exercise-kit/exercise-hub-status';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
-import { isStarted } from './transition.logic';
+import { hubStatus, isStarted } from './transition.logic';
 
 /** Where an inherited script came from. Stored as a key, never translated text (architecture
  * issue #1 §6). */
@@ -95,10 +96,11 @@ export function registerTransitionModel(): void {
     habit: 'paradigms',
     titleKey: 'habits.exercises.paradigms-transition.title',
     shortTitleKey: 'habits.exercises.paradigms-transition.shortTitle',
-    summaryKey: 'habits.exercises.paradigms-transition.summary',
     icon: 'compare_arrows',
     route: TRANSITION_ROUTE,
+    order: 20,
     isStarted: storeStartedFactory<Script[]>(TRANSITION_MODEL_KEY, isStarted),
+    statusFactory: storeStatusFactory<Script[]>(TRANSITION_MODEL_KEY, hubStatus),
   });
 }
 

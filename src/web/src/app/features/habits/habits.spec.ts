@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { HABITS } from '../../core/habits/habits';
+import { ExerciseGuideOpener } from '../../shared/exercise-kit/exercise-guide/exercise-guide-opener';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
@@ -25,7 +26,6 @@ const H2_MISSION: ExerciseRegistryEntry = {
   habit: 'h2',
   titleKey: 'habits.paradigms.title',
   shortTitleKey: 'titles.about',
-  summaryKey: 'nav.back',
   icon: 'flag',
   route: 'habits/h2/mission',
 };
@@ -35,29 +35,52 @@ const H2_ROLES: ExerciseRegistryEntry = {
   habit: 'h2',
   titleKey: 'titles.plan',
   shortTitleKey: 'titles.plan',
-  summaryKey: 'nav.back',
   icon: 'flag',
   route: 'habits/h2/roles',
 };
 
 describe('Habits feature', () => {
-  it('lists every habit hub', async () => {
-    configureApp({ handset: false });
-    const fixture = await renderShellAt('/habits');
-    const host = fixture.nativeElement as HTMLElement;
-
-    const items = [...host.querySelectorAll('app-habits-page a')];
-    expect(items.length).toBe(HABITS.length);
-    expect(items[1].getAttribute('href')).toBe('/habits/h1');
-  });
-
-  it('lists every habit by its short title, not the long one (#218)', async () => {
+  it('shows Paradigms available, Habit 1 next up and the rest collapsed under one row (#219)', async () => {
     configureApp({ handset: false });
     const fixture = await renderShellAt('/habits');
     const host = fixture.nativeElement as HTMLElement;
     const transloco = TestBed.inject(TranslocoService);
 
-    const titles = [...host.querySelectorAll('app-habits-page [matListItemTitle]')].map((el) =>
+    const items = [...host.querySelectorAll('app-habits-page a')];
+    expect(items.map((item) => item.getAttribute('href'))).toEqual([
+      '/habits/paradigms',
+      '/habits/h1',
+    ]);
+    expect(items[0].querySelector('mat-progress-spinner')).toBeTruthy();
+    expect(items[1].querySelector('.habit-coming-soon-chip')?.textContent?.trim()).toBe(
+      transloco.translate('habits.hub.comingSoon'),
+    );
+
+    const toggle = host.querySelector('app-habits-page .habit-later-toggle') as HTMLButtonElement;
+    expect(toggle.querySelector('.habit-title')?.textContent?.trim()).toBe(
+      'Habits 2–7 and Interdependence: coming soon',
+    );
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-controls')).toBe('habits-later');
+  });
+
+  it('expands the collapsed row to every remaining habit, by its short title (#218, #219)', async () => {
+    configureApp({ handset: false });
+    const fixture = await renderShellAt('/habits');
+    const host = fixture.nativeElement as HTMLElement;
+    const transloco = TestBed.inject(TranslocoService);
+
+    (host.querySelector('app-habits-page .habit-later-toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(
+      host.querySelector('app-habits-page .habit-later-toggle')?.getAttribute('aria-expanded'),
+    ).toBe('true');
+    const links = [...host.querySelectorAll('app-habits-page a')];
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(
+      HABITS.map((habit) => `/habits/${habit.id}`),
+    );
+    const titles = [...host.querySelectorAll('app-habits-page a .habit-title')].map((el) =>
       el.textContent?.trim(),
     );
     expect(titles).toEqual(HABITS.map((habit) => transloco.translate(habit.shortTitleKey)));
@@ -128,7 +151,7 @@ describe('Habits feature', () => {
 
     afterEach(() => resetExerciseRegistryForTesting(snapshot));
 
-    it('lists registered exercises with title, summary and a Continue action to the first not-done one', async () => {
+    it('lists registered exercises with number, short title and status, and a Continue action to the first not-done one', async () => {
       configureApp({ handset: false });
       const fixture = await renderShellAt('/habits/h2');
       const host = fixture.nativeElement as HTMLElement;
@@ -140,7 +163,11 @@ describe('Habits feature', () => {
       // Chrome shows the short title only; the long one belongs to the exercise page (#218).
       expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.shortTitleKey));
       expect(links[0].textContent).not.toContain(transloco.translate(H2_MISSION.titleKey));
-      expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.summaryKey));
+      expect(links[0].querySelector('.hub-number')?.textContent?.trim()).toBe('1');
+      // No summary line (#219); the status column is part of the link's accessible name.
+      expect(links[0].querySelector('.hub-not-started')?.textContent?.trim()).toBe(
+        transloco.translate('habits.hub.notStarted'),
+      );
 
       const continueLink = host.querySelector('app-habit-hub-page .hub-continue');
       expect(continueLink?.getAttribute('href')).toBe('/habits/h2/mission');
@@ -202,8 +229,7 @@ describe('Habits feature', () => {
       fixture.detectChanges();
       const host = fixture.nativeElement as HTMLElement;
 
-      const h2Index = HABITS.findIndex((habit) => habit.id === 'h2');
-      const h2Item = [...host.querySelectorAll('app-habits-page a')][h2Index];
+      const h2Item = host.querySelector('app-habits-page a[href="/habits/h2"]') as HTMLElement;
       expect(h2Item.querySelector('mat-progress-spinner')).toBeTruthy();
       expect(h2Item.querySelector('.habit-progress-count')?.textContent?.trim()).toBe(
         TestBed.inject(TranslocoService).translate('habits.progress', { done: 1, total: 2 }),
@@ -257,7 +283,6 @@ describe('Habits feature', () => {
         habit: 'h3',
         titleKey: 'titles.paradigms',
         shortTitleKey: 'titles.paradigms',
-        summaryKey: 'nav.back',
         icon: 'flag',
         route: 'habits/h3/example',
         statusFactory: (): Signal<ExerciseHubStatus | null> => status,
@@ -288,6 +313,119 @@ describe('Habits feature', () => {
       expect(host.querySelector('app-habit-hub-page')?.textContent).not.toContain(
         transloco.translate('habits.hub.noExercises'),
       );
+    });
+  });
+
+  describe('hub order, status column and About this habit (#219)', () => {
+    let exerciseSnapshot: ReturnType<typeof snapshotExerciseRegistryForTesting>;
+    let actionSnapshot: ReturnType<typeof snapshotHubActionRegistryForTesting>;
+
+    beforeEach(() => {
+      exerciseSnapshot = snapshotExerciseRegistryForTesting();
+      actionSnapshot = snapshotHubActionRegistryForTesting();
+      resetExerciseRegistryForTesting();
+      resetHubActionRegistryForTesting();
+    });
+
+    afterEach(() => {
+      resetExerciseRegistryForTesting(exerciseSnapshot);
+      resetHubActionRegistryForTesting(actionSnapshot);
+    });
+
+    function h4(exerciseId: string, extra: Partial<ExerciseRegistryEntry> = {}) {
+      registerExercise({
+        exerciseId,
+        habit: 'h4',
+        titleKey: 'titles.plan',
+        shortTitleKey: 'titles.plan',
+        icon: 'flag',
+        route: `habits/h4/${exerciseId}`,
+        ...extra,
+      });
+    }
+
+    it('lists exercises and picks Continue in `order`, unordered ones last in registration order', async () => {
+      h4('unordered');
+      h4('second', { order: 20 });
+      h4('first', { order: 10 });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h4');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const hrefs = [...host.querySelectorAll('app-habit-hub-page mat-nav-list a')].map((link) =>
+        link.getAttribute('href'),
+      );
+      expect(hrefs).toEqual(['/habits/h4/first', '/habits/h4/second', '/habits/h4/unordered']);
+      expect(host.querySelector('app-habit-hub-page .hub-continue')?.getAttribute('href')).toBe(
+        '/habits/h4/first',
+      );
+    });
+
+    it('shows Not started, In progress, the exercise text or the done date per row', async () => {
+      h4('idle', { order: 10 });
+      h4('started', { order: 20, isStarted: () => signal(true) });
+      h4('counted', {
+        order: 30,
+        isStarted: () => signal(true),
+        statusFactory: () =>
+          signal<ExerciseHubStatus | null>({
+            key: 'habits.exercises.paradigms-perception.stepsDone',
+            count: 2,
+            params: { total: 3 },
+          }),
+      });
+      h4('finished', { order: 40, isStarted: () => signal(true) });
+      configureApp({
+        handset: false,
+        providers: [
+          { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
+        ],
+      });
+      const fixture = await renderShellAt('/habits/h4');
+      TestBed.inject(ExerciseProgress).markDone('finished');
+      fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+
+      const statuses = [...host.querySelectorAll('app-habit-hub-page .hub-row-status')].map(
+        (status) => status.textContent?.trim(),
+      );
+      expect(statuses[0]).toBe('Not started');
+      expect(statuses[1]).toBe('In progress');
+      expect(statuses[2]).toBe('2 of 3 steps');
+      expect(statuses[3]).toMatch(/^check_circle\s+Completed /);
+    });
+
+    it('puts the hub actions after the list, as text buttons', async () => {
+      h4('only', { order: 10 });
+      registerHubAction({ id: 'teach', labelKey: 'nav.back', icon: 'campaign', route: 'x' });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h4');
+      const host = fixture.nativeElement as HTMLElement;
+
+      const list = host.querySelector('app-habit-hub-page mat-nav-list') as Element;
+      const action = host.querySelector('app-habit-hub-page .hub-action') as Element;
+      expect(list.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(action.hasAttribute('mat-button')).toBe(true);
+    });
+
+    it('opens the intro in the guide dialog, titled About this habit', async () => {
+      const open = vi.fn().mockResolvedValue(undefined);
+      configureApp({
+        handset: false,
+        providers: [{ provide: ExerciseGuideOpener, useValue: { open } }],
+      });
+      const fixture = await renderShellAt('/habits/h1');
+      const host = fixture.nativeElement as HTMLElement;
+      const transloco = TestBed.inject(TranslocoService);
+
+      const about = host.querySelector('app-habit-hub-page .hub-about') as HTMLButtonElement;
+      expect(about.getAttribute('aria-label')).toBe('About this habit');
+      about.click();
+
+      expect(open).toHaveBeenCalledTimes(1);
+      const [content, , title] = open.mock.calls[0] as [{ inShort: string }, unknown, string];
+      expect(content.inShort).toBe(transloco.translate('habits.hub.intro.h1'));
+      expect(title).toBe('About this habit');
     });
   });
 });

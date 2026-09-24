@@ -21,6 +21,7 @@ import {
   upsertEntry,
   isStarted,
 } from './teach.logic';
+import { hubStatus } from './teach.logic';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
 
@@ -379,5 +380,19 @@ describe('isDraftWorthSaving (issue #217)', () => {
     expect(isDraftWorthSaving({ keyIdea: 'Choose your response' })).toBe(true);
     expect(isDraftWorthSaving({ person: 'Sam' })).toBe(true);
     expect(isDraftWorthSaving({ learned: 'They asked why' })).toBe(true);
+  });
+});
+
+describe('hubStatus (#219)', () => {
+  it('is null until a chapter is shared', () => {
+    expect(hubStatus([])).toBeNull();
+    expect(hubStatus([entry()])).toBeNull();
+  });
+
+  it('counts shared chapters', () => {
+    expect(hubStatus([entry({ status: 'shared' })])).toEqual({
+      key: 'habits.exercises.paradigms-teach.sharedCount',
+      count: 1,
+    });
   });
 });

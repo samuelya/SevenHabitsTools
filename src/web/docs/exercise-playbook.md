@@ -25,20 +25,25 @@ issue #1 (§6 JSON rules, §7 frontend conventions, §9 testing bar).
 | Document path          | `habits.<habit>.<camelCaseName>`, as given in the issue's "Data model"                              | `habits.paradigms.scripts`                    |
 | Transloco scope        | the `exerciseId`; in templates use the camelCase alias Transloco derives from it                    | `paradigmsTransition.step.title`              |
 | Route title key        | root scope `titles.<exerciseId>` in `public/assets/i18n/{en,ar}.json`                               | `titles.paradigms-transition`                 |
-| Hub title/summary keys | `habits` scope: `exercises.<exerciseId>.title` (long) / `.shortTitle` / `.summary` in `features/habits/i18n/{en,ar}.json`  | `habits.exercises.paradigms-transition.title` |
+| Hub title keys         | `habits` scope: `exercises.<exerciseId>.title` (long) / `.shortTitle` in `features/habits/i18n/{en,ar}.json`; the hub shows no summary line (#219) | `habits.exercises.paradigms-transition.title` |
+| Hub status text key    | `habits` scope: `exercises.<exerciseId>.<count>` as plural categories (`one`/`other`; `ar` all six), returned by the exercise's `hubStatus()` (#219) | `habits.exercises.paradigms-transition.patternCount` = "3 patterns" |
 | Short title            | `habits.exercises.<exerciseId>.shortTitle`, ≤ 3 words, set as the registry entry's required `shortTitleKey` (#218); the root route title `titles.<exerciseId>` holds the same wording. Chrome (top app bar, tab title, hub list, the hub's "Continue: …" button) shows only the short title; the long `title` (`prompt.title`) is the page's visually hidden `h1` and the visible `heading` of `ExercisePromptCard`, shown while the card is expanded (collapsed, it would push the primary action below the fold at 360x800) | `titles.paradigms-perception` = "Your paradigm" |
 | Guide key              | exercise's own Transloco scope, `guide` (§8) — `translateObjectSignal('guide', undefined, '<exerciseId>')`                                          | `paradigmsPerception.guide`                   |
 
-The hub page renders the title/summary in the `habits` scope, and shell code renders route titles
+The hub page renders the title and status text in the `habits` scope, and shell code renders route titles
 in the root scope. A key placed in the exercise's own scope throws there (`ThrowingMissingHandler`, #149/#162).
 
 ## 2. Wiring checklist (four registrations, one line each)
 
 1. `<slug>.model.ts`: `registerModel({ key, path, defaults, validate })` **and**
-   `registerExercise({ exerciseId, habit, titleKey, shortTitleKey, summaryKey, icon, route, isStarted })`, where
+   `registerExercise({ exerciseId, habit, titleKey, shortTitleKey, icon, route, order, isStarted, statusFactory })`, where
    `isStarted: storeStartedFactory<T>(key, isStarted)` (`shared/exercise-kit/exercise-started.ts`)
    wraps the pure `isStarted(value)` predicate from `<slug>.logic.ts` (list/assessment: any live
-   record; worksheet: the record exists, #216). Both at module load, with the idempotent guard used in `shared/exercise-kit/exercise-kit.model.ts`. This file
+   record; worksheet: the record exists, #216), and `statusFactory: storeStatusFactory<T>(key, hubStatus)`
+   (`shared/exercise-kit/exercise-hub-status.ts`) wraps the pure `hubStatus(value)` giving the hub's
+   in-progress text, `{ key, count, params? }` or `null` (#219). `order` is the exercise's chapter
+   position on its hub (10, 20, …; gaps let a later exercise slot in); without one it sorts last.
+   The hub's status column falls back to "In progress"/"Not started" when `hubStatus` is `null`. Both at module load, with the idempotent guard used in `shared/exercise-kit/exercise-kit.model.ts`. This file
    is in the initial bundle: types, defaults, validators and registrations only, with no component
    or service imports.
 2. `src/app/model-registry.ts`: add `import './features/<exerciseId>/<slug>.model';`.

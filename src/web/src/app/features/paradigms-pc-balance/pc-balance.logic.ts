@@ -1,4 +1,5 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
+import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   latestAssessment,
   liveAssessments,
@@ -70,6 +71,12 @@ export function liveAudits(audits: readonly PcAudit[]): PcAudit[] {
  * collapse both read this. */
 export function isStarted(audits: readonly PcAudit[]): boolean {
   return audits.some(isLive);
+}
+
+/** The hub's in-progress text (issue #219): "1 audit", one per live audit; `null` with none. */
+export function hubStatus(audits: readonly PcAudit[]): ExerciseHubStatus | null {
+  const count = liveAudits(audits).length;
+  return count > 0 ? { key: 'habits.exercises.paradigms-pc-balance.auditCount', count } : null;
 }
 
 /** An audit is complete once it has at least one asset and every over-used asset names an action

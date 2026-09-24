@@ -67,4 +67,22 @@ describe('ExerciseGuide', () => {
 
     expect(close).toHaveBeenCalled();
   });
+
+  it('uses a given title instead of the generic one, and skips empty sections (#219)', () => {
+    const { fixture } = setUp({
+      title: 'About this habit',
+      content: { inShort: 'The intro.', howTo: [], examples: [], afterwards: '' },
+    });
+    const element = fixture.nativeElement as HTMLElement;
+    const text = element.textContent as string;
+
+    expect(element.querySelector('.exercise-guide-title')?.textContent?.trim()).toBe(
+      'About this habit',
+    );
+    expect(text).toContain('The intro.');
+    expect(text).not.toContain('How to do it');
+    expect(text).not.toContain('An example');
+    expect(text).not.toContain('Afterwards');
+    expect(element.querySelectorAll('section')).toHaveLength(1);
+  });
 });

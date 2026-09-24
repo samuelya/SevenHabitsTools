@@ -23,6 +23,7 @@ import {
   summarize,
   isStarted,
 } from './maturity.logic';
+import { hubStatus } from './maturity.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
 
@@ -382,5 +383,19 @@ describe('isDraftWorthSaving (issue #217)', () => {
     expect(
       isDraftWorthSaving({ areas: [...initial.areas, { id: 'x', name: 'Health' }] }, initial),
     ).toBe(true);
+  });
+});
+
+describe('hubStatus (#219)', () => {
+  it('is null with no live assessment', () => {
+    expect(hubStatus([])).toBeNull();
+    expect(hubStatus([assessment({ deletedAt: NOW.toISOString() })])).toBeNull();
+  });
+
+  it('counts live assessments', () => {
+    expect(hubStatus([assessment({ id: 'a' }), assessment({ id: 'b' })])).toEqual({
+      key: 'habits.exercises.paradigms-maturity.assessmentCount',
+      count: 2,
+    });
   });
 });

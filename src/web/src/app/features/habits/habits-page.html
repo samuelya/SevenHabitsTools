@@ -1,26 +1,74 @@
 <h1 class="visually-hidden">{{ 'nav.habits' | transloco }}</h1>
 <p>{{ 'habits.intro' | transloco }}</p>
 <mat-nav-list>
-  @for (habit of habits; track habit.id) {
-    @let progress = progressFor(habit.id)();
-    <a mat-list-item class="habit-item" [routerLink]="habit.id">
-      <mat-icon matListItemIcon aria-hidden="true">{{ habit.icon }}</mat-icon>
-      <span matListItemTitle class="habit-title">{{ habit.shortTitleKey | transloco }}</span>
-      @if (progress.total > 0) {
-        <span matListItemMeta class="habit-progress">
-          <mat-progress-spinner
-            class="habit-progress-ring"
-            mode="determinate"
-            diameter="32"
-            strokeWidth="3"
-            [value]="progressPercentage(progress.done, progress.total)"
-            aria-hidden="true"
-          />
-          <span class="habit-progress-count">
-            {{ 'habits.progress' | transloco: { done: progress.done, total: progress.total } }}
+  @for (row of layout().shown; track row.habit.id) {
+    <a
+      mat-list-item
+      class="habit-item"
+      [class.habit-next-up]="row.state === 'nextUp'"
+      [routerLink]="row.habit.id"
+    >
+      <mat-icon matListItemIcon aria-hidden="true">{{ row.habit.icon }}</mat-icon>
+      <span matListItemTitle class="habit-row">
+        <span class="habit-title">{{ row.habit.shortTitleKey | transloco }}</span>
+        @if (row.state === 'available') {
+          @let progress = progressFor(row.habit.id)();
+          <span class="habit-progress">
+            <mat-progress-spinner
+              class="habit-progress-ring"
+              mode="determinate"
+              diameter="32"
+              strokeWidth="3"
+              [value]="progressPercentage(progress.done, progress.total)"
+              aria-hidden="true"
+            />
+            <span class="habit-progress-count">
+              {{ 'habits.progress' | transloco: { done: progress.done, total: progress.total } }}
+            </span>
           </span>
-        </span>
-      }
+        } @else {
+          <span class="habit-coming-soon-chip">{{ 'habits.hub.comingSoon' | transloco }}</span>
+        }
+      </span>
     </a>
   }
+  @if (layout().later.length) {
+    @let label = laterLabel();
+    <button
+      mat-list-item
+      type="button"
+      class="habit-item habit-later-toggle"
+      aria-controls="habits-later"
+      [attr.aria-expanded]="laterExpanded()"
+      (click)="toggleLater()"
+    >
+      <mat-icon matListItemIcon aria-hidden="true">{{
+        laterExpanded() ? 'expand_less' : 'expand_more'
+      }}</mat-icon>
+      <span matListItemTitle class="habit-row">
+        <span class="habit-title">
+          @if (label.plural) {
+            {{ label.key | appPlural: label.count }}
+          } @else {
+            {{ label.key | transloco: label.params }}
+          }
+        </span>
+      </span>
+    </button>
+  }
 </mat-nav-list>
+<!-- Always in the DOM (empty while collapsed) so the toggle's aria-controls resolves. -->
+<div id="habits-later">
+  @if (laterExpanded()) {
+    <mat-nav-list class="habits-later">
+      @for (habit of layout().later; track habit.id) {
+        <a mat-list-item class="habit-item habit-later" [routerLink]="habit.id">
+          <mat-icon matListItemIcon aria-hidden="true">{{ habit.icon }}</mat-icon>
+          <span matListItemTitle class="habit-row">
+            <span class="habit-title">{{ habit.shortTitleKey | transloco }}</span>
+          </span>
+        </a>
+      }
+    </mat-nav-list>
+  }
+</div>

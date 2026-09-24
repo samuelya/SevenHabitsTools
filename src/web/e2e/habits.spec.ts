@@ -1,48 +1,181 @@
 import AxeBuilder from '@axe-core/playwright';
+import { Locator } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
- * Habit hub flow (issue #31): the overview lists every habit, Home links to it, and each habit's
- * own hub page renders — today, with no exercise registered yet, that means every hub shows the
- * "coming soon" empty state rather than a listing, in both languages and at both viewport sizes
- * (`playwright.config.ts` projects). The listing/Continue/done-badge behaviour itself is covered
- * by the component spec (`src/app/features/habits/habits.spec.ts`), which can register a fake
- * exercise the way this suite — against the real production bundle — cannot.
+ * Habits list and habit hub (issues #31, #219), in both languages and at both viewport sizes
+ * (`playwright.config.ts` projects): the list's three row states, the Paradigms hub's chapter
+ * order and status column, "About this habit", and an empty hub. Fake-registry cases (ordering
+ * fallbacks, every status kind) live in the component spec
+ * (`src/app/features/habits/habits.spec.ts`).
  */
 
 const HABIT_IDS = ['paradigms', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'h7', 'interdependence'];
+
+/** Chapter order on the Paradigms hub (#219). */
+const PARADIGMS_ORDER = [
+  '/habits/paradigms/perception',
+  '/habits/paradigms/transition',
+  '/habits/paradigms/pc-balance',
+  '/habits/paradigms/maturity',
+  '/habits/paradigms/teach',
+];
+
+const TEXT = {
+  en: {
+    browseHabits: 'Browse habits',
+    comingSoon: 'Coming soon',
+    later: 'Habits 2–7 and Interdependence: coming soon',
+    notStarted: 'Not started',
+    onePattern: '1 pattern',
+    aboutHabit: 'About this habit',
+    emptyState: 'coming soon',
+    teachThisChapter: 'Teach this chapter',
+  },
+  ar: {
+    browseHabits: 'تصفح العادات',
+    comingSoon: 'قريبًا',
+    later: 'العادات 2–7 والترابط: قريبًا',
+    notStarted: 'لم يبدأ',
+    onePattern: 'نمط واحد',
+    aboutHabit: 'عن هذه العادة',
+    emptyState: 'ستتوفر قريبًا',
+    teachThisChapter: 'علّم هذا الفصل',
+  },
+};
 
 function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-test.describe('habit hub', () => {
-  test('Home links to the habit overview, which lists every habit', async ({ page }, testInfo) => {
-    await page.goto('/');
-    const browseHabits =
-      localeFor(testInfo.project.name) === 'ar' ? 'تصفح العادات' : 'Browse habits';
-    await page.getByRole('link', { name: browseHabits }).click();
+/** Nothing ends in an ellipsis: an element is truncated when its content is wider than its box
+ * (same check as `titles.spec.ts`). */
+async function expectNotTruncated(locator: Locator): Promise<void> {
+  // `count()` doesn't wait: let the lazy route and its translations render first.
+  await expect(locator.first()).toBeVisible();
+  const count = await locator.count();
+  for (let index = 0; index < count; index++) {
+    const item = locator.nth(index);
+    const { text, scrollWidth, clientWidth } = await item.evaluate((element) => ({
+      text: element.textContent?.trim() ?? '',
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+    }));
+    expect(scrollWidth, `"${text}" is truncated`).toBeLessThanOrEqual(clientWidth);
+  }
+}
 
+test.describe('habits list and hub', () => {
+  test('Home links to the habits list: Paradigms available, Habit 1 next up, the rest collapsed', async ({
+    page,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    await page.goto('/');
+    await page.getByRole('link', { name: text.browseHabits }).click();
     await expect(page).toHaveURL(/\/habits$/);
+
     const links = page.locator('app-habits-page a');
+    await expect(links).toHaveCount(2);
+    await expect(links.nth(0)).toHaveAttribute('href', '/habits/paradigms');
+    await expect(links.nth(1)).toHaveAttribute('href', '/habits/h1');
+    await expect(links.nth(1).locator('.habit-coming-soon-chip')).toHaveText(text.comingSoon);
+
+    const toggle = page.locator('app-habits-page .habit-later-toggle');
+    await expect(toggle.locator('.habit-title')).toHaveText(text.later);
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expectNotTruncated(page.locator('app-habits-page .habit-row'));
+
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     await expect(links).toHaveCount(HABIT_IDS.length);
     for (const id of HABIT_IDS) {
       await expect(page.locator(`app-habits-page a[href="/habits/${id}"]`)).toBeVisible();
     }
+    await expectNotTruncated(page.locator('app-habits-page .habit-row'));
   });
 
-  test('a habit hub shows its intro and the empty state when nothing is registered yet', async ({
+  test('the Paradigms hub lists its exercises in chapter order with a status column', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    await seedDocument({
+      habits: {
+        paradigms: {
+          scripts: [
+            {
+              id: '21111111-1111-4111-8111-111111111111',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+              text: 'Conflict means someone has to lose',
+              source: 'family',
+              effect: 'harms',
+              decision: 'rewrite',
+            },
+          ],
+        },
+      },
+    });
+    await page.goto('/habits/paradigms');
+
+    const rows = page.locator('app-habit-hub-page mat-nav-list a');
+    await expect(rows).toHaveCount(PARADIGMS_ORDER.length);
+    for (const [index, href] of PARADIGMS_ORDER.entries()) {
+      await expect(rows.nth(index)).toHaveAttribute('href', href);
+      await expect(rows.nth(index).locator('.hub-number')).toHaveText(String(index + 1));
+    }
+    // The started transition exercise says how far it got; the others haven't been started.
+    await expect(rows.nth(1).locator('.hub-row-status')).toHaveText(text.onePattern);
+    for (const index of [0, 2, 3, 4]) {
+      await expect(rows.nth(index).locator('.hub-row-status')).toHaveText(text.notStarted);
+    }
+    // The status is part of the row's accessible name (screen readers hear it with the title).
+    await expect(rows.nth(1)).toHaveAccessibleName(new RegExp(text.onePattern));
+
+    // Continue points at the first not-done exercise in chapter order.
+    await expect(page.locator('app-habit-hub-page .hub-continue')).toHaveAttribute(
+      'href',
+      PARADIGMS_ORDER[0],
+    );
+    await expectNotTruncated(page.locator('app-habit-hub-page .hub-row'));
+    await expectNotTruncated(page.locator('app-habit-hub-page .hub-continue'));
+
+    // "Teach this chapter" comes last, after the list.
+    const action = page.locator('app-habit-hub-page .hub-action');
+    await expect(action).toHaveText(new RegExp(text.teachThisChapter));
+    const actionBelowList = await page.evaluate(() => {
+      const list = document.querySelector('app-habit-hub-page mat-nav-list');
+      const button = document.querySelector('app-habit-hub-page .hub-action');
+      return !!list && !!button && !!(list.compareDocumentPosition(button) & 4);
+    });
+    expect(actionBelowList).toBe(true);
+  });
+
+  test('About this habit opens the intro in a dialog', async ({ page }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    await page.goto('/habits/paradigms');
+
+    await page.getByRole('button', { name: text.aboutHabit }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(text.aboutHabit);
+    await expect(dialog.locator('p').first()).not.toBeEmpty();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  });
+
+  test('a habit hub without exercises shows the empty state and Teach this chapter only', async ({
     page,
   }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
     await page.goto('/habits/h1');
 
     const hub = page.locator('app-habit-hub-page');
     await expect(hub.locator('h1')).toBeVisible();
-    await expect(hub.locator('.hub-intro')).not.toBeEmpty();
-    const expectedEmptyState =
-      localeFor(testInfo.project.name) === 'ar' ? 'ستتوفر قريبًا' : 'coming soon';
-    await expect(hub).toContainText(expectedEmptyState, { ignoreCase: true });
+    await expect(hub).toContainText(text.emptyState, { ignoreCase: true });
     await expect(hub.locator('.hub-continue')).toHaveCount(0);
+    await expect(hub.locator('mat-nav-list')).toHaveCount(0);
+    await expect(hub.locator('.hub-action')).toHaveCount(1);
   });
 
   test('every habit hub route resolves without an untranslated key', async ({ page }) => {
@@ -51,26 +184,25 @@ test.describe('habit hub', () => {
       await expect(page.locator('app-habit-hub-page h1')).not.toHaveText(
         /^[a-z0-9]+(\.[a-z0-9]+)+$/i,
       );
-      await expect(page.locator('app-habit-hub-page .hub-intro')).not.toHaveText(
-        /^[a-z0-9]+(\.[a-z0-9]+)+$/i,
-      );
     }
   });
 
-  test('accessibility: the habit overview and a habit hub have no serious or critical violations', async ({
+  test('accessibility: the habits list and a habit hub have no serious or critical violations', async ({
     page,
   }) => {
     await page.goto('/habits');
+    await expect(page.locator('app-habits-page .habit-later-toggle')).toBeVisible();
     let results = await new AxeBuilder({ page }).analyze();
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
 
-    await page.goto('/habits/h1');
-    // A hub action's label comes from a lazily loaded translation scope; scanning before it lands
-    // reports a transient nameless link (`link-name`), not the settled page (flaky on main too).
+    await page.goto('/habits/paradigms');
+    // Labels come from lazily loaded translation scopes; scanning before they land reports a
+    // transient nameless link or button (`link-name`), not the settled page.
     await expect(page.locator('app-habit-hub-page h1')).toBeVisible();
-    for (const action of await page.locator('.hub-action').all()) {
+    await expect(page.locator('app-habit-hub-page .hub-row-status').first()).not.toBeEmpty();
+    for (const action of await page.locator('.hub-action, .hub-about').all()) {
       await expect(action).not.toHaveAccessibleName('');
     }
     results = await new AxeBuilder({ page }).analyze();
