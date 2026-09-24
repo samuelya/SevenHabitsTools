@@ -100,13 +100,25 @@ async function closeEditor(harness: RouterTestingHarness): Promise<void> {
   await harness.fixture.whenStable();
 }
 
-async function addScript(harness: RouterTestingHarness): Promise<void> {
+/** Taps "Add a script": opens the editor on an in-memory draft at `new` (issue #217). */
+async function openDraft(harness: RouterTestingHarness): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
   const addButton = host.querySelector('.add-button') as HTMLButtonElement;
   // A real click focuses the button first; jsdom's `.click()` doesn't, and the kit captures
   // whatever is focused at that moment as the element to restore focus to on close.
   addButton.focus();
   addButton.click();
+  await harness.fixture.whenStable();
+}
+
+/** Adds a script the way a user does: open the draft, then type its text, which saves it. */
+async function addScript(
+  harness: RouterTestingHarness,
+  text = 'Silence means agreement',
+): Promise<void> {
+  await openDraft(harness);
+  itemForm(harness).changed.emit({ text });
+  harness.detectChanges();
   await harness.fixture.whenStable();
 }
 
@@ -156,18 +168,6 @@ describe('TransitionPage', () => {
     ).toHaveLength(0);
     const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.getAttribute('aria-disabled') === 'true').toBe(true);
-  });
-
-  it('adding a script navigates to its child route and opens the full-screen editor', async () => {
-    const harness = await setUp();
-    await addScript(harness);
-    const host = harness.routeNativeElement as HTMLElement;
-
-    expect(TestBed.inject(Router).url).toMatch(new RegExp(`^${LIST_URL}/[^/]+$`));
-    expect(host.querySelector('app-transition-item-form')).not.toBeNull();
-    expect(
-      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
-    ).toHaveLength(1);
   });
 
   it('editing the text updates the list item and enables Mark done for a kept script', async () => {

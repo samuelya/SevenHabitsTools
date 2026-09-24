@@ -317,6 +317,63 @@ describe('TeachPage', () => {
 
     expect(harness.routeNativeElement?.querySelectorAll('.exercise-list__delete')).toHaveLength(1);
   });
+
+  describe('draft before record (issue #217)', () => {
+    function storedEntries(): readonly TeachEntry[] {
+      return TestBed.runInInjectionContext(() =>
+        featureStore<TeachEntry[]>(TEACH_MODEL_KEY).value(),
+      );
+    }
+
+    function editorStatus(harness: RouterTestingHarness): string | undefined {
+      return harness.routeNativeElement?.querySelector('.editor-status')?.textContent?.trim();
+    }
+
+    it('opening a chapter with no entry reads "New" and stores nothing', async () => {
+      const harness = await setUp();
+      await selectChapter(harness, 1);
+
+      expect(editorStatus(harness)).toBe('New');
+      expect(storedEntries()).toHaveLength(0);
+    });
+
+    it('keeps a status change in memory, and stores it with the first typed text', async () => {
+      const harness = await setUp();
+      await selectChapter(harness, 1);
+
+      itemForm(harness).changed.emit({ status: 'skipped' });
+      harness.detectChanges();
+      expect(storedEntries()).toHaveLength(0);
+      expect(itemForm(harness).entry().status).toBe('skipped');
+      expect(editorStatus(harness)).toBe('New');
+
+      itemForm(harness).changed.emit({ person: 'Sam' });
+      harness.detectChanges();
+      expect(storedEntries()).toHaveLength(1);
+      expect(storedEntries()[0]).toMatchObject({ keyIdea: '', person: 'Sam', status: 'skipped' });
+      expect(editorStatus(harness)).toBe('Saved');
+    });
+
+    it('backing out of an untouched chapter stores nothing, and its edits are gone next time', async () => {
+      const harness = await setUp();
+      await selectChapter(harness, 1);
+      itemForm(harness).changed.emit({ status: 'skipped' });
+      await closeEditor(harness);
+
+      expect(storedEntries()).toHaveLength(0);
+      await selectChapter(harness, 1);
+      expect(itemForm(harness).entry().status).toBe('planned');
+    });
+
+    it('the header Done button closes the editor', async () => {
+      const harness = await setUp();
+      await selectChapter(harness, 1);
+      (harness.routeNativeElement!.querySelector('.editor-done') as HTMLButtonElement).click();
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    });
+  });
 });
 
 describe('TeachPage intro card (issue #216)', () => {

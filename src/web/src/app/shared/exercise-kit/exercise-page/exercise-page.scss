@@ -290,6 +290,13 @@
   font-size: 0.75rem;
 }
 
+// Issue #217: the primary exit, last in the header's flex row so it sits at the inline end in
+// both directions. 48px block size, same touch target as `.editor-close`.
+.editor-done {
+  flex: none;
+  min-block-size: 48px;
+}
+
 .editor-body {
   padding: 1rem;
 }

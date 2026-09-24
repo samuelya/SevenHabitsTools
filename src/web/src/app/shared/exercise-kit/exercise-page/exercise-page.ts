@@ -26,6 +26,11 @@ import { HANDSET_QUERY } from '../../../core/layout/breakpoints';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
 import { EDITOR_FOCUS_HOST, EditorFocusHost } from './editor-initial-focus.directive';
 
+/** The editor header's status (issue #217): `'new'` while the editor shows an in-memory draft no
+ * record exists for yet, `'saved'` once it does, `'saving'` for a page whose writes are async,
+ * `null` for no status at all. */
+export type EditorStatus = 'new' | 'saved' | 'saving' | null;
+
 /**
  * The one page scaffold every exercise page uses (issue #185, parent #184): a single visually
  * hidden `h1` (the toolbar title is the only visible one), the projected `[intro]`/body/`[footer]`
@@ -65,8 +70,10 @@ export class ExercisePage implements EditorFocusHost {
   readonly editing = input(false);
   /** Shown in the editor header. */
   readonly editorTitle = input('');
-  readonly editorStatus = input<'saved' | 'saving' | null>(null);
-  /** The header's close button, or Escape while focus is inside the editor. */
+  readonly editorStatus = input<EditorStatus>(null);
+  /** The header's close button, its primary "Done" button (issue #217: the explicit finish,
+   * never blocked on validation), or Escape while focus is inside the editor. One output, so no
+   * page can ship a Done button that does nothing. */
   readonly editorClosed = output<void>();
 
   private readonly editorHeading = viewChild<ElementRef<HTMLElement>>('editorHeading');

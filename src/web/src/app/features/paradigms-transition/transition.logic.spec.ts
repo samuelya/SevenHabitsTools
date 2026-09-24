@@ -1,6 +1,6 @@
 import { SCRIPT_EFFECTS, SCRIPT_SOURCES, Script } from './transition.model';
 import {
-  addScript,
+  isDraftWorthSaving,
   checklistLabelsFrom,
   checklistLoaded,
   doneChecklist,
@@ -203,26 +203,27 @@ describe('toListItem', () => {
       done: false,
     });
   });
+
+  it('titles a script with no text by its new script, then its situation, else blank (issue #217)', () => {
+    const title = (overrides: Partial<Script>) => toListItem(script(overrides), labels).title;
+    expect(title({ text: ' ', newScript: 'Both can win', situation: 'At work' })).toBe(
+      'Both can win',
+    );
+    expect(title({ text: '', newScript: '  ', situation: 'At work' })).toBe('At work');
+    expect(title({ text: '', newScript: undefined, situation: ' ' })).toBe('');
+  });
 });
 
-describe('addScript', () => {
-  it('appends a new record stamped with a fresh id and the given time', () => {
-    const result = addScript(
-      [],
-      { text: 'x', source: 'work', effect: 'mixed', decision: 'keep' },
-      NOW,
-    );
+describe('isDraftWorthSaving (issue #217)', () => {
+  it('is false while every free-text field is blank or whitespace-only', () => {
+    expect(isDraftWorthSaving({ text: '' })).toBe(false);
+    expect(isDraftWorthSaving({ text: '  \n ', newScript: ' ', situation: '' })).toBe(false);
+  });
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      text: 'x',
-      source: 'work',
-      effect: 'mixed',
-      decision: 'keep',
-      createdAt: NOW.toISOString(),
-      updatedAt: NOW.toISOString(),
-    });
-    expect(result[0].id).toBeTruthy();
+  it('is true once any free-text field has a non-blank character', () => {
+    expect(isDraftWorthSaving({ text: 'a' })).toBe(true);
+    expect(isDraftWorthSaving({ text: '', newScript: 'b' })).toBe(true);
+    expect(isDraftWorthSaving({ text: '', situation: 'c' })).toBe(true);
   });
 });
 

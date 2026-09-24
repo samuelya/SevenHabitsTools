@@ -1,4 +1,4 @@
-import { newRecord, softDelete, touch, isLive } from '../../core/data/record';
+import { softDelete, touch, isLive } from '../../core/data/record';
 import {
   allMet,
   ChecklistLabels,
@@ -140,19 +140,28 @@ export function labelsFrom(
   };
 }
 
-/** Maps a script to the row `ExerciseList` renders. */
+/** Maps a script to the row `ExerciseList` renders. Its title is the script, else the new
+ * script, else the situation: a draft is saved from any of them (issue #217). With all three
+ * blank it is `''`, which `ExerciseList` shows as "Untitled". */
 export function toListItem(script: Script, labels: ScriptLabels): ExerciseListItem {
   return {
     id: script.id,
-    title: script.text,
+    title:
+      [script.text, script.newScript, script.situation]
+        .map((text) => (text ?? '').trim())
+        .find((text) => text !== '') ?? '',
     subtitle: `${labels.source[script.source]} · ${labels.effect[script.effect]}`,
     done: isItemComplete(script),
   };
 }
 
-/** Appends a new script created from `fields`, stamped with a fresh id and `now`. */
-export function addScript(scripts: readonly Script[], fields: ScriptFields, now: Date): Script[] {
-  return [...scripts, newRecord(fields, now)];
+/** Draft before record (issue #217): a new script's draft becomes a record once any free-text
+ * field (the script, the new script, the situation) holds non-blank text. Choosing a source,
+ * effect or decision alone keeps it a draft. */
+export function isDraftWorthSaving(
+  draft: Pick<ScriptFields, 'text' | 'newScript' | 'situation'>,
+): boolean {
+  return [draft.text, draft.newScript, draft.situation].some((text) => (text ?? '').trim() !== '');
 }
 
 /** Replaces the fields of the live script `id` with `fields`, leaving every other script alone;

@@ -1,8 +1,8 @@
 <app-exercise-page
   [title]="'paradigmsMaturity.prompt.title' | transloco"
-  [editing]="hasDetail()"
+  [editing]="draft.selected() !== null"
   [editorTitle]="'paradigmsMaturity.editor.title' | transloco"
-  [editorStatus]="editorStatus()"
+  [editorStatus]="draft.status()"
   (editorClosed)="closeDetail()"
 >
   <app-exercise-prompt-card
@@ -30,7 +30,7 @@
   />
 
   <div editor>
-    @if (selectedAssessment(); as assessment) {
+    @if (draft.selected(); as assessment) {
       <app-maturity-assessment-form
         [assessment]="assessment"
         [builtInLabels]="builtInLabels()"

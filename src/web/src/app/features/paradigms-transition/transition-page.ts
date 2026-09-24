@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
+import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
@@ -12,10 +13,10 @@ import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-p
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
+import { recordDraft } from '../../shared/exercise-kit/record-draft';
 import { TransitionItemForm } from './transition-item-form';
 import { TransitionSummary } from './transition-summary';
 import {
-  addScript,
   CHECKLIST_KEYS,
   checklistLabelsFrom,
   checklistLoaded,
@@ -29,6 +30,7 @@ import {
   summarize,
   toListItem,
   isStarted,
+  isDraftWorthSaving,
 } from './transition.logic';
 import {
   SCRIPT_EFFECTS,
@@ -39,7 +41,8 @@ import {
   TRANSITION_ROUTE,
 } from './transition.model';
 
-/** Every new script starts here; the user edits it straight away in the opened detail form. */
+/** Every new script's draft starts here (issue #217: it becomes a record on the first typed
+ * script text, `isDraftWorthSaving()`). */
 const DEFAULT_FIELDS: ScriptFields = {
   text: '',
   source: 'family',
@@ -63,6 +66,11 @@ const DEFAULT_FIELDS: ScriptFields = {
  * focus-restore state, the list's search text and the intro card's collapsed state) each time.
  * Navigation is always the *absolute* `TRANSITION_ROUTE` (`goTo()`), never relative to
  * `this.route` — see `goTo()`'s own doc comment for why relative navigation doesn't work here.
+ *
+ * **Draft before record (issue #217):** "Add a script" opens the reserved `NEW_ITEM_ID`
+ * segment; `recordDraft()` holds the new script in memory, appends it to the store on the first
+ * typed text in any field and moves the URL to the real id (`replaceUrl`, so back still returns to
+ * the list). Backing out before that leaves nothing.
  */
 @Component({
   selector: 'app-transition-page',
@@ -130,19 +138,19 @@ export class TransitionPage {
   protected readonly items = computed(() =>
     this.scripts().map((script) => toListItem(script, this.labels())),
   );
-  protected readonly selectedScript = computed(
-    () => this.scripts().find((script) => script.id === this.itemId()) ?? null,
-  );
-  protected readonly hasDetail = computed(() => this.selectedScript() !== null);
-  /** Drives the editor header's title (issue #187's acceptance criteria): a script created but
-   * never typed into yet is still "new", even though it already exists in the document. */
-  protected readonly isNewScript = computed(() => !this.selectedScript()?.text.trim());
-  /** This page's `store.update()` is always synchronous (in-memory; the debounced write to disk
-   * is a separate, lower layer — `DocumentPersistence`), so there's no "saving" state to show:
-   * every applied change is "saved" the instant it lands (playbook's "Page layout" section). */
-  protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
-    this.hasDetail() ? 'saved' : null,
-  );
+  protected readonly draft = recordDraft<Script>({
+    itemId: this.itemId,
+    records: this.scripts,
+    create: () => newRecord(DEFAULT_FIELDS, this.clock.now()),
+    isWorthSaving: isDraftWorthSaving,
+    save: (record) => this.store.update((scripts) => [...scripts, record]),
+    update: (id, fields) => this.store.update((scripts) => editScript(scripts, id, fields)),
+    navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
+    now: () => this.clock.now(),
+  });
+  /** Drives the editor header's title (issue #187's acceptance criteria): a draft, or a saved
+   * script whose text was cleared again, is still "new". */
+  protected readonly isNewScript = computed(() => !this.draft.selected()?.text.trim());
   /** `null` until the first script exists (issue #215): no "0 scripts named" card next to the
    * list's own empty-state text. */
   protected readonly summary = computed(() =>
@@ -165,25 +173,6 @@ export class TransitionPage {
   protected readonly done = this.progress.isDone(TRANSITION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(TRANSITION_MODEL_KEY);
 
-  constructor() {
-    // An `:itemId` that isn't a live script — a typo'd/stale deep link, or one this same effect
-    // just tombstoned by deleting it — redirects to the list (issue #187's acceptance criteria).
-    // Deleting and then navigating away explicitly would race this: this single effect covers
-    // both a bad id from the start and one that goes bad while open.
-    //
-    // `id != null` (not `!== null`): `withComponentInputBinding()`'s default
-    // `unmatchedInputBehavior` is `'alwaysUndefined'`, so closing the editor — a URL with no
-    // trailing segment, and therefore no `itemId` param — calls `setInput('itemId', undefined)`
-    // rather than leaving this input's own `null` default alone. `undefined` is just as much
-    // "no id" as `null` is.
-    effect(() => {
-      const id = this.itemId();
-      if (id != null && !this.scripts().some((script) => script.id === id)) {
-        this.goToList();
-      }
-    });
-  }
-
   /** Absolute, not `router.navigate([...], { relativeTo: this.route })`: relative navigation's
    * `'../'` counts route *config* nesting, and this feature's routes are lazily mounted under the
    * `ROUTE_REGISTRY`'s own `habits/paradigms/transition` entry, so `'../'` resolves against a
@@ -193,8 +182,8 @@ export class TransitionPage {
    * real `ROUTE_REGISTRY`; the unit tests' shallower mounting hid it). `TRANSITION_ROUTE` is
    * exactly the URL `registerExercise()` already advertises for this exercise, so it can't drift
    * from where this feature is actually mounted. */
-  private goTo(commands: readonly string[]): void {
-    void this.router.navigate([`/${TRANSITION_ROUTE}`, ...commands]);
+  private goTo(commands: readonly string[], options?: { replaceUrl?: boolean }): void {
+    void this.router.navigate([`/${TRANSITION_ROUTE}`, ...commands], options);
   }
 
   private goToList(): void {
@@ -209,25 +198,23 @@ export class TransitionPage {
     this.goToList();
   }
 
+  /** Opens the editor on a fresh in-memory draft; nothing is stored yet (issue #217). */
   protected onAddScript(): void {
-    const now = this.clock.now();
-    let createdId: string | null = null;
-    const applied = this.store.update((scripts) => {
-      const next = addScript(scripts, DEFAULT_FIELDS, now);
-      createdId = next[next.length - 1].id;
-      return next;
-    });
-    if (applied && createdId) {
-      this.goTo([createdId]);
-    }
+    this.draft.start();
   }
 
+  /** The first typed text saves a draft (`recordDraft()`), which then moves the URL to its id. */
   protected onItemChanged(id: string, fields: Partial<ScriptFields>): void {
-    this.store.update((scripts) => editScript(scripts, id, fields));
+    this.draft.edit(id, fields);
   }
 
   protected onItemDeleted(id: string): void {
-    // The redirect effect above closes the editor once the delete lands (the id is no longer a
+    // An unsaved draft has no record to delete: discarding it is just closing the editor.
+    if (this.draft.owns(id)) {
+      this.draft.discard();
+      return;
+    }
+    // `recordDraft()`'s redirect effect closes the editor once the delete lands (the id is no longer a
     // live script) — this only owns confirm, the tombstone itself, and Undo (playbook's "Deleting
     // entries"; `DeleteWithUndo` is the shared confirm → delete → undo flow issue #203 introduced).
     void this.deleteWithUndo.confirmAndDelete({

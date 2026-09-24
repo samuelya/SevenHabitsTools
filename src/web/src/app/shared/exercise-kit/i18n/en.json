@@ -23,7 +23,8 @@
     "sortLabel": "Sort",
     "sortByTitle": "By title",
     "sortByStatus": "By status",
-    "deleteAria": "Delete {{item}}"
+    "deleteAria": "Delete {{item}}",
+    "untitled": "Untitled"
   },
   "detail": {
     "close": "Back to list"
@@ -31,7 +32,9 @@
   "editor": {
     "close": "Close",
     "saved": "Saved",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "new": "New",
+    "done": "Done"
   },
   "reflection": {
     "characterCount": "{{count}} characters",

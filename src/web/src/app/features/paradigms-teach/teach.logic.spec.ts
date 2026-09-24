@@ -1,5 +1,6 @@
 import { TeachEntry } from './teach.model';
 import {
+  isDraftWorthSaving,
   KEY_IDEA_MAX_LENGTH,
   checklistLabelsFrom,
   checklistLoaded,
@@ -365,5 +366,18 @@ describe('isStarted (issue #216)', () => {
     expect(
       isStarted([entry({ id: 'x1', deletedAt: NOW.toISOString() }), entry({ id: 'x2' })]),
     ).toBe(true);
+  });
+});
+
+describe('isDraftWorthSaving (issue #217)', () => {
+  it('is false while every free-text field is blank, whatever else was edited', () => {
+    expect(isDraftWorthSaving({})).toBe(false);
+    expect(isDraftWorthSaving({ keyIdea: '   ', person: '', learned: ' ' })).toBe(false);
+  });
+
+  it('is true once any free-text field has a non-blank character', () => {
+    expect(isDraftWorthSaving({ keyIdea: 'Choose your response' })).toBe(true);
+    expect(isDraftWorthSaving({ person: 'Sam' })).toBe(true);
+    expect(isDraftWorthSaving({ learned: 'They asked why' })).toBe(true);
   });
 });

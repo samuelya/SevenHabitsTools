@@ -153,6 +153,7 @@
       [value]="bound.reflection"
       [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
       [sessionStatus]="true"
+      [immediate]="unsaved()"
       (valueChange)="onReflectionChanged(bound.id, $event)"
     />
   }

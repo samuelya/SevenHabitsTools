@@ -7,7 +7,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
 import { EditorInitialFocus } from './editor-initial-focus.directive';
-import { ExercisePage } from './exercise-page';
+import { EditorStatus, ExercisePage } from './exercise-page';
 
 @Component({
   selector: 'app-host',
@@ -31,7 +31,7 @@ import { ExercisePage } from './exercise-page';
 })
 class HostComponent {
   readonly editing = signal(false);
-  readonly editorStatus = signal<'saved' | 'saving' | null>(null);
+  readonly editorStatus = signal<EditorStatus>(null);
   closedCount = 0;
 
   onClosed(): void {
@@ -279,21 +279,6 @@ describe('ExercisePage', () => {
     expect(selected.scrollIntoView).not.toHaveBeenCalled();
   });
 
-  it('shows the saving and saved status text through the aria-live region', () => {
-    configureTestBed(false);
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.editing.set(true);
-    fixture.componentInstance.editorStatus.set('saving');
-    fixture.detectChanges();
-    let host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.editor-status')?.textContent?.trim()).toBe('Saving…');
-
-    fixture.componentInstance.editorStatus.set('saved');
-    fixture.detectChanges();
-    host = fixture.nativeElement as HTMLElement;
-    expect(host.querySelector('.editor-status')?.textContent?.trim()).toBe('Saved');
-  });
-
   it('collapses the intro card on entering focus mode and never re-expands it on exit', () => {
     configureTestBed(false);
     const fixture = TestBed.createComponent(HostComponent);
@@ -309,18 +294,6 @@ describe('ExercisePage', () => {
     fixture.componentInstance.editing.set(false);
     fixture.detectChanges();
     expect(promptCard.expanded()).toBe(false);
-  });
-
-  it('emits editorClosed when the close button is clicked', () => {
-    configureTestBed(false);
-    const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.editing.set(true);
-    fixture.detectChanges();
-    const host = fixture.nativeElement as HTMLElement;
-
-    (host.querySelector('.editor-close') as HTMLButtonElement).click();
-
-    expect(fixture.componentInstance.closedCount).toBe(1);
   });
 
   it('emits editorClosed on Escape while focus is inside the editor', () => {

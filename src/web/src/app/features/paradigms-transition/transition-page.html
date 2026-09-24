@@ -1,11 +1,11 @@
 <app-exercise-page
   [title]="'paradigmsTransition.prompt.title' | transloco"
-  [editing]="hasDetail()"
+  [editing]="draft.selected() !== null"
   [editorTitle]="
     (isNewScript() ? 'paradigmsTransition.editor.newTitle' : 'paradigmsTransition.editor.editTitle')
       | transloco
   "
-  [editorStatus]="editorStatus()"
+  [editorStatus]="draft.status()"
   (editorClosed)="closeDetail()"
 >
   <app-exercise-prompt-card
@@ -34,7 +34,7 @@
   />
 
   <div editor>
-    @if (selectedScript(); as script) {
+    @if (draft.selected(); as script) {
       <app-transition-item-form
         [script]="script"
         (changed)="onItemChanged(script.id, $event)"

@@ -98,11 +98,14 @@ ad hoc markup:
   history column's own max-content contribution back through the `1fr` track and overshoots
   `.page` by that much on every ordinary open. Both breakpoints
   share the same editor header (back/close button, `editorTitle()`, an `aria-live`
-  "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
-  inputs above.
-- **`editorStatus()`:** `'saved'` once `hasDetail()` — this page's `store.update()` calls are
-  synchronous, so every applied edit (including creating the item) is "saved" the instant it
-  lands; `null` otherwise. Only compute `'saving'` if a feature's own persistence genuinely has a
+  "New"/"Saved"/"Saving…" status, and a primary "Done" button at the inline end, #217) — the kit
+  builds it; the page only supplies the three inputs above. "Done" emits `(editorClosed)` like
+  the back/close button and Escape, so it can never be left unbound; it never blocks on
+  validation.
+- **`editorStatus()`** (type `EditorStatus`; `recordDraft().status()` for a list or assessment):
+  `null` without `hasDetail()`; `'new'` while the editor shows an unsaved draft (see "Draft
+  before record" below); `'saved'` otherwise — `store.update()` is synchronous, so every applied edit is "saved" the
+  instant it lands. Only compute `'saving'` if a feature's own persistence genuinely has a
   pending-write state to report (none does yet).
 - **The footer slot** holds the summary and `app-done-toggle`, always. On handset it's not
   rendered at all while `editing()` (`showFooter`, the kit's own computed) — never conditionally
@@ -225,6 +228,37 @@ every page gets wrong the first time:
   above.
 - The back gesture, reload and deep links then come for free: they're just the browser's own
   history and URL handling over a real route, nothing the page has to implement.
+
+**Draft before record (#217, owner decision; supersedes "create the record on the Add
+button").** A list or assessment page holds one `recordDraft<T>({ itemId, records, create,
+isWorthSaving, save, update, navigate, now })` (`shared/exercise-kit/record-draft.ts`) and wires
+it in three places:
+- "Add"/"New" calls `draft.start()`: a fresh in-memory draft (built with `newRecord()`, so it
+  already has its final id) at the reserved segment `NEW_ITEM_ID` (`'new'`). It replaces any draft
+  already open, and opens nothing in a read-only tab (`DocumentStore.isWriter()` is `false`, and
+  `reportRefusedEdit()` shows the usual notice). A reload of `.../new` opens an empty draft once
+  the writer lock settles; a read-only tab leaves it for the list with `replaceUrl`.
+- The template reads `draft.selected()` (the live record for `itemId`, or the draft on `new`) and
+  `draft.status()`. `recordDraft()` owns the redirect of an `:itemId` that isn't a live record to
+  the list, so the page has no redirect effect of its own.
+- The form's `changed` goes to `draft.edit(id, fields)`. Nothing reaches the store, and so nothing
+  reaches `DocumentPersistence` or IndexedDB, until the exercise's pure
+  `isDraftWorthSaving(draft, initial)` (`<slug>.logic.ts`: any free-text field non-blank, or, for
+  an assessment pre-filled from the latest one, the first real change; choices and pre-filled
+  defaults don't count) holds. Then `save` appends it and `navigate` moves the URL to its id with
+  `replaceUrl: true` (the form keeps its instance: same id). An edit for a live record goes
+  through `update`; any other id writes nothing. `edit()` returns whether the edit reached the
+  store, so an edit kept in the draft never reports "Saved".
+- **A draft's edits are never held back.** While `draft.unsaved()` is `true`, a child that
+  debounces must pass each edit on at once (`ReflectionEditor`'s `[immediate]`), so the first
+  worthwhile keystroke saves the draft and nothing is pending when the editor closes, the page is
+  left or New is pressed again. That lets the draft live only while the URL is `new`: leaving
+  `new` drops it, and a late edit for it writes nothing.
+- A delete on an unsaved draft calls `draft.discard()`, which closes the editor with `replaceUrl`
+  so Back doesn't reopen `new`. Once saved, it's a record like any other: clearing its fields
+  again doesn't un-save it (that would need a hard delete).
+- A fixed-row list with no Add (`paradigms-teach`) keeps a per-row pending-fields signal instead,
+  with the same "New" → "Saved" status and the same save rule.
 
 **Who moves focus, and when.** The kit owns the editor's opening and closing focus; the feature
 owns only what happens while the editor stays open. Mark the editor's first field with

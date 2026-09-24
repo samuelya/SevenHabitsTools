@@ -1,8 +1,8 @@
 <app-exercise-page
   [title]="'paradigmsPcBalance.prompt.title' | transloco"
-  [editing]="hasDetail()"
+  [editing]="draft.selected() !== null"
   [editorTitle]="'paradigmsPcBalance.editor.title' | transloco"
-  [editorStatus]="editorStatus()"
+  [editorStatus]="draft.status()"
   (editorClosed)="closeDetail()"
 >
   <app-exercise-prompt-card
@@ -30,10 +30,11 @@
   />
 
   <div editor>
-    @if (selectedAudit(); as audit) {
+    @if (draft.selected(); as audit) {
       <app-pc-balance-audit-form
         #auditForm
         [audit]="audit"
+        [unsaved]="draft.unsaved()"
         (changed)="onAuditChanged(audit.id, $event)"
         (reflectionChanged)="onReflectionChanged($event, auditForm)"
       />

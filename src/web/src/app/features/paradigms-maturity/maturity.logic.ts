@@ -1,4 +1,4 @@
-import { newRecord, isLive, softDelete, touch } from '../../core/data/record';
+import { isLive, softDelete, touch } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
 import {
   latestAssessment,
@@ -218,6 +218,22 @@ export function newAssessmentFields(
   return { date: today, areas };
 }
 
+/** Draft before record (issue #217): a new assessment's draft becomes a record on the first real
+ * input — an area rated, a non-blank note, or the area list itself changed (one added, removed or
+ * renamed) relative to `initial`, the draft `newAssessmentFields()` built. The areas pre-filled
+ * from the latest assessment are not input, and neither is the pre-filled date. */
+export function isDraftWorthSaving(
+  draft: Pick<MaturityAssessment, 'areas'>,
+  initial: Pick<MaturityAssessment, 'areas'>,
+): boolean {
+  const shape = (areas: readonly MaturityArea[]): string =>
+    JSON.stringify(areas.map((area) => [area.id, area.key ?? null, area.name ?? null]));
+  return (
+    draft.areas.some((area) => area.level !== undefined || (area.note ?? '').trim() !== '') ||
+    shape(draft.areas) !== shape(initial.areas)
+  );
+}
+
 /** Appends a new custom area with no level. */
 export function addArea(areas: readonly MaturityArea[], name: string): MaturityArea[] {
   return [...areas, { id: crypto.randomUUID(), name }];
@@ -259,15 +275,6 @@ export function setAreaNote(
  * area is a nested value object of its assessment, not a record). */
 export function removeArea(areas: readonly MaturityArea[], id: string): MaturityArea[] {
   return areas.filter((area) => area.id !== id);
-}
-
-/** Appends a new assessment created from `fields`, stamped with a fresh id and `now`. */
-export function addAssessment(
-  assessments: readonly MaturityAssessment[],
-  fields: MaturityAssessmentFields,
-  now: Date,
-): MaturityAssessment[] {
-  return [...assessments, newRecord(fields, now)];
 }
 
 /** Replaces the fields of the live assessment `id` with `fields`, leaving every other assessment

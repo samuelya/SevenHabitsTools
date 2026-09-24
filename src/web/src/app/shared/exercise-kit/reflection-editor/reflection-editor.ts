@@ -61,6 +61,10 @@ export class ReflectionEditor implements OnDestroy {
    * `aria-describedby` alongside this component's own status/hint id (issue #212, review
    * finding). */
   readonly promptId = input<string | null>(null);
+  /** Emits every keystroke at once, with no debounce and no "Saving…" (issue #217): for a record
+   * that is still an unsaved draft, which must hold nothing back when the editor closes. The
+   * caller's `reportSaveOutcome(true)` still shows "Saved" once the edit is stored. */
+  readonly immediate = input(false);
   readonly valueChange = output<string>();
 
   /** Resyncs to `value()` whenever it changes externally (initial load, a sync from another tab),
@@ -96,6 +100,10 @@ export class ReflectionEditor implements OnDestroy {
   protected onInput(event: Event): void {
     const text = (event.target as HTMLTextAreaElement).value;
     this.draft.set(text);
+    if (this.immediate()) {
+      this.valueChange.emit(text);
+      return;
+    }
     this.pendingSave = true;
     this.status.set('saving');
     clearTimeout(this.debounceTimer);

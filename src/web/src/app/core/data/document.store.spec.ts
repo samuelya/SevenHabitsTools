@@ -314,6 +314,20 @@ describe('DocumentStore', () => {
       expect(store.refusedEdits()).toBe(0);
     });
 
+    it('isWriter() only answers; reportRefusedEdit() counts a refusal (issue #217)', () => {
+      const writer = configureWithRole('writer');
+      expect(writer.isWriter()).toBe(true);
+
+      TestBed.resetTestingModule();
+      const reader = configureWithRole('reader');
+      const before = reader.document();
+      expect(reader.isWriter()).toBe(false);
+      expect(reader.refusedEdits()).toBe(0);
+      reader.reportRefusedEdit();
+      expect(reader.refusedEdits()).toBe(1);
+      expect(reader.document()).toBe(before);
+    });
+
     it('still lets replaceDocument through, since it is not an edit', () => {
       const store = configureWithRole('reader');
       const next = { ...store.document(), settings: { theme: 'from-writer' } };

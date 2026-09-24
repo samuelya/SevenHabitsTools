@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
@@ -49,7 +50,100 @@ const TEXT: Record<
   },
 };
 
+/** A saved script's editor URL: the real id, not the draft's reserved `new` segment (#217). */
+const SAVED_SCRIPT_URL = /\/habits\/paradigms\/transition\/(?!new$)[^/]+$/;
+
+/** The stored scripts (`habits.paradigms.scripts`) as IndexedDB holds them — the same document
+ * the JSON export writes out. `null` while the slice doesn't exist at all. */
+async function storedScripts(page: Page): Promise<unknown[] | null> {
+  return page.evaluate(
+    () =>
+      new Promise<unknown[] | null>((resolve, reject) => {
+        const open = indexedDB.open('sevenhabits');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          if (!db.objectStoreNames.contains('documents')) {
+            db.close();
+            resolve(null);
+            return;
+          }
+          const get = db.transaction('documents').objectStore('documents').get('current');
+          get.onsuccess = () => {
+            db.close();
+            resolve(get.result?.habits?.paradigms?.scripts ?? null);
+          };
+          get.onerror = () => reject(get.error);
+        };
+      }),
+  );
+}
+
 test.describe('paradigms transition reflection', () => {
+  // Issue #217: "Add" opens an in-memory draft at `.../new`; nothing is stored until the script
+  // text is typed, so backing out of an untouched draft leaves no item and no record.
+  test('draft before record: backing out of an untouched draft leaves the list and the document empty', async ({
+    page,
+  }, testInfo) => {
+    const isMobile = testInfo.project.name.startsWith('mobile');
+    const isRtl = testInfo.project.name.endsWith('-ar');
+    await page.goto('/habits/paradigms/transition');
+
+    await page.locator('.add-button').click();
+    await expect(page).toHaveURL(/\/habits\/paradigms\/transition\/new$/);
+    const form = page.locator('app-transition-item-form');
+    await expect(form).toBeVisible();
+    await expect(form.locator('textarea').first()).toBeFocused();
+    const status = page.locator('.editor-status');
+    const done = page.locator('.editor-done');
+    await expect(status).toHaveText(isRtl ? 'جديد' : 'New');
+    await expect(done).toHaveText(isRtl ? 'تم' : 'Done');
+    // "Done" sits at the inline end, next to the status: right of it in LTR, left of it in RTL.
+    const statusBox = (await status.boundingBox())!;
+    const doneBox = (await done.boundingBox())!;
+    if (isRtl) {
+      expect(doneBox.x + doneBox.width).toBeLessThanOrEqual(statusBox.x + 1);
+    } else {
+      expect(doneBox.x).toBeGreaterThanOrEqual(statusBox.x + statusBox.width - 1);
+    }
+    // Desktop split view: no phantom row beside the empty form.
+    await expect(page.locator('.exercise-list__item')).toHaveCount(0);
+
+    if (isMobile) {
+      await page.goBack();
+    } else {
+      await page.keyboard.press('Escape');
+    }
+    await expect(page).toHaveURL(/\/habits\/paradigms\/transition$/);
+    await expect(form).not.toBeVisible();
+    await expect(page.locator('.exercise-list__item')).toHaveCount(0);
+    // Longer than the 500 ms save debounce (`SAVE_DEBOUNCE_MS`), so a write would have landed.
+    await page.waitForTimeout(1000);
+    expect(await storedScripts(page)).toBeNull();
+
+    // A reload on `.../new` reopens an empty draft rather than redirecting to the list.
+    await page.goto('/habits/paradigms/transition/new');
+    await expect(form).toBeVisible();
+    await expect(form.locator('textarea').first()).toHaveValue('');
+    await expect(status).toHaveText(isRtl ? 'جديد' : 'New');
+
+    // The first typed character saves it: the URL shows the real id, and so does a reload.
+    await form.locator('textarea').first().fill('Silence means agreement');
+    await expect(page).toHaveURL(SAVED_SCRIPT_URL);
+    await expect(status).toHaveText(isRtl ? 'تم الحفظ' : 'Saved');
+    const savedUrl = page.url();
+    await page.waitForTimeout(1000);
+    expect(await storedScripts(page)).toHaveLength(1);
+    await page.reload();
+    await expect(page).toHaveURL(savedUrl);
+    await expect(form.locator('textarea').first()).toHaveValue('Silence means agreement');
+
+    // "Done" closes the editor.
+    await done.click();
+    await expect(page).toHaveURL(/\/habits\/paradigms\/transition$/);
+    await expect(page.locator('.exercise-list__item')).toHaveCount(1);
+  });
+
   test('adds a script through the full-screen editor, marks the exercise done, and it survives a reload', async ({
     page,
   }, testInfo) => {
@@ -153,6 +247,9 @@ test.describe('paradigms transition reflection', () => {
     await page.locator('.add-button').click();
     const form = page.locator('app-transition-item-form');
     await expect(form).toBeVisible();
+    // An untouched draft leaves nothing behind (issue #217), so type to keep one script.
+    await form.locator('textarea').first().fill('Silence means agreement');
+    await expect(page).toHaveURL(SAVED_SCRIPT_URL);
 
     // Every toggle meets the 44 px touch target (#194).
     const toggleHeights = await form
@@ -214,6 +311,9 @@ test.describe('paradigms transition reflection', () => {
     await page.locator('.add-button').click();
     const form = page.locator('app-transition-item-form');
     await form.locator('textarea').first().fill('Old habit to remove');
+    // Typing saves the draft and replaces `new` with the real id (issue #217); wait for that
+    // before going back, or the back step could land before the replace does.
+    await expect(page).toHaveURL(SAVED_SCRIPT_URL);
     if (isMobile) {
       await page.goBack();
     } else {

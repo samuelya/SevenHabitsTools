@@ -29,6 +29,9 @@
   }
 
   @if (visibleItems().length) {
+    <!-- A row with a blank title (a script saved from another field, issue #217) still has a
+         visible name and a named bin button. -->
+    @let untitled = 'exerciseKit.list.untitled' | transloco;
     <mat-nav-list>
       @for (item of visibleItems(); track item.id) {
         <!-- The swipe host (issue #203): a wrapper, not the row button itself — a bin `<button>`
@@ -71,7 +74,7 @@
             } @else {
               <span matListItemIcon aria-hidden="true"></span>
             }
-            <span matListItemTitle>{{ item.title }}</span>
+            <span matListItemTitle>{{ item.title.trim() || untitled }}</span>
             @if (item.subtitle; as subtitle) {
               <span matListItemLine>{{ subtitle }}</span>
             }
@@ -80,7 +83,9 @@
             <button
               type="button"
               class="exercise-list__delete"
-              [attr.aria-label]="'exerciseKit.list.deleteAria' | transloco: { item: item.title }"
+              [attr.aria-label]="
+                'exerciseKit.list.deleteAria' | transloco: { item: item.title.trim() || untitled }
+              "
               (click)="requestDelete(item)"
             >
               <mat-icon aria-hidden="true">delete</mat-icon>
