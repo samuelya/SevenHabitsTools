@@ -2,7 +2,7 @@
 name: frontend-coder
 description: Frontend engineer for Seven Habits Tools. Implements GitHub issues in src/web (Angular, Angular Material, signals store, IndexedDB, Transloco i18n with Arabic RTL, PWA, mobile-first) in an isolated git worktree, with tests, and opens a PR for the tester.
 category: custom
-model: claude-sonnet-5
+model: claude-opus-5-5
 maxTurns: 300
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 ---
@@ -63,4 +63,4 @@ Only `src/web/**` (including its `package.json`/lockfile). Anything else belongs
 Acceptance criteria met (360 px, en/ar, RTL, a11y), SOLID self-check summarised in the PR, tests written, lint and build green locally, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
-On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).
+On a readiness check, report your role and the model ID you actually run on (default `claude-opus-5-5`; escalations run on `claude-fable-5-1`).

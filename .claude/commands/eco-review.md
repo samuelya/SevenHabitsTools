@@ -34,7 +34,7 @@ For each: its issue (`scripts/gh/issue-context.sh`), turns, median context, whet
 - The most-read docs grew (playbook, architecture issue #1): split must-read from reference.
 - `maxTurns` hit often with partial output: issues too big, send that to the business-analyst; never hit: lower the cap.
 - `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE`: did median context per turn fall without more failed rounds? Keep; if failed rounds rose, raise the percentage one step.
-- Every Opus or Fable run maps to an escalation, a design decision, a review or a risk-routed first round (CLAUDE.md "Model routing"); otherwise the model policy leaked. Compare failed rounds and tokens per PR on Opus-routed issues with the Sonnet-first escalations before 2026-09-24 (#122, #147, #148, #165, #234).
+- Coders run on Opus 5.5 since 2026-09-24 (CLAUDE.md "Coder model"); every Fable run maps to an escalation or a design decision. Compare failed rounds and tokens per PR with the Sonnet-first period before 2026-09-24 (#122, #147, #148, #165, #234).
 - A round that failed on a "design fact" (platform semantics): is it on the design-check list?
 
 ## 5. Propose at most three changes
