@@ -20,6 +20,7 @@ import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
 import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -95,6 +96,8 @@ export class TeachPage {
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly progress = inject(ExerciseProgress);
+  /** The scope's `guide` key for "Read more", `null` until it loads (issue #231). */
+  protected readonly guideContent = exerciseGuideSignal('paradigms-teach');
 
   /** The `:itemId` route param — the selected chapter key, absent while the list, not a chapter,
    * is showing. Bound through `withComponentInputBinding`. */
