@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -198,7 +199,7 @@ describe('TransitionPage draft before record (issue #217)', () => {
     expect(itemForm(harness).script().source).toBe('family');
   });
 
-  it("the form's delete button discards an unsaved draft without a confirm", async () => {
+  it("the form's delete button discards an unsaved draft without a confirm, and Back skips it (R5)", async () => {
     const deleteWithUndo = fakeDeleteWithUndo();
     const harness = await setUp({ deleteWithUndo });
     await openDraft(harness);
@@ -213,6 +214,10 @@ describe('TransitionPage draft before record (issue #217)', () => {
     expect(deleteWithUndo.calls).toHaveLength(0);
     expect(TestBed.inject(Router).url).toBe(LIST_URL);
     expect(storedScripts()).toHaveLength(0);
+    // `replaceUrl`: the history holds no `new` entry to reopen a draft on.
+    const location = TestBed.inject(Location);
+    location.back();
+    expect(location.path()).not.toBe(`${LIST_URL}/new`);
   });
 
   it('the header Done button closes the editor', async () => {

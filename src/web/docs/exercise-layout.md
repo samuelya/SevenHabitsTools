@@ -235,22 +235,28 @@ isWorthSaving, save, update, navigate, now })` (`shared/exercise-kit/record-draf
 it in three places:
 - "Add"/"New" calls `draft.start()`: a fresh in-memory draft (built with `newRecord()`, so it
   already has its final id) at the reserved segment `NEW_ITEM_ID` (`'new'`). It replaces any draft
-  already open, and opens nothing in a read-only tab (`DocumentStore.canEdit()` shows the usual
-  refused-edit notice). A reload of `.../new` opens an empty draft once the writer lock settles.
+  already open, and opens nothing in a read-only tab (`DocumentStore.isWriter()` is `false`, and
+  `reportRefusedEdit()` shows the usual notice). A reload of `.../new` opens an empty draft once
+  the writer lock settles; a read-only tab leaves it for the list with `replaceUrl`.
 - The template reads `draft.selected()` (the live record for `itemId`, or the draft on `new`) and
-  `draft.status()`; the page's own redirect effect exempts `NEW_ITEM_ID`.
+  `draft.status()`. `recordDraft()` owns the redirect of an `:itemId` that isn't a live record to
+  the list, so the page has no redirect effect of its own.
 - The form's `changed` goes to `draft.edit(id, fields)`. Nothing reaches the store, and so nothing
   reaches `DocumentPersistence` or IndexedDB, until the exercise's pure
   `isDraftWorthSaving(draft, initial)` (`<slug>.logic.ts`: any free-text field non-blank, or, for
   an assessment pre-filled from the latest one, the first real change; choices and pre-filled
-  defaults don't count) holds. Then `save` appends it and, if `new` is still open, `navigate`
-  moves the URL to its id with `replaceUrl: true` (the form keeps its instance: same id). An edit
-  for a live record goes through `update`; any other id writes nothing.
-- Leaving `new` doesn't drop the draft: an edit a child flushes from `ngOnDestroy` (the
-  `ReflectionEditor` debounce, on Done or back) runs after `itemId` has moved, still lands in the
-  draft and saves it if worth saving, without reopening the editor.
-- A delete on an unsaved draft just closes the editor. Once saved, it's a record like any other:
-  clearing its fields again doesn't un-save it (that would need a hard delete).
+  defaults don't count) holds. Then `save` appends it and `navigate` moves the URL to its id with
+  `replaceUrl: true` (the form keeps its instance: same id). An edit for a live record goes
+  through `update`; any other id writes nothing. `edit()` returns whether the edit reached the
+  store, so an edit kept in the draft never reports "Saved".
+- **A draft's edits are never held back.** While `draft.unsaved()` is `true`, a child that
+  debounces must pass each edit on at once (`ReflectionEditor`'s `[immediate]`), so the first
+  worthwhile keystroke saves the draft and nothing is pending when the editor closes, the page is
+  left or New is pressed again. That lets the draft live only while the URL is `new`: leaving
+  `new` drops it, and a late edit for it writes nothing.
+- A delete on an unsaved draft calls `draft.discard()`, which closes the editor with `replaceUrl`
+  so Back doesn't reopen `new`. Once saved, it's a record like any other: clearing its fields
+  again doesn't un-save it (that would need a hard delete).
 - A fixed-row list with no Add (`paradigms-teach`) keeps a per-row pending-fields signal instead,
   with the same "New" → "Saved" status and the same save rule.
 

@@ -140,11 +140,16 @@ export function labelsFrom(
   };
 }
 
-/** Maps a script to the row `ExerciseList` renders. */
+/** Maps a script to the row `ExerciseList` renders. Its title is the script, else the new
+ * script, else the situation: a draft is saved from any of them (issue #217). With all three
+ * blank it is `''`, which `ExerciseList` shows as "Untitled". */
 export function toListItem(script: Script, labels: ScriptLabels): ExerciseListItem {
   return {
     id: script.id,
-    title: script.text,
+    title:
+      [script.text, script.newScript, script.situation]
+        .map((text) => (text ?? '').trim())
+        .find((text) => text !== '') ?? '',
     subtitle: `${labels.source[script.source]} · ${labels.effect[script.effect]}`,
     done: isItemComplete(script),
   };

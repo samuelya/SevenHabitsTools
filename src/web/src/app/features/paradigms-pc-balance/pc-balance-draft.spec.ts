@@ -1,4 +1,5 @@
-import { signal } from '@angular/core';
+import { Location } from '@angular/common';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -21,6 +22,10 @@ import pcBalanceRoutes from './pc-balance.routes';
 /** The draft-before-record edge cases (issue #217's review findings), apart from
  * `pc-balance-page.spec.ts`: a debounced reflection flushed by closing, and a read-only tab. */
 const LIST_URL = `/${PC_BALANCE_ROUTE}`;
+const ELSEWHERE_URL = '/elsewhere';
+
+@Component({ template: '' })
+class Elsewhere {}
 
 async function setUp(role: WriterRole = 'writer'): Promise<RouterTestingHarness> {
   registerExerciseKitModel();
@@ -29,7 +34,10 @@ async function setUp(role: WriterRole = 'writer'): Promise<RouterTestingHarness>
     providers: [
       provideTranslocoTesting(),
       provideRouter(
-        [{ path: PC_BALANCE_ROUTE, children: pcBalanceRoutes }],
+        [
+          { path: PC_BALANCE_ROUTE, children: pcBalanceRoutes },
+          { path: ELSEWHERE_URL.slice(1), component: Elsewhere },
+        ],
         withComponentInputBinding(),
       ),
       { provide: CLOCK, useValue: { now: () => new Date('2026-01-01T00:00:00.000Z') } },
@@ -52,7 +60,7 @@ async function click(harness: RouterTestingHarness, selector: string): Promise<v
   harness.detectChanges();
 }
 
-/** Types into the reflection's textarea: `ReflectionEditor` holds it for its 1 s debounce. */
+/** Types into the reflection's textarea, well inside `ReflectionEditor`'s 1 s debounce. */
 function typeReflection(harness: RouterTestingHarness, text: string): void {
   const textarea = host(harness).querySelector(
     'app-reflection-editor textarea',
@@ -98,7 +106,7 @@ describe('PcBalancePage draft (issue #217)', () => {
     expect(TestBed.inject(Router).url).toBe(LIST_URL);
   });
 
-  it('reports "Saved" for a whitespace-only reflection kept in the draft', async () => {
+  it('shows no "Saved" for a whitespace-only reflection kept in the draft', async () => {
     const harness = await setUp();
     const before = currentDocument();
     await click(harness, '.add-button');
@@ -111,8 +119,54 @@ describe('PcBalancePage draft (issue #217)', () => {
       vi.useRealTimers();
     }
 
-    expect(host(harness).querySelector('app-reflection-editor')?.textContent).toContain('Saved');
+    expect(host(harness).querySelector('app-reflection-editor')?.textContent).not.toContain(
+      'Saved',
+    );
     expect(currentDocument()).toBe(before);
+  });
+
+  it('saves a typed reflection at once, so leaving the page stays left (R1)', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+
+    await harness.navigateByUrl(ELSEWHERE_URL);
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe(ELSEWHERE_URL);
+    expect(storedAudits().map((audit) => audit.reflection)).toEqual(['Rested more this month']);
+  });
+
+  it('keeps the typed reflection when New is pressed again at once (R2)', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+
+    await click(harness, '.add-button');
+
+    expect(storedAudits().map((audit) => audit.reflection)).toEqual(['Rested more this month']);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
+    const textarea = host(harness).querySelector(
+      'app-reflection-editor textarea',
+    ) as HTMLTextAreaElement;
+    expect(textarea.value).toBe('');
+  });
+
+  it('leaves no `new` entry behind Done for Back to reopen as a blank draft (R10)', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+    // Well inside the 1 s debounce, but after the router has settled, as a user's next tap is.
+    await harness.fixture.whenStable();
+    await click(harness, '.editor-done');
+
+    // The history entry Back lands on; this harness' router doesn't follow popstate itself.
+    const location = TestBed.inject(Location);
+    location.back();
+
+    const [audit] = storedAudits();
+    expect(location.path()).toBe(`${LIST_URL}/${audit.id}`);
+    expect(storedAudits()).toHaveLength(1);
   });
 
   it('opens no draft in a read-only tab, and counts it as a refused edit', async () => {

@@ -79,6 +79,9 @@ export interface PcReflectionChange {
 })
 export class PcBalanceAuditForm {
   readonly audit = input.required<PcAudit>();
+  /** Whether `audit` is still an unsaved draft (issue #217): the reflection then skips its
+   * debounce, so the draft is saved on the first real keystroke and nothing is left pending. */
+  readonly unsaved = input(false);
   readonly changed = output<Partial<PcAuditFields>>();
   readonly reflectionChanged = output<PcReflectionChange>();
 

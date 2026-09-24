@@ -23,7 +23,8 @@
     "sortLabel": "ترتيب",
     "sortByTitle": "حسب العنوان",
     "sortByStatus": "حسب الحالة",
-    "deleteAria": "حذف {{item}}"
+    "deleteAria": "حذف {{item}}",
+    "untitled": "بلا عنوان"
   },
   "detail": {
     "close": "العودة إلى القائمة"

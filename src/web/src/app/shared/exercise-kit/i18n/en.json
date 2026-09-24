@@ -23,7 +23,8 @@
     "sortLabel": "Sort",
     "sortByTitle": "By title",
     "sortByStatus": "By status",
-    "deleteAria": "Delete {{item}}"
+    "deleteAria": "Delete {{item}}",
+    "untitled": "Untitled"
   },
   "detail": {
     "close": "Back to list"

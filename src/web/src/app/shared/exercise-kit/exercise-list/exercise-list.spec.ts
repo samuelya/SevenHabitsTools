@@ -180,6 +180,13 @@ describe('ExerciseList', () => {
     );
   });
 
+  it('shows a blank title as "Untitled", on the row and its bin button (issue #217)', () => {
+    const fixture = setUp([{ id: 'blank', title: '  ' }], null, undefined, undefined, true);
+
+    expect(fixture.nativeElement.textContent).toContain('Untitled');
+    expect(deleteButtons(fixture)[0].getAttribute('aria-label')).toBe('Delete Untitled');
+  });
+
   it('emits deleteRequested with the item id when its bin button is clicked', () => {
     const fixture = setUp(ITEMS, null, undefined, undefined, true);
     const emitted: string[] = [];

@@ -215,4 +215,25 @@ describe('ReflectionEditor', () => {
 
     expect(emitted).toEqual([]);
   });
+
+  it('with immediate, emits each keystroke at once, shows no "Saving…" and leaves nothing to flush (issue #217)', () => {
+    const fixture = setUp('', null, true);
+    fixture.componentRef.setInput('immediate', true);
+    const emitted: string[] = [];
+    fixture.componentInstance.valueChange.subscribe((v) => emitted.push(v));
+
+    typeInto(fixture, 'a');
+    typeInto(fixture, 'ab');
+    fixture.detectChanges();
+    expect(emitted).toEqual(['a', 'ab']);
+    expect(fixture.nativeElement.textContent).not.toContain('Saving');
+
+    fixture.componentInstance.reportSaveOutcome(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Saved');
+
+    fixture.destroy();
+    vi.advanceTimersByTime(REFLECTION_DEBOUNCE_MS);
+    expect(emitted).toEqual(['a', 'ab']);
+  });
 });

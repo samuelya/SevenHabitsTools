@@ -97,13 +97,16 @@ export class DocumentStore {
     return computed(() => getAtPath<T>(this.documentSignal(), path));
   }
 
+  /** Whether this tab may edit right now: a pure query, safe in a template or `computed`. */
+  readonly isWriter: Signal<boolean> = this.writerLock.isWriter;
+
   /**
-   * Whether this tab may edit right now, asked before an action that only leads to edits (issue
-   * #217: opening a new record's draft). Changes nothing; a `false` counts as a refused edit
-   * (`refusedEdits`), so the user is told exactly as for a refused `update()`.
+   * Tells the user an edit was refused, exactly as a refused `update()` does (`refusedEdits`).
+   * For an action that only leads to edits and is refused up front when `isWriter()` is `false`
+   * (issue #217: opening a new record's draft).
    */
-  canEdit(): boolean {
-    return this.mutate((doc) => doc);
+  reportRefusedEdit(): void {
+    this.refusedEditsSignal.update((count) => count + 1);
   }
 
   /** Replaces the whole document: bootstrap load, JSON import or a sync merge. */
@@ -193,7 +196,7 @@ export class DocumentStore {
     apply: (doc: Record<string, unknown>, now: Date) => Record<string, unknown>,
   ): boolean {
     if (!this.writerLock.isWriter()) {
-      this.refusedEditsSignal.update((count) => count + 1);
+      this.reportRefusedEdit();
       return false;
     }
     const now = this.clock.now();

@@ -6,7 +6,7 @@ import { of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EditorStatus, ExercisePage } from './exercise-page';
 
-/** The editor header's draft status and Done button (issue #217), kept apart from
+/** The editor header: its status, close and Done buttons (issue #217), kept apart from
  * `exercise-page.spec.ts` to hold both files under the 500-line rule. */
 @Component({
   selector: 'app-header-host',
@@ -32,7 +32,7 @@ class HeaderHostComponent {
   }
 }
 
-function setUp(): HeaderHostComponent & { header: HTMLElement } {
+function setUp(): HeaderHostComponent & { header: HTMLElement; detectChanges: () => void } {
   const state: BreakpointState = { matches: false, breakpoints: {} };
   TestBed.configureTestingModule({
     providers: [
@@ -49,10 +49,30 @@ function setUp(): HeaderHostComponent & { header: HTMLElement } {
   const header = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
     '.editor-header',
   )!;
-  return Object.assign(fixture.componentInstance, { header });
+  return Object.assign(fixture.componentInstance, {
+    header,
+    detectChanges: () => fixture.detectChanges(),
+  });
 }
 
-describe('ExercisePage editor header (issue #217)', () => {
+describe('ExercisePage editor header', () => {
+  it('shows the saving and saved status text through the aria-live region', () => {
+    const host = setUp();
+    host.editorStatus.set('saving');
+    host.detectChanges();
+    expect(host.header.querySelector('.editor-status')?.textContent?.trim()).toBe('Saving…');
+
+    host.editorStatus.set('saved');
+    host.detectChanges();
+    expect(host.header.querySelector('.editor-status')?.textContent?.trim()).toBe('Saved');
+  });
+
+  it('emits editorClosed when the close button is clicked', () => {
+    const host = setUp();
+    host.header.querySelector<HTMLButtonElement>('.editor-close')!.click();
+    expect(host.closedCount).toBe(1);
+  });
+
   it('shows "New" for a draft no record exists for yet', () => {
     const { header } = setUp();
     expect(header.querySelector('.editor-status')?.textContent?.trim()).toBe('New');

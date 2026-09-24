@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
@@ -18,7 +18,7 @@ import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-p
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
-import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
+import { recordDraft } from '../../shared/exercise-kit/record-draft';
 import { MaturityAssessmentForm } from './maturity-assessment-form';
 import { MaturityResult } from './maturity-result';
 import { MaturitySummary } from './maturity-summary';
@@ -182,23 +182,6 @@ export class MaturityPage {
   protected readonly done = this.progress.isDone(MATURITY_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(MATURITY_MODEL_KEY);
 
-  constructor() {
-    // An `:itemId` that isn't a live assessment redirects to the history (issue #187's pattern).
-    // Guard `id != null`, not `id !== null`: `withComponentInputBinding()`'s default
-    // `unmatchedInputBehavior` is `'alwaysUndefined'`, so closing the editor sets `itemId` to
-    // `undefined`, not this input's own `null` default.
-    effect(() => {
-      const id = this.itemId();
-      if (
-        id != null &&
-        id !== NEW_ITEM_ID &&
-        !this.assessments().some((assessment) => assessment.id === id)
-      ) {
-        this.goToList();
-      }
-    });
-  }
-
   /** Absolute, not relative to `this.route` — see `TransitionPage.goTo()`'s doc comment for why
    * relative navigation doesn't resolve against this feature's lazily mounted route. */
   private goTo(commands: readonly string[], options?: { replaceUrl?: boolean }): void {
@@ -228,7 +211,7 @@ export class MaturityPage {
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). The
-   * redirect effect above closes the editor once the delete lands, since the id is then no longer
+   * `recordDraft()` redirect effect closes the editor once the delete lands, since the id is then no longer
    * a live assessment — this only owns confirm, the tombstone, and Undo. */
   protected onAssessmentDeleted(id: string): void {
     void this.deleteWithUndo.confirmAndDelete({

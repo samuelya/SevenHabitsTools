@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-p
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
-import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
+import { recordDraft } from '../../shared/exercise-kit/record-draft';
 import { TransitionItemForm } from './transition-item-form';
 import { TransitionSummary } from './transition-summary';
 import {
@@ -173,26 +173,6 @@ export class TransitionPage {
   protected readonly done = this.progress.isDone(TRANSITION_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(TRANSITION_MODEL_KEY);
 
-  constructor() {
-    // An `:itemId` that isn't a live script — a typo'd/stale deep link, or one this same effect
-    // just tombstoned by deleting it — redirects to the list (issue #187's acceptance criteria).
-    // Deleting and then navigating away explicitly would race this: this single effect covers
-    // both a bad id from the start and one that goes bad while open.
-    //
-    // `id != null` (not `!== null`): `withComponentInputBinding()`'s default
-    // `unmatchedInputBehavior` is `'alwaysUndefined'`, so closing the editor — a URL with no
-    // trailing segment, and therefore no `itemId` param — calls `setInput('itemId', undefined)`
-    // rather than leaving this input's own `null` default alone. `undefined` is just as much
-    // "no id" as `null` is.
-    effect(() => {
-      // `NEW_ITEM_ID` is the draft's segment (issue #217), never a stored id.
-      const id = this.itemId();
-      if (id != null && id !== NEW_ITEM_ID && !this.scripts().some((script) => script.id === id)) {
-        this.goToList();
-      }
-    });
-  }
-
   /** Absolute, not `router.navigate([...], { relativeTo: this.route })`: relative navigation's
    * `'../'` counts route *config* nesting, and this feature's routes are lazily mounted under the
    * `ROUTE_REGISTRY`'s own `habits/paradigms/transition` entry, so `'../'` resolves against a
@@ -231,10 +211,10 @@ export class TransitionPage {
   protected onItemDeleted(id: string): void {
     // An unsaved draft has no record to delete: discarding it is just closing the editor.
     if (this.draft.owns(id)) {
-      this.goToList();
+      this.draft.discard();
       return;
     }
-    // The redirect effect above closes the editor once the delete lands (the id is no longer a
+    // `recordDraft()`'s redirect effect closes the editor once the delete lands (the id is no longer a
     // live script) — this only owns confirm, the tombstone itself, and Undo (playbook's "Deleting
     // entries"; `DeleteWithUndo` is the shared confirm → delete → undo flow issue #203 introduced).
     void this.deleteWithUndo.confirmAndDelete({

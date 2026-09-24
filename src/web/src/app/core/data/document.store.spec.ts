@@ -314,17 +314,18 @@ describe('DocumentStore', () => {
       expect(store.refusedEdits()).toBe(0);
     });
 
-    it('canEdit() answers without changing the document, counting a refusal (issue #217)', () => {
+    it('isWriter() only answers; reportRefusedEdit() counts a refusal (issue #217)', () => {
       const writer = configureWithRole('writer');
-      const before = writer.document();
-      expect(writer.canEdit()).toBe(true);
-      expect(writer.document()).toBe(before);
-      expect(writer.refusedEdits()).toBe(0);
+      expect(writer.isWriter()).toBe(true);
 
       TestBed.resetTestingModule();
       const reader = configureWithRole('reader');
-      expect(reader.canEdit()).toBe(false);
+      const before = reader.document();
+      expect(reader.isWriter()).toBe(false);
+      expect(reader.refusedEdits()).toBe(0);
+      reader.reportRefusedEdit();
       expect(reader.refusedEdits()).toBe(1);
+      expect(reader.document()).toBe(before);
     });
 
     it('still lets replaceDocument through, since it is not an edit', () => {

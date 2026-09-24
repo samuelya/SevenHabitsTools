@@ -21,6 +21,8 @@ interface Harness {
   draft: RecordDraft<Note>;
   creates: () => number;
   navigations: (string | null)[];
+  /** The `navigate()` calls made with `replaceUrl`, by segment. */
+  replaced: (string | null)[];
   updates: string[];
 }
 
@@ -39,6 +41,7 @@ function setUp(options: { saveApplies?: boolean; role?: WriterRole } = {}): Harn
   const itemId = signal<string | null | undefined>(null);
   const records = signal<readonly Note[]>([]);
   const navigations: (string | null)[] = [];
+  const replaced: (string | null)[] = [];
   const updates: string[] = [];
   let createCount = 0;
   const draft = TestBed.runInInjectionContext(() =>
@@ -64,15 +67,27 @@ function setUp(options: { saveApplies?: boolean; role?: WriterRole } = {}): Harn
         );
         return true;
       },
-      navigate: (segment) => {
+      navigate: (segment, navigateOptions) => {
         navigations.push(segment);
+        if (navigateOptions?.replaceUrl) {
+          replaced.push(segment);
+        }
         itemId.set(segment ?? undefined);
       },
       now: () => SAVED,
     }),
   );
   TestBed.tick();
-  return { itemId, records, role, draft, creates: () => createCount, navigations, updates };
+  return {
+    itemId,
+    records,
+    role,
+    draft,
+    creates: () => createCount,
+    navigations,
+    replaced,
+    updates,
+  };
 }
 
 /** `start()` plus the effects the navigation triggers. */
@@ -107,12 +122,12 @@ describe('recordDraft (issue #217)', () => {
     expect(harness.records()).toHaveLength(0);
   });
 
-  it('keeps edits in memory until the draft is worth saving', () => {
+  it('keeps edits in memory until the draft is worth saving, reporting them as not stored', () => {
     const harness = setUp();
     const id = start(harness);
 
-    expect(harness.draft.edit(id, { tag: 'b' })).toBe(true);
-    expect(harness.draft.edit(id, { text: '  ' })).toBe(true);
+    expect(harness.draft.edit(id, { tag: 'b' })).toBe(false);
+    expect(harness.draft.edit(id, { text: '  ' })).toBe(false);
     expect(harness.records()).toHaveLength(0);
     expect(harness.draft.selected()).toMatchObject({ tag: 'b', text: '  ' });
   });
@@ -135,6 +150,7 @@ describe('recordDraft (issue #217)', () => {
       },
     ]);
     expect(harness.navigations).toEqual([NEW_ITEM_ID, id]);
+    expect(harness.replaced).toEqual([id]);
     expect(harness.draft.owns(id)).toBe(false);
     expect(harness.draft.status()).toBe('saved');
     // Later edits go to the live record through `update`.
@@ -143,17 +159,41 @@ describe('recordDraft (issue #217)', () => {
     expect(harness.records()[0].text).toBe('again');
   });
 
-  it('an edit flushed after leaving `new` still saves the draft, without navigating back', () => {
+  it('leaving `new` drops the draft: a later edit for it writes nothing, and `new` opens afresh', () => {
     const harness = setUp();
     const id = start(harness);
+    harness.draft.edit(id, { tag: 'b' });
     harness.itemId.set(undefined);
     TestBed.tick();
 
-    expect(harness.draft.edit(id, { text: 'typed just before closing' })).toBe(true);
-
-    expect(harness.records().map((note) => note.text)).toEqual(['typed just before closing']);
+    expect(harness.draft.owns(id)).toBe(false);
+    expect(harness.draft.edit(id, { text: 'too late' })).toBe(false);
+    expect(harness.records()).toHaveLength(0);
     expect(harness.navigations).toEqual([NEW_ITEM_ID]);
+
+    harness.itemId.set(NEW_ITEM_ID);
+    TestBed.tick();
+    expect(harness.draft.selected()?.id).not.toBe(id);
+    expect(harness.draft.selected()?.tag).toBe('a');
+  });
+
+  it('discard() closes the draft with `replaceUrl`, so Back does not reopen it', () => {
+    const harness = setUp();
+    start(harness);
+
+    harness.draft.discard();
+    TestBed.tick();
+
+    expect(harness.replaced).toEqual([null]);
     expect(harness.draft.selected()).toBeNull();
+  });
+
+  it('sends an id that is not a live record back to the list', () => {
+    const harness = setUp();
+    harness.itemId.set('missing');
+    TestBed.tick();
+
+    expect(harness.navigations).toEqual([null]);
   });
 
   it('never writes for an id that is neither the draft nor a live record', () => {
@@ -223,5 +263,6 @@ describe('recordDraft (issue #217)', () => {
     harness.role.set('reader');
     TestBed.tick();
     expect(harness.navigations).toEqual([null]);
+    expect(harness.replaced).toEqual([null]);
   });
 });
