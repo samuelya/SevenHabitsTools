@@ -1,13 +1,11 @@
-import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
- * Maturity continuum self-assessment (issue #50): the second **assessment** exercise (playbook
- * §4), reusing #49's `assessment-history.logic.ts`. Happy path from the habit hub — start an
- * assessment, rate every area, see the overall profile, mark the exercise done, and confirm it
- * survives a reload and shows on the hub. No `seedDocument` call, so each project renders
- * whichever language its own locale defaults to (`mobile-ar`/`desktop-ar`, per
+ * Maturity continuum self-assessment (issue #50): the layout repros (#213) and deleting an
+ * assessment. The editor's own flow, from the area chips to rating (issue #222), is in
+ * `e2e/paradigms-maturity-areas.spec.ts`. No `seedDocument` call unless a test needs one, so each
+ * project renders whichever language its own locale defaults to (`mobile-ar`/`desktop-ar`, per
  * `playwright.config.ts`), same as `e2e/paradigms-transition.spec.ts`.
  */
 
@@ -15,36 +13,9 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<
-  'en' | 'ar',
-  {
-    checklistItem: string;
-    hubTitle: string;
-    markDone: string;
-    reopen: string;
-    cancel: string;
-    delete: string;
-    undo: string;
-  }
-> = {
-  en: {
-    checklistItem: 'Rate every area in one assessment',
-    hubTitle: 'Growth continuum',
-    markDone: 'Mark done',
-    reopen: 'Reopen',
-    cancel: 'Cancel',
-    delete: 'Delete',
-    undo: 'Undo',
-  },
-  ar: {
-    checklistItem: 'قيّم كل المجالات في تقييم واحد',
-    hubTitle: 'مسار النضج',
-    markDone: 'وضع علامة تم',
-    reopen: 'إعادة فتح',
-    cancel: 'إلغاء',
-    delete: 'حذف',
-    undo: 'تراجع',
-  },
+const TEXT: Record<'en' | 'ar', { cancel: string; delete: string; undo: string }> = {
+  en: { cancel: 'Cancel', delete: 'Delete', undo: 'Undo' },
+  ar: { cancel: 'إلغاء', delete: 'حذف', undo: 'تراجع' },
 };
 
 /** 14 saved assessments: review round 1's own measured repro for a history column taller than the
@@ -107,123 +78,6 @@ async function pageOverflow(page: Page): Promise<number> {
 }
 
 test.describe('maturity continuum self-assessment', () => {
-  test('rates every area, sees the overall profile, marks the exercise done, and it survives a reload', async ({
-    page,
-  }, testInfo) => {
-    const text = TEXT[localeFor(testInfo.project.name)];
-    // Focus mode is a full-screen panel on handset that hides the footer (and its `DoneToggle`)
-    // entirely while open (`showFooter`, `exercise-page.ts`) — the same layout `paradigms-
-    // transition.spec.ts` accounts for, closing the editor before checking it.
-    const isMobile = testInfo.project.name.startsWith('mobile');
-
-    await page.goto('/habits/paradigms');
-    await page.locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle }).click();
-    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity$/);
-
-    // No zero counter before the first assessment: the gate checklist is the only message (#215).
-    await expect(page.locator('app-maturity-summary')).toHaveCount(0);
-    await expect(page.locator('.done-checklist', { hasText: text.checklistItem })).toBeVisible();
-
-    await page.locator('.add-button').click();
-    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/new$/);
-    const form = page.locator('app-maturity-assessment-form');
-    await expect(form).toBeVisible();
-
-    // Phase 1 (issue #222): chips for the six suggested areas, none chosen; the first chip row is
-    // on screen without scrolling at 360x800, with a 10% margin for CI's wider fonts.
-    const chips = form.locator('.area-chip');
-    await expect(chips).toHaveCount(6);
-    await expect(form.locator('.area-chip[aria-pressed="true"]')).toHaveCount(0);
-    const chipBottom = (await chips.first().boundingBox())!;
-    const port = (await page.locator('main.page').boundingBox())!;
-    expect(chipBottom.y + chipBottom.height).toBeLessThanOrEqual(port.y + port.height * 0.9);
-
-    // The first chip saves the draft (issue #217); choosing it again would remove it.
-    await chips.nth(0).click();
-    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/(?!new$)[^/]+$/);
-    await expect(chips.nth(0)).toHaveAttribute('aria-pressed', 'true');
-    await chips.nth(2).click();
-    const custom = form.locator('.custom-area input');
-    await custom.fill('Volunteering');
-    await custom.press('Enter');
-    await expect(custom).toHaveValue('');
-    await expect(form.locator('.area-chip[aria-pressed="true"]')).toHaveCount(3);
-
-    await form.locator('.continue-button').click();
-    await expect(form.locator('.rate-phase')).toBeVisible();
-    await expect(form.locator('.maturity-legend')).toHaveCount(1);
-
-    if (isMobile) {
-      // One area per screen, Previous/Next.
-      for (let i = 0; i < 3; i++) {
-        await expect(form.locator('.area-rating')).toHaveCount(1);
-        await form.locator('.level-option').nth(1).click();
-        if (i < 2) {
-          await form.locator('.next-area').click();
-        }
-      }
-      await expect(form.locator('.next-area')).toHaveCount(0);
-    } else {
-      await expect(form.locator('.area-panel')).toHaveCount(3);
-      await expandAllPanels(page);
-      for (let i = 0; i < 3; i++) {
-        await form.locator('.area-panel').nth(i).locator('.level-option').nth(1).click();
-      }
-    }
-
-    await expect(page.locator('app-maturity-result .profile')).toBeVisible();
-
-    if (isMobile) {
-      await page.goBack();
-      await expect(page).toHaveURL(/\/habits\/paradigms\/maturity$/);
-    } else {
-      await page.locator('app-exercise-page .editor-close').click();
-    }
-
-    const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
-    await expect(markDoneButton).toBeEnabled();
-    await markDoneButton.click();
-    await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
-
-    // Longer than the 500 ms save debounce (`SAVE_DEBOUNCE_MS`, `document-persistence.ts`) — see
-    // `e2e/multi-tab.spec.ts`'s own comment on the same wait before relying on persisted state.
-    await page.waitForTimeout(1000);
-    await page.reload();
-    await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
-    await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
-
-    await page.goto('/habits/paradigms');
-    await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
-  });
-
-  test('accessibility: the assessment page and its open editor have no serious or critical violations', async ({
-    page,
-  }) => {
-    await page.goto('/habits/paradigms/maturity');
-    const listResults = await new AxeBuilder({ page }).analyze();
-    expect(
-      listResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
-    ).toEqual([]);
-
-    await page.locator('.add-button').click();
-    await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
-    const editorResults = await new AxeBuilder({ page }).analyze();
-    expect(
-      editorResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
-    ).toEqual([]);
-
-    // Phase 2 (issue #222): the legend, the rating control and the pager or panels.
-    const form = page.locator('app-maturity-assessment-form');
-    await form.locator('.area-chip').first().click();
-    await form.locator('.continue-button').click();
-    await expect(form.locator('.rate-phase')).toBeVisible();
-    await form.locator('.maturity-legend mat-expansion-panel-header').click();
-    const ratingResults = await new AxeBuilder({ page }).analyze();
-    expect(
-      ratingResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
-    ).toEqual([]);
-  });
-
   // Issue #213: desktop split mode used to let a tall editor grow the grid row past the
   // viewport, putting the sticky footer over the last field. The six built-in areas with a
   // filled-in note each (autosizing to its max rows, `cdkAutosizeMaxRows`) is the primary repro
@@ -535,8 +389,10 @@ test.describe('maturity continuum self-assessment', () => {
     await page.locator('.add-button').click();
     const form = page.locator('app-maturity-assessment-form');
     await expect(form).toBeVisible();
-    // The first chip is what saves the draft (issues #217, #222); an untouched one leaves no item.
+    // Continue with a chip chosen is what saves the draft (issues #217, #222); an untouched one
+    // leaves no item.
     await form.locator('.area-chip').first().click();
+    await form.locator('.continue-button').click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/(?!new$)[^/]+$/);
     if (isMobile) {
       await page.goBack();

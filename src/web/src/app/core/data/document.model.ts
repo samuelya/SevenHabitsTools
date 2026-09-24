@@ -1,7 +1,9 @@
 import { HabitId } from '../habits/habits';
 
-/** The schema version this build of the app reads and writes. Bump on breaking changes and add a migration. */
-export const CURRENT_SCHEMA_VERSION = 1;
+/** The schema version this build of the app reads and writes. Bump on breaking changes, and when a
+ * shipped model's `validate()` starts accepting values an older build would reject, and add a
+ * migration. v2: `paradigms-maturity`'s `friendships` area key (#222). */
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export interface DocumentMeta {
   readonly createdAt: string;

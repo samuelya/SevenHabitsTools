@@ -7,8 +7,9 @@ import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started'
 import { hubStatus, isStarted } from './maturity.logic';
 
 /** The built-in life areas: #50's six plus `friendships` (issue #222). Stored as a key, never
- * translated text (architecture issue #1 §6). Adding a key only widens `validate()`, so no
- * migration: every stored document stays valid. */
+ * translated text (architecture issue #1 §6). Adding a key keeps every stored document valid, but
+ * an older build's `validate()` would reject one holding it, hence schema v2 and its no-op
+ * migration (`migration-v1-to-v2.ts`), so that build reports "made by a newer version" instead. */
 export const MATURITY_AREA_KEYS = [
   'work',
   'family',

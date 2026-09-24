@@ -25,6 +25,12 @@
   color: var(--mat-sys-on-surface-variant, gray);
 }
 
+.custom-area-error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-error, #b3261e);
+}
+
 .phase-header {
   display: flex;
   flex-wrap: wrap;

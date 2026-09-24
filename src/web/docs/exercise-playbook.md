@@ -60,7 +60,9 @@ Plus the i18n files: `features/<exerciseId>/i18n/{en,ar}.json`, the root `titles
 
 **Adding a model needs no `schemaVersion` bump and no migration.** An absent slice falls back to
 `defaults()` (`featureStore`), and `validateDocument()` skips absent slices. Bump and add a
-migration only when you change the stored shape of a model that has already shipped.
+migration only when you change the stored shape of a model that has already shipped, or widen
+what its `validate()` accepts (a new enum key): an older build would call the document corrupt
+instead of "made by a newer version" (#222's `friendships`, v1 → v2, a no-op migration).
 
 ## 3. Data rules
 

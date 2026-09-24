@@ -1,17 +1,13 @@
 import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
   isDraftWorthSaving,
-  addCustomArea,
-  areaChips,
   clampIndex,
   firstUnratedIndex,
   initialPhase,
-  toggleBuiltInArea,
   checklistLabelsFrom,
   checklistLoaded,
   deltaFor,
   doneChecklist,
-  displayName,
   editAssessment,
   isAssessmentComplete,
   isComplete,
@@ -28,6 +24,7 @@ import {
   isStarted,
 } from './maturity.logic';
 import { hubStatus } from './maturity.logic';
+import { displayName } from './maturity-areas.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
 
@@ -201,6 +198,16 @@ describe('deltaFor/removedAreas', () => {
     expect(removedAreas([], null)).toEqual([]);
   });
 
+  it('treat a custom area named like a built-in, in any locale, as that built-in (#222 review)', () => {
+    const previousCustom = area({ id: 'p1', key: undefined, name: 'friendships ', level: 1 });
+    const current = area({ id: 'c1', key: 'friendships', level: 2 });
+    expect(deltaFor(current, [previousCustom])).toEqual({ kind: 'diff', value: 1 });
+    expect(removedAreas([current], [previousCustom])).toEqual([]);
+
+    const previousArabic = area({ id: 'p2', key: undefined, name: 'الأصدقاء', level: 2 });
+    expect(deltaFor(current, [previousArabic])).toEqual({ kind: 'diff', value: 0 });
+  });
+
   it('agree with each other when one side has a key and the other only a same-text name', () => {
     // A renamed built-in area (`key` + `name`) must not match a *custom* area that happens to
     // share the same name text (no `key`) — `matches()` used to check only its first argument's
@@ -228,7 +235,7 @@ describe('summarize', () => {
 
 describe('newAssessmentFields', () => {
   it('starts with no areas when there is no previous assessment: the user picks chips (#222)', () => {
-    const fields = newAssessmentFields(null, '2026-02-01');
+    const fields = newAssessmentFields([], '2026-02-01');
     expect(fields.date).toBe('2026-02-01');
     expect(fields.areas).toEqual([]);
   });
@@ -240,7 +247,7 @@ describe('newAssessmentFields', () => {
         area({ id: 'p2', key: undefined, name: 'Volunteering', level: 1 }),
       ],
     });
-    const fields = newAssessmentFields(latest, '2026-02-01');
+    const fields = newAssessmentFields([latest], '2026-02-01');
     expect(fields.areas).toHaveLength(2);
     expect(fields.areas[0]).toMatchObject({ key: 'work' });
     expect(fields.areas[0].level).toBeUndefined();
@@ -248,56 +255,13 @@ describe('newAssessmentFields', () => {
     expect(fields.areas[1]).toMatchObject({ name: 'Volunteering' });
     expect(fields.areas[0].id).not.toBe('p1');
   });
-});
 
-describe('area chips (#222)', () => {
-  const LABELS = { work: 'Work', family: 'Family', community: 'Community' };
-
-  it('offers every suggested key, pressed when the assessment holds it', () => {
-    const chips = areaChips([area({ id: 'a1', key: 'family' })], ['work', 'family'], LABELS);
-    expect(chips).toEqual([
-      { id: 'key:work', key: 'work', label: 'Work', pressed: false },
-      { id: 'key:family', key: 'family', label: 'Family', pressed: true },
+  it('skips a latest assessment with no areas for the newest one that has any (#222 review)', () => {
+    const empty = assessment({ id: 'a2', areas: [] });
+    const older = assessment({ id: 'a1', areas: [area({ id: 'p1', key: 'health' })] });
+    expect(newAssessmentFields([empty, older], '2026-02-01').areas).toEqual([
+      expect.objectContaining({ key: 'health' }),
     ]);
-  });
-
-  it('adds a pressed chip for every other area: custom, renamed-custom and unsuggested built-ins', () => {
-    const chips = areaChips(
-      [
-        area({ id: 'c1', key: 'community' }),
-        area({ id: 'c2', key: undefined, name: 'Volunteering' }),
-        area({ id: 'c3', key: 'work', name: 'Day job' }),
-      ],
-      ['work'],
-      LABELS,
-    );
-    expect(chips).toEqual([
-      { id: 'key:work', key: 'work', label: 'Work', pressed: true },
-      { id: 'c1', areaId: 'c1', label: 'Community', pressed: true },
-      { id: 'c2', areaId: 'c2', label: 'Volunteering', pressed: true },
-    ]);
-  });
-
-  it('toggles a built-in area on, then off (every area with that key)', () => {
-    const added = toggleBuiltInArea([area({ id: 'x', key: 'family' })], 'work');
-    expect(added).toHaveLength(2);
-    expect(added[1]).toMatchObject({ key: 'work' });
-    expect(added[1].level).toBeUndefined();
-    expect(added[1].id).toBeTruthy();
-
-    const removed = toggleBuiltInArea([...added, area({ id: 'y', key: 'work' })], 'work');
-    expect(removed.map((a) => a.id)).toEqual(['x']);
-  });
-
-  it('adds a trimmed custom area, and nothing for a blank or already-listed name', () => {
-    const result = addCustomArea([], '  Volunteering ');
-    expect(result).toHaveLength(1);
-    expect(result![0]).toMatchObject({ name: 'Volunteering' });
-    expect(result![0].key).toBeUndefined();
-    expect(result![0].level).toBeUndefined();
-
-    expect(addCustomArea([], '   ')).toBeNull();
-    expect(addCustomArea(result!, 'volunteering')).toBeNull();
   });
 });
 
@@ -406,30 +370,17 @@ describe('isStarted (issue #216)', () => {
   });
 });
 
-describe('isDraftWorthSaving (issue #217)', () => {
-  const initial = newAssessmentFields(null, '2026-01-01');
+describe('isDraftWorthSaving (issue #217, #222 review)', () => {
+  const withArea = { areas: [area()] };
 
-  it('is false for the untouched draft with its pre-filled areas', () => {
-    expect(isDraftWorthSaving(initial, initial)).toBe(false);
+  it('is false until the user continues to rating, whatever the areas hold', () => {
+    expect(isDraftWorthSaving(withArea, false)).toBe(false);
+    expect(isDraftWorthSaving({ areas: [area({ level: 2, note: 'Busy' })] }, false)).toBe(false);
   });
 
-  it('is false for a whitespace-only note', () => {
-    const areas = initial.areas.map((area, i) => (i === 0 ? { ...area, note: '  ' } : area));
-    expect(isDraftWorthSaving({ areas }, initial)).toBe(false);
-  });
-
-  it('is true once an area is rated or a note is written', () => {
-    const rated = initial.areas.map((area, i) => (i === 0 ? { ...area, level: 2 as const } : area));
-    expect(isDraftWorthSaving({ areas: rated }, initial)).toBe(true);
-    const noted = initial.areas.map((area, i) => (i === 0 ? { ...area, note: 'Busy' } : area));
-    expect(isDraftWorthSaving({ areas: noted }, initial)).toBe(true);
-  });
-
-  it('is true once the area list itself changes', () => {
-    expect(isDraftWorthSaving({ areas: initial.areas.slice(1) }, initial)).toBe(true);
-    expect(
-      isDraftWorthSaving({ areas: [...initial.areas, { id: 'x', name: 'Health' }] }, initial),
-    ).toBe(true);
+  it('is true on Continue with at least one area, never with none', () => {
+    expect(isDraftWorthSaving(withArea, true)).toBe(true);
+    expect(isDraftWorthSaving({ areas: [] }, true)).toBe(false);
   });
 });
 

@@ -45,7 +45,8 @@
     "levelLabel": "Where you stand",
     "noteLabel": "Note (optional)",
     "removeArea": "Remove this area",
-    "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on."
+    "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on.",
+    "areaRemoved": "Area removed"
   },
   "areas": {
     "title": "Which areas do you want to rate?",
@@ -54,7 +55,8 @@
     "customPlaceholder": "e.g. Volunteering",
     "addButton": "Add",
     "continueButton": "Continue",
-    "requiredHint": "Choose at least one area to continue."
+    "requiredHint": "Choose at least one area to continue.",
+    "duplicateError": "That area is already in the list."
   },
   "rate": {
     "title": "Rate each area",

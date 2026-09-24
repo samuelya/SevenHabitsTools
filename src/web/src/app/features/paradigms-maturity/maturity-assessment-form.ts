@@ -7,11 +7,11 @@ import {
   Injector,
   afterNextRender,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
   output,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
@@ -26,17 +26,20 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import {
   AreaChip,
-  MaturityFormPhase,
+  addBuiltInArea,
   addCustomArea,
   areaChips,
-  clampIndex,
   displayName,
+  hasAreaData,
+} from './maturity-areas.logic';
+import {
+  MaturityFormPhase,
+  clampIndex,
   firstUnratedIndex,
   initialPhase,
   removeArea,
   setAreaLevel,
   setAreaNote,
-  toggleBuiltInArea,
 } from './maturity.logic';
 import {
   MATURITY_LEVELS,
@@ -47,16 +50,26 @@ import {
   MaturityLevel,
 } from './maturity.model';
 
+/** An area being removed: where it was, and whether its chip (a suggested built-in's) stays. */
+interface RemovedArea {
+  readonly areaId: string;
+  readonly index: number;
+  readonly keepsChip: boolean;
+}
+
 /**
  * The editor for one assessment, in two phases (issue #222): pick the areas as chips (plus "Add
  * your own"), then rate them — one area per screen with Previous/Next on a phone, one expansion
  * panel per area above the handset breakpoint — under a single collapsible legend. Purely
  * presentational: `assessment` is the current value, `changed` emits the edited areas so the page
- * persists them at once (`recordDraft()` saves a new draft on the first chip).
+ * persists them at once, `continued` tells the page the user moved on to rating (which saves a new
+ * draft, #222 review), and `areaRemoveRequested` asks it to confirm removing an area that holds a
+ * level or a note (#222 review); an empty area is removed at once.
  *
- * The phase and the current area are UI state keyed on the assessment **id**: saving a draft keeps
- * its id (#217), so the user stays on the same screen, while opening another assessment resets
- * both.
+ * The phase, the current area and the "Add your own" text are UI state keyed on the assessment
+ * **id**: saving a draft keeps its id (#217), so the user stays on the same screen, while opening
+ * another assessment resets them. The current area is held by id, not position, so removing an
+ * earlier area never moves the open panel.
  */
 @Component({
   selector: 'app-maturity-assessment-form',
@@ -90,30 +103,60 @@ export class MaturityAssessmentForm {
    * the area picker. */
   readonly isNew = input(false);
   readonly changed = output<Partial<MaturityAssessmentFields>>();
+  /** Continue into rating, with at least one area. */
+  readonly continued = output<void>();
+  /** The id of an area with a level or note the user asked to remove; the page confirms first. */
+  readonly areaRemoveRequested = output<string>();
 
   protected readonly levels = MATURITY_LEVELS;
-  protected readonly customName = signal('');
 
-  private readonly areas = computed(() => this.assessment().areas);
+  /** The areas as last edited here, else as the input has them. Every edit builds on this, not on
+   * `assessment()`: two edits before the next change detection (a chip, then Enter in "Add your
+   * own") would otherwise build the second on the stale input and drop the first. */
+  protected readonly areas = linkedSignal(() => this.assessment().areas);
   private readonly assessmentId = computed(() => this.assessment().id);
 
-  private readonly phaseState = linkedSignal<string, MaturityFormPhase>({
+  protected readonly customName = linkedSignal<string, string>({
     source: this.assessmentId,
-    computation: () => untracked(() => initialPhase(this.areas(), this.isNew())),
+    computation: () => '',
+  });
+  /** Set when "Add your own" refused a name already in the list; cleared on the next keystroke. */
+  protected readonly customNameDuplicate = linkedSignal<string, boolean>({
+    source: this.assessmentId,
+    computation: () => false,
+  });
+
+  /** Keyed on the id and on whether the list is empty: emptying it (the last area removed, here
+   * or after a confirm) returns to the picker, and it stays there as chips are chosen again. */
+  private readonly phaseSource = computed(
+    () => ({ id: this.assessmentId(), empty: this.areas().length === 0 }),
+    { equal: (a, b) => a.id === b.id && a.empty === b.empty },
+  );
+  private readonly phaseState = linkedSignal<{ id: string; empty: boolean }, MaturityFormPhase>({
+    source: this.phaseSource,
+    computation: (source, previous) => {
+      if (previous && previous.source.id === source.id) {
+        return source.empty ? 'areas' : previous.value;
+      }
+      return untracked(() => initialPhase(this.areas(), this.isNew()));
+    },
   });
   /** Never the rating phase with nothing to rate. `phaseState` is read first, always: a linked
    * signal computes lazily, so reading it only once areas exist would take its initial value from
-   * the first chip's saved record (no longer new) instead of the draft that opened. */
+   * a later state of the assessment instead of the one that opened. */
   protected readonly phase = computed<MaturityFormPhase>(() => {
     const phase = this.phaseState();
     return this.areas().length === 0 ? 'areas' : phase;
   });
 
-  private readonly index = linkedSignal<string, number>({
+  private readonly currentId = linkedSignal<string, string | null>({
     source: this.assessmentId,
-    computation: () => untracked(() => firstUnratedIndex(this.areas())),
+    computation: () => untracked(() => this.areas()[firstUnratedIndex(this.areas())]?.id ?? null),
   });
-  protected readonly current = computed(() => clampIndex(this.index(), this.areas().length));
+  protected readonly current = computed(() => {
+    const index = this.areas().findIndex((area) => area.id === this.currentId());
+    return index === -1 ? 0 : index;
+  });
   protected readonly currentArea = computed<MaturityArea | null>(
     () => this.areas()[this.current()] ?? null,
   );
@@ -123,43 +166,62 @@ export class MaturityAssessmentForm {
   );
   protected readonly hasAreas = computed(() => this.areas().length > 0);
 
+  /** An area whose removal the page is confirming, so the view can follow once (if) it goes. */
+  private pendingRemoval: (RemovedArea & { readonly assessmentId: string }) | null = null;
+
+  private readonly customInput = viewChild<ElementRef<HTMLInputElement>>('customInput');
   private readonly areasHeading = viewChild<ElementRef<HTMLElement>>('areasHeading');
   private readonly rateHeading = viewChild<ElementRef<HTMLElement>>('rateHeading');
   private readonly areaHeading = viewChild<ElementRef<HTMLElement>>('areaHeading');
+
+  constructor() {
+    effect(() => {
+      const areas = this.areas();
+      const pending = this.pendingRemoval;
+      if (
+        pending &&
+        pending.assessmentId === untracked(this.assessmentId) &&
+        !areas.some((area) => area.id === pending.areaId)
+      ) {
+        this.pendingRemoval = null;
+        untracked(() => this.afterAreaRemoved(pending, areas));
+      }
+    });
+  }
 
   protected nameOf(area: Pick<MaturityArea, 'key' | 'name'>): string {
     return displayName(area, this.builtInLabels());
   }
 
   protected onChipToggled(chip: AreaChip): void {
-    if (chip.key) {
-      this.emitAreas(toggleBuiltInArea(this.areas(), chip.key));
-    } else if (chip.areaId) {
-      this.emitAreas(removeArea(this.areas(), chip.areaId));
+    if (chip.areaId) {
+      this.requestRemove(chip.areaId);
+    } else if (chip.key) {
+      this.emitAreas(addBuiltInArea(this.areas(), chip.key));
     }
   }
 
   protected onCustomNameInput(event: Event): void {
     this.customName.set((event.target as HTMLInputElement).value);
+    this.customNameDuplicate.set(false);
   }
 
   protected onAddCustom(event: Event): void {
     event.preventDefault();
-    const areas = addCustomArea(this.areas(), this.customName());
-    if (areas) {
-      this.emitAreas(areas);
-    }
-    this.customName.set('');
+    this.addCustomName();
   }
 
-  /** Phase 1 → 2, on the first unrated area. Does nothing with no area chosen (the button stays
-   * focusable, `disabledInteractive`, and its hint says why). */
+  /** Phase 1 → 2, on the first unrated area; a name still typed in "Add your own" is added first,
+   * and a refused one keeps the user here with its error. Does nothing with no area chosen (the
+   * button stays focusable, `disabledInteractive`, and its hint says why). */
   protected onContinue(): void {
-    if (!this.hasAreas()) {
+    const areas = this.addCustomName();
+    if (areas === null || areas.length === 0) {
       return;
     }
-    this.index.set(firstUnratedIndex(this.areas()));
+    this.currentId.set(areas[firstUnratedIndex(areas)]?.id ?? null);
     this.phaseState.set('rate');
+    this.continued.emit();
     this.focusAfterRender(() => this.rateHeading());
   }
 
@@ -171,7 +233,8 @@ export class MaturityAssessmentForm {
   /** Previous/Next keep focus on the button pressed; when that button is gone (first or last
    * area), focus moves to the area heading so it is never lost to the page. */
   protected onStep(delta: number, button: HTMLElement): void {
-    this.index.set(clampIndex(this.current() + delta, this.areas().length));
+    const areas = this.areas();
+    this.currentId.set(areas[clampIndex(this.current() + delta, areas.length)]?.id ?? null);
     this.focusAfterRender(() => (button.isConnected ? null : this.areaHeading()));
   }
 
@@ -184,20 +247,76 @@ export class MaturityAssessmentForm {
     this.emitAreas(setAreaNote(this.areas(), id, note));
   }
 
-  /** Removing the last area returns to the picker; otherwise the next area (or the new last one)
-   * shows and its heading takes focus, since the button pressed is gone. */
   protected onRemoveArea(id: string): void {
-    const areas = removeArea(this.areas(), id);
-    this.emitAreas(areas);
-    if (areas.length === 0) {
-      this.phaseState.set('areas');
+    this.requestRemove(id);
+  }
+
+  /** An area holding a level or note goes through the page's confirm (#222 review: a chip toggle
+   * or Remove alone must not lose it); an empty one is removed at once. Either way only that area
+   * goes. */
+  private requestRemove(areaId: string): void {
+    const areas = this.areas();
+    const index = areas.findIndex((area) => area.id === areaId);
+    if (index === -1) {
+      return;
+    }
+    const removed: RemovedArea = {
+      areaId,
+      index,
+      keepsChip: this.chips().some((chip) => chip.areaId === areaId && chip.key !== undefined),
+    };
+    if (hasAreaData(areas[index])) {
+      this.pendingRemoval = { ...removed, assessmentId: this.assessmentId() };
+      this.areaRemoveRequested.emit(areaId);
+      return;
+    }
+    const remaining = removeArea(areas, areaId);
+    this.emitAreas(remaining);
+    this.afterAreaRemoved(removed, remaining);
+  }
+
+  /** The next area (or the new last one) becomes current. Focus goes where the pressed control
+   * went: with no area left the picker shows (`phaseState`) and its heading takes focus; on rating
+   * the area (phone) or phase heading does; on the picker a suggested chip stays in place and keeps
+   * focus, while any other chip is gone, so the heading takes it. */
+  private afterAreaRemoved(removed: RemovedArea, remaining: readonly MaturityArea[]): void {
+    if (this.currentId() === removed.areaId) {
+      this.currentId.set(remaining[clampIndex(removed.index, remaining.length)]?.id ?? null);
+    }
+    if (remaining.length === 0) {
       this.focusAfterRender(() => this.areasHeading());
-    } else {
+    } else if (untracked(this.phaseState) === 'rate') {
       this.focusAfterRender(() => (this.handset() ? this.areaHeading() : this.rateHeading()));
+    } else if (!removed.keepsChip) {
+      this.focusAfterRender(() => this.areasHeading());
     }
   }
 
+  /** "Add your own": adds the typed name and clears the field, keeps it with an inline error when
+   * the name is already in the list. Returns the areas as they now stand (unchanged for a blank
+   * name), `null` when refused. */
+  private addCustomName(): MaturityArea[] | null {
+    const result = addCustomArea(this.areas(), this.customName(), this.builtInLabels());
+    if (result.ok) {
+      this.emitAreas(result.areas);
+      this.customName.set('');
+      // Cleared on the element too: typing may not have re-rendered `[value]` yet, and then the
+      // binding sees '' → '' as no change and leaves the typed text in place.
+      const input = this.customInput()?.nativeElement;
+      if (input) {
+        input.value = '';
+      }
+      return result.areas;
+    }
+    if (result.reason === 'duplicate') {
+      this.customNameDuplicate.set(true);
+      return null;
+    }
+    return [...this.areas()];
+  }
+
   private emitAreas(areas: MaturityArea[]): void {
+    this.areas.set(areas);
     this.changed.emit({ areas });
   }
 

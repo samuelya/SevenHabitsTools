@@ -34,12 +34,18 @@ interface Setup {
   readonly host: HTMLElement;
   /** Every `areas` value emitted, latest last. */
   readonly emitted: MaturityArea[][];
+  /** How many times Continue was reported. */
+  readonly continued: () => number;
+  /** Every area id whose removal the form asked the page to confirm. */
+  readonly removeRequests: string[];
+  /** Feeds a new value in, as the page would after a confirmed removal. */
+  readonly setAreas: (areas: MaturityArea[]) => void;
 }
 
 /** Mounts the form and, like the page, feeds each emitted change back in as the new value. */
 function setUp(
   initial: MaturityAssessment,
-  options: { handset?: boolean; isNew?: boolean } = {},
+  options: { handset?: boolean; isNew?: boolean; feedBack?: boolean } = {},
 ): Setup {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('paradigms-maturity')],
@@ -54,12 +60,45 @@ function setUp(
   fixture.componentInstance.changed.subscribe((fields) => {
     if (fields.areas) {
       emitted.push([...fields.areas]);
+      if (options.feedBack === false) {
+        return;
+      }
       current = { ...current, areas: fields.areas };
       fixture.componentRef.setInput('assessment', current);
     }
   });
+  let continued = 0;
+  fixture.componentInstance.continued.subscribe(() => continued++);
+  const removeRequests: string[] = [];
+  fixture.componentInstance.areaRemoveRequested.subscribe((id) => removeRequests.push(id));
   fixture.detectChanges();
-  return { fixture, host: fixture.nativeElement as HTMLElement, emitted };
+  return {
+    fixture,
+    host: fixture.nativeElement as HTMLElement,
+    emitted,
+    continued: () => continued,
+    removeRequests,
+    setAreas: (areas) => {
+      current = { ...current, areas };
+      fixture.componentRef.setInput('assessment', current);
+      fixture.detectChanges();
+    },
+  };
+}
+
+function typeCustomName(setup: Setup, value: string): HTMLInputElement {
+  const input = setup.host.querySelector('.custom-area input') as HTMLInputElement;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+  setup.fixture.detectChanges();
+  return input;
+}
+
+function submitCustomName(setup: Setup): void {
+  (setup.host.querySelector('.custom-area') as HTMLFormElement).dispatchEvent(
+    new Event('submit', { cancelable: true }),
+  );
+  setup.fixture.detectChanges();
 }
 
 function chips(host: HTMLElement): HTMLButtonElement[] {
@@ -129,18 +168,111 @@ describe('MaturityAssessmentForm, phase 1: areas (#222)', () => {
 
   it('adds a custom area from "Add your own" and clears the field', () => {
     const setup = setUp(assessment(), { isNew: true });
-    const input = setup.host.querySelector('.custom-area input') as HTMLInputElement;
-    input.value = '  Volunteering ';
-    input.dispatchEvent(new Event('input'));
-    (setup.host.querySelector('.custom-area') as HTMLFormElement).dispatchEvent(
-      new Event('submit', { cancelable: true }),
-    );
-    setup.fixture.detectChanges();
+    const input = typeCustomName(setup, '  Volunteering ');
+    submitCustomName(setup);
 
     expect(setup.emitted.at(-1)).toEqual([expect.objectContaining({ name: 'Volunteering' })]);
     expect(setup.emitted.at(-1)?.[0].key).toBeUndefined();
     expect(input.value).toBe('');
     expect(chip(setup.host, 'Volunteering').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('builds each edit on the last one, even before the page has fed it back (#222 review)', () => {
+    const setup = setUp(assessment(), { isNew: true, feedBack: false });
+    chip(setup.host, 'Health').click();
+    typeCustomName(setup, 'Volunteering');
+    submitCustomName(setup);
+
+    expect(setup.emitted.at(-1)?.map((a) => a.key ?? a.name)).toEqual(['health', 'Volunteering']);
+  });
+
+  it('refuses a name already in the list: keeps the text and says why until the next keystroke (#222 review)', () => {
+    const setup = setUp(
+      assessment({ areas: [area({ id: 'x1', key: undefined, name: 'Volunteering' })] }),
+      {
+        isNew: true,
+      },
+    );
+    const input = typeCustomName(setup, 'volunteering');
+    submitCustomName(setup);
+
+    expect(setup.emitted).toHaveLength(0);
+    expect(input.value).toBe('volunteering');
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(input.getAttribute('aria-describedby')).toBe('maturity-custom-duplicate');
+    expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
+      'That area is already in the list.',
+    );
+
+    typeCustomName(setup, 'volunteering abroad');
+    expect(input.getAttribute('aria-invalid')).toBeNull();
+    expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe('');
+  });
+
+  it('refuses a built-in name typed as a custom one (#222 review)', () => {
+    const setup = setUp(assessment(), { isNew: true });
+    typeCustomName(setup, 'health');
+    submitCustomName(setup);
+
+    expect(setup.emitted).toHaveLength(0);
+    expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
+      'That area is already in the list.',
+    );
+  });
+
+  it('Continue adds a name still typed in "Add your own", then reports it (#222 review)', () => {
+    const setup = setUp(assessment(), { isNew: true });
+    typeCustomName(setup, 'Volunteering');
+    click(setup, '.continue-button');
+
+    expect(setup.emitted.at(-1)).toEqual([expect.objectContaining({ name: 'Volunteering' })]);
+    expect(setup.continued()).toBe(1);
+    expect(setup.host.querySelector('.rate-phase')).not.toBeNull();
+  });
+
+  it('Continue with a refused name stays on the chips with the error (#222 review)', () => {
+    const setup = setUp(assessment({ areas: [area({ id: 'x1', key: 'work' })] }), { isNew: true });
+    typeCustomName(setup, 'Work');
+    click(setup, '.continue-button');
+
+    expect(setup.continued()).toBe(0);
+    expect(setup.host.querySelector('.areas-phase')).not.toBeNull();
+    expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
+      'That area is already in the list.',
+    );
+  });
+
+  it('clears the typed name when another assessment opens in the same form (#222 review)', () => {
+    const setup = setUp(assessment(), { isNew: true });
+    typeCustomName(setup, 'Volunteering');
+
+    setup.fixture.componentRef.setInput('assessment', assessment({ id: 'a2' }));
+    setup.fixture.detectChanges();
+
+    expect((setup.host.querySelector('.custom-area input') as HTMLInputElement).value).toBe('');
+  });
+
+  it('asks the page to confirm unpressing an area that holds a level or a note (#222 review)', () => {
+    const setup = setUp(
+      assessment({
+        areas: [
+          area({ id: 'x1', key: 'work', level: 2 }),
+          area({ id: 'x2', key: 'family', note: 'Weekends' }),
+          area({ id: 'x3', key: 'health' }),
+        ],
+      }),
+    );
+    click(setup, '.change-areas');
+
+    chip(setup.host, 'Work').click();
+    chip(setup.host, 'Family').click();
+    setup.fixture.detectChanges();
+    expect(setup.removeRequests).toEqual(['x1', 'x2']);
+    expect(setup.emitted).toHaveLength(0);
+
+    chip(setup.host, 'Health').click();
+    setup.fixture.detectChanges();
+    expect(setup.emitted.at(-1)?.map((a) => a.id)).toEqual(['x1', 'x2']);
   });
 
   it('adds nothing for a blank custom name', () => {
@@ -288,6 +420,31 @@ describe('MaturityAssessmentForm, phase 2: rating (#222)', () => {
     click(setup, '.remove-area');
     expect(setup.emitted.at(-1)).toEqual([]);
     expect(setup.host.querySelector('.areas-phase')).not.toBeNull();
+  });
+
+  it('Remove on a rated area asks the page to confirm; the view follows once it goes (#222 review)', () => {
+    const setup = setUp(assessment({ areas: THREE }), { handset: true });
+    click(setup, '.previous-area');
+    expect(setup.host.querySelector('h4.area-name')?.textContent?.trim()).toBe('Work');
+
+    click(setup, '.remove-area');
+    expect(setup.removeRequests).toEqual(['x1']);
+    expect(setup.emitted).toHaveLength(0);
+
+    setup.setAreas(THREE.slice(1));
+    expect(setup.host.querySelector('h4.area-name')?.textContent?.trim()).toBe('Family');
+  });
+
+  it('desktop: removing an earlier area keeps the same panel open (#222 review)', () => {
+    const setup = setUp(assessment({ areas: THREE }));
+    const expanded = () =>
+      Array.from(setup.host.querySelectorAll('.area-panel'))
+        .filter((panel) => panel.classList.contains('mat-expanded'))
+        .map((panel) => panel.querySelector('.area-name')?.textContent?.trim());
+    expect(expanded()).toEqual(['Family']);
+
+    setup.setAreas(THREE.slice(1));
+    expect(expanded()).toEqual(['Family']);
   });
 
   it('edits the note of the matching area, with the example placeholder (#230)', () => {

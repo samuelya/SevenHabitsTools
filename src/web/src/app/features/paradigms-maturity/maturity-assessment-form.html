@@ -33,10 +33,13 @@
         <mat-form-field appearance="outline" class="custom-area-field" subscriptSizing="dynamic">
           <mat-label>{{ 'paradigmsMaturity.areas.customLabel' | transloco }}</mat-label>
           <input
+            #customInput
             matInput
             type="text"
             [placeholder]="'paradigmsMaturity.areas.customPlaceholder' | transloco"
             [value]="customName()"
+            [attr.aria-invalid]="customNameDuplicate() ? 'true' : null"
+            [attr.aria-describedby]="customNameDuplicate() ? 'maturity-custom-duplicate' : null"
             (input)="onCustomNameInput($event)"
           />
         </mat-form-field>
@@ -45,6 +48,11 @@
           {{ 'paradigmsMaturity.areas.addButton' | transloco }}
         </button>
       </form>
+      <p id="maturity-custom-duplicate" class="custom-area-error" aria-live="polite">
+        @if (customNameDuplicate()) {
+          {{ 'paradigmsMaturity.areas.duplicateError' | transloco }}
+        }
+      </p>
 
       <div class="continue-row">
         <button
@@ -107,7 +115,7 @@
                 <p class="area-position">
                   {{
                     'paradigmsMaturity.rate.positionLabel'
-                      | transloco: { index: current() + 1, count: assessment().areas.length }
+                      | transloco: { index: current() + 1, count: areas().length }
                   }}
                 </p>
                 <h4 #areaHeading class="area-name" tabindex="-1" [id]="'area-name-' + area.id">
@@ -134,7 +142,7 @@
                   {{ 'paradigmsMaturity.rate.previousButton' | transloco }}
                 </button>
               }
-              @if (current() < assessment().areas.length - 1) {
+              @if (current() < areas().length - 1) {
                 <button
                   mat-flat-button
                   type="button"
@@ -149,8 +157,8 @@
         }
       } @else {
         <mat-accordion multi class="area-panels">
-          @for (area of assessment().areas; track area.id; let i = $index) {
-            <mat-expansion-panel class="area-panel" [expanded]="i === current()">
+          @for (area of areas(); track area.id) {
+            <mat-expansion-panel class="area-panel" [expanded]="area.id === currentArea()?.id">
               <mat-expansion-panel-header>
                 <mat-panel-title class="area-name" [id]="'area-name-' + area.id">{{
                   nameOf(area)
