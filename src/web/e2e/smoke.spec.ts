@@ -128,14 +128,6 @@ test.describe('app shell smoke', () => {
     await expect(page).toHaveURL(/\/habits$/);
     await expect(page.getByTestId('page-title')).toHaveText(text.habits);
 
-    await nav.getByRole('link', { name: text.plan }).click();
-    await expect(page).toHaveURL(/\/plan$/);
-    await expect(page.getByTestId('page-title')).toHaveText(text.plan);
-
-    await nav.getByRole('link', { name: text.journal }).click();
-    await expect(page).toHaveURL(/\/journal$/);
-    await expect(page.getByTestId('page-title')).toHaveText(text.journal);
-
     await nav.getByRole('link', { name: text.settings }).click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByTestId('page-title')).toHaveText(text.settings);
@@ -143,6 +135,57 @@ test.describe('app shell smoke', () => {
     await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByTestId('page-title')).toHaveText(text.home);
+  });
+
+  test('lists only shipped destinations; Plan and Journal still open by deep link', async ({
+    page,
+  }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
+    await page.goto('/');
+    const nav = mainNav(page, testInfo.project.name);
+
+    await expect(nav.getByRole('link')).toHaveText(
+      [text.home, text.habits, text.settings].map((label) => new RegExp(label)),
+    );
+
+    // Three evenly spaced tabs with touch targets of at least 44 px (issue #221).
+    if (testInfo.project.name.startsWith('mobile-')) {
+      const boxes = await Promise.all(
+        (await nav.getByRole('link').all()).map((link) => link.boundingBox()),
+      );
+      for (const box of boxes) {
+        expect(box!.width).toBeGreaterThanOrEqual(44);
+        expect(box!.height).toBeGreaterThanOrEqual(44);
+        expect(Math.abs(box!.width - boxes[0]!.width)).toBeLessThanOrEqual(1);
+      }
+    }
+
+    for (const [path, title] of [
+      ['/plan', text.plan],
+      ['/journal', text.journal],
+    ] as const) {
+      await page.goto(path);
+      await expect(page.getByTestId('page-title')).toHaveText(title);
+      await expect(nav.getByRole('link', { name: title })).toHaveCount(0);
+    }
+  });
+
+  test('top-level pages show one title: the toolbar, with the h1 visually hidden', async ({
+    page,
+  }, testInfo) => {
+    const text = SHELL_TEXT[localeFor(testInfo.project.name)];
+    for (const [path, heading] of [
+      ['/', text.appName],
+      ['/habits', text.habits],
+      ['/settings', text.settings],
+    ] as const) {
+      await page.goto(path);
+      const h1 = page.getByRole('heading', { level: 1 });
+      await expect(h1).toHaveText(heading);
+      const box = await h1.boundingBox();
+      expect(box!.width).toBeLessThanOrEqual(1);
+      expect(box!.height).toBeLessThanOrEqual(1);
+    }
   });
 
   for (const lang of ['en', 'ar'] as const) {

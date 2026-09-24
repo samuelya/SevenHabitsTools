@@ -26,7 +26,7 @@ import { ExportReminderBanner } from '../../shared/ui/export-reminder-banner/exp
         (dismiss)="dismissReminder()"
       />
     }
-    <h1 class="page-heading">{{ 'app.name' | transloco }}</h1>
+    <h1 class="visually-hidden">{{ 'app.name' | transloco }}</h1>
     <p>{{ 'home.welcome' | transloco }}</p>
     <a mat-flat-button routerLink="/habits">{{ 'home.browseHabits' | transloco }}</a>
   `,

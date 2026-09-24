@@ -17,7 +17,7 @@ import { PwaInstallBanner } from '../../pwa/pwa-install-banner';
 import { GithubLink } from '../../../shared/ui/github-link/github-link';
 import { AppTitleStrategy } from '../app-title-strategy';
 import { HANDSET_QUERY } from '../breakpoints';
-import { NAV_ITEMS } from '../nav-items';
+import { getRegisteredNavFeatures, NAV_ITEMS, visibleNavItems } from '../nav-items';
 
 export { HANDSET_QUERY };
 
@@ -49,7 +49,7 @@ export class Shell {
   private readonly breakpoints = inject(BreakpointObserver);
   private readonly titles = inject(AppTitleStrategy);
 
-  protected readonly navItems = NAV_ITEMS;
+  protected readonly navItems = visibleNavItems(NAV_ITEMS, getRegisteredNavFeatures());
 
   protected readonly handset = toSignal(
     this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),

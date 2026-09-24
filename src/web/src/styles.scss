@@ -87,6 +87,19 @@ body {
   font: var(--mat-sys-headline-small);
 }
 
+// Kept for screen readers, hidden on screen: a top-level page's `h1` that would only repeat the
+// toolbar title (issue #221), the same pattern as the exercise scaffold's own heading.
+.visually-hidden {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  white-space: nowrap;
+  border: 0;
+}
+
 // Snackbars (`APP_SNACKBAR_CLASS`) sit above the bottom navigation on handset widths instead of
 // covering it (#128). Matches `HANDSET_QUERY` and the bottom nav's 64px items plus 1px border.
 @media (max-width: 599.98px) {
