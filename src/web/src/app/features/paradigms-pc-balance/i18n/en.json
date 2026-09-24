@@ -57,7 +57,7 @@
     "financialAssetPlaceholder": "e.g. My savings",
     "humanAssetPlaceholder": "e.g. My friendship with Sam",
     "actionPlaceholder": "e.g. A 20-minute walk before work, three days a week.",
-    "reflectionPlaceholder": "e.g. I've been living off my savings and my sleep. This month I'll put some back into both.",
+    "reflectionPlaceholder": "e.g. I've been wearing out my back and my savings. This month I'll put some back into both.",
     "legend": "Getting out: how much you rely on it now · Putting in: how much you look after it",
     "suggestions": "Suggestions: {{group}}",
     "addSuggested": "Add {{name}}",
@@ -87,5 +87,51 @@
       "other": "{{count}} audits taken"
     },
     "latestBalance": "Latest average balance: {{value}}"
+  },
+  "guide": {
+    "inShort": "You'll list a few things you count on, like your health, money and friendships. You'll rate how much you get out of each, and how much you put back. About 15 minutes. You'll end with one way to look after anything you're over-using.",
+    "howTo": [
+      "Tap \"New audit\". The date is today, and you can change it.",
+      "In each group, add what you count on: tap a suggestion, or type your own.",
+      "Rate how much you get out of each one, and how much you put in.",
+      "Anything you get a lot from but give little back shows as Over-used.",
+      "For each over-used one, write one thing you'll do to look after it.",
+      "If you like, add a note on what stands out.",
+      "Tap \"Mark done\" once each asset has a name, and each over-used one a plan."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Audit",
+        "subtitle": "2 over-used",
+        "fields": [
+          {
+            "label": "Physical — My back",
+            "value": "Getting out 5 · Putting in 2 · Over-used"
+          },
+          {
+            "label": "How you'll look after it",
+            "value": "\"A 20-minute walk before work, three days a week.\""
+          },
+          {
+            "label": "Financial — My savings",
+            "value": "Getting out 5 · Putting in 1 · Over-used"
+          },
+          {
+            "label": "How you'll look after it",
+            "value": "\"Put a little aside every payday.\""
+          },
+          {
+            "label": "Human and relationships — My friendship with Sam",
+            "value": "Getting out 3 · Putting in 3 · Balanced"
+          },
+          {
+            "label": "Notes",
+            "value": "\"I've been wearing out my back and my savings. This month I'll put some back into both.\""
+          }
+        ]
+      }
+    ],
+    "afterwards": "Start this week with the easiest thing on your list. In a month, tap \"New audit\" and compare it with this one. Then go on to the next exercise."
   }
 }

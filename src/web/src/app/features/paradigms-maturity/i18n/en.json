@@ -98,5 +98,46 @@
       "other": "{{count}} assessments taken"
     },
     "latestProfile": "Latest profile: {{profile}}"
+  },
+  "guide": {
+    "inShort": "You'll pick a few parts of your life, like work, family and money. For each, you'll say if you wait for others, handle it yourself, or team up. About ten minutes. You'll end with an overall picture, and the habits to work on next.",
+    "howTo": [
+      "Tap \"New assessment\", then pick the areas you want to rate.",
+      "Add your own area if one's missing, then tap \"Continue\".",
+      "For each area, pick the answer that fits best right now.",
+      "If it helps you remember, add a note on why.",
+      "Look at your overall profile and the habits it points to.",
+      "Tap \"Mark done\" once every area in the assessment is rated."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Assessment",
+        "subtitle": "Mostly independence",
+        "fields": [
+          {
+            "label": "Work",
+            "value": "I wait for others (Dependence). Note: \"I still wait for my manager to tell me what to focus on.\""
+          },
+          {
+            "label": "Money",
+            "value": "I handle it myself (Independence)"
+          },
+          {
+            "label": "Volunteering",
+            "value": "I handle it myself (Independence)"
+          },
+          {
+            "label": "Family",
+            "value": "We do it together (Interdependence)"
+          },
+          {
+            "label": "Overall profile",
+            "value": "Mostly independence"
+          }
+        ]
+      }
+    ],
+    "afterwards": "Do it again in a month and compare. The app shows what changed since last time. Until then, start with the areas where you still wait for others."
   }
 }

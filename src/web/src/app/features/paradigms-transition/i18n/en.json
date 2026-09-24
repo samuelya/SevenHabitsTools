@@ -82,5 +82,65 @@
       "one": "1 rewritten",
       "other": "{{count}} rewritten"
     }
+  },
+  "guide": {
+    "inShort": "You'll name two or three patterns you picked up growing up or at work. For each one, you'll decide to keep it, rewrite it or stop it. About ten minutes. You'll end with one pattern to change, and a moment this week to try it.",
+    "howTo": [
+      "Tap \"Add pattern\" and write something you say, do or expect without thinking.",
+      "Pick where it comes from, and whether it helps or harms you.",
+      "Decide what to do with it: Keep, Rewrite or Stop.",
+      "For Rewrite, write how you want it to go. For Stop, write what you'll do instead.",
+      "Then name one moment this week when it'll show up.",
+      "Add as many patterns as you like. Tap \"Mark done\" once one is complete."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "We pay every bill the day it arrives.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Where it comes from",
+            "value": "Family"
+          },
+          {
+            "label": "Its effect",
+            "value": "Helps"
+          },
+          {
+            "label": "Your decision",
+            "value": "Keep"
+          }
+        ]
+      },
+      {
+        "kind": "card",
+        "title": "When I'm stressed I go quiet and shut everyone out.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Where it comes from",
+            "value": "Family"
+          },
+          {
+            "label": "Its effect",
+            "value": "Harms"
+          },
+          {
+            "label": "Your decision",
+            "value": "Rewrite"
+          },
+          {
+            "label": "Your new version",
+            "value": "\"When I'm stressed I say so, and ask for ten minutes to think.\""
+          },
+          {
+            "label": "When it'll show up",
+            "value": "\"Thursday's talk about the bills with my partner.\""
+          }
+        ]
+      }
+    ],
+    "afterwards": "This week, watch for the moment you named. Try the new version once, even if it feels awkward. Then come back, add any pattern you noticed, and go on to the next exercise."
   }
 }

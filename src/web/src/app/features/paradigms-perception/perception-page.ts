@@ -6,12 +6,12 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
-import { translateObjectSignal, translateSignal, TranslocoPipe } from '@jsverse/transloco';
+import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { ExerciseGuideContent } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
+import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
@@ -183,24 +183,8 @@ export class PerceptionPage {
     return checklistLoaded(labels) ? doneChecklist(this.exercise(), labels) : null;
   });
 
-  // The whole `guide` object at once (issue #212's "Data model"), not per-field keys: its shape
-  // (an array of How-to steps, an array of example cards) doesn't fit `translateSignal`'s
-  // flat-key-list API. Reactive to a language switch the same way `translateSignal` is.
-  private readonly guideTranslation = translateObjectSignal(
-    'guide',
-    undefined,
-    'paradigms-perception',
-  );
-  /** `null` until the scope has actually loaded (review finding on this PR): `translateObjectSignal`
-   * starts at `{}`, which the cast alone makes look like real content, so `ExercisePromptCard`'s
-   * "Read more" button would appear — and open an empty-looking dialog if tapped — before the
-   * scope's `guide` key ever loads. Checking `howTo.length` (always non-empty once loaded, since
-   * this exercise's `guide` always has at least one how-to step) also makes the input meaningful
-   * for an exercise whose scope has no `guide` key at all. */
-  protected readonly guideContent = computed(() => {
-    const content = this.guideTranslation() as unknown as ExerciseGuideContent;
-    return content.howTo?.length ? content : null;
-  });
+  /** The scope's `guide` key, `null` until it loads (`exerciseGuideSignal`'s doc comment). */
+  protected readonly guideContent = exerciseGuideSignal('paradigms-perception');
 
   protected readonly readyToMarkDone = computed(() => isComplete(this.exercise()));
   protected readonly done = this.progress.isDone(PERCEPTION_MODEL_KEY);
