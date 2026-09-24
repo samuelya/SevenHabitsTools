@@ -9,13 +9,15 @@
     "searchLabel": "بحث في الفصول",
     "empty": "لا توجد فصول بعد.",
     "noMatch": "لا توجد فصول مطابقة لبحثك.",
-    "overdue": "متأخر",
     "deleted": "تم حذف المُدخَل",
-    "undo": "تراجع"
-  },
-  "editor": {
-    "newTitle": "التزام جديد",
-    "editTitle": "تعديل الالتزام"
+    "undo": "تراجع",
+    "status": {
+      "notPlanned": "غير مخطط",
+      "planned": "مخطط بحلول {{date}}",
+      "overdue": "متأخر",
+      "shared": "تمت المشاركة",
+      "skipped": "تم التخطي"
+    }
   },
   "form": {
     "keyIdeaLabel": "الفكرة الأساسية، بكلماتك الخاصة",

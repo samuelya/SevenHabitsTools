@@ -24,10 +24,17 @@
     "sourceLabel": "Where it comes from",
     "effectLabel": "Its effect",
     "decisionLabel": "Your decision",
-    "decisionHint": "Keep: no further fields. Rewrite or Stop: write the new script and a situation this week.",
-    "newScriptLabel": "The new script you want instead",
-    "newScriptRequired": "Write the new script when you're rewriting or stopping this one.",
-    "situationLabel": "A situation this week where it applies",
+    "decisionHint": {
+      "keep": "Nothing more to write. Keep it and move on.",
+      "rewrite": "Good call. Say it the way you want it to go from now on.",
+      "stop": "Good call. Something better can take its place."
+    },
+    "newScriptLabel": {
+      "rewrite": "What will you say or do instead?",
+      "stop": "What will you do instead of this?"
+    },
+    "newScriptRequired": "Write what you'll do instead before moving on.",
+    "situationLabel": "Which situation this week will this show up in?",
     "situationRequired": "Name a concrete situation this week.",
     "delete": "Delete this script",
     "textPlaceholder": "e.g. When I'm stressed I go quiet and shut everyone out.",

@@ -30,6 +30,14 @@ describe('filterExerciseItems', () => {
     expect(filterExerciseItems(ITEMS, 'mission').map((item) => item.id)).toEqual(['b']);
   });
 
+  it('matches on a chip label (issue #225)', () => {
+    const items: ExerciseListItem[] = [
+      { id: 'x', title: 'Silence', chips: [{ label: 'Family' }, { label: 'Harms' }] },
+      { id: 'y', title: 'Shouting', chips: [{ label: 'Work' }] },
+    ];
+    expect(filterExerciseItems(items, 'harm').map((item) => item.id)).toEqual(['x']);
+  });
+
   it('matches nothing when no item has the query', () => {
     expect(filterExerciseItems(ITEMS, 'zzz')).toEqual([]);
   });

@@ -358,7 +358,7 @@ describe('TransitionPage', () => {
     const promptCard = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
       .componentInstance as ExercisePromptCard;
     const search = host.querySelector('app-exercise-list .search input') as HTMLInputElement;
-    // Matches every row's subtitle, so there's still a row to open with the query in place.
+    // Matches every row's source chip, so there's still a row to open with the query in place.
     search.value = 'family';
     search.dispatchEvent(new Event('input'));
     harness.detectChanges();
@@ -396,7 +396,7 @@ describe('TransitionPage', () => {
     expect(summaryText).toContain('1');
   });
 
-  it("updates a listed script's translated subtitle when the active language changes", async () => {
+  it("updates a listed script's translated chips when the active language changes", async () => {
     // Regression test for a review finding on #51's PR: `labels` used to be a `computed` that
     // called `transloco.translate()` without reading a signal, so it evaluated once and never
     // updated the subtitle again after a language switch (or a scope that loaded late).

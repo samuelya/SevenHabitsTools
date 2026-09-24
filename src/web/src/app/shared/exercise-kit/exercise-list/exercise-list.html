@@ -54,6 +54,7 @@
             class="exercise-list__item"
             [class.exercise-list__item--selected]="item.id === selectedId()"
             [class.exercise-list__item--warning]="item.warning"
+            [class.exercise-list__item--chips]="!!item.chips?.length"
             [activated]="item.id === selectedId()"
             [attr.aria-pressed]="item.id === selectedId() ? 'true' : 'false'"
             (click)="itemSelected.emit(item.id)"
@@ -77,6 +78,17 @@
             <span matListItemTitle>{{ item.title.trim() || untitled }}</span>
             @if (item.subtitle; as subtitle) {
               <span matListItemLine>{{ subtitle }}</span>
+            }
+            @if (item.chips?.length) {
+              <span matListItemLine class="exercise-list__chips">
+                @for (chip of item.chips; track $index) {
+                  <span
+                    class="exercise-list__chip"
+                    [class.exercise-list__chip--warning]="chip.warning"
+                    >{{ chip.label }}</span
+                  >
+                }
+              </span>
             }
           </button>
           @if (isRowDeletable(item)) {
