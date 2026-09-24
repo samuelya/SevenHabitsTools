@@ -204,14 +204,56 @@ describe('PcBalancePage', () => {
   it('adding the first asset saves the draft and moves the URL to its id (issue #217)', async () => {
     const harness = await setUp();
     await openDraft(harness);
-    addAssetThroughForm(harness, 0, 'Sleep', 3, 3);
+    addAssetThroughForm(harness, 0, 'Knees', 3, 3);
     await harness.fixture.whenStable();
 
     const stored = storedAudits();
     expect(stored).toHaveLength(1);
-    expect(stored[0].assets.map((asset) => asset.name)).toEqual(['Sleep']);
+    expect(stored[0].assets.map((asset) => asset.name)).toEqual(['Knees']);
     expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${stored[0].id}`);
     expect(editorStatus(harness)).toBe('Saved');
+  });
+
+  it('a suggested chip on a new draft stores the audit with the built-in key (#223)', async () => {
+    const harness = await setUp();
+    await openDraft(harness);
+    const host = harness.routeNativeElement as HTMLElement;
+    expect(host.querySelector('.group-summary')).toBeNull();
+
+    (host.querySelector('.suggested-chip') as HTMLButtonElement).click();
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    const stored = storedAudits();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].assets).toEqual([{ key: 'sleep', name: '', group: 'physical', p: 3, pc: 3 }]);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${stored[0].id}`);
+    expect(host.querySelector('[data-asset-key="sleep"] .asset-title')?.textContent).toContain(
+      'Sleep',
+    );
+  });
+
+  it('removing a rated asset confirms with its name, removes it, and Undo puts it back (#223)', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp(undefined, deleteWithUndo);
+    await addAudit(harness);
+    addAssetThroughForm(harness, 0, 'Knees', 5, 1);
+    addAssetThroughForm(harness, 1, 'Car', 3, 3);
+    const host = harness.routeNativeElement as HTMLElement;
+
+    (host.querySelector('.remove-asset') as HTMLButtonElement).click();
+
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].confirm?.title).toBe('Remove Knees?');
+    expect(deleteWithUndo.calls[0].deletedMessage).toBe('Asset removed');
+
+    deleteWithUndo.calls[0].onConfirm();
+    harness.detectChanges();
+    expect(storedAudits()[0].assets.map((asset) => asset.name)).toEqual(['Car']);
+
+    deleteWithUndo.calls[0].onUndo();
+    harness.detectChanges();
+    expect(storedAudits()[0].assets.map((asset) => asset.name)).toEqual(['Knees', 'Car']);
   });
 
   it('the header Done button closes the editor (issue #217)', async () => {
@@ -227,7 +269,7 @@ describe('PcBalancePage', () => {
   it('enables Mark done once every asset is complete, and disables it again for a new unresolved over-used one', async () => {
     const harness = await setUp();
     await addAudit(harness);
-    addAssetThroughForm(harness, 0, 'Sleep', 3, 3);
+    addAssetThroughForm(harness, 0, 'Knees', 3, 3);
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(
@@ -238,7 +280,7 @@ describe('PcBalancePage', () => {
 
     // Adding a second, over-used asset with no action yet disables Mark done again: the audit
     // needs *every* over-used asset to have an action, not just one complete asset overall.
-    addAssetThroughForm(harness, 1, 'Savings', 5, 1);
+    addAssetThroughForm(harness, 1, 'Car', 5, 1);
     expect(
       (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
         'aria-disabled',
@@ -250,7 +292,7 @@ describe('PcBalancePage', () => {
   it('requires a maintenance action before Mark done once every asset is over-used', async () => {
     const harness = await setUp();
     await addAudit(harness);
-    addAssetThroughForm(harness, 0, 'Savings', 5, 1);
+    addAssetThroughForm(harness, 0, 'Car', 5, 1);
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(
@@ -274,7 +316,7 @@ describe('PcBalancePage', () => {
   it('marks done and reopens through DoneToggle', async () => {
     const harness = await setUp();
     await addAudit(harness);
-    addAssetThroughForm(harness, 0, 'Sleep', 3, 3);
+    addAssetThroughForm(harness, 0, 'Knees', 3, 3);
     const host = harness.routeNativeElement as HTMLElement;
 
     (host.querySelector('app-done-toggle button') as HTMLButtonElement).click();
@@ -298,7 +340,7 @@ describe('PcBalancePage', () => {
   it('pre-fills a new audit from the latest, with sliders reset to 3', async () => {
     const harness = await setUp();
     await addAudit(harness);
-    addAssetThroughForm(harness, 0, 'Sleep', 5, 1); // over-used
+    addAssetThroughForm(harness, 0, 'Knees', 5, 1); // over-used
     await harness.navigateByUrl(LIST_URL);
     expect(
       harness.routeNativeElement?.querySelectorAll(
@@ -311,7 +353,7 @@ describe('PcBalancePage', () => {
     const host = harness.routeNativeElement as HTMLElement;
     expect(host.querySelectorAll('.asset-row')).toHaveLength(1);
     expect((host.querySelector('.asset-row input[type="text"]') as HTMLInputElement).value).toBe(
-      'Sleep',
+      'Knees',
     );
     // Sliders reset to 3 (balanced), not carried over at 5/1 — no action field needed.
     expect(host.querySelector('.asset-action')).toBeNull();

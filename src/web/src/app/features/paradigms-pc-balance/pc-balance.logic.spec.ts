@@ -1,7 +1,6 @@
 import { PcAsset, PcAudit } from './pc-balance.model';
 import {
   isDraftWorthSaving,
-  addAsset,
   auditAverageBalance,
   balanceOf,
   checklistLabelsFrom,
@@ -11,6 +10,7 @@ import {
   editAudit,
   groupSummaries,
   isAssetComplete,
+  isAssetNamed,
   isAuditComplete,
   isComplete,
   isOverUsed,
@@ -243,16 +243,31 @@ describe('newAuditFields', () => {
     expect(fields.assets[0].action).toBeUndefined();
     expect(fields.assets[0].key).not.toBe('k1');
   });
+
+  it("keeps a suggested asset's built-in key (#223)", () => {
+    const latest = audit({ assets: [asset({ key: 'sleep', name: '', p: 5, pc: 1 })] });
+    const fields = newAuditFields(latest, '2026-02-01');
+    expect(fields.assets[0]).toMatchObject({ key: 'sleep', name: '', p: 3, pc: 3 });
+  });
 });
 
-describe('addAsset/editAsset/removeAsset', () => {
-  it('adds an asset with both sliders at 3', () => {
-    const result = addAsset([], 'Savings', 'financial');
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ name: 'Savings', group: 'financial', p: 3, pc: 3 });
-    expect(result[0].key).toBeTruthy();
+describe('isAssetNamed/isAssetComplete (#223)', () => {
+  it('counts a suggested asset, whose name is its built-in key, as named', () => {
+    expect(isAssetNamed({ key: 'sleep', name: '' })).toBe(true);
+    expect(isAssetComplete(asset({ key: 'sleep', name: '' }))).toBe(true);
   });
 
+  it('does not count a blank custom asset as named', () => {
+    expect(isAssetNamed({ key: 'uuid-1', name: '  ' })).toBe(false);
+  });
+
+  it('lets an audit of suggested assets meet the checklist', () => {
+    const audits = [audit({ assets: [asset({ key: 'team', name: '', group: 'human' })] })];
+    expect(isComplete(audits)).toBe(true);
+  });
+});
+
+describe('editAsset/removeAsset', () => {
   it('edits only the matching asset', () => {
     const target = asset({ key: 'k1', name: 'old' });
     const other = asset({ key: 'k2', name: 'other' });

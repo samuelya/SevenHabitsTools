@@ -67,8 +67,10 @@
   flex-direction: column;
 }
 
+// Stretched by the flex column rather than `inline-size: 100%`, which added `mat-slider`'s own
+// inline margins on top and pushed a thumb at 5 past the viewport edge at 360 px (#223).
 .slider-field mat-slider {
-  inline-size: 100%;
+  align-self: stretch;
 }
 
 .balance-indicator {

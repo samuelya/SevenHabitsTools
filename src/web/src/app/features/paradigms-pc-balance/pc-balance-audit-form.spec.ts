@@ -21,12 +21,22 @@ function audit(overrides: Partial<PcAudit> = {}): PcAudit {
   };
 }
 
+const BUILT_IN_LABELS = {
+  sleep: 'Sleep',
+  exercise: 'Exercise',
+  savings: 'Savings',
+  incomeSkills: 'Income skills',
+  partner: 'Partner',
+  team: 'Team',
+};
+
 function setUp(initial: PcAudit) {
   TestBed.configureTestingModule({
     providers: [provideTranslocoTesting(), provideTranslocoScope('paradigms-pc-balance')],
   });
   const fixture = TestBed.createComponent(PcBalanceAuditForm);
   fixture.componentRef.setInput('audit', initial);
+  fixture.componentRef.setInput('builtInLabels', BUILT_IN_LABELS);
   fixture.detectChanges();
   return fixture;
 }
@@ -50,14 +60,14 @@ describe('PcBalanceAuditForm', () => {
     expect(rows).toHaveLength(2);
   });
 
-  it('adds an asset to the given group and clears the draft name', () => {
+  it('adds a typed asset to the given group', () => {
     const fixture = setUp(audit());
     const emitted: unknown[] = [];
     fixture.componentInstance.changed.subscribe((event) => emitted.push(event));
     const host = fixture.nativeElement as HTMLElement;
 
     const nameInput = host.querySelector('.add-asset-row input[type="text"]') as HTMLInputElement;
-    nameInput.value = 'Sleep';
+    nameInput.value = 'My back';
     nameInput.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     (host.querySelector('.add-asset-row button') as HTMLButtonElement).click();
@@ -65,7 +75,7 @@ describe('PcBalanceAuditForm', () => {
     expect(emitted).toHaveLength(1);
     const assets = (emitted[0] as { assets: PcAsset[] }).assets;
     expect(assets).toHaveLength(1);
-    expect(assets[0]).toMatchObject({ name: 'Sleep', group: 'physical', p: 3, pc: 3 });
+    expect(assets[0]).toMatchObject({ name: 'My back', group: 'physical', p: 3, pc: 3 });
   });
 
   it('does not add an asset with a blank name', () => {
