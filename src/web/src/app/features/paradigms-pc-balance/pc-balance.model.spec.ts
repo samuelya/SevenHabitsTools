@@ -1,3 +1,7 @@
+import documentV2Fixture from '../../testing/fixtures/document-v2.json';
+import documentV3Fixture from '../../testing/fixtures/document-v3.json';
+import { CURRENT_SCHEMA_VERSION } from '../../core/data/document.model';
+import { resolveDocument } from '../../core/data/document-validation';
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
 import {
@@ -91,5 +95,21 @@ describe('paradigms-pc-balance model', () => {
   it('passes validateDocument() when the document contains this slice (export/import guarantee)', () => {
     const issues = validateDocument({ habits: { paradigms: { pcAudits: [FULL_AUDIT] } } });
     expect(issues.filter((issue) => issue.path === PC_BALANCE_PATH)).toEqual([]);
+  });
+
+  it('loads a v2 document holding a built-in asset: migrated, its key and blank name kept (#223)', () => {
+    const v2 = structuredClone(documentV2Fixture) as Record<string, unknown>;
+    const pcAudits = structuredClone(documentV3Fixture.habits.paradigms.pcAudits);
+    (v2['habits'] as Record<string, Record<string, unknown>>)['paradigms']['pcAudits'] = pcAudits;
+
+    const result = resolveDocument(v2);
+
+    if (!result.ok) {
+      throw new Error('the v2 document did not load');
+    }
+    expect(result.document.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    const audits = (result.document.habits['paradigms'] as { pcAudits: PcAudit[] }).pcAudits;
+    expect(audits).toEqual(pcAudits);
+    expect(audits[0].assets[0]).toMatchObject({ key: 'sleep', name: '' });
   });
 });

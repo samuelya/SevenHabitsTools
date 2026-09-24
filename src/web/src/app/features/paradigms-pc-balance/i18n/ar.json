@@ -21,8 +21,15 @@
     "financial": "المالي",
     "human": "الإنساني والعلاقات"
   },
+  "asset": {
+    "sleep": "النوم",
+    "exercise": "الرياضة",
+    "savings": "المدخرات",
+    "incomeSkills": "مهارات الكسب",
+    "partner": "شريك الحياة",
+    "team": "فريق العمل"
+  },
   "groupSummary": {
-    "noAssets": "لا توجد أصول بعد",
     "average": "متوسط التوازن: {{value}}",
     "counts": "{{over}} مُستنزف · {{balanced}} متوازن · {{under}} مُهمَل"
   },
@@ -30,7 +37,7 @@
     "nameLabel": "الأصل",
     "pLabel": "الاستفادة (P)",
     "pcLabel": "الصيانة (PC)",
-    "actionLabel": "إجراء صيانة واحد",
+    "actionLabel": "اكتب حاجة واحدة هتعملها عشان تحافظ عليه.",
     "actionRequired": "سمِّ إجراء صيانة واحداً لهذا الأصل المُستنزف.",
     "removeAsset": "احذف هذا الأصل",
     "newAssetLabel": "اسم الأصل الجديد",
@@ -40,12 +47,25 @@
     "financialAssetPlaceholder": "مثلاً: التحويشة بتاعتي",
     "humanAssetPlaceholder": "مثلاً: صحوبيتي مع سارة",
     "actionPlaceholder": "مثلاً: أتمشى 20 دقيقة قبل الشغل، 3 أيام في الأسبوع.",
-    "reflectionPlaceholder": "مثلاً: بقالي فترة بصرف من التحويشة ومن نومي. الشهر ده هرجّع شوية للاتنين."
+    "reflectionPlaceholder": "مثلاً: بقالي فترة بصرف من التحويشة ومن نومي. الشهر ده هرجّع شوية للاتنين.",
+    "legend": "الاستفادة: قد إيه بتعتمد عليه دلوقتي · الصيانة: قد إيه بتحافظ عليه.",
+    "suggestions": "أصول مقترحة: {{group}}",
+    "addSuggested": "أضف {{name}}",
+    "duplicateAsset": "هذا الأصل موجود بالفعل في هذا التقييم.",
+    "removeConfirmTitle": "هل تريد إزالة {{name}}؟",
+    "removeConfirmBody": "ستُفقد تقييماته وإجراء صيانته. يمكنك التراجع خلال ثوانٍ بعد الإزالة.",
+    "removeConfirmButton": "إزالة",
+    "assetRemoved": "تمت إزالة الأصل"
   },
   "status": {
     "overUsed": "مُستنزف",
     "balanced": "متوازن",
     "underUsed": "مُهمَل"
+  },
+  "statusGloss": {
+    "overUsed": "بتاخد منه كتير وبترجّعله قليل.",
+    "balanced": "اللي بتاخده منه واللي بتديهوله قريبين من بعض.",
+    "underUsed": "بتديله أكتر من اللي بتاخده منه دلوقتي."
   },
   "checklist": {
     "named": "ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة",

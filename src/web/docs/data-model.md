@@ -71,8 +71,11 @@ This is what lets independent feature PRs land without touching a shared schema 
 `schemaVersion` is an integer, bumped on any breaking change to the root shape or a model's
 stored shape. Widening a model's `validate()` to accept values an older build rejects (a new enum
 value, such as #222's `friendships` area key) counts as breaking too: without the bump, an older
-build would reject a new document as corrupt instead of reporting "made by a newer version". Such a
-migration only stamps the version (`migration-v1-to-v2.ts`). `src/app/core/data/migrations/`:
+build would reject a new document as corrupt instead of reporting "made by a newer version". So
+does a changed **meaning** of a stored value that `validate()` still accepts (#223: an asset `key`
+of `sleep` with `name: ''` is a built-in asset; an older build reads it as a blank custom asset and
+loses the built-in identity when it copies the audit). Such a migration only stamps the version
+(`migration-v1-to-v2.ts`, `migration-v2-to-v3.ts`). `src/app/core/data/migrations/`:
 
 - `migration.ts` — the `Migration` interface: `{ from, to, migrate(doc) }`.
 - `migrations.ts` — `MIGRATIONS`, the ordered list; add new entries here, never reorder or

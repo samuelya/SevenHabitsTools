@@ -15,6 +15,7 @@ import {
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import {
+  isBuiltInAssetKey,
   PC_BALANCE_GROUPS,
   PcAsset,
   PcAudit,
@@ -58,8 +59,16 @@ export function isOverUsed(asset: Pick<PcAsset, 'p' | 'pc'>): boolean {
  * count toward "the audit is complete" (review finding on #49/#50's PR — this was previously
  * unchecked, so an empty-named asset still counted). Pure business rule, kept out of `validate()`
  * (architecture issue #1 §6). */
-export function isAssetComplete(asset: Pick<PcAsset, 'name' | 'p' | 'pc' | 'action'>): boolean {
-  return Boolean(asset.name.trim()) && (!isOverUsed(asset) || Boolean(asset.action?.trim()));
+export function isAssetComplete(
+  asset: Pick<PcAsset, 'key' | 'name' | 'p' | 'pc' | 'action'>,
+): boolean {
+  return isAssetNamed(asset) && (!isOverUsed(asset) || Boolean(asset.action?.trim()));
+}
+
+/** Named: a typed name, or a suggested asset's built-in key (issue #223), whose label is
+ * translated at render. */
+export function isAssetNamed(asset: Pick<PcAsset, 'key' | 'name'>): boolean {
+  return Boolean(asset.name.trim()) || isBuiltInAssetKey(asset.key);
 }
 
 /** Live audits only (architecture issue #1 §6: tombstoned records are never shown). */
@@ -96,7 +105,7 @@ export type PcBalanceChecklistKey = (typeof CHECKLIST_KEYS)[number];
 function auditMet(audit: PcAudit): ChecklistMet<PcBalanceChecklistKey> {
   const hasAssets = audit.assets.length > 0;
   return {
-    named: hasAssets && audit.assets.every((asset) => Boolean(asset.name.trim())),
+    named: hasAssets && audit.assets.every(isAssetNamed),
     actions:
       hasAssets &&
       audit.assets.every((asset) => !isOverUsed(asset) || Boolean(asset.action?.trim())),
@@ -188,13 +197,14 @@ export function summarize(audits: readonly PcAudit[]): PcBalanceSummaryData {
 
 /** A new audit dated today, pre-filling asset names and groups from the latest audit with sliders
  * reset to 3 and no carried-over action (issue #49's implementation notes) — an empty asset list
- * when there is no previous audit. */
+ * when there is no previous audit. A suggested asset keeps its built-in key (issue #223); any
+ * other gets a fresh one. */
 export function newAuditFields(latest: PcAudit | null, today: string): PcAuditFields {
   return {
     date: today,
     assets: latest
       ? latest.assets.map((asset) => ({
-          key: crypto.randomUUID(),
+          key: isBuiltInAssetKey(asset.key) ? asset.key : crypto.randomUUID(),
           name: asset.name,
           group: asset.group,
           p: DEFAULT_SLIDER_VALUE,
@@ -217,18 +227,6 @@ export function isDraftWorthSaving(
     draft.reflection.trim() !== '' ||
     JSON.stringify(draft.assets) !== JSON.stringify(initial.assets)
   );
-}
-
-/** Appends a new asset to one audit's asset list, both sliders starting at 3. */
-export function addAsset(
-  assets: readonly PcAsset[],
-  name: string,
-  group: PcBalanceGroup,
-): PcAsset[] {
-  return [
-    ...assets,
-    { key: crypto.randomUUID(), name, group, p: DEFAULT_SLIDER_VALUE, pc: DEFAULT_SLIDER_VALUE },
-  ];
 }
 
 /** Merges `fields` into the matching asset only; a no-op copy if `key` is not found. */

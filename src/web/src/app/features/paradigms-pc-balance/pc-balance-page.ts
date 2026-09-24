@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
@@ -18,6 +19,7 @@ import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-ca
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { recordDraft } from '../../shared/exercise-kit/record-draft';
+import { builtInLabelsFrom, displayName, restoreAsset } from './pc-balance-assets.logic';
 import { PcBalanceAuditForm, PcReflectionChange } from './pc-balance-audit-form';
 import { PcBalanceSummary } from './pc-balance-summary';
 import {
@@ -30,13 +32,21 @@ import {
   isComplete,
   liveAudits,
   newAuditFields,
+  removeAsset,
   removeAudit,
   restoreAudit,
   summarize,
   isStarted,
   isDraftWorthSaving,
 } from './pc-balance.logic';
-import { PC_BALANCE_MODEL_KEY, PC_BALANCE_ROUTE, PcAudit, PcAuditFields } from './pc-balance.model';
+import {
+  PC_BALANCE_MODEL_KEY,
+  PC_BALANCE_ROUTE,
+  PC_BUILT_IN_ASSET_KEYS,
+  PcAsset,
+  PcAudit,
+  PcAuditFields,
+} from './pc-balance.model';
 
 /**
  * P/PC balance audit (issue #49): the reference **assessment** exercise (playbook §4) — a
@@ -79,6 +89,7 @@ export class PcBalancePage {
   private readonly transloco = inject(TranslocoService);
   private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<PcAudit[]>(PC_BALANCE_MODEL_KEY);
+  private readonly documentStore = inject(DocumentStore);
   /** Any live record (issue #216), from the same pure predicate the registry's `isStarted` uses. */
   protected readonly started = computed(() => isStarted(this.store.value()));
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
@@ -98,6 +109,20 @@ export class PcBalancePage {
       subtitle: balanceSubtitle(auditAverageBalance(audit)),
     })),
   );
+  // Reactive labels (playbook §6): a cold load or a language switch updates the suggested chips
+  // and the built-in asset titles. `null` until the scope has loaded, so the form (and a remove
+  // confirm) never shows a blank chip or "Remove ?" (the checklist's same gate).
+  private readonly builtInAssetLabels = translateSignal(
+    PC_BUILT_IN_ASSET_KEYS.map((key) => `asset.${key}`),
+    undefined,
+    'paradigms-pc-balance',
+  );
+  protected readonly builtInLabels = computed(() => builtInLabelsFrom(this.builtInAssetLabels()));
+  /** Bumped each time the store refuses an edit (a read-only tab), so the form drops its own copy
+   * of the assets and shows the stored ones again (#222's same rule). The store's own count, so an
+   * edit that doesn't land for another reason (an Undo after its audit was deleted) doesn't reset
+   * the audit that is open. */
+  protected readonly refusedEdits = this.documentStore.refusedEdits;
   protected readonly draft = recordDraft<PcAudit>({
     itemId: this.itemId,
     records: this.audits,
@@ -162,6 +187,57 @@ export class PcBalancePage {
   /** The first real input saves a draft (`recordDraft()`), which then moves the URL to its id. */
   protected onAuditChanged(id: string, fields: Partial<PcAuditFields>): void {
     this.draft.edit(id, fields);
+  }
+
+  /** Removing an asset holding a rating or action: confirm → remove → undo (issue #223), the
+   * shared pattern with asset-specific wording, and Undo putting it back where it was. A read-only
+   * tab is refused up front: no confirm, no "Asset removed" for an edit that can't land. */
+  protected async onAssetRemoveRequested(
+    id: string,
+    key: string,
+    form: PcBalanceAuditForm,
+  ): Promise<void> {
+    if (!this.documentStore.isWriter()) {
+      this.documentStore.reportRefusedEdit();
+      return;
+    }
+    const assets = this.assetsOf(id);
+    const index = assets.findIndex((asset) => asset.key === key);
+    if (index === -1) {
+      form.cancelAssetRemoval(key);
+      return;
+    }
+    const removed = assets[index];
+    const name = displayName(removed, this.builtInLabels() ?? {});
+    let confirmed = false;
+    await this.deleteWithUndo.confirmAndDelete({
+      confirm: {
+        title: this.transloco.translate('paradigmsPcBalance.form.removeConfirmTitle', { name }),
+        body: this.transloco.translate('paradigmsPcBalance.form.removeConfirmBody'),
+        confirmLabel: this.transloco.translate('paradigmsPcBalance.form.removeConfirmButton'),
+      },
+      deletedMessage: this.transloco.translate('paradigmsPcBalance.form.assetRemoved'),
+      undoLabel: this.transloco.translate('paradigmsPcBalance.history.undo'),
+      onConfirm: () => {
+        confirmed = true;
+        this.onAuditChanged(id, { assets: removeAsset(this.assetsOf(id), key) });
+      },
+      onUndo: () =>
+        this.onAuditChanged(id, { assets: restoreAsset(this.assetsOf(id), removed, index) }),
+    });
+    if (!confirmed) {
+      form.cancelAssetRemoval(key);
+    }
+  }
+
+  /** The assets of audit `id` as they stand now: the open audit's (stored or draft), else the
+   * stored one's, for an Undo tapped after the editor closed. */
+  private assetsOf(id: string): readonly PcAsset[] {
+    const selected = this.draft.selected();
+    if (selected?.id === id) {
+      return selected.assets;
+    }
+    return this.audits().find((audit) => audit.id === id)?.assets ?? [];
   }
 
   /** Always reports an outcome, so the reflection never sits on "Saving…". On an unsaved draft

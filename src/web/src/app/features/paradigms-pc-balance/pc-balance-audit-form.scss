@@ -67,13 +67,83 @@
   flex-direction: column;
 }
 
+// Stretched by the flex column rather than `inline-size: 100%`, which added `mat-slider`'s own
+// inline margins on top and pushed a thumb at 5 past the viewport edge at 360 px (#223).
 .slider-field mat-slider {
-  inline-size: 100%;
+  align-self: stretch;
 }
 
 .balance-indicator {
   margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+  align-items: baseline;
+}
+
+.balance-status {
   font-weight: 600;
+}
+
+// The plain gloss on the first asset showing each status (issue #223).
+.balance-gloss {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.rating-legend {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.asset-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.action-prompt {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+// Suggested assets (issue #223): plain buttons styled as chips, the same look as the growth
+// continuum's area chips (#222); each adds its asset and goes.
+.suggested-assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.suggested-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-block-size: 44px;
+  padding-inline: 0.75rem 1rem;
+  border: 1px solid var(--mat-sys-outline, gray);
+  border-radius: 22px;
+  background: transparent;
+  color: var(--mat-sys-on-surface, inherit);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-on-surface, black) 8%, transparent);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary, blue);
+    outline-offset: 2px;
+  }
+}
+
+.suggested-chip__icon {
+  font-size: 18px;
+  inline-size: 18px;
+  block-size: 18px;
 }
 
 .balance-indicator--overUsed {
