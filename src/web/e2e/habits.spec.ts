@@ -67,6 +67,12 @@ test.describe('habit hub', () => {
     ).toEqual([]);
 
     await page.goto('/habits/h1');
+    // A hub action's label comes from a lazily loaded translation scope; scanning before it lands
+    // reports a transient nameless link (`link-name`), not the settled page (flaky on main too).
+    await expect(page.locator('app-habit-hub-page h1')).toBeVisible();
+    for (const action of await page.locator('.hub-action').all()) {
+      await expect(action).not.toHaveAccessibleName('');
+    }
     results = await new AxeBuilder({ page }).analyze();
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
