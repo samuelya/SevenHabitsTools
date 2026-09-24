@@ -8,7 +8,7 @@ import { MaturityLevel } from './maturity.model';
 /** The footer's counts card: how many assessments exist and the most recent one's overall
  * profile. Purely presentational — `summary` is computed by the page from `maturity.logic.ts`'s
  * `summarize()`, `profileLabels` from its `translateSignal`-backed labels. Plural-correct through
- * `AppPluralPipe`, not a plain `TranslocoPipe` interpolation (playbook §5). */
+ * `AppPluralPipe`, not a plain `TranslocoPipe` interpolation (`exercise-layout.md`). */
 @Component({
   selector: 'app-maturity-summary',
   imports: [MatCardModule, AppPluralPipe, TranslocoPipe],
