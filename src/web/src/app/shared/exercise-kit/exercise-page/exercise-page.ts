@@ -71,12 +71,10 @@ export class ExercisePage implements EditorFocusHost {
   /** Shown in the editor header. */
   readonly editorTitle = input('');
   readonly editorStatus = input<EditorStatus>(null);
-  /** The header's close button, or Escape while focus is inside the editor. */
+  /** The header's close button, its primary "Done" button (issue #217: the explicit finish,
+   * never blocked on validation), or Escape while focus is inside the editor. One output, so no
+   * page can ship a Done button that does nothing. */
   readonly editorClosed = output<void>();
-  /** The header's primary "Done" button (issue #217): the explicit finish. It never blocks on
-   * validation; a page normally treats it exactly like `editorClosed`, which stays the secondary
-   * exit. */
-  readonly done = output<void>();
 
   private readonly editorHeading = viewChild<ElementRef<HTMLElement>>('editorHeading');
   /** The list/body column — its own scroll container while the desktop split editor is up (see
@@ -206,9 +204,5 @@ export class ExercisePage implements EditorFocusHost {
 
   protected close(): void {
     this.editorClosed.emit();
-  }
-
-  protected finish(): void {
-    this.done.emit();
   }
 }

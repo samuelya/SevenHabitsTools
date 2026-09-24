@@ -1,4 +1,4 @@
-import { newRecord, isLive, softDelete, touch } from '../../core/data/record';
+import { isLive, softDelete, touch } from '../../core/data/record';
 import {
   latestAssessment,
   liveAssessments,
@@ -237,11 +237,6 @@ export function editAsset(
  * applies to records; an asset is a nested value object of its audit, not a record). */
 export function removeAsset(assets: readonly PcAsset[], key: string): PcAsset[] {
   return assets.filter((asset) => asset.key !== key);
-}
-
-/** Appends a new audit created from `fields`, stamped with a fresh id and `now`. */
-export function addAudit(audits: readonly PcAudit[], fields: PcAuditFields, now: Date): PcAudit[] {
-  return [...audits, newRecord(fields, now)];
 }
 
 /** Replaces the fields of the live audit `id` with `fields`, leaving every other audit alone; a

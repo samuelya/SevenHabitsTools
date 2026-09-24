@@ -145,7 +145,7 @@ export class TeachPage {
   });
   protected readonly hasDetail = computed(() => this.selectedChapter() !== null);
   /** Draft before record (issue #217): edits to a chapter with no entry yet, held in memory until
-   * its key idea is non-blank (`isDraftWorthSaving()`). Keyed by chapter and dropped by the
+   * any free-text field is non-blank (`isDraftWorthSaving()`). Keyed by chapter and dropped by the
    * constructor's effect as soon as another chapter (or none) is selected. */
   private readonly pending = signal<{
     readonly chapter: TeachChapter;
@@ -258,7 +258,7 @@ export class TeachPage {
       this.store.update((entries) => upsertEntry(entries, chapter, fields, this.clock.now()));
       return;
     }
-    // No entry yet: keep the edit in memory until the key idea is non-blank, then create the
+    // No entry yet: keep the edit in memory until some typed text is non-blank, then create the
     // entry with every field edited so far (issue #217).
     const previous = this.pending();
     const merged = { ...(previous?.chapter === chapter ? previous.fields : {}), ...fields };

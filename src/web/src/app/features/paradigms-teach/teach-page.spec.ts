@@ -337,32 +337,32 @@ describe('TeachPage', () => {
       expect(storedEntries()).toHaveLength(0);
     });
 
-    it('keeps edits other than the key idea in memory, and stores them with it', async () => {
+    it('keeps a status change in memory, and stores it with the first typed text', async () => {
       const harness = await setUp();
       await selectChapter(harness, 1);
 
-      itemForm(harness).changed.emit({ person: 'Sam' });
+      itemForm(harness).changed.emit({ status: 'skipped' });
       harness.detectChanges();
       expect(storedEntries()).toHaveLength(0);
-      expect(itemForm(harness).entry().person).toBe('Sam');
+      expect(itemForm(harness).entry().status).toBe('skipped');
       expect(editorStatus(harness)).toBe('New');
 
-      itemForm(harness).changed.emit({ keyIdea: 'Choose your response' });
+      itemForm(harness).changed.emit({ person: 'Sam' });
       harness.detectChanges();
       expect(storedEntries()).toHaveLength(1);
-      expect(storedEntries()[0]).toMatchObject({ keyIdea: 'Choose your response', person: 'Sam' });
+      expect(storedEntries()[0]).toMatchObject({ keyIdea: '', person: 'Sam', status: 'skipped' });
       expect(editorStatus(harness)).toBe('Saved');
     });
 
     it('backing out of an untouched chapter stores nothing, and its edits are gone next time', async () => {
       const harness = await setUp();
       await selectChapter(harness, 1);
-      itemForm(harness).changed.emit({ person: 'Sam' });
+      itemForm(harness).changed.emit({ status: 'skipped' });
       await closeEditor(harness);
 
       expect(storedEntries()).toHaveLength(0);
       await selectChapter(harness, 1);
-      expect(itemForm(harness).entry().person).toBeUndefined();
+      expect(itemForm(harness).entry().status).toBe('planned');
     });
 
     it('the header Done button closes the editor', async () => {

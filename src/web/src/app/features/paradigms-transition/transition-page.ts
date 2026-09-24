@@ -9,7 +9,7 @@ import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
-import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -67,10 +67,10 @@ const DEFAULT_FIELDS: ScriptFields = {
  * Navigation is always the *absolute* `TRANSITION_ROUTE` (`goTo()`), never relative to
  * `this.route` — see `goTo()`'s own doc comment for why relative navigation doesn't work here.
  *
- * **Draft before record (issue #217):** "Add a script" only navigates to the reserved
- * `NEW_ITEM_ID` segment; `recordDraft()` holds the new script in memory and appends it to the
- * store on the first typed script text, then this page moves the URL to the real id
- * (`replaceUrl`, so back still returns to the list). Backing out before that leaves nothing.
+ * **Draft before record (issue #217):** "Add a script" opens the reserved `NEW_ITEM_ID`
+ * segment; `recordDraft()` holds the new script in memory, appends it to the store on the first
+ * typed text in any field and moves the URL to the real id (`replaceUrl`, so back still returns to
+ * the list). Backing out before that leaves nothing.
  */
 @Component({
   selector: 'app-transition-page',
@@ -138,34 +138,19 @@ export class TransitionPage {
   protected readonly items = computed(() =>
     this.scripts().map((script) => toListItem(script, this.labels())),
   );
-  private readonly draft = recordDraft<Script>({
+  protected readonly draft = recordDraft<Script>({
     itemId: this.itemId,
     records: this.scripts,
     create: () => newRecord(DEFAULT_FIELDS, this.clock.now()),
     isWorthSaving: isDraftWorthSaving,
     save: (record) => this.store.update((scripts) => [...scripts, record]),
+    update: (id, fields) => this.store.update((scripts) => editScript(scripts, id, fields)),
+    navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
     now: () => this.clock.now(),
   });
-  protected readonly selectedScript = computed(() => {
-    const id = this.itemId();
-    return id === NEW_ITEM_ID
-      ? this.draft.current()
-      : (this.scripts().find((script) => script.id === id) ?? null);
-  });
-  protected readonly hasDetail = computed(() => this.selectedScript() !== null);
   /** Drives the editor header's title (issue #187's acceptance criteria): a draft, or a saved
    * script whose text was cleared again, is still "new". */
-  protected readonly isNewScript = computed(() => !this.selectedScript()?.text.trim());
-  /** "New" while the editor shows an unsaved draft (issue #217); otherwise this page's
-   * `store.update()` is always synchronous (in-memory; the debounced write to disk is a separate,
-   * lower layer — `DocumentPersistence`), so there's no "saving" state to show: every applied
-   * change is "saved" the instant it lands (`exercise-layout.md`'s `editorStatus()`). */
-  protected readonly editorStatus = computed<EditorStatus>(() => {
-    if (!this.hasDetail()) {
-      return null;
-    }
-    return this.draft.unsaved() ? 'new' : 'saved';
-  });
+  protected readonly isNewScript = computed(() => !this.draft.selected()?.text.trim());
   /** `null` until the first script exists (issue #215): no "0 scripts named" card next to the
    * list's own empty-state text. */
   protected readonly summary = computed(() =>
@@ -233,22 +218,14 @@ export class TransitionPage {
     this.goToList();
   }
 
-  /** Opens the editor on a fresh in-memory draft (`recordDraft()` creates it for `NEW_ITEM_ID`);
-   * nothing is stored yet (issue #217). */
+  /** Opens the editor on a fresh in-memory draft; nothing is stored yet (issue #217). */
   protected onAddScript(): void {
-    this.goTo([NEW_ITEM_ID]);
+    this.draft.start();
   }
 
+  /** The first typed text saves a draft (`recordDraft()`), which then moves the URL to its id. */
   protected onItemChanged(id: string, fields: Partial<ScriptFields>): void {
-    if (this.draft.owns(id)) {
-      // The first typed script text saves the draft; the URL then shows the real id, replacing
-      // `new` so a reload opens the stored script and back still returns to the list.
-      if (this.draft.edit(fields)) {
-        this.goTo([id], { replaceUrl: true });
-      }
-      return;
-    }
-    this.store.update((scripts) => editScript(scripts, id, fields));
+    this.draft.edit(id, fields);
   }
 
   protected onItemDeleted(id: string): void {

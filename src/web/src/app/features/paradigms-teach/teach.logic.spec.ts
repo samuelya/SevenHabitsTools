@@ -370,12 +370,14 @@ describe('isStarted (issue #216)', () => {
 });
 
 describe('isDraftWorthSaving (issue #217)', () => {
-  it('is false without a non-blank key idea, whatever else was edited', () => {
+  it('is false while every free-text field is blank, whatever else was edited', () => {
     expect(isDraftWorthSaving({})).toBe(false);
-    expect(isDraftWorthSaving({ keyIdea: '   ' })).toBe(false);
+    expect(isDraftWorthSaving({ keyIdea: '   ', person: '', learned: ' ' })).toBe(false);
   });
 
-  it('is true once the key idea has a non-blank character', () => {
+  it('is true once any free-text field has a non-blank character', () => {
     expect(isDraftWorthSaving({ keyIdea: 'Choose your response' })).toBe(true);
+    expect(isDraftWorthSaving({ person: 'Sam' })).toBe(true);
+    expect(isDraftWorthSaving({ learned: 'They asked why' })).toBe(true);
   });
 });

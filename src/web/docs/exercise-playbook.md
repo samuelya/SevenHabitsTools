@@ -116,9 +116,10 @@ those decisions so building another one needs none of its own.
 **Draft before record (#217).** A list/assessment editor opened by "Add"/"New" works on an
 in-memory draft at the reserved `new` URL segment (`recordDraft()`,
 `shared/exercise-kit/record-draft.ts`); the record is created on the first meaningful input
-(`isDraftWorthSaving()` in `<slug>.logic.ts`), never on the button, so backing out of an untouched
+(`isDraftWorthSaving()` in `<slug>.logic.ts`: typed text in any free-text field, not a choice or
+a pre-filled default), never on the button, so backing out of an untouched
 draft leaves nothing in the list or the export. The editor status reads "New" until then and
-"Saved" after, and the header's "Done" button closes the editor (`(done)`). This supersedes the
+"Saved" after, and the header's "Done" button closes the editor (it emits `(editorClosed)`). This supersedes the
 earlier "create the record on the Add button" convention; details in `exercise-layout.md`.
 
 **The prompt card and the guide, in short (§8 has the full definition of done):**

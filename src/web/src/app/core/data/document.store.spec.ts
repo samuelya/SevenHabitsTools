@@ -314,6 +314,19 @@ describe('DocumentStore', () => {
       expect(store.refusedEdits()).toBe(0);
     });
 
+    it('canEdit() answers without changing the document, counting a refusal (issue #217)', () => {
+      const writer = configureWithRole('writer');
+      const before = writer.document();
+      expect(writer.canEdit()).toBe(true);
+      expect(writer.document()).toBe(before);
+      expect(writer.refusedEdits()).toBe(0);
+
+      TestBed.resetTestingModule();
+      const reader = configureWithRole('reader');
+      expect(reader.canEdit()).toBe(false);
+      expect(reader.refusedEdits()).toBe(1);
+    });
+
     it('still lets replaceDocument through, since it is not an edit', () => {
       const store = configureWithRole('reader');
       const next = { ...store.document(), settings: { theme: 'from-writer' } };

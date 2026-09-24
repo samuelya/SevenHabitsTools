@@ -19,7 +19,6 @@ ad hoc markup:
   [editorTitle]="(isNewItem() ? '<exerciseId>.editor.newTitle' : '<exerciseId>.editor.editTitle') | transloco"
   [editorStatus]="editorStatus()"
   (editorClosed)="closeDetail()"
-  (done)="closeDetail()"
 >
   <app-exercise-prompt-card intro [prompt]="..." [chapterReference]="..." [whyItMatters]="..." />
 
@@ -100,12 +99,12 @@ ad hoc markup:
   `.page` by that much on every ordinary open. Both breakpoints
   share the same editor header (back/close button, `editorTitle()`, an `aria-live`
   "New"/"Saved"/"Saving…" status, and a primary "Done" button at the inline end, #217) — the kit
-  builds it; the page only supplies the three inputs above and binds `(done)` to the same close
-  as `(editorClosed)`. "Done" never blocks on validation; the back/close button stays the
-  secondary exit.
-- **`editorStatus()`** (type `EditorStatus`): `null` without `hasDetail()`; `'new'` while the
-  editor shows an unsaved draft (`recordDraft().unsaved()`, see "Draft before record" below);
-  `'saved'` otherwise — `store.update()` is synchronous, so every applied edit is "saved" the
+  builds it; the page only supplies the three inputs above. "Done" emits `(editorClosed)` like
+  the back/close button and Escape, so it can never be left unbound; it never blocks on
+  validation.
+- **`editorStatus()`** (type `EditorStatus`; `recordDraft().status()` for a list or assessment):
+  `null` without `hasDetail()`; `'new'` while the editor shows an unsaved draft (see "Draft
+  before record" below); `'saved'` otherwise — `store.update()` is synchronous, so every applied edit is "saved" the
   instant it lands. Only compute `'saving'` if a feature's own persistence genuinely has a
   pending-write state to report (none does yet).
 - **The footer slot** holds the summary and `app-done-toggle`, always. On handset it's not
@@ -231,19 +230,25 @@ every page gets wrong the first time:
   history and URL handling over a real route, nothing the page has to implement.
 
 **Draft before record (#217, owner decision; supersedes "create the record on the Add
-button").** "Add"/"New" only navigates to the reserved segment `NEW_ITEM_ID` (`'new'`,
-`shared/exercise-kit/record-draft.ts`). The page's `recordDraft<T>({ itemId, records, create,
-isWorthSaving, save, now })` opens an in-memory draft (built with `newRecord()`, so it already has
-its final id) whenever `itemId` becomes `new` — which also reopens an empty draft on a reload of
-`.../new` — and drops it when `itemId` moves away. Nothing reaches the store, and so nothing
-reaches `DocumentPersistence` or IndexedDB, until the exercise's own pure
-`isDraftWorthSaving(draft, initial)` (`<slug>.logic.ts`: the first required field non-blank, or,
-for an assessment pre-filled from the latest one, the first real change) holds; then one
-`store.update()` appends it and the page navigates to the real id with `replaceUrl: true`. So:
-- `selected = itemId === NEW_ITEM_ID ? draft.current() : live.find(id)`; the redirect effect
-  exempts `NEW_ITEM_ID`.
-- Route the form's `changed` through `draft.owns(id) ? draft.edit(fields) : store.update(...)`;
-  the form keeps its instance across `new` → id (same id).
+button").** A list or assessment page holds one `recordDraft<T>({ itemId, records, create,
+isWorthSaving, save, update, navigate, now })` (`shared/exercise-kit/record-draft.ts`) and wires
+it in three places:
+- "Add"/"New" calls `draft.start()`: a fresh in-memory draft (built with `newRecord()`, so it
+  already has its final id) at the reserved segment `NEW_ITEM_ID` (`'new'`). It replaces any draft
+  already open, and opens nothing in a read-only tab (`DocumentStore.canEdit()` shows the usual
+  refused-edit notice). A reload of `.../new` opens an empty draft once the writer lock settles.
+- The template reads `draft.selected()` (the live record for `itemId`, or the draft on `new`) and
+  `draft.status()`; the page's own redirect effect exempts `NEW_ITEM_ID`.
+- The form's `changed` goes to `draft.edit(id, fields)`. Nothing reaches the store, and so nothing
+  reaches `DocumentPersistence` or IndexedDB, until the exercise's pure
+  `isDraftWorthSaving(draft, initial)` (`<slug>.logic.ts`: any free-text field non-blank, or, for
+  an assessment pre-filled from the latest one, the first real change; choices and pre-filled
+  defaults don't count) holds. Then `save` appends it and, if `new` is still open, `navigate`
+  moves the URL to its id with `replaceUrl: true` (the form keeps its instance: same id). An edit
+  for a live record goes through `update`; any other id writes nothing.
+- Leaving `new` doesn't drop the draft: an edit a child flushes from `ngOnDestroy` (the
+  `ReflectionEditor` debounce, on Done or back) runs after `itemId` has moved, still lands in the
+  draft and saves it if worth saving, without reopening the editor.
 - A delete on an unsaved draft just closes the editor. Once saved, it's a record like any other:
   clearing its fields again doesn't un-save it (that would need a hard delete).
 - A fixed-row list with no Add (`paradigms-teach`) keeps a per-row pending-fields signal instead,

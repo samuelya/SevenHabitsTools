@@ -2,7 +2,6 @@ import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
   isDraftWorthSaving,
   addArea,
-  addAssessment,
   checklistLabelsFrom,
   checklistLoaded,
   deltaFor,
@@ -291,17 +290,7 @@ describe('addArea/renameArea/setAreaLevel/setAreaNote/removeArea', () => {
   });
 });
 
-describe('addAssessment/editAssessment', () => {
-  it('appends a new assessment stamped with a fresh id and the given time', () => {
-    const result = addAssessment([], { date: '2026-01-01', areas: [] }, NOW);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      date: '2026-01-01',
-      createdAt: NOW.toISOString(),
-      updatedAt: NOW.toISOString(),
-    });
-  });
-
+describe('editAssessment', () => {
   it('merges fields into the matching live assessment only', () => {
     const target = assessment({ id: 'a1', areas: [] });
     const other = assessment({ id: 'a2', areas: [] });

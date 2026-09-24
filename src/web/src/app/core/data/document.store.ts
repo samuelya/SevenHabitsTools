@@ -97,6 +97,15 @@ export class DocumentStore {
     return computed(() => getAtPath<T>(this.documentSignal(), path));
   }
 
+  /**
+   * Whether this tab may edit right now, asked before an action that only leads to edits (issue
+   * #217: opening a new record's draft). Changes nothing; a `false` counts as a refused edit
+   * (`refusedEdits`), so the user is told exactly as for a refused `update()`.
+   */
+  canEdit(): boolean {
+    return this.mutate((doc) => doc);
+  }
+
   /** Replaces the whole document: bootstrap load, JSON import or a sync merge. */
   replaceDocument(doc: RootDocument): void {
     this.documentSignal.set(doc);

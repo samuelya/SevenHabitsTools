@@ -13,7 +13,7 @@ import {
 } from '../../shared/exercise-kit/assessment-history.logic';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -97,7 +97,7 @@ export class PcBalancePage {
       subtitle: balanceSubtitle(auditAverageBalance(audit)),
     })),
   );
-  private readonly draft = recordDraft<PcAudit>({
+  protected readonly draft = recordDraft<PcAudit>({
     itemId: this.itemId,
     records: this.audits,
     // Read when the draft opens: the latest audit's assets, sliders reset (`newAuditFields`).
@@ -107,22 +107,9 @@ export class PcBalancePage {
     },
     isWorthSaving: isDraftWorthSaving,
     save: (record) => this.store.update((audits) => [...audits, record]),
+    update: (id, fields) => this.store.update((audits) => editAudit(audits, id, fields)),
+    navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
     now: () => this.clock.now(),
-  });
-  protected readonly selectedAudit = computed(() => {
-    const id = this.itemId();
-    return id === NEW_ITEM_ID
-      ? this.draft.current()
-      : (this.audits().find((audit) => audit.id === id) ?? null);
-  });
-  protected readonly hasDetail = computed(() => this.selectedAudit() !== null);
-  /** "New" for an unsaved draft (issue #217), otherwise "saved": this page's `store.update()` is
-   * always synchronous — see `exercise-layout.md`'s `editorStatus()`. */
-  protected readonly editorStatus = computed<EditorStatus>(() => {
-    if (!this.hasDetail()) {
-      return null;
-    }
-    return this.draft.unsaved() ? 'new' : 'saved';
   });
   /** `null` until the first audit exists (issue #215): no "0 audits taken" card next to the
    * history's own empty-state text. */
@@ -181,39 +168,19 @@ export class PcBalancePage {
 
   /** Opens the editor on an in-memory draft; nothing is stored yet (issue #217). */
   protected onNewAudit(): void {
-    this.goTo([NEW_ITEM_ID]);
+    this.draft.start();
   }
 
+  /** The first real input saves a draft (`recordDraft()`), which then moves the URL to its id. */
   protected onAuditChanged(id: string, fields: Partial<PcAuditFields>): void {
-    if (this.draft.owns(id)) {
-      this.editDraft(id, fields);
-      return;
-    }
-    this.store.update((audits) => editAudit(audits, id, fields));
+    this.draft.edit(id, fields);
   }
 
+  /** Always reports an outcome, so the reflection never sits on "Saving…". A flush from closing
+   * the editor lands in the draft too, and saves it if it is worth saving (issue #217). */
   protected onReflectionChanged(change: PcReflectionChange, form: PcBalanceAuditForm): void {
-    if (this.draft.owns(change.auditId)) {
-      // A whitespace-only reflection keeps the draft unsaved, so there's no outcome to report yet.
-      if (this.editDraft(change.auditId, { reflection: change.reflection })) {
-        form.reportReflectionSaveOutcome(change.auditId, true);
-      }
-      return;
-    }
-    const saved = this.store.update((audits) =>
-      editAudit(audits, change.auditId, { reflection: change.reflection }),
-    );
-    form.reportReflectionSaveOutcome(change.auditId, saved);
-  }
-
-  /** Edits the unsaved draft; on the edit that saves it, the URL moves from `new` to the real id
-   * (`replaceUrl`, so back still returns to the history). Returns whether this edit saved it. */
-  private editDraft(id: string, fields: Partial<PcAuditFields>): boolean {
-    const saved = this.draft.edit(fields);
-    if (saved) {
-      this.goTo([id], { replaceUrl: true });
-    }
-    return saved;
+    const landed = this.draft.edit(change.auditId, { reflection: change.reflection });
+    form.reportReflectionSaveOutcome(change.auditId, landed);
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). */

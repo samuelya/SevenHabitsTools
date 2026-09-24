@@ -1,4 +1,4 @@
-import { newRecord, softDelete, touch, isLive } from '../../core/data/record';
+import { softDelete, touch, isLive } from '../../core/data/record';
 import {
   allMet,
   ChecklistLabels,
@@ -150,16 +150,13 @@ export function toListItem(script: Script, labels: ScriptLabels): ExerciseListIt
   };
 }
 
-/** Appends a new script created from `fields`, stamped with a fresh id and `now`. */
-export function addScript(scripts: readonly Script[], fields: ScriptFields, now: Date): Script[] {
-  return [...scripts, newRecord(fields, now)];
-}
-
-/** Draft before record (issue #217): a new script's draft becomes a record once its one always-
- * required field, the script text, is non-blank. Choosing a source, effect or decision alone keeps
- * it a draft. */
-export function isDraftWorthSaving(draft: Pick<ScriptFields, 'text'>): boolean {
-  return draft.text.trim() !== '';
+/** Draft before record (issue #217): a new script's draft becomes a record once any free-text
+ * field (the script, the new script, the situation) holds non-blank text. Choosing a source,
+ * effect or decision alone keeps it a draft. */
+export function isDraftWorthSaving(
+  draft: Pick<ScriptFields, 'text' | 'newScript' | 'situation'>,
+): boolean {
+  return [draft.text, draft.newScript, draft.situation].some((text) => (text ?? '').trim() !== '');
 }
 
 /** Replaces the fields of the live script `id` with `fields`, leaving every other script alone;

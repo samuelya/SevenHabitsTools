@@ -210,11 +210,13 @@ export function labelsFrom(
   };
 }
 
-/** Draft before record (issue #217): a chapter's first edits become its entry once the key idea
- * — the one always-required field — is non-blank. Status, dates, person or what was learned alone
+/** Draft before record (issue #217): a chapter's first edits become its entry once any free-text
+ * field (the key idea, the person, what was learned) holds non-blank text. Status or dates alone
  * keep it a draft. */
-export function isDraftWorthSaving(fields: Partial<Pick<TeachEntryFields, 'keyIdea'>>): boolean {
-  return (fields.keyIdea ?? '').trim() !== '';
+export function isDraftWorthSaving(
+  fields: Partial<Pick<TeachEntryFields, 'keyIdea' | 'person' | 'learned'>>,
+): boolean {
+  return [fields.keyIdea, fields.person, fields.learned].some((text) => (text ?? '').trim() !== '');
 }
 
 /** The editor's current value for `chapter`: its live entry's own fields, or fresh defaults if it

@@ -2,7 +2,6 @@ import { PcAsset, PcAudit } from './pc-balance.model';
 import {
   isDraftWorthSaving,
   addAsset,
-  addAudit,
   auditAverageBalance,
   balanceOf,
   checklistLabelsFrom,
@@ -268,18 +267,7 @@ describe('addAsset/editAsset/removeAsset', () => {
   });
 });
 
-describe('addAudit/editAudit', () => {
-  it('appends a new audit stamped with a fresh id and the given time', () => {
-    const result = addAudit([], { date: '2026-01-01', assets: [], reflection: '' }, NOW);
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      date: '2026-01-01',
-      createdAt: NOW.toISOString(),
-      updatedAt: NOW.toISOString(),
-    });
-    expect(result[0].id).toBeTruthy();
-  });
-
+describe('editAudit', () => {
   it('merges fields into the matching live audit only', () => {
     const target = audit({ id: 'a1', reflection: 'old' });
     const other = audit({ id: 'a2', reflection: 'other' });

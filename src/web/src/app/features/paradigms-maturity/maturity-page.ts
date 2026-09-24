@@ -14,7 +14,7 @@ import {
 } from '../../shared/exercise-kit/assessment-history.logic';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -133,7 +133,7 @@ export class MaturityPage {
       };
     });
   });
-  private readonly draft = recordDraft<MaturityAssessment>({
+  protected readonly draft = recordDraft<MaturityAssessment>({
     itemId: this.itemId,
     records: this.assessments,
     // Read when the draft opens: the latest assessment's areas, levels unset.
@@ -143,18 +143,15 @@ export class MaturityPage {
     },
     isWorthSaving: isDraftWorthSaving,
     save: (record) => this.store.update((assessments) => [...assessments, record]),
+    update: (id, fields) =>
+      this.store.update((assessments) => editAssessment(assessments, id, fields)),
+    navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
     now: () => this.clock.now(),
-  });
-  protected readonly selectedAssessment = computed(() => {
-    const id = this.itemId();
-    return id === NEW_ITEM_ID
-      ? this.draft.current()
-      : (this.assessments().find((assessment) => assessment.id === id) ?? null);
   });
   /** An unsaved draft is compared with the latest stored assessment, exactly as it will be once
    * saved: it takes part in the lookup as if it were already in the history. */
   protected readonly previous = computed(() => {
-    const selected = this.selectedAssessment();
+    const selected = this.draft.selected();
     if (!selected) {
       return null;
     }
@@ -162,15 +159,6 @@ export class MaturityPage {
       ? [...this.assessments(), selected]
       : this.assessments();
     return previousAssessment(assessments, selected.id);
-  });
-  protected readonly hasDetail = computed(() => this.selectedAssessment() !== null);
-  /** "New" for an unsaved draft (issue #217), otherwise "saved": this page's `store.update()` is
-   * always synchronous — see `exercise-layout.md`'s `editorStatus()`. */
-  protected readonly editorStatus = computed<EditorStatus>(() => {
-    if (!this.hasDetail()) {
-      return null;
-    }
-    return this.draft.unsaved() ? 'new' : 'saved';
   });
   /** `null` until the first assessment exists (issue #215): no "0 assessments taken" card next
    * to the history's own empty-state text. */
@@ -231,19 +219,12 @@ export class MaturityPage {
 
   /** Opens the editor on an in-memory draft; nothing is stored yet (issue #217). */
   protected onNewAssessment(): void {
-    this.goTo([NEW_ITEM_ID]);
+    this.draft.start();
   }
 
+  /** The first real input saves a draft (`recordDraft()`), which then moves the URL to its id. */
   protected onAssessmentChanged(id: string, fields: Partial<MaturityAssessmentFields>): void {
-    if (this.draft.owns(id)) {
-      // The edit that saves the draft moves the URL from `new` to the real id (`replaceUrl`, so
-      // back still returns to the history).
-      if (this.draft.edit(fields)) {
-        this.goTo([id], { replaceUrl: true });
-      }
-      return;
-    }
-    this.store.update((assessments) => editAssessment(assessments, id, fields));
+    this.draft.edit(id, fields);
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). The

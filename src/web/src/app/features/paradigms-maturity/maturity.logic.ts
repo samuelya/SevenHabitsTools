@@ -1,4 +1,4 @@
-import { newRecord, isLive, softDelete, touch } from '../../core/data/record';
+import { isLive, softDelete, touch } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
 import {
   latestAssessment,
@@ -275,15 +275,6 @@ export function setAreaNote(
  * area is a nested value object of its assessment, not a record). */
 export function removeArea(areas: readonly MaturityArea[], id: string): MaturityArea[] {
   return areas.filter((area) => area.id !== id);
-}
-
-/** Appends a new assessment created from `fields`, stamped with a fresh id and `now`. */
-export function addAssessment(
-  assessments: readonly MaturityAssessment[],
-  fields: MaturityAssessmentFields,
-  now: Date,
-): MaturityAssessment[] {
-  return [...assessments, newRecord(fields, now)];
 }
 
 /** Replaces the fields of the live assessment `id` with `fields`, leaving every other assessment
