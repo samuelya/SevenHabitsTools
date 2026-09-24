@@ -13,19 +13,11 @@
         <span class="habit-title">{{ row.habit.shortTitleKey | transloco }}</span>
         @if (row.state === 'available') {
           @let progress = progressFor(row.habit.id)();
-          <span class="habit-progress">
-            <mat-progress-spinner
-              class="habit-progress-ring"
-              mode="determinate"
-              diameter="32"
-              strokeWidth="3"
-              [value]="progressPercentage(progress.done, progress.total)"
-              aria-hidden="true"
-            />
-            <span class="habit-progress-count">
-              {{ 'habits.progress' | transloco: { done: progress.done, total: progress.total } }}
-            </span>
-          </span>
+          <app-habit-progress
+            [done]="progress.done"
+            [total]="progress.total"
+            [label]="'habits.progress' | transloco: { done: progress.done, total: progress.total }"
+          />
         } @else {
           <span class="habit-coming-soon-chip">{{ 'habits.hub.comingSoon' | transloco }}</span>
         }

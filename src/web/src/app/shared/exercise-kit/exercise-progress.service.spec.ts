@@ -34,6 +34,17 @@ describe('ExerciseProgress', () => {
     expect(progress.completedAt('h2-mission')()).toBe(NOW.toISOString());
   });
 
+  it('anyCompletion turns true on the first markDone and stays true after reopen (#220)', () => {
+    const progress = setUp();
+    expect(progress.anyCompletion()).toBe(false);
+
+    progress.markDone('h2-mission');
+    expect(progress.anyCompletion()).toBe(true);
+
+    progress.reopen('h2-mission');
+    expect(progress.anyCompletion()).toBe(true);
+  });
+
   it('is not done again after reopen', () => {
     const progress = setUp();
     progress.markDone('h2-mission');

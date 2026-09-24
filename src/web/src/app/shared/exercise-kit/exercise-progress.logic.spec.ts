@@ -2,6 +2,7 @@ import { ExerciseCompletion } from './exercise-kit.model';
 import { ExerciseRegistryEntry } from './exercise-registry';
 import {
   completedAtFor,
+  hasAnyCompletion,
   isExerciseDone,
   progressForHabit,
   reopenCompletion,
@@ -11,6 +12,24 @@ import { nextExercise } from './exercise-progress.logic';
 
 const NOW = new Date('2026-01-02T10:00:00.000Z');
 const LATER = new Date('2026-01-03T10:00:00.000Z');
+
+describe('hasAnyCompletion (#220)', () => {
+  it('is false with no completion records', () => {
+    expect(hasAnyCompletion([])).toBe(false);
+  });
+
+  it('stays true after the only done exercise is reopened', () => {
+    const done = upsertDoneCompletion([], 'h2-mission', NOW);
+
+    expect(hasAnyCompletion(reopenCompletion(done, 'h2-mission', LATER))).toBe(true);
+  });
+
+  it('ignores tombstoned records', () => {
+    const [completion] = upsertDoneCompletion([], 'h2-mission', NOW);
+
+    expect(hasAnyCompletion([{ ...completion, deletedAt: LATER.toISOString() }])).toBe(false);
+  });
+});
 
 describe('upsertDoneCompletion', () => {
   it('creates a completion the first time an exercise is marked done', () => {

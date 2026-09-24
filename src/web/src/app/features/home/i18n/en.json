@@ -1,4 +1,7 @@
 {
-  "welcome": "Work through every exercise of the seven habits, at your own pace.",
-  "browseHabits": "Browse habits"
+  "heading": "Today",
+  "firstRun": "This app follows the book, chapter by chapter. Start with Paradigms, the first chapter.",
+  "allDoneNextUp": "All done for now; {{habit}} is coming soon.",
+  "allDone": "You've done every exercise. Well done.",
+  "progressHeading": "Your progress"
 }

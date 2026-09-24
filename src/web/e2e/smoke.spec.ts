@@ -26,6 +26,7 @@ const SHELL_TEXT = {
   en: {
     appName: 'Seven Habits Tools',
     home: 'Home',
+    today: 'Today',
     habits: 'Habits',
     plan: 'Plan',
     journal: 'Journal',
@@ -34,6 +35,7 @@ const SHELL_TEXT = {
   ar: {
     appName: 'أدوات العادات السبع',
     home: 'الرئيسية',
+    today: 'اليوم',
     habits: 'العادات',
     plan: 'التخطيط',
     journal: 'المذكرات',
@@ -71,7 +73,7 @@ test.describe('app shell smoke', () => {
   test('loads the home page', async ({ page }, testInfo) => {
     const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.today);
     await expect(page).toHaveTitle(`${text.home} | ${text.appName}`);
   });
 
@@ -175,7 +177,7 @@ test.describe('app shell smoke', () => {
   }, testInfo) => {
     const text = SHELL_TEXT[localeFor(testInfo.project.name)];
     for (const [path, heading] of [
-      ['/', text.appName],
+      ['/', text.today],
       ['/habits', text.habits],
       ['/settings', text.settings],
     ] as const) {
@@ -281,7 +283,7 @@ test.describe('app shell smoke', () => {
     await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
     // The home page's own copy, not just the attributes, actually renders in Arabic.
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('أدوات العادات السبع');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('اليوم');
 
     if (testInfo.project.name.startsWith('desktop')) {
       // The side nav mirrors to the end (right) edge of the viewport instead of the start (left).
@@ -315,7 +317,7 @@ test.describe('app shell smoke', () => {
     // exercises the same offline app instance a user would actually be poking at.
     await nav.getByRole('link', { name: text.home, exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.today);
   });
 
   for (const path of VISITED_PAGES) {
