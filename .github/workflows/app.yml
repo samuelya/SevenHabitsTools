@@ -106,7 +106,14 @@ jobs:
         run: dotnet build "${{ steps.sln.outputs.path }}" --no-restore -warnaserror
 
       - name: Test
-        run: dotnet test "${{ steps.sln.outputs.path }}" --no-build
+        # global.json opts into Microsoft.Testing.Platform (required by xunit.v3 4.x on .NET 10),
+        # which takes --solution/--project instead of a positional path.
+        run: |
+          target="${{ steps.sln.outputs.path }}"
+          case "$target" in
+            *.sln|*.slnx) dotnet test --solution "$target" --no-build ;;
+            *) dotnet test --project "$target" --no-build ;;
+          esac
 
       - uses: docker/setup-buildx-action@v4
 
