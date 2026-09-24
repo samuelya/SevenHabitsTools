@@ -18,15 +18,13 @@
       mat-flat-button
       type="button"
       [disabled]="disabled()"
+      disabledInteractive
       [attr.aria-describedby]="describedBy()"
-      (click)="toggled.emit()"
+      (click)="onMarkDone()"
     >
       <mat-icon aria-hidden="true">check_circle</mat-icon>
       {{ 'exerciseKit.doneToggle.markDone' | transloco }}
     </button>
-    @if (disabled() && disabledHint(); as hint) {
-      <span class="disabled-hint" [id]="hintId">{{ hint }}</span>
-    }
     @if (unmetChecklist(); as items) {
       <div class="done-checklist" [id]="checklistId">
         <p class="done-checklist-heading">{{ 'exerciseKit.doneToggle.toMarkDone' | transloco }}</p>

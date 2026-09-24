@@ -124,14 +124,66 @@ describe('PcBalanceAuditForm', () => {
     expect(assets[0].key).toBe('k2');
   });
 
-  it('emits the edited reflection', () => {
+  it('emits the edited reflection with its audit id', () => {
     const fixture = setUp(audit());
     const emitted: unknown[] = [];
-    fixture.componentInstance.changed.subscribe((event) => emitted.push(event));
+    fixture.componentInstance.reflectionChanged.subscribe((event) => emitted.push(event));
 
-    fixture.componentInstance['onReflectionChanged']('Noticing a pattern.');
+    fixture.componentInstance['onReflectionChanged']('a1', 'Noticing a pattern.');
 
-    expect(emitted).toEqual([{ reflection: 'Noticing a pattern.' }]);
+    expect(emitted).toEqual([{ auditId: 'a1', reflection: 'Noticing a pattern.' }]);
+  });
+
+  it('shows no reflection status until the first keystroke, then the reported outcome (#215)', () => {
+    const fixture = setUp(audit({ reflection: 'An older reflection.' }));
+    const host = fixture.nativeElement as HTMLElement;
+    const status = () => host.querySelector('app-reflection-editor .status')?.textContent?.trim();
+
+    expect(status()).toBe('');
+    expect(host.querySelector('app-reflection-editor .hint')).toBeNull();
+
+    const textarea = host.querySelector('app-reflection-editor textarea') as HTMLTextAreaElement;
+    textarea.value = 'A new reflection.';
+    textarea.dispatchEvent(new Event('input'));
+    fixture.componentInstance.reportReflectionSaveOutcome('a1', true);
+    fixture.detectChanges();
+
+    expect(status()).toBe('Saved');
+  });
+
+  it("switching audits flushes a pending reflection under the old audit's id and drops its status", () => {
+    vi.useFakeTimers();
+    try {
+      const fixture = setUp(audit({ id: 'a1' }));
+      const host = fixture.nativeElement as HTMLElement;
+      const status = () => host.querySelector('app-reflection-editor .status')?.textContent?.trim();
+      const emitted: unknown[] = [];
+      fixture.componentInstance.reflectionChanged.subscribe((event) => emitted.push(event));
+
+      const textarea = host.querySelector('app-reflection-editor textarea') as HTMLTextAreaElement;
+      textarea.value = 'Typed into a1.';
+      textarea.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      expect(status()).not.toBe('');
+
+      fixture.componentRef.setInput('audit', audit({ id: 'a2', reflection: 'Kept for a2.' }));
+      fixture.detectChanges();
+
+      expect(emitted).toEqual([{ auditId: 'a1', reflection: 'Typed into a1.' }]);
+      expect(status()).toBe('');
+      expect(
+        (host.querySelector('app-reflection-editor textarea') as HTMLTextAreaElement).value,
+      ).toBe('Kept for a2.');
+
+      fixture.componentInstance.reportReflectionSaveOutcome('a1', true);
+      fixture.detectChanges();
+      expect(status()).toBe('');
+
+      vi.advanceTimersByTime(2000);
+      expect(emitted).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('resets touched state when a different audit is bound', () => {

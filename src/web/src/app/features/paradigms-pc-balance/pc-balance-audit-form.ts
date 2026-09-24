@@ -7,6 +7,7 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -37,12 +38,26 @@ import {
   PcBalanceGroup,
 } from './pc-balance.model';
 
+/** A reflection edit and the audit it was typed into. */
+export interface PcReflectionChange {
+  readonly auditId: string;
+  readonly reflection: string;
+}
+
 /**
  * The editor for one audit (issue #49): its date, the P/PC group summary, every asset grouped by
  * physical/financial/human with its sliders and balance indicator, and a reflection. Purely
  * presentational — `audit` is the current value, `changed` emits the edited field(s) so the page
  * persists through `featureStore` immediately, the same autosave-on-edit convention
  * `TransitionItemForm` uses.
+ *
+ * The reflection uses `ReflectionEditor`'s session status (issue #215): nothing until the first
+ * keystroke, then "Saving…"/"Saved". Only the page knows whether a write landed, so it reports
+ * back through `reportReflectionSaveOutcome()` after persisting a `reflectionChanged` edit.
+ *
+ * The form is reused across audits, so the editor is keyed per audit and every reflection edit
+ * carries the id of the audit it was typed into: a debounced edit flushed while switching audits
+ * lands on the audit it belongs to, not on the newly selected one (review finding on #215's PR).
  */
 @Component({
   selector: 'app-pc-balance-audit-form',
@@ -65,6 +80,9 @@ import {
 export class PcBalanceAuditForm {
   readonly audit = input.required<PcAudit>();
   readonly changed = output<Partial<PcAuditFields>>();
+  readonly reflectionChanged = output<PcReflectionChange>();
+
+  private readonly reflectionEditor = viewChild(ReflectionEditor);
 
   protected readonly sliderMin = SLIDER_MIN;
   protected readonly sliderMax = SLIDER_MAX;
@@ -149,8 +167,16 @@ export class PcBalanceAuditForm {
     this.changed.emit({ assets: removeAsset(this.audit().assets, key) });
   }
 
-  protected onReflectionChanged(reflection: string): void {
-    this.changed.emit({ reflection });
+  protected onReflectionChanged(auditId: string, reflection: string): void {
+    this.reflectionChanged.emit({ auditId, reflection });
+  }
+
+  /** Forwards the page's save outcome for a `reflectionChanged` edit to the editor's status, only
+   * while that audit's editor is still the one shown (a flush on switching audits isn't). */
+  reportReflectionSaveOutcome(auditId: string, saved: boolean): void {
+    if (auditId === this.audit().id) {
+      this.reflectionEditor()?.reportSaveOutcome(saved);
+    }
   }
 
   private onAssetChanged(key: string, fields: Partial<Omit<PcAsset, 'key'>>): void {

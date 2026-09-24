@@ -14,7 +14,7 @@
          must already exist in the DOM before its content changes for a screen reader to announce
          it — creating the `<p>` at the same moment "Saving…" first appears misses that first
          announcement. -->
-    <p id="reflection-status" class="status" aria-live="polite">
+    <p [id]="statusId" class="status" aria-live="polite">
       @if (status(); as status) {
         {{
           (status === 'saving' ? 'exerciseKit.editor.saving' : 'exerciseKit.editor.saved')
@@ -23,7 +23,7 @@
       }
     </p>
   } @else {
-    <p id="reflection-hint" class="hint">
+    <p [id]="hintId" class="hint">
       <span class="character-count">{{
         'exerciseKit.reflection.characterCount' | transloco: { count: characterCount() }
       }}</span>

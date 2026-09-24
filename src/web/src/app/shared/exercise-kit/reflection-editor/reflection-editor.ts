@@ -49,6 +49,8 @@ export const REFLECTION_DEBOUNCE_MS = 1000;
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReflectionEditor implements OnDestroy {
+  private static nextInstanceId = 0;
+
   readonly value = input.required<string>();
   readonly label = input.required<string>();
   readonly updatedAt = input<string | null>(null);
@@ -70,8 +72,14 @@ export class ReflectionEditor implements OnDestroy {
    * `'saved'` once the caller confirms the write landed (`reportSaveOutcome`). Only rendered when
    * `sessionStatus()` is `true`. */
   protected readonly status = signal<'saving' | 'saved' | null>(null);
+  /** Own instance id, the same pattern `DoneToggle` uses (issue #215): two editors on one page
+   * would otherwise share one `id`, and every textarea's `aria-describedby` would resolve to the
+   * first editor's caption. */
+  private readonly instanceId = ReflectionEditor.nextInstanceId++;
+  protected readonly statusId = `reflection-status-${this.instanceId}`;
+  protected readonly hintId = `reflection-hint-${this.instanceId}`;
   protected readonly describedBy = computed(() => {
-    const ids = [this.promptId(), this.sessionStatus() ? 'reflection-status' : 'reflection-hint'];
+    const ids = [this.promptId(), this.sessionStatus() ? this.statusId : this.hintId];
     return ids.filter((id) => id !== null).join(' ');
   });
 

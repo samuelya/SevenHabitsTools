@@ -1,5 +1,15 @@
 import { isLive, newRecord, softDelete, touch } from '../../core/data/record';
 import { localDateString } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  allMet,
+  ChecklistLabels,
+  ChecklistMet,
+  checklistItems,
+  checklistLabels,
+  closestMet,
+  labelsLoaded,
+} from '../../shared/exercise-kit/done-checklist.logic';
+import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
   TEACH_CHAPTERS,
@@ -103,10 +113,46 @@ export function sharedCount(entries: readonly TeachEntry[]): number {
   return entries.filter((entry) => isLive(entry) && entry.status === 'shared').length;
 }
 
+/** The two gate items (issue #215). */
+export const CHECKLIST_KEYS = ['planned', 'shared'] as const;
+export type TeachChecklistKey = (typeof CHECKLIST_KEYS)[number];
+
+/** One entry's "met" map: `planned` is met by an entry with a valid date, or by a shared one, so
+ * the done rule stays #52's "one live shared entry" even for an imported entry with a blank
+ * `plannedAt` (review finding on #215's PR); `shared` by its status. */
+function entryMet(entry: TeachEntry): ChecklistMet<TeachChecklistKey> {
+  const shared = entry.status === 'shared';
+  return { planned: shared || isValidPlannedAt(entry.plannedAt), shared };
+}
+
+/** The checklist describes the live entry closest to complete (`closestMet()`). */
+function checklistMet(entries: readonly TeachEntry[]): ChecklistMet<TeachChecklistKey> {
+  return closestMet(entries.filter(isLive), CHECKLIST_KEYS, entryMet);
+}
+
 /** Whether `DoneToggle` should be enabled: at least one live entry is `'shared'` (issue #52's
- * "Implementation notes"). */
-export function canMarkDone(entries: readonly TeachEntry[]): boolean {
-  return sharedCount(entries) > 0;
+ * "Implementation notes"), derived from the checklist (issue #215). */
+export function isComplete(entries: readonly TeachEntry[]): boolean {
+  return allMet(CHECKLIST_KEYS, checklistMet(entries));
+}
+
+/** The gate items, labelled for `DoneToggle` (see `transition.logic.ts`'s `doneChecklist()`). */
+export function doneChecklist(
+  entries: readonly TeachEntry[],
+  labels: ChecklistLabels<TeachChecklistKey>,
+): readonly DoneChecklistItem[] {
+  return checklistItems(CHECKLIST_KEYS, checklistMet(entries), labels);
+}
+
+export function checklistLabelsFrom(
+  labels: readonly (string | undefined)[],
+): ChecklistLabels<TeachChecklistKey> {
+  return checklistLabels(CHECKLIST_KEYS, labels);
+}
+
+/** Gates the checklist's rendering until the scope has loaded (no blank rows on a cold visit). */
+export function checklistLoaded(labels: ChecklistLabels<TeachChecklistKey>): boolean {
+  return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
 /** The summary card's counts (issue #52's acceptance criteria): how many of the ten chapters have

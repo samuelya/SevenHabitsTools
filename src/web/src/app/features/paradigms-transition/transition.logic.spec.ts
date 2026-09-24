@@ -1,8 +1,11 @@
 import { SCRIPT_EFFECTS, SCRIPT_SOURCES, Script } from './transition.model';
 import {
   addScript,
-  canMarkDone,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
   editScript,
+  isComplete,
   isItemComplete,
   labelsFrom,
   removeScript,
@@ -56,25 +59,87 @@ describe('isItemComplete', () => {
   });
 });
 
-describe('canMarkDone', () => {
+describe('isComplete', () => {
   it('is false with no scripts', () => {
-    expect(canMarkDone([])).toBe(false);
+    expect(isComplete([])).toBe(false);
   });
 
   it('is false when no live script is complete', () => {
     const incomplete = script({ decision: 'stop' });
-    expect(canMarkDone([incomplete])).toBe(false);
+    expect(isComplete([incomplete])).toBe(false);
   });
 
   it('is true once at least one live script is complete', () => {
     const complete = script({ decision: 'keep' });
     const incomplete = script({ id: 's2', decision: 'stop' });
-    expect(canMarkDone([incomplete, complete])).toBe(true);
+    expect(isComplete([incomplete, complete])).toBe(true);
   });
 
   it('ignores a tombstoned complete script', () => {
     const deleted = script({ decision: 'keep', deletedAt: NOW.toISOString() });
-    expect(canMarkDone([deleted])).toBe(false);
+    expect(isComplete([deleted])).toBe(false);
+  });
+});
+
+const LABELS = checklistLabelsFrom(['Pattern', 'Decide', 'Instead', 'Situation']);
+
+describe('doneChecklist', () => {
+  const met = (scripts: Script[]) => doneChecklist(scripts, LABELS).map((item) => item.met);
+
+  it('lists the four items, all unmet, with no scripts', () => {
+    expect(doneChecklist([], LABELS)).toEqual([
+      { label: 'Pattern', met: false },
+      { label: 'Decide', met: false },
+      { label: 'Instead', met: false },
+      { label: 'Situation', met: false },
+    ]);
+  });
+
+  it('leaves everything unmet for a script with no pattern text yet', () => {
+    expect(met([script({ text: '  ' })])).toEqual([false, false, false, false]);
+  });
+
+  it('meets every item for a named Keep script', () => {
+    expect(met([script({ decision: 'keep' })])).toEqual([true, true, true, true]);
+  });
+
+  it('asks for the new script and the situation for Rewrite/Stop', () => {
+    expect(met([script({ decision: 'stop' })])).toEqual([true, true, false, false]);
+    expect(met([script({ decision: 'rewrite', newScript: 'Talk it through' })])).toEqual([
+      true,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('describes the live script closest to complete, ignoring tombstones', () => {
+    const scripts = [
+      script({ id: 's1', decision: 'stop' }),
+      script({ id: 's2', decision: 'stop', newScript: 'Pause first' }),
+      script({ id: 's3', decision: 'keep', deletedAt: NOW.toISOString() }),
+    ];
+    expect(met(scripts)).toEqual([true, true, true, false]);
+  });
+
+  it('is all met exactly when isComplete is true', () => {
+    const cases: Script[][] = [
+      [],
+      [script({ decision: 'stop' })],
+      [script({ decision: 'keep' })],
+      [script({ decision: 'rewrite', newScript: 'x', situation: 'y' })],
+      [script({ decision: 'keep', deletedAt: NOW.toISOString() })],
+    ];
+    for (const scripts of cases) {
+      expect(doneChecklist(scripts, LABELS).every((item) => item.met)).toBe(isComplete(scripts));
+    }
+  });
+});
+
+describe('checklistLoaded', () => {
+  it("is false for translateSignal's before-load [''] and true once labels arrive", () => {
+    expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    expect(checklistLoaded(LABELS)).toBe(true);
   });
 });
 

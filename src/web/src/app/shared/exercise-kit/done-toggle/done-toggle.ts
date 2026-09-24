@@ -20,13 +20,15 @@ export interface DoneChecklistItem {
  * `disabled` (issue #51) only gates the "Mark done" button — a list exercise whose done rule is
  * "at least one item is complete" passes `!canMarkDone` here rather than hiding the control.
  * Reopening stays available regardless: it undoes a past action, not one gated by current data.
+ * The button stays focusable while gated (`disabledInteractive` + `aria-disabled`, not the native
+ * `disabled` attribute — issue #215): a natively disabled button is skipped by Tab and most screen
+ * readers never announce its description, so the checklist below would only be reachable by
+ * accident. A click on it is swallowed here, since `disabledInteractive` alone doesn't stop one.
  *
- * `disabledHint` (issue #185) renders next to a disabled "Mark done" button, linked to it with
- * `aria-describedby`, so the user learns *why* it's unavailable instead of a silently inert
- * button. `checklist` (issue #212) is the richer alternative: while "Mark done" is disabled, it
- * renders the still-unmet items under "To mark done:", also linked with `aria-describedby`, and
- * disappears once every item is met (or the exercise is done) — `disabledHint` keeps working
- * unchanged for the exercises that still just pass a single hint string.
+ * `checklist` (issue #212): while "Mark done" is gated, it renders the still-unmet items under
+ * "To mark done:", linked to the button with `aria-describedby`, and disappears once every item
+ * is met (or the exercise is done). Every exercise passes one (#215 removed the older single
+ * `disabledHint` string).
  */
 @Component({
   selector: 'app-done-toggle',
@@ -41,14 +43,12 @@ export class DoneToggle {
   readonly done = input.required<boolean>();
   readonly completedAt = input<string | null>(null);
   readonly disabled = input(false);
-  readonly disabledHint = input<string | null>(null);
   readonly checklist = input<readonly DoneChecklistItem[] | null>(null);
   readonly toggled = output<void>();
 
   /** Own instance id, so two `DoneToggle`s on the same page (e.g. the dev kit demo) don't collide
    * on the same `id`s for `aria-describedby` to point at. */
   private readonly instanceId = DoneToggle.nextInstanceId++;
-  protected readonly hintId = `done-toggle-hint-${this.instanceId}`;
   protected readonly checklistId = `done-toggle-checklist-${this.instanceId}`;
 
   /** Only while "Mark done" is disabled, and only until every item is met (or the exercise is
@@ -62,17 +62,13 @@ export class DoneToggle {
     return items !== null && items.some((item) => !item.met) ? items : null;
   });
 
-  protected readonly describedBy = computed(() => {
-    const ids: string[] = [];
-    // Matches the template's own truthiness test (`@if (disabled() && disabledHint(); as hint)`,
-    // not a `!== null` check) — review finding on this PR: a caller passing `''` used to get an id
-    // pushed here for a hint span the template never renders, a dangling `aria-describedby`.
-    if (this.disabled() && this.disabledHint()) {
-      ids.push(this.hintId);
+  protected readonly describedBy = computed(() =>
+    this.unmetChecklist() !== null ? this.checklistId : null,
+  );
+
+  protected onMarkDone(): void {
+    if (!this.disabled()) {
+      this.toggled.emit();
     }
-    if (this.unmetChecklist() !== null) {
-      ids.push(this.checklistId);
-    }
-    return ids.length > 0 ? ids.join(' ') : null;
-  });
+  }
 }

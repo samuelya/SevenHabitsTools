@@ -5,6 +5,16 @@ import {
   liveAssessments,
 } from '../../shared/exercise-kit/assessment-history.logic';
 import {
+  allMet,
+  ChecklistLabels,
+  ChecklistMet,
+  checklistItems,
+  checklistLabels,
+  closestMet,
+  labelsLoaded,
+} from '../../shared/exercise-kit/done-checklist.logic';
+import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
+import {
   MATURITY_AREA_KEYS,
   MATURITY_LEVELS,
   MaturityArea,
@@ -30,9 +40,45 @@ export function isAssessmentComplete(assessment: Pick<MaturityAssessment, 'areas
   return assessment.areas.length > 0 && assessment.areas.every(isAreaRated);
 }
 
-/** Whether `DoneToggle` should be enabled: at least one live assessment is fully rated. */
-export function canMarkDone(assessments: readonly MaturityAssessment[]): boolean {
-  return liveAssessments(assessments).some(isAssessmentComplete);
+/** The one gate item (issue #215). Its label says "every area in one assessment", not the
+ * issue's "at least one area": #50's done rule (every area rated) is unchanged, and the checklist
+ * must never claim less than the button needs. */
+export const CHECKLIST_KEYS = ['rated'] as const;
+export type MaturityChecklistKey = (typeof CHECKLIST_KEYS)[number];
+
+function assessmentMet(assessment: MaturityAssessment): ChecklistMet<MaturityChecklistKey> {
+  return { rated: isAssessmentComplete(assessment) };
+}
+
+function checklistMet(
+  assessments: readonly MaturityAssessment[],
+): ChecklistMet<MaturityChecklistKey> {
+  return closestMet(liveAssessments(assessments), CHECKLIST_KEYS, assessmentMet);
+}
+
+/** Whether `DoneToggle` should be enabled: at least one live assessment is fully rated, derived
+ * from the checklist (issue #215). */
+export function isComplete(assessments: readonly MaturityAssessment[]): boolean {
+  return allMet(CHECKLIST_KEYS, checklistMet(assessments));
+}
+
+/** The gate item, labelled for `DoneToggle` (see `transition.logic.ts`'s `doneChecklist()`). */
+export function doneChecklist(
+  assessments: readonly MaturityAssessment[],
+  labels: ChecklistLabels<MaturityChecklistKey>,
+): readonly DoneChecklistItem[] {
+  return checklistItems(CHECKLIST_KEYS, checklistMet(assessments), labels);
+}
+
+export function checklistLabelsFrom(
+  labels: readonly (string | undefined)[],
+): ChecklistLabels<MaturityChecklistKey> {
+  return checklistLabels(CHECKLIST_KEYS, labels);
+}
+
+/** Gates the checklist's rendering until the scope has loaded (no blank rows on a cold visit). */
+export function checklistLoaded(labels: ChecklistLabels<MaturityChecklistKey>): boolean {
+  return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
 /** Already-translated display name: a custom or renamed name if set, otherwise the built-in

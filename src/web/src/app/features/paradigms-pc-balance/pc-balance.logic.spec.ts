@@ -4,12 +4,15 @@ import {
   addAudit,
   auditAverageBalance,
   balanceOf,
-  canMarkDone,
+  checklistLabelsFrom,
+  checklistLoaded,
+  doneChecklist,
   editAsset,
   editAudit,
   groupSummaries,
   isAssetComplete,
   isAuditComplete,
+  isComplete,
   isOverUsed,
   newAuditFields,
   removeAsset,
@@ -72,7 +75,7 @@ describe('isAssetComplete', () => {
   });
 });
 
-describe('isAuditComplete/canMarkDone', () => {
+describe('isAuditComplete/isComplete', () => {
   it('is false with no assets', () => {
     expect(isAuditComplete(audit({ assets: [] }))).toBe(false);
   });
@@ -89,19 +92,73 @@ describe('isAuditComplete/canMarkDone', () => {
     ).toBe(true);
   });
 
-  it('canMarkDone ignores a tombstoned audit', () => {
+  it('isComplete ignores a tombstoned audit', () => {
     const complete = audit({
       id: 'a1',
       assets: [asset()],
       deletedAt: NOW.toISOString(),
     });
-    expect(canMarkDone([complete])).toBe(false);
+    expect(isComplete([complete])).toBe(false);
   });
 
-  it('canMarkDone is true once at least one live audit is complete', () => {
+  it('isComplete is true once at least one live audit is complete', () => {
     const incomplete = audit({ id: 'a1', assets: [] });
     const complete = audit({ id: 'a2', assets: [asset()] });
-    expect(canMarkDone([incomplete, complete])).toBe(true);
+    expect(isComplete([incomplete, complete])).toBe(true);
+  });
+});
+
+const LABELS = checklistLabelsFrom(['Name', 'Actions']);
+
+describe('doneChecklist', () => {
+  const met = (audits: PcAudit[]) => doneChecklist(audits, LABELS).map((item) => item.met);
+
+  it('lists both items, unmet, with no audits', () => {
+    expect(doneChecklist([], LABELS)).toEqual([
+      { label: 'Name', met: false },
+      { label: 'Actions', met: false },
+    ]);
+  });
+
+  it('leaves both unmet for an audit with no assets', () => {
+    expect(met([audit({ assets: [] })])).toEqual([false, false]);
+  });
+
+  it('asks for the action while an over-used asset has none', () => {
+    expect(met([audit({ assets: [asset({ p: 5, pc: 1 })] })])).toEqual([true, false]);
+  });
+
+  it('asks for a name again once an asset is renamed blank', () => {
+    expect(met([audit({ assets: [asset({ name: ' ' })] })])).toEqual([false, true]);
+  });
+
+  it('describes the live audit closest to complete, ignoring tombstones', () => {
+    const audits = [
+      audit({ id: 'a1', assets: [] }),
+      audit({ id: 'a2', assets: [asset({ p: 5, pc: 1 })] }),
+      audit({ id: 'a3', assets: [asset()], deletedAt: NOW.toISOString() }),
+    ];
+    expect(met(audits)).toEqual([true, false]);
+  });
+
+  it('is all met exactly when isComplete is true', () => {
+    const cases: PcAudit[][] = [
+      [],
+      [audit({ assets: [] })],
+      [audit({ assets: [asset({ p: 5, pc: 1 })] })],
+      [audit({ assets: [asset({ p: 5, pc: 1, action: 'Rest' })] })],
+      [audit({ assets: [asset()], deletedAt: NOW.toISOString() })],
+    ];
+    for (const audits of cases) {
+      expect(doneChecklist(audits, LABELS).every((item) => item.met)).toBe(isComplete(audits));
+    }
+  });
+});
+
+describe('checklistLoaded', () => {
+  it("is false for translateSignal's before-load [''] and true once labels arrive", () => {
+    expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    expect(checklistLoaded(LABELS)).toBe(true);
   });
 });
 

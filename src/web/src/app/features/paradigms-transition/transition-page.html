@@ -41,12 +41,14 @@
   </div>
 
   <div footer class="summary-section">
-    <app-transition-summary [summary]="summary()" />
+    @if (summary(); as summary) {
+      <app-transition-summary [summary]="summary" />
+    }
     <app-done-toggle
       [done]="done()"
       [completedAt]="completedAt()"
       [disabled]="!readyToMarkDone()"
-      [disabledHint]="'paradigmsTransition.summary.doneHint' | transloco"
+      [checklist]="checklist()"
       (toggled)="onToggleDone()"
     />
   </div>

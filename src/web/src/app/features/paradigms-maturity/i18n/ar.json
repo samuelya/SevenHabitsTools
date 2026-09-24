@@ -52,6 +52,9 @@
     "newArea": "جديد",
     "removedArea": "محذوف"
   },
+  "checklist": {
+    "rated": "قيّم كل المجالات في تقييم واحد"
+  },
   "summary": {
     "totalAssessments": {
       "zero": "لا تقييمات",
@@ -61,7 +64,6 @@
       "many": "{{count}} تقييماً",
       "other": "{{count}} تقييم"
     },
-    "latestProfile": "الملف الأخير: {{profile}}",
-    "doneHint": "أكمل تقييماً واحداً على الأقل أولاً: كل مجال يحتاج تقييماً."
+    "latestProfile": "الملف الأخير: {{profile}}"
   }
 }

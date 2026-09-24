@@ -1,10 +1,13 @@
 import { TeachEntry } from './teach.model';
 import {
   KEY_IDEA_MAX_LENGTH,
-  canMarkDone,
+  checklistLabelsFrom,
+  checklistLoaded,
   defaultPlannedAt,
+  doneChecklist,
   draftFor,
   entryForChapter,
+  isComplete,
   isKeyIdeaValid,
   isOverdue,
   isValidPlannedAt,
@@ -120,7 +123,7 @@ describe('isOverdue', () => {
   });
 });
 
-describe('sharedCount and canMarkDone', () => {
+describe('sharedCount and isComplete', () => {
   it('counts only live, shared entries', () => {
     const entries = [
       entry({ id: 'e1', status: 'shared' }),
@@ -128,11 +131,63 @@ describe('sharedCount and canMarkDone', () => {
       entry({ id: 'e3', chapter: 'h3', status: 'shared', deletedAt: '2026-01-05T00:00:00.000Z' }),
     ];
     expect(sharedCount(entries)).toBe(1);
-    expect(canMarkDone(entries)).toBe(true);
+    expect(isComplete(entries)).toBe(true);
   });
 
   it('is false with no shared entries', () => {
-    expect(canMarkDone([entry({ status: 'planned' })])).toBe(false);
+    expect(isComplete([entry({ status: 'planned' })])).toBe(false);
+  });
+
+  it('is true for a shared entry with a blank plannedAt (#52 rule unchanged)', () => {
+    expect(isComplete([entry({ status: 'shared', plannedAt: '' })])).toBe(true);
+  });
+});
+
+const LABELS = checklistLabelsFrom(['Plan', 'Share']);
+
+describe('doneChecklist', () => {
+  const met = (entries: TeachEntry[]) => doneChecklist(entries, LABELS).map((item) => item.met);
+
+  it('lists both items, unmet, with no entries', () => {
+    expect(doneChecklist([], LABELS)).toEqual([
+      { label: 'Plan', met: false },
+      { label: 'Share', met: false },
+    ]);
+  });
+
+  it('meets "plan" once a chapter has a dated entry, "share" once one is shared', () => {
+    expect(met([entry({ status: 'planned' })])).toEqual([true, false]);
+    expect(met([entry({ status: 'planned' }), entry({ id: 'e2', status: 'shared' })])).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('ignores a tombstoned shared entry', () => {
+    expect(met([entry({ status: 'shared', deletedAt: '2026-01-05T00:00:00.000Z' })])).toEqual([
+      false,
+      false,
+    ]);
+  });
+
+  it('is all met exactly when isComplete is true', () => {
+    const cases: TeachEntry[][] = [
+      [],
+      [entry({ status: 'planned' })],
+      [entry({ status: 'skipped' })],
+      [entry({ status: 'shared' })],
+      [entry({ status: 'shared', plannedAt: '' })],
+      [entry({ status: 'planned', plannedAt: '' })],
+      [entry({ status: 'shared', deletedAt: '2026-01-05T00:00:00.000Z' })],
+    ];
+    for (const entries of cases) {
+      expect(doneChecklist(entries, LABELS).every((item) => item.met)).toBe(isComplete(entries));
+    }
+  });
+
+  it("checklistLoaded is false for translateSignal's before-load [''] only", () => {
+    expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
+    expect(checklistLoaded(LABELS)).toBe(true);
   });
 });
 

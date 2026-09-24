@@ -4,6 +4,16 @@ import {
   liveAssessments,
 } from '../../shared/exercise-kit/assessment-history.logic';
 import {
+  allMet,
+  ChecklistLabels,
+  ChecklistMet,
+  checklistItems,
+  checklistLabels,
+  closestMet,
+  labelsLoaded,
+} from '../../shared/exercise-kit/done-checklist.logic';
+import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
+import {
   PC_BALANCE_GROUPS,
   PcAsset,
   PcAudit,
@@ -62,9 +72,52 @@ export function isAuditComplete(audit: Pick<PcAudit, 'assets'>): boolean {
   return audit.assets.length > 0 && audit.assets.every(isAssetComplete);
 }
 
-/** Whether `DoneToggle` should be enabled: at least one live audit is complete. */
-export function canMarkDone(audits: readonly PcAudit[]): boolean {
-  return liveAudits(audits).some(isAuditComplete);
+/** The two gate items (issue #215). */
+export const CHECKLIST_KEYS = ['named', 'actions'] as const;
+export type PcBalanceChecklistKey = (typeof CHECKLIST_KEYS)[number];
+
+/** One audit's "met" map: `named` is at least one asset, every one of them named (sliders always
+ * hold a value, so a name is the only thing an asset can be missing); `actions` is
+ * every over-used asset naming its action (not met by an audit with no assets). Both met is
+ * exactly `isAuditComplete()`. */
+function auditMet(audit: PcAudit): ChecklistMet<PcBalanceChecklistKey> {
+  const hasAssets = audit.assets.length > 0;
+  return {
+    named: hasAssets && audit.assets.every((asset) => Boolean(asset.name.trim())),
+    actions:
+      hasAssets &&
+      audit.assets.every((asset) => !isOverUsed(asset) || Boolean(asset.action?.trim())),
+  };
+}
+
+/** The checklist describes the live audit closest to complete (`closestMet()`). */
+function checklistMet(audits: readonly PcAudit[]): ChecklistMet<PcBalanceChecklistKey> {
+  return closestMet(liveAudits(audits), CHECKLIST_KEYS, auditMet);
+}
+
+/** Whether `DoneToggle` should be enabled: at least one live audit is complete, derived from the
+ * checklist (issue #215) so the button and the list it shows can never disagree. */
+export function isComplete(audits: readonly PcAudit[]): boolean {
+  return allMet(CHECKLIST_KEYS, checklistMet(audits));
+}
+
+/** The gate items, labelled for `DoneToggle` (see `transition.logic.ts`'s `doneChecklist()`). */
+export function doneChecklist(
+  audits: readonly PcAudit[],
+  labels: ChecklistLabels<PcBalanceChecklistKey>,
+): readonly DoneChecklistItem[] {
+  return checklistItems(CHECKLIST_KEYS, checklistMet(audits), labels);
+}
+
+export function checklistLabelsFrom(
+  labels: readonly (string | undefined)[],
+): ChecklistLabels<PcBalanceChecklistKey> {
+  return checklistLabels(CHECKLIST_KEYS, labels);
+}
+
+/** Gates the checklist's rendering until the scope has loaded (no blank rows on a cold visit). */
+export function checklistLoaded(labels: ChecklistLabels<PcBalanceChecklistKey>): boolean {
+  return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
 function averageOf(assets: readonly PcAsset[]): number | null {

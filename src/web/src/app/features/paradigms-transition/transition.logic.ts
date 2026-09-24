@@ -1,4 +1,14 @@
 import { newRecord, softDelete, touch, isLive } from '../../core/data/record';
+import {
+  allMet,
+  ChecklistLabels,
+  ChecklistMet,
+  checklistItems,
+  checklistLabels,
+  closestMet,
+  labelsLoaded,
+} from '../../shared/exercise-kit/done-checklist.logic';
+import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
   Script,
@@ -29,10 +39,55 @@ export function liveScripts(scripts: readonly Script[]): Script[] {
   return scripts.filter(isLive);
 }
 
+/** The four gate items (issue #215), in the order the item form asks for them. */
+export const CHECKLIST_KEYS = ['pattern', 'decision', 'newScript', 'situation'] as const;
+export type TransitionChecklistKey = (typeof CHECKLIST_KEYS)[number];
+
+/** One script's "met" map. `decision` always holds one of the three options (a new script starts
+ * at Keep), so "Decide what to do with it" is met as soon as there is a pattern to decide about;
+ * the two Rewrite/Stop items are met by a named Keep script. All four met is exactly
+ * `isItemComplete()`. */
+function scriptMet(script: Script): ChecklistMet<TransitionChecklistKey> {
+  const named = Boolean(script.text.trim());
+  const needsMore = requiresNewScript(script.decision);
+  return {
+    pattern: named,
+    decision: named,
+    newScript: named && (!needsMore || Boolean(script.newScript?.trim())),
+    situation: named && (!needsMore || Boolean(script.situation?.trim())),
+  };
+}
+
+/** The checklist describes the live script closest to complete (`closestMet()`), so "Mark done"
+ * and the list it shows reduce the same map and can never disagree. */
+function checklistMet(scripts: readonly Script[]): ChecklistMet<TransitionChecklistKey> {
+  return closestMet(liveScripts(scripts), CHECKLIST_KEYS, scriptMet);
+}
+
 /** Whether `DoneToggle` should be enabled: at least one live script is complete (issue #51's
- * "Implementation notes"). */
-export function canMarkDone(scripts: readonly Script[]): boolean {
-  return liveScripts(scripts).some(isItemComplete);
+ * "Implementation notes"), derived from the checklist (issue #215). */
+export function isComplete(scripts: readonly Script[]): boolean {
+  return allMet(CHECKLIST_KEYS, checklistMet(scripts));
+}
+
+/** The gate items, labelled for `DoneToggle` — `labels` from `checklistLabelsFrom()` over a
+ * `translateSignal` of `checklist.<key>` (playbook §6 "Reactive labels"). */
+export function doneChecklist(
+  scripts: readonly Script[],
+  labels: ChecklistLabels<TransitionChecklistKey>,
+): readonly DoneChecklistItem[] {
+  return checklistItems(CHECKLIST_KEYS, checklistMet(scripts), labels);
+}
+
+export function checklistLabelsFrom(
+  labels: readonly (string | undefined)[],
+): ChecklistLabels<TransitionChecklistKey> {
+  return checklistLabels(CHECKLIST_KEYS, labels);
+}
+
+/** Gates the checklist's rendering until the scope has loaded (no blank rows on a cold visit). */
+export function checklistLoaded(labels: ChecklistLabels<TransitionChecklistKey>): boolean {
+  return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
 /** The summary card's counts (issue #51's acceptance criteria): how many live scripts are

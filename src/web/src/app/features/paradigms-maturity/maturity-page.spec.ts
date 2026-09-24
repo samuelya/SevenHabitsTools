@@ -75,11 +75,30 @@ describe('MaturityPage', () => {
     );
   });
 
+  it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('app-maturity-summary')).toBeNull();
+    expect(host.querySelector('app-done-toggle .done-checklist')?.textContent).toContain(
+      'Rate every area in one assessment',
+    );
+
+    await addAssessment(harness);
+    harness.detectChanges();
+
+    expect(host.querySelector('app-maturity-summary')).not.toBeNull();
+  });
+
   it('starts with no history and Mark done disabled', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
     expect(host.querySelectorAll('app-assessment-history-list button')).toHaveLength(0);
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
   });
 
   it('creating a new assessment navigates to its child route and pre-fills the six built-in areas', async () => {
@@ -100,12 +119,18 @@ describe('MaturityPage', () => {
     for (let i = 0; i < 5; i++) {
       rateArea(harness, i, 2);
     }
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
 
     rateArea(harness, 5, 2);
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(false);
   });
 
   it('shows the overall profile once at least one area is rated', async () => {

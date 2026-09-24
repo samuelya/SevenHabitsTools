@@ -44,6 +44,10 @@
     "shared": "Shared",
     "skipped": "Skipped"
   },
+  "checklist": {
+    "planned": "Plan one chapter with a date",
+    "shared": "Mark it shared"
+  },
   "summary": {
     "shared": {
       "one": "1 of {{total}} chapters shared",
@@ -52,7 +56,6 @@
     "overdue": {
       "one": "1 overdue",
       "other": "{{count}} overdue"
-    },
-    "doneHint": "Share at least one chapter's key idea with someone first."
+    }
   }
 }

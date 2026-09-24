@@ -113,11 +113,30 @@ describe('PcBalancePage', () => {
     );
   });
 
+  it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('app-pc-balance-summary')).toBeNull();
+    expect(host.querySelector('app-done-toggle .done-checklist')?.textContent).toContain(
+      'Add an asset and name every one',
+    );
+
+    await addAudit(harness);
+    harness.detectChanges();
+
+    expect(host.querySelector('app-pc-balance-summary')).not.toBeNull();
+  });
+
   it('starts with no history and Mark done disabled', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;
     expect(host.querySelectorAll('app-assessment-history-list button')).toHaveLength(0);
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
   });
 
   it('creating a new audit navigates to its child route and opens the editor', async () => {
@@ -136,14 +155,20 @@ describe('PcBalancePage', () => {
     addAssetThroughForm(harness, 0, 'Sleep', 3, 3);
     const host = harness.routeNativeElement as HTMLElement;
 
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(false);
 
     // Adding a second, over-used asset with no action yet disables Mark done again: the audit
     // needs *every* over-used asset to have an action, not just one complete asset overall.
     addAssetThroughForm(harness, 1, 'Savings', 5, 1);
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
     expect(host.querySelector('.asset-action')).not.toBeNull();
   });
 
@@ -153,16 +178,22 @@ describe('PcBalancePage', () => {
     addAssetThroughForm(harness, 0, 'Savings', 5, 1);
     const host = harness.routeNativeElement as HTMLElement;
 
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(true);
 
     const textarea = host.querySelector('.asset-action textarea') as HTMLTextAreaElement;
     textarea.value = 'Automate a weekly transfer';
     textarea.dispatchEvent(new Event('input'));
     harness.detectChanges();
 
-    expect((host.querySelector('app-done-toggle button') as HTMLButtonElement).disabled).toBe(
-      false,
-    );
+    expect(
+      (host.querySelector('app-done-toggle button') as HTMLButtonElement).getAttribute(
+        'aria-disabled',
+      ) === 'true',
+    ).toBe(false);
   });
 
   it('marks done and reopens through DoneToggle', async () => {

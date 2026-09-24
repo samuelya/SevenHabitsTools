@@ -17,6 +17,7 @@ function localeFor(projectName: string): 'en' | 'ar' {
 const TEXT: Record<
   'en' | 'ar',
   {
+    checklistItem: string;
     hubTitle: string;
     markDone: string;
     reopen: string;
@@ -27,6 +28,7 @@ const TEXT: Record<
   }
 > = {
   en: {
+    checklistItem: 'Add at least one pattern you learned at home',
     hubTitle: 'Become a transition person',
     markDone: 'Mark done',
     reopen: 'Reopen',
@@ -36,6 +38,7 @@ const TEXT: Record<
     undo: 'Undo',
   },
   ar: {
+    checklistItem: 'ضيف على الأقل عادة واحدة أخدتها من بيتك',
     hubTitle: 'كن حلقة انتقال إيجابية',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
@@ -60,6 +63,10 @@ test.describe('paradigms transition reflection', () => {
     await page.goto('/habits/paradigms');
     await page.locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle }).click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/transition$/);
+
+    // No zero counter before the first script: the gate checklist is the only message (#215).
+    await expect(page.locator('app-transition-summary')).toHaveCount(0);
+    await expect(page.locator('.done-checklist', { hasText: text.checklistItem })).toBeVisible();
 
     const addButton = page.locator('.add-button');
     await addButton.click();
