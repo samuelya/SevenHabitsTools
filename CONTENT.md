@@ -62,7 +62,7 @@ Arabic uses two registers, split by what the string does. Nobody decides this st
 
 ### Key-suffix boundary (Arabic register)
 
-Look at the **last segment** of the key. It matches a suffix when it equals the suffix or ends with it in camelCase: `attemptLabel` counts as `label`, `revealButton` as `button`, `currentLegend` as `legend`, `placeholder1` as `placeholder`.
+Look at the **last segment** of the key. It matches a suffix when it equals the suffix or has it as a final camelCase segment, optionally followed by digits: `attemptLabel` counts as `label`, `revealButton` as `button`, `currentLegend` as `legend`, `placeholder1` as `placeholder`.
 
 | Key matches | Register |
 |---|---|
