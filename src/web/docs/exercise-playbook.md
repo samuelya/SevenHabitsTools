@@ -35,8 +35,10 @@ in the root scope. A key placed in the exercise's own scope throws there (`Throw
 ## 2. Wiring checklist (four registrations, one line each)
 
 1. `<slug>.model.ts`: `registerModel({ key, path, defaults, validate })` **and**
-   `registerExercise({ exerciseId, habit, titleKey, summaryKey, icon, route })`. Both at module
-   load, with the idempotent guard used in `shared/exercise-kit/exercise-kit.model.ts`. This file
+   `registerExercise({ exerciseId, habit, titleKey, summaryKey, icon, route, isStarted })`, where
+   `isStarted: storeStartedFactory<T>(key, isStarted)` (`shared/exercise-kit/exercise-started.ts`)
+   wraps the pure `isStarted(value)` predicate from `<slug>.logic.ts` (list/assessment: any live
+   record; worksheet: the record exists, #216). Both at module load, with the idempotent guard used in `shared/exercise-kit/exercise-kit.model.ts`. This file
    is in the initial bundle: types, defaults, validators and registrations only, with no component
    or service imports.
 2. `src/app/model-registry.ts`: add `import './features/<exerciseId>/<slug>.model';`.
@@ -118,6 +120,9 @@ those decisions so building another one needs none of its own.
   matters" then a `From: <chapter>` line, in that order. On desktop/tablet it starts expanded and
   collapses once the exercise has been started; on handset it always starts collapsed regardless —
   the visible part alone must carry what a first-time phone user needs.
+- The desktop reading width comes from the scaffold (`exercise-page.scss`, #216): the intro slot
+  caps at 72ch and the content slot and the split editor's form at 640px. A page adds no width
+  rules of its own.
 - "Read more" opens `ExerciseGuide`, a `MatDialog`: full-screen below `HANDSET_QUERY`, centred and
   capped at 560px above it. Four sections, same headings on every exercise: In short, How to do it
   (numbered), An example (§4's "Guide example" column), Afterwards.
@@ -220,7 +225,7 @@ convention to follow, not a component to add.
 | A `label`/`prompt`/`placeholder` triple per free-text field: `mat-label` = a short noun, a `<p class="field-prompt">` above the field = the question, `placeholder` = a worked example — never the only label | `perception-page.html`'s `step1.firstView.{label,prompt,placeholder}` and every other field |
 | "Back" hidden on step 1, "Next" hidden on the last step — `GuidedStepper` already does this; nothing a page adds | `guided-stepper.html`/`.ts` |
 | No zero counter anywhere on the page: a worksheet shows no step-count summary at all (the checklist is the only progress indicator); a list/assessment's own count card only renders once its total is non-zero | `perception-page.html`'s footer (no summary card, only `<app-done-toggle [checklist]>`); `exercise-layout.md`'s "Counts are plural-correct" |
-| The intro card collapsed once started — and, on handset, collapsed on every visit regardless of `isStarted()`, since the mandated copy for a worksheet's intro can alone push the first field past an 800px viewport at 360px width | `perception-page.ts`'s `collapsedByDefault` (`started() OR handset()`); `exercise-prompt-card.ts`'s `collapsedByDefault` input |
+| The intro card collapsed once started — and, on handset, collapsed on every visit regardless of `isStarted()`, since an expanded intro can alone push the primary action below the fold at 360×800 (#216 measured teach's first chapter at 768px against a 735px scroll port) | `collapsedByDefault = introCollapsedByDefault(started)` in the page (`exercise-prompt-card/intro-collapsed.ts`, `started() OR handset()`), bound to `exercise-prompt-card.ts`'s `collapsedByDefault` input; `started` uses the same `isStarted()` predicate the registry entry does |
 
 ### Writing the strings
 

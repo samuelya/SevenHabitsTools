@@ -63,6 +63,12 @@ export function entryForChapter(
   return entries.find((entry) => entry.chapter === chapter && isLive(entry));
 }
 
+/** Started once any chapter has a live entry (issue #216) — the hub's "started" and the intro
+ * card's collapse both read this. */
+export function isStarted(entries: readonly TeachEntry[]): boolean {
+  return entries.some(isLive);
+}
+
 /** Creates `chapter`'s entry on first edit, or edits its existing live one — never a second live
  * entry for the same chapter. Stamps `sharedAt` from `now` the moment `status` first becomes
  * `'shared'` (issue #52's "Implementation notes"); a later edit that leaves it `'shared'` doesn't

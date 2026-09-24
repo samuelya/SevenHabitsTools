@@ -57,6 +57,8 @@ describe('paradigms-perception model', () => {
       summaryKey: 'habits.exercises.paradigms-perception.summary',
       icon: 'visibility',
       route: 'habits/paradigms/perception',
+      // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      isStarted: expect.any(Function),
     });
   });
 

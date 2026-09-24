@@ -2,6 +2,8 @@ import { BaseRecord } from '../../core/data/record';
 import { isArrayOf, isBaseRecord, isOneOf } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
+import { isStarted } from './perception.logic';
 
 /** Whether one change attempt (step 2) relied on a quick fix or a principle the user built into
  * themselves (issue #48). Stored as a key, never translated text (architecture issue #1 §6). */
@@ -135,6 +137,7 @@ export function registerPerceptionModel(): void {
     summaryKey: 'habits.exercises.paradigms-perception.summary',
     icon: 'visibility',
     route: PERCEPTION_ROUTE,
+    isStarted: storeStartedFactory<PerceptionExercise | null>(PERCEPTION_MODEL_KEY, isStarted),
   });
 }
 

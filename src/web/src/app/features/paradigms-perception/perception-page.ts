@@ -1,7 +1,5 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
@@ -9,15 +7,14 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { translateObjectSignal, translateSignal, TranslocoPipe } from '@jsverse/transloco';
-import { map } from 'rxjs';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { featureStore } from '../../core/data/feature-store';
-import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { CLOCK } from '../../core/time/clock';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseGuideContent } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
+import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { GuidedStepContent } from '../../shared/exercise-kit/guided-stepper/guided-step-content';
 import {
@@ -109,7 +106,6 @@ const STEP_COMPLETE = [isStepOneComplete, isStepTwoComplete, isStepThreeComplete
 })
 export class PerceptionPage {
   private readonly clock = inject(CLOCK);
-  private readonly breakpoints = inject(BreakpointObserver);
   private readonly store = featureStore<PerceptionExercise | null>(PERCEPTION_MODEL_KEY);
   protected readonly progress = inject(ExerciseProgress);
 
@@ -121,15 +117,11 @@ export class PerceptionPage {
   /** Whether a record exists at all (issue #212's "started" rule): needs no stored flag, since a
    * worksheet record is only ever created on its first edit (`ensureExercise`). */
   protected readonly started = computed(() => isStarted(this.exercise()));
-  private readonly handset = toSignal(
-    this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
-    { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
-  );
   /** The intro card collapses once started (issue #212's spec), but on a phone it always starts
    * collapsed regardless — the mandated copy alone runs to about 520px expanded at 360px width,
    * which by itself pushes the first field past an 800px viewport (see the comment on the issue).
    * Desktop/tablet keeps the literal `started()`-only rule since there's room for it there. */
-  protected readonly collapsedByDefault = computed(() => this.started() || this.handset());
+  protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly changeAttempts = computed(
     () => this.exercise()?.changeAttempts ?? blankChangeAttempts(),
   );

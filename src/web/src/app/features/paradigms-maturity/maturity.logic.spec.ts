@@ -21,6 +21,7 @@ import {
   setAreaNote,
   suggestedHabits,
   summarize,
+  isStarted,
 } from './maturity.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
@@ -348,5 +349,21 @@ describe('removeAssessment/restoreAssessment (issue #203)', () => {
     const result = restoreAssessment([deleted], 'not-found', LATER);
 
     expect(result[0]).toBe(deleted);
+  });
+});
+
+describe('isStarted (issue #216)', () => {
+  it('is false with no assessments at all', () => {
+    expect(isStarted([])).toBe(false);
+  });
+
+  it('is false when every assessment is tombstoned', () => {
+    expect(isStarted([assessment({ deletedAt: NOW.toISOString() })])).toBe(false);
+  });
+
+  it('is true once any live assessment exists', () => {
+    expect(
+      isStarted([assessment({ id: 'x1', deletedAt: NOW.toISOString() }), assessment({ id: 'x2' })]),
+    ).toBe(true);
   });
 });

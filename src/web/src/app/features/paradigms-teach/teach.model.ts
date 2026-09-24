@@ -13,11 +13,12 @@ import {
   getRegisteredExercises,
   registerExercise,
 } from '../../shared/exercise-kit/exercise-registry';
+import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
 import {
   getRegisteredHubActions,
   registerHubAction,
 } from '../../shared/exercise-kit/hub-action-registry';
-import { sharedCount } from './teach.logic';
+import { isStarted, sharedCount } from './teach.logic';
 
 /** The ten book chapters a "teach it" commitment can be made for (issue #52's "Implementation
  * notes"): the nine habit hubs plus "Inside-Out Again", which has no habit hub of its own. Stored
@@ -121,6 +122,7 @@ export function registerTeachModel(): void {
       summaryKey: 'habits.exercises.paradigms-teach.summary',
       icon: 'campaign',
       route: TEACH_ROUTE,
+      isStarted: storeStartedFactory<TeachEntry[]>(TEACH_MODEL_KEY, isStarted),
       statusFactory: (): Signal<ExerciseHubStatus | null> => {
         // Defensive, not just idempotent: this factory runs later, lazily, from the hub page's own
         // `runInInjectionContext()` call at render time — a spec that reset the model registry

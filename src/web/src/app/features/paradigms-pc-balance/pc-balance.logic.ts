@@ -66,6 +66,12 @@ export function liveAudits(audits: readonly PcAudit[]): PcAudit[] {
   return liveAssessments(audits);
 }
 
+/** Started once any live audit exists (issue #216) — the hub's "started" and the intro card's
+ * collapse both read this. */
+export function isStarted(audits: readonly PcAudit[]): boolean {
+  return audits.some(isLive);
+}
+
 /** An audit is complete once it has at least one asset and every over-used asset names an action
  * (issue #49's implementation notes). */
 export function isAuditComplete(audit: Pick<PcAudit, 'assets'>): boolean {

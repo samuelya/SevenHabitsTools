@@ -51,6 +51,8 @@ describe('paradigms-transition model', () => {
       summaryKey: 'habits.exercises.paradigms-transition.summary',
       icon: 'compare_arrows',
       route: 'habits/paradigms/transition',
+      // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      isStarted: expect.any(Function),
     });
   });
 

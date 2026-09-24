@@ -30,6 +30,12 @@ export function liveAssessmentsOf(
   return liveAssessments(assessments);
 }
 
+/** Started once any live assessment exists (issue #216) — the hub's "started" and the intro
+ * card's collapse both read this. */
+export function isStarted(assessments: readonly MaturityAssessment[]): boolean {
+  return assessments.some(isLive);
+}
+
 export function isAreaRated(area: Pick<MaturityArea, 'level'>): boolean {
   return area.level !== undefined;
 }

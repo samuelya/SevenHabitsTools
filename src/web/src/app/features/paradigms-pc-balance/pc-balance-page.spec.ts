@@ -1,4 +1,4 @@
-import { EventEmitter, signal } from '@angular/core';
+import { DebugElement, EventEmitter, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MatSliderThumb } from '@angular/material/slider';
 import { By } from '@angular/platform-browser';
@@ -7,6 +7,11 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
 import '../../features/settings/settings.model';
+import { featureStore } from '../../core/data/feature-store';
+import { newRecord } from '../../core/data/record';
+import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
+import { PcBalancePage } from './pc-balance-page';
+import { PC_BALANCE_MODEL_KEY, PcAudit } from './pc-balance.model';
 import {
   ConfirmAndDeleteOptions,
   DeleteWithUndo,
@@ -284,5 +289,35 @@ describe('PcBalancePage', () => {
     expect(
       harness.routeNativeElement?.querySelectorAll('.assessment-history-list__item'),
     ).toHaveLength(1);
+  });
+});
+
+describe('PcBalancePage intro card (issue #216)', () => {
+  function promptCardIn(debugElement: DebugElement): ExercisePromptCard {
+    return debugElement.query(By.directive(ExercisePromptCard)).componentInstance;
+  }
+
+  it('starts expanded on a first visit, before anything is saved (desktop)', async () => {
+    const harness = await setUp();
+    expect(promptCardIn(harness.fixture.debugElement).expanded()).toBe(true);
+  });
+
+  it('starts collapsed on a later visit once a live audit exists (desktop)', async () => {
+    await setUp();
+    TestBed.runInInjectionContext(() =>
+      featureStore<PcAudit[]>(PC_BALANCE_MODEL_KEY).update((current) => [
+        ...current,
+        newRecord(
+          { date: '2026-01-01', assets: [], reflection: '' } as const,
+          new Date('2026-01-01T00:00:00.000Z'),
+        ),
+      ]),
+    );
+
+    const fixture = TestBed.createComponent(PcBalancePage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(promptCardIn(fixture.debugElement).expanded()).toBe(false);
   });
 });

@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { DebugElement, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter, Router, Routes, withComponentInputBinding } from '@angular/router';
@@ -9,6 +9,10 @@ import { CLOCK } from '../../core/time/clock';
 // Side-effect only: `DoneToggle`'s "Completed <time>" caption renders through `AppDatePipe`,
 // which resolves `settings.numerals` via `featureStore` — see `done-toggle.spec.ts`'s own import.
 import '../../features/settings/settings.model';
+import { featureStore } from '../../core/data/feature-store';
+import { newRecord } from '../../core/data/record';
+import { TransitionPage } from './transition-page';
+import { TRANSITION_MODEL_KEY, Script } from './transition.model';
 import {
   ConfirmAndDeleteOptions,
   DeleteWithUndo,
@@ -424,5 +428,40 @@ describe('TransitionPage', () => {
     expect(
       host.querySelector('app-exercise-list mat-nav-list .exercise-list__item')?.textContent,
     ).toContain('Silence means agreement');
+  });
+});
+
+describe('TransitionPage intro card (issue #216)', () => {
+  function promptCardIn(debugElement: DebugElement): ExercisePromptCard {
+    return debugElement.query(By.directive(ExercisePromptCard)).componentInstance;
+  }
+
+  it('starts expanded on a first visit, before anything is saved (desktop)', async () => {
+    const harness = await setUp();
+    expect(promptCardIn(harness.fixture.debugElement).expanded()).toBe(true);
+  });
+
+  it('starts collapsed on a later visit once a live script exists (desktop)', async () => {
+    await setUp();
+    TestBed.runInInjectionContext(() =>
+      featureStore<Script[]>(TRANSITION_MODEL_KEY).update((current) => [
+        ...current,
+        newRecord(
+          {
+            text: 'Silence means agreement',
+            source: 'family',
+            effect: 'harms',
+            decision: 'keep',
+          } as const,
+          new Date('2026-01-01T00:00:00.000Z'),
+        ),
+      ]),
+    );
+
+    const fixture = TestBed.createComponent(TransitionPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(promptCardIn(fixture.debugElement).expanded()).toBe(false);
   });
 });

@@ -13,6 +13,7 @@ import {
   restoreScript,
   summarize,
   toListItem,
+  isStarted,
 } from './transition.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
@@ -301,5 +302,21 @@ describe('requiresNewScript', () => {
     expect(requiresNewScript('keep')).toBe(false);
     expect(requiresNewScript('rewrite')).toBe(true);
     expect(requiresNewScript('stop')).toBe(true);
+  });
+});
+
+describe('isStarted (issue #216)', () => {
+  it('is false with no scripts at all', () => {
+    expect(isStarted([])).toBe(false);
+  });
+
+  it('is false when every script is tombstoned', () => {
+    expect(isStarted([script({ deletedAt: NOW.toISOString() })])).toBe(false);
+  });
+
+  it('is true once any live script exists', () => {
+    expect(
+      isStarted([script({ id: 'x1', deletedAt: NOW.toISOString() }), script({ id: 'x2' })]),
+    ).toBe(true);
   });
 });

@@ -7,6 +7,8 @@ import {
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
+import { isStarted } from './pc-balance.logic';
 
 /** The three asset groups the audit covers (issue #49). Stored as a key, never translated text
  * (architecture issue #1 §6). */
@@ -106,6 +108,7 @@ export function registerPcBalanceModel(): void {
     summaryKey: 'habits.exercises.paradigms-pc-balance.summary',
     icon: 'balance',
     route: PC_BALANCE_ROUTE,
+    isStarted: storeStartedFactory<PcAudit[]>(PC_BALANCE_MODEL_KEY, isStarted),
   });
 }
 

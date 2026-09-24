@@ -63,6 +63,7 @@ describe('paradigms-teach model', () => {
       route: 'habits/paradigms/teach',
     });
     expect(entry?.statusFactory).toBeInstanceOf(Function);
+    expect(entry?.isStarted).toBeInstanceOf(Function);
   });
 
   it('registers a "teach this" hub action that pre-selects the current hub\'s chapter', () => {
