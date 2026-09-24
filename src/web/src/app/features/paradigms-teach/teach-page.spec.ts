@@ -140,6 +140,43 @@ describe('TeachPage', () => {
     expect(titles[9]).toContain('Inside-Out again');
   });
 
+  it('has no search box or sort toggle over the ten fixed chapters (issue #224)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('app-exercise-list input[type="search"]')).toBeNull();
+    expect(host.querySelector('app-exercise-list mat-button-toggle-group')).toBeNull();
+  });
+
+  it('shows a status chip on every chapter row, and the key idea and a dated chip once planned (issue #224)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+    const rows = () => host.querySelectorAll('app-exercise-list .exercise-list__item');
+
+    expect(rows()[1].querySelector('.exercise-list__chip')?.textContent?.trim()).toBe(
+      'Not planned',
+    );
+
+    await selectChapter(harness, 1);
+    itemForm(harness).changed.emit({ keyIdea: 'Choose your response\nnot just react' });
+    harness.detectChanges();
+
+    expect(rows()[1].textContent).toContain('Choose your response');
+    expect(rows()[1].textContent).not.toContain('not just react');
+    expect(rows()[1].querySelector('.exercise-list__chip')?.textContent?.trim()).toBe(
+      'Planned by 12 Jan',
+    );
+  });
+
+  it('titles the editor with the chapter name, not "New commitment" (issue #224)', async () => {
+    const harness = await setUp();
+    await selectChapter(harness, 1);
+
+    expect(harness.routeNativeElement?.querySelector('.editor-title')?.textContent?.trim()).toBe(
+      'Habit 1: Be proactive',
+    );
+  });
+
   it('opens a chapter with no entry yet in the full-screen editor, defaulted to "planned"', async () => {
     const harness = await setUp();
     await selectChapter(harness, 1);

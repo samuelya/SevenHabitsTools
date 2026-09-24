@@ -1,10 +1,7 @@
 <app-exercise-page
   [title]="'paradigmsTeach.prompt.title' | transloco"
   [editing]="hasDetail()"
-  [editorTitle]="
-    (isNewEntry() ? 'paradigmsTeach.editor.newTitle' : 'paradigmsTeach.editor.editTitle')
-      | transloco
-  "
+  [editorTitle]="editorTitle()"
   [editorStatus]="editorStatus()"
   (editorClosed)="closeDetail()"
 >
@@ -24,6 +21,7 @@
     [emptyMessage]="'paradigmsTeach.list.empty' | transloco"
     [noMatchMessage]="'paradigmsTeach.list.noMatch' | transloco"
     initialSort="none"
+    [searchable]="false"
     [deletable]="true"
     (itemSelected)="select($event)"
     (deleteRequested)="onEntryDeleted($event)"

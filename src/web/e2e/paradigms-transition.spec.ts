@@ -23,6 +23,13 @@ const TEXT: Record<
     markDone: string;
     reopen: string;
     stopToggle: string;
+    rewriteToggle: string;
+    familyChip: string;
+    harmsChip: string;
+    keepHint: string;
+    rewriteLabel: string;
+    stopLabel: string;
+    situationLabel: string;
     cancel: string;
     delete: string;
     undo: string;
@@ -34,6 +41,13 @@ const TEXT: Record<
     markDone: 'Mark done',
     reopen: 'Reopen',
     stopToggle: 'Stop',
+    rewriteToggle: 'Rewrite',
+    familyChip: 'Family',
+    harmsChip: 'Harms',
+    keepHint: 'Nothing more to write. Keep it and move on.',
+    rewriteLabel: 'What will you say or do instead?',
+    stopLabel: 'What will you do instead of this?',
+    situationLabel: 'Which situation this week will this show up in?',
     cancel: 'Cancel',
     delete: 'Delete',
     undo: 'Undo',
@@ -44,6 +58,13 @@ const TEXT: Record<
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     stopToggle: 'أوقفه',
+    rewriteToggle: 'أعد صياغته',
+    familyChip: 'العائلة',
+    harmsChip: 'يضر',
+    keepHint: 'مفيش حاجة تانية تكتبها. خليها زي ما هي وكمّل.',
+    rewriteLabel: 'ماذا ستقول أو تفعل بدلاً من ذلك؟',
+    stopLabel: 'ماذا ستفعل بدلاً من هذا؟',
+    situationLabel: 'في أي موقف هذا الأسبوع سيظهر هذا؟',
     cancel: 'إلغاء',
     delete: 'حذف',
     undo: 'تراجع',
@@ -270,6 +291,79 @@ test.describe('paradigms transition reflection', () => {
     const footer = await page.locator('.footer-slot').boundingBox();
     const pageArea = await page.locator('main.page').boundingBox();
     expect(pageArea!.y + pageArea!.height - (footer!.y + footer!.height)).toBeLessThanOrEqual(24);
+  });
+
+  test('the row shows the pattern text, clamped at two lines, with source and effect chips (#225)', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    const pattern =
+      'When someone raises their voice at home I go completely quiet, agree to anything they ask and then stew about it for days afterwards without saying a word to anyone';
+    await seedDocument({
+      habits: {
+        paradigms: {
+          scripts: [
+            {
+              id: '22222222-2222-4222-8222-222222222221',
+              createdAt: '2026-01-01T00:00:00.000Z',
+              updatedAt: '2026-01-01T00:00:00.000Z',
+              text: `${pattern}\nSecond line never shown`,
+              source: 'family',
+              effect: 'harms',
+              decision: 'keep',
+            },
+          ],
+        },
+      },
+    });
+    await page.goto('/habits/paradigms/transition');
+
+    const row = page.locator('.exercise-list__item');
+    await expect(row).toHaveCount(1);
+    await expect(row).not.toContainText('Second line never shown');
+    await expect(row.locator('.exercise-list__chip')).toHaveText([text.familyChip, text.harmsChip]);
+
+    // Two lines at most, ending in an ellipsis rather than overflowing into the chips.
+    const title = row.locator('[matListItemTitle]');
+    const { lines, clipped } = await title.evaluate((element) => {
+      const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
+      return {
+        lines: Math.round(element.clientHeight / lineHeight),
+        clipped: element.scrollHeight > element.clientHeight,
+      };
+    });
+    expect(lines).toBeLessThanOrEqual(2);
+    expect(clipped).toBe(true);
+    const titleBox = (await title.boundingBox())!;
+    const chipsBox = (await row.locator('.exercise-list__chips').boundingBox())!;
+    expect(chipsBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height - 1);
+    const rowBox = (await row.boundingBox())!;
+    expect(chipsBox.y + chipsBox.height).toBeLessThanOrEqual(rowBox.y + rowBox.height + 1);
+  });
+
+  test('the decision hint and field labels talk to the user per choice (#225)', async ({
+    page,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+    await page.goto('/habits/paradigms/transition');
+    await page.locator('.add-button').click();
+    const form = page.locator('app-transition-item-form');
+    await form.locator('textarea').first().fill('Silence means agreement');
+
+    const decision = form.locator('mat-button-toggle-group[aria-describedby="decision-hint"]');
+    await expect(decision).toHaveCount(1);
+    const hint = form.locator('#decision-hint');
+    await expect(hint).toHaveText(text.keepHint);
+
+    await form.locator('button', { hasText: text.rewriteToggle }).click();
+    await expect(hint).not.toHaveText(text.keepHint);
+    await expect(form.locator('mat-label', { hasText: text.rewriteLabel })).toBeVisible();
+    await expect(form.locator('mat-label', { hasText: text.situationLabel })).toBeVisible();
+
+    await form.locator('button', { hasText: text.stopToggle }).click();
+    await expect(form.locator('mat-label', { hasText: text.stopLabel })).toBeVisible();
+    await expect(form.locator('mat-label', { hasText: text.situationLabel })).toBeVisible();
   });
 
   // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but

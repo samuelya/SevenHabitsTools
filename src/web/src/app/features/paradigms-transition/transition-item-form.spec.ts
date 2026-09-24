@@ -125,13 +125,37 @@ describe('TransitionItemForm', () => {
     expect(emitted).toHaveLength(1);
   });
 
-  it('shows the decision hint under the decision toggle group', () => {
-    const fixture = setUp(script());
-
-    expect(fixture.nativeElement.querySelector('.decision-hint')?.textContent).toContain(
-      'write the new script',
+  it('describes the decision control with a hint that talks about the choice made (issue #225)', () => {
+    const fixture = setUp(script({ decision: 'keep' }));
+    const group = fixture.nativeElement.querySelector(
+      'mat-button-toggle-group[aria-describedby="decision-hint"]',
     );
+    const hint = () => fixture.nativeElement.querySelector('#decision-hint')?.textContent?.trim();
+
+    expect(group).not.toBeNull();
+    expect(hint()).toBe('Nothing more to write. Keep it and move on.');
+
+    fixture.componentRef.setInput('script', script({ decision: 'rewrite' }));
+    fixture.detectChanges();
+    expect(hint()).not.toBe('Nothing more to write. Keep it and move on.');
+    expect(hint()).not.toMatch(/field/i);
   });
+
+  it.each([
+    ['rewrite', 'What will you say or do instead?'],
+    ['stop', 'What will you do instead of this?'],
+  ] as const)(
+    'asks the %s question for the first field, and the situation question (issue #225)',
+    (decision, question) => {
+      const fixture = setUp(script({ decision }));
+      const labels = [...fixture.nativeElement.querySelectorAll('mat-label')].map((label) =>
+        (label as HTMLElement).textContent?.trim(),
+      );
+
+      expect(labels).toContain(question);
+      expect(labels).toContain('Which situation this week will this show up in?');
+    },
+  );
 
   it("leaves the editor's opening focus to the kit, and marks the script field for it (#187)", async () => {
     const fixture = setUp(script(), { attached: true });

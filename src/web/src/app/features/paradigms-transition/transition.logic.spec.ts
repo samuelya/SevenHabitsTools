@@ -195,14 +195,22 @@ describe('toListItem', () => {
     effect: { helps: 'Helps', harms: 'Harms', mixed: 'Mixed' },
   };
 
-  it('maps text, a translated source/effect subtitle and completeness', () => {
+  it('maps the pattern text, translated source/effect chips and completeness (issue #225)', () => {
     const item = toListItem(script({ decision: 'stop' }), labels);
     expect(item).toEqual({
       id: 's1',
       title: 'Conflict means someone has to lose',
-      subtitle: 'Family · Harms',
+      chips: [{ label: 'Family' }, { label: 'Harms' }],
       done: false,
     });
+  });
+
+  it("titles the row with the pattern's first non-blank line only (issue #225)", () => {
+    const item = toListItem(
+      script({ text: '\n  When I am stressed  \nI shut everyone out' }),
+      labels,
+    );
+    expect(item.title).toBe('When I am stressed');
   });
 
   it('titles a script with no text by its new script, then its situation, else blank (issue #217)', () => {
