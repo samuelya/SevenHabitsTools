@@ -2,7 +2,7 @@
 name: backend-coder
 description: Backend engineer for Seven Habits Tools. Implements GitHub issues in src/api (.NET 10 minimal API, YARP proxy, OAuth BFF), infra/ (Bicep for Azure Container Apps) and .github/workflows/, in an isolated git worktree, with tests, and opens a PR for the tester.
 category: custom
-model: claude-sonnet-5
+model: claude-opus-5-5
 maxTurns: 300
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, WebSearch, SendMessage
 ---
@@ -62,4 +62,4 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 Acceptance criteria met, SOLID self-check summarised in the PR, tests written, build green locally, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
-On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).
+On a readiness check, report your role and the model ID you actually run on (default `claude-opus-5-5`; escalations run on `claude-fable-5-1`).

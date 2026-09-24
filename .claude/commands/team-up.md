@@ -15,6 +15,6 @@ Run this at the start of an implementation session. One Bash call for the reads,
 6. This session's model: the lead runs on Opus by default (`.claude/settings.json`); switch to Fable with `/model` only for an escalation or a design decision, and back afterwards.
 7. Print a table: agent | default model | escalation tiers.
 
-Pipeline reminder: owner picks an issue → coder (own worktree, one round) → PR → owner runs `/code-review` (effort scaled to risk) → fresh coder fixes findings → tester (feature PRs; skipped for small fixes, see CLAUDE.md "Tester scope") → owner merges. Coders start on Sonnet, or on Opus 5.5 for risky issues (CLAUDE.md "Model routing"); escalation is 2 rounds per tier, Sonnet → Opus 5.5 → Fable → owner. `business-analyst` curates the backlog independently on Opus 5.5.
+Pipeline reminder: owner picks an issue → coder (own worktree, one round) → PR → owner runs `/code-review` (effort scaled to risk) → fresh coder fixes findings → tester (feature PRs; skipped for small fixes, see CLAUDE.md "Tester scope") → owner merges. Coders run on Opus 5.5 (CLAUDE.md "Coder model"); escalation is 2 rounds per tier, Opus 5.5 → Fable → owner. The tester runs on Sonnet. `business-analyst` curates the backlog independently on Opus 5.5.
 
 Status names are case-sensitive: `scripts/gh/set-status.sh <issue> "In progress"` (`Backlog`, `Ready`, `In progress`, `In review`, `Done`).
