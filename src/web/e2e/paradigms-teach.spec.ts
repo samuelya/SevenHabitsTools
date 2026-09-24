@@ -16,15 +16,23 @@ function localeFor(projectName: string): 'en' | 'ar' {
 
 const TEXT: Record<
   'en' | 'ar',
-  { hubActionLabel: string; markDone: string; reopen: string; sharedToggle: string }
+  {
+    checklistItem: string;
+    hubActionLabel: string;
+    markDone: string;
+    reopen: string;
+    sharedToggle: string;
+  }
 > = {
   en: {
+    checklistItem: 'Plan one chapter with a date',
     hubActionLabel: 'Teach this',
     markDone: 'Mark done',
     reopen: 'Reopen',
     sharedToggle: 'Shared',
   },
   ar: {
+    checklistItem: 'خطّط لفصل واحد بميعاد',
     hubActionLabel: 'علّم هذا',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
@@ -33,6 +41,17 @@ const TEXT: Record<
 };
 
 test.describe('teach-to-learn tracker', () => {
+  test('shows the gate checklist and no zero counter before any chapter is planned (#215)', async ({
+    page,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
+
+    await page.goto('/habits/paradigms/teach');
+
+    await expect(page.locator('.done-checklist', { hasText: text.checklistItem })).toBeVisible();
+    await expect(page.locator('app-teach-summary')).toHaveCount(0);
+  });
+
   test('opens from the h1 hub pre-selecting its chapter, marks it shared and done, and it survives a reload', async ({
     page,
   }, testInfo) => {

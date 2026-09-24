@@ -13,13 +13,18 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<'en' | 'ar', { hubTitle: string; markDone: string; reopen: string }> = {
+const TEXT: Record<
+  'en' | 'ar',
+  { checklistItem: string; hubTitle: string; markDone: string; reopen: string }
+> = {
   en: {
+    checklistItem: 'Rate at least one asset',
     hubTitle: 'Audit your results and capacity',
     markDone: 'Mark done',
     reopen: 'Reopen',
   },
   ar: {
+    checklistItem: 'قيّم على الأقل حاجة واحدة ليها قيمة عندك',
     hubTitle: 'قيّم نتائجك وقدرتك على الإنتاج',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
@@ -39,6 +44,10 @@ test.describe('P/PC balance audit', () => {
     await page.goto('/habits/paradigms');
     await page.locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle }).click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/pc-balance$/);
+
+    // No zero counter before the first audit: the gate checklist is the only message (#215).
+    await expect(page.locator('app-pc-balance-summary')).toHaveCount(0);
+    await expect(page.locator('.done-checklist', { hasText: text.checklistItem })).toBeVisible();
 
     await page.locator('.add-button').click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/pc-balance\/[^/]+$/);

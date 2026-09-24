@@ -283,17 +283,17 @@ translations outside `TranslocoPipe`/`translateSignal`, it needs both too: an `O
 whose inputs didn't change is otherwise skipped, and its text stays in the previous language
 (issue #187; `transition-summary.spec.ts`'s en → ar → en test is the guard).
 
-**`DoneToggle`'s `disabledHint`.** For an exercise built before #212, pass one whenever
-`disabled()` can be true, so the user learns _why_ "Mark done" is unavailable instead of finding a
-silently inert button:
+**`DoneToggle`'s `checklist`.** Every exercise passes `[checklist]` (playbook's "Definition of
+done"), so the user learns _which_ required items are still unmet instead of finding a silently
+inert "Mark done". The single-string `disabledHint` input is gone (#215). While gated, "Mark done"
+is `disabledInteractive` with `aria-disabled="true"`, not natively `disabled`: it stays in the Tab
+order and screen readers announce the checklist it points at through `aria-describedby`.
+`DoneToggle` swallows the click itself. Assert the gate in a test with
+`getAttribute('aria-disabled')`, not `.disabled`.
 
-```html
-<app-done-toggle ... [disabledHint]="'<exerciseId>.summary.doneHint' | transloco" />
-```
-
-A **new** exercise passes `checklist` instead (playbook's "Definition of done") — the richer
-alternative that lists which required items are still unmet, not just that some are; don't pass
-both.
+A list or assessment page only renders its count card once the first item exists: the page's
+`summary` computed returns `null` before that, and the template wraps the card in
+`@if (summary(); as summary)` (#215). The list's own empty-state text is then the only message.
 
 **Forms.** `cdkTextareaAutosize` (`@angular/cdk/text-field`) on every free-text `<textarea>`, with
 `cdkAutosizeMinRows="3" cdkAutosizeMaxRows="10"` — a fixed two-row box makes writing feel cramped;
