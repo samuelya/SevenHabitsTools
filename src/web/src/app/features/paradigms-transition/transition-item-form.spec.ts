@@ -142,8 +142,8 @@ describe('TransitionItemForm', () => {
   });
 
   it.each([
-    ['rewrite', 'What will you say or do instead?'],
-    ['stop', 'What will you do instead of this?'],
+    ['rewrite', 'Your new version'],
+    ['stop', "What you'll do instead"],
   ] as const)(
     'asks the %s question for the first field, and the situation question (issue #225)',
     (decision, question) => {
@@ -153,7 +153,32 @@ describe('TransitionItemForm', () => {
       );
 
       expect(labels).toContain(question);
-      expect(labels).toContain('Which situation this week will this show up in?');
+      expect(labels).toContain("When it'll show up");
+    },
+  );
+
+  it.each([
+    ['rewrite', 'How do you want it to go from now on?'],
+    ['stop', 'What will you do instead of this?'],
+  ] as const)(
+    'asks each free-text question above its field and names it as the description, for %s (#228)',
+    (decision, newScriptPrompt) => {
+      const fixture = setUp(script({ decision }));
+      const element = fixture.nativeElement as HTMLElement;
+      const prompts = [...element.querySelectorAll('.field-prompt')].map((prompt) => [
+        prompt.id,
+        prompt.textContent?.trim(),
+      ]);
+      const describedBy = [...element.querySelectorAll('textarea, input')].map((field) =>
+        field.getAttribute('aria-describedby'),
+      );
+
+      expect(prompts).toEqual([
+        ['text-prompt', "What's something you say, do or expect that you picked up from others?"],
+        ['new-script-prompt', newScriptPrompt],
+        ['situation-prompt', 'When will this come up this week?'],
+      ]);
+      expect(describedBy).toEqual(['text-prompt', 'new-script-prompt', 'situation-prompt']);
     },
   );
 

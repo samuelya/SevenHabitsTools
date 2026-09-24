@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Paradigms & perception (issue #48, reworked by #212): the reference **worksheet** exercise
@@ -27,46 +28,24 @@ function activeStepContent(page: Page) {
   );
 }
 
-const TEXT: Record<
-  'en' | 'ar',
-  {
-    hubTitle: string;
-    reveal: string;
-    character: string;
-    next: string;
-    markDone: string;
-    reopen: string;
-    readMore: string;
-    guideTitle: string;
-    guideClose: string;
-    checklistItem: string;
-  }
-> = {
-  en: {
-    hubTitle: 'Your paradigm',
-    reveal: 'Show the other side',
-    character: 'Real change',
-    next: 'Next',
-    markDone: 'Mark done',
-    reopen: 'Reopen',
-    readMore: 'Read more',
-    guideTitle: 'How to do this exercise',
-    guideClose: 'Close',
-    checklistItem: "Write why you think they didn't wave back",
-  },
-  ar: {
-    hubTitle: 'إطارك الذهني',
-    reveal: 'اعرض الوجه الآخر',
-    character: 'تغيير حقيقي',
-    next: 'التالي',
-    markDone: 'وضع علامة تم',
-    reopen: 'إعادة فتح',
-    readMore: 'اقرأ المزيد',
-    guideTitle: 'إزاي تعمل التمرين ده',
-    guideClose: 'قفل',
-    checklistItem: 'اكتب ليه تفتكر إنه ما ردش عليك',
-  },
-};
+function textFor(locale: Locale) {
+  const kit = (key: string) => t(locale, 'exerciseKit', key);
+  return {
+    hubTitle: t(locale, 'habits', 'exercises.paradigms-perception.shortTitle'),
+    reveal: t(locale, 'paradigmsPerception', 'step1.revealButton'),
+    character: t(locale, 'paradigmsPerception', 'step2.kind.character'),
+    next: kit('stepper.next'),
+    markDone: kit('doneToggle.markDone'),
+    reopen: kit('doneToggle.reopen'),
+    readMore: kit('promptCard.readMore'),
+    guideTitle: kit('guide.title'),
+    guideClose: kit('guide.close'),
+    checklistItem: t(locale, 'paradigmsPerception', 'checklist.firstView'),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 test.describe('paradigms & perception worksheet', () => {
   test('fills all three steps, marks the exercise done, and it survives a reload', async ({

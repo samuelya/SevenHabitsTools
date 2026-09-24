@@ -84,7 +84,7 @@ describe('MaturityAssessmentForm, phase 2: rating (#222)', () => {
     const setup = setUp(assessment({ areas: THREE }), { handset: true });
     const remove = setup.host.querySelector('.remove-area') as HTMLButtonElement;
 
-    expect(remove.getAttribute('aria-label')).toBe('Remove this area: Family');
+    expect(remove.getAttribute('aria-label')).toBe('Remove area: Family');
     remove.click();
     setup.fixture.detectChanges();
 
@@ -124,6 +124,10 @@ describe('MaturityAssessmentForm, phase 2: rating (#222)', () => {
     expect(textarea.placeholder).toBe(
       'e.g. I still wait for my manager to tell me what to focus on.',
     );
+    // The question sits above the field and describes it (#228).
+    const prompt = setup.host.querySelector(`#${textarea.getAttribute('aria-describedby')}`);
+    expect(prompt?.classList).toContain('field-prompt');
+    expect(prompt?.textContent?.trim()).toBe('What makes you say that?');
     textarea.value = 'Feeling steadier lately';
     textarea.dispatchEvent(new Event('input'));
 

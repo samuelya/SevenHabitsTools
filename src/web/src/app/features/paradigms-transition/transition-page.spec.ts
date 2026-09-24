@@ -100,7 +100,7 @@ async function closeEditor(harness: RouterTestingHarness): Promise<void> {
   await harness.fixture.whenStable();
 }
 
-/** Taps "Add a script": opens the editor on an in-memory draft at `new` (issue #217). */
+/** Taps 'Add pattern': opens the editor on an in-memory draft at `new` (issue #217). */
 async function openDraft(harness: RouterTestingHarness): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
   const addButton = host.querySelector('.add-button') as HTMLButtonElement;
@@ -132,7 +132,7 @@ describe('TransitionPage', () => {
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(host.textContent).toContain('Become a transition person');
-    expect(host.textContent).toContain('inherited');
+    expect(host.textContent).toContain('passed down');
   });
 
   it('glosses "script" inline under the prompt on first use (#218)', async () => {
@@ -140,7 +140,7 @@ describe('TransitionPage', () => {
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(host.querySelector('.prompt-gloss')?.textContent?.trim()).toBe(
-      'The pattern you learned at home; the book calls it a script.',
+      'The pattern you learned at home. The book calls it a script.',
     );
   });
 
@@ -243,7 +243,7 @@ describe('TransitionPage', () => {
     ).click();
 
     expect(deleteWithUndo.calls).toHaveLength(1);
-    expect(deleteWithUndo.calls[0].deletedMessage).toBe('Script deleted');
+    expect(deleteWithUndo.calls[0].deletedMessage).toBe('Pattern deleted');
     expect(deleteWithUndo.calls[0].undoLabel).toBe('Undo');
 
     // Simulates the user confirming in the (faked-away) dialog.

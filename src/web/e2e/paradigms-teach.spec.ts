@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Teach-to-learn tracker (issue #52): the second "list" exercise, this one over a fixed row per
@@ -14,40 +15,22 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<
-  'en' | 'ar',
-  {
-    checklistItem: string;
-    hubActionLabel: string;
-    h1Title: string;
-    markDone: string;
-    notPlanned: string;
-    overdue: string;
-    reopen: string;
-    sharedToggle: string;
-  }
-> = {
-  en: {
-    checklistItem: 'Plan one chapter with a date',
-    hubActionLabel: 'Teach this chapter',
-    h1Title: 'Habit 1: Be proactive',
-    markDone: 'Mark done',
-    notPlanned: 'Not planned',
-    overdue: 'Overdue',
-    reopen: 'Reopen',
-    sharedToggle: 'Shared',
-  },
-  ar: {
-    checklistItem: 'خطّط لفصل واحد بميعاد',
-    hubActionLabel: 'علّم هذا الفصل',
-    h1Title: 'العادة 1: كن مبادراً',
-    markDone: 'وضع علامة تم',
-    notPlanned: 'غير مخطط',
-    overdue: 'متأخر',
-    reopen: 'إعادة فتح',
-    sharedToggle: 'تمت المشاركة',
-  },
-};
+function textFor(locale: Locale) {
+  const teach = (key: string) => t(locale, 'paradigmsTeach', key);
+  return {
+    checklistItem: teach('checklist.planned'),
+    hubActionLabel: t(locale, 'habits', 'exercises.paradigms-teach.hubActionLabel'),
+    h1Title: teach('chapter.h1'),
+    markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
+    notPlanned: teach('list.status.notPlanned'),
+    overdue: teach('list.status.overdue'),
+    reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
+    sharedToggle: teach('status.shared'),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 test.describe('teach-to-learn tracker', () => {
   test('shows the gate checklist and no zero counter before any chapter is planned (#215)', async ({

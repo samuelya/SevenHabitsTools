@@ -1,5 +1,6 @@
 import type { Page, TestInfo } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Exercises JSON export/import end to end (issue #37): export downloads a file, a full
@@ -13,34 +14,26 @@ const FILE_INPUT = 'input[type="file"]';
 /** None of these tests seed a language, so they render whichever language the project's own
  * locale defaults to (`mobile-ar`/`desktop-ar`, per `playwright.config.ts`) — the strings below
  * let assertions target the right one instead of hardcoding `en`. */
-const BACKUP_TEXT = {
-  en: {
-    today: 'Today',
-    exportButton: 'Export data',
-    importButton: 'Import data',
-    replaceButton: 'Replace…',
-    confirmReplaceButton: 'Yes, replace',
-    errorHeading: "We couldn't read your saved data",
-    notJson: /JSON file this app can read/i,
-    invalid: /data isn't in a shape/i,
-    readOnlyImportRefused: /read-only, so it can't import/i,
-    alreadyRecovered: 'Another tab has already recovered your data',
-  },
-  ar: {
-    today: 'اليوم',
-    exportButton: 'تصدير البيانات',
-    importButton: 'استيراد البيانات',
-    replaceButton: 'استبدال…',
-    confirmReplaceButton: 'نعم، استبدال',
-    errorHeading: 'تعذّرت قراءة بياناتك المحفوظة',
-    notJson: /ملف JSON يمكن لهذا التطبيق قراءته/,
-    invalid: /بصيغة يتعرف عليها هذا التطبيق/,
-    readOnlyImportRefused: /للقراءة فقط، لذلك لا يمكنه الاستيراد/,
-    alreadyRecovered: 'استرجع تبويب آخر بياناتك بالفعل',
-  },
-} as const;
+function textFor(locale: Locale) {
+  const root = (key: string) => t(locale, 'root', key);
+  return {
+    today: t(locale, 'home', 'heading'),
+    exportButton: t(locale, 'settings', 'backup.export'),
+    importButton: t(locale, 'settings', 'backup.import'),
+    replaceButton: root('data.import.replace'),
+    confirmReplaceButton: root('data.import.confirmReplace'),
+    errorHeading: root('data.error.title'),
+    notJson: root('data.import.errors.notJson'),
+    invalid: root('data.import.errors.invalid'),
+    readOnlyImportRefused: t(locale, 'settings', 'backup.importReadOnly'),
+    alreadyRecovered: root('data.error.importRefusedRecoveredElsewhere'),
+  };
+}
 
-function localeFor(testInfo: TestInfo): keyof typeof BACKUP_TEXT {
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const BACKUP_TEXT = { en: textFor('en'), ar: textFor('ar') };
+
+function localeFor(testInfo: TestInfo): Locale {
   return testInfo.project.name.endsWith('-ar') ? 'ar' : 'en';
 }
 

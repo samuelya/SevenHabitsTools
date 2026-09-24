@@ -164,7 +164,7 @@ describe('PcBalanceAuditForm (#223)', () => {
     expect(input.value).toBe('Sleep');
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(harness.host.querySelector('#duplicate-physical')?.textContent).toContain(
-      'That asset is already in this audit.',
+      "You've already added that one.",
     );
 
     typeName(harness, 0, 'Sleep more');
@@ -189,7 +189,7 @@ describe('PcBalanceAuditForm (#223)', () => {
     const legends = empty.host.querySelectorAll('.rating-legend');
     expect(legends).toHaveLength(1);
     expect(legends[0].textContent?.trim()).toBe(
-      'Getting out: how much you rely on it now · Putting in: how much you maintain it.',
+      'Getting out: how much you rely on it now · Putting in: how much you look after it',
     );
     expect(legends[0].nextElementSibling?.getAttribute('data-asset-key')).toBe('savings');
   });
@@ -216,11 +216,15 @@ describe('PcBalanceAuditForm (#223)', () => {
     expect(indicator('c').querySelector('.balance-gloss')?.textContent).toContain('about even');
   });
 
-  it("asks for the maintenance action with the issue's prompt, labelling the field", () => {
+  it('asks how to look after an over-used asset above a labelled field it describes (#228)', () => {
     const { host } = setUp(audit({ assets: [asset({ p: 5, pc: 1 })] }));
-    const label = host.querySelector('.action-prompt') as HTMLLabelElement;
-    expect(label.textContent?.trim()).toBe("Name one thing you'll do to maintain it.");
-    expect(host.querySelector(`#${label.htmlFor}`)?.tagName).toBe('TEXTAREA');
+    const prompt = host.querySelector('.action-prompt') as HTMLElement;
+    expect(prompt.textContent?.trim()).toBe("What's one thing you'll do to look after it?");
+    const field = host.querySelector('.asset-action textarea') as HTMLTextAreaElement;
+    expect(field.getAttribute('aria-describedby')?.split(' ')).toContain(prompt.id);
+    expect(host.querySelector('.asset-action mat-label')?.textContent?.trim()).toBe(
+      "How you'll look after it",
+    );
   });
 
   it('asks the page to confirm removing an asset holding a rating or a typed name; removes an untouched suggested one', () => {

@@ -1,4 +1,7 @@
 <form class="teach-item-form">
+  <p class="field-prompt" id="key-idea-prompt">
+    {{ 'paradigmsTeach.form.keyIdeaPrompt' | transloco }}
+  </p>
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ 'paradigmsTeach.form.keyIdeaLabel' | transloco }}</mat-label>
     <textarea
@@ -13,7 +16,9 @@
       [placeholder]="'paradigmsTeach.form.keyIdeaPlaceholder' | transloco"
       [value]="entry().keyIdea"
       [attr.aria-describedby]="
-        isTouched('keyIdea') && keyIdeaInvalid() ? 'key-idea-error' : 'key-idea-count'
+        isTouched('keyIdea') && keyIdeaInvalid()
+          ? 'key-idea-prompt key-idea-error'
+          : 'key-idea-prompt key-idea-count'
       "
       (input)="onKeyIdeaInput($event)"
       (blur)="touch('keyIdea')"
@@ -33,11 +38,15 @@
     </p>
   }
 
+  <p class="field-prompt" id="person-prompt">
+    {{ 'paradigmsTeach.form.personPrompt' | transloco }}
+  </p>
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ 'paradigmsTeach.form.personLabel' | transloco }}</mat-label>
     <input
       matInput
       type="text"
+      aria-describedby="person-prompt"
       [placeholder]="'paradigmsTeach.form.personPlaceholder' | transloco"
       [value]="entry().person ?? ''"
       (input)="onPersonInput($event)"
@@ -72,10 +81,14 @@
     }
   </fieldset>
 
+  <p class="field-prompt" id="learned-prompt">
+    {{ 'paradigmsTeach.form.learnedPrompt' | transloco }}
+  </p>
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ 'paradigmsTeach.form.learnedLabel' | transloco }}</mat-label>
     <textarea
       matInput
+      aria-describedby="learned-prompt"
       cdkTextareaAutosize
       cdkAutosizeMinRows="3"
       cdkAutosizeMaxRows="10"

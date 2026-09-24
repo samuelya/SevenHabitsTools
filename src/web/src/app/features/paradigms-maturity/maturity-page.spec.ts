@@ -134,7 +134,7 @@ describe('MaturityPage', () => {
     const host = harness.routeNativeElement as HTMLElement;
 
     expect(host.querySelector('.prompt-gloss')?.textContent?.trim()).toBe(
-      "Growth continuum: dependence → independence → interdependence, the book's growth line.",
+      'The book calls the three stages dependence, independence and interdependence.',
     );
   });
 

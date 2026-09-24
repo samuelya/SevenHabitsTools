@@ -2,9 +2,9 @@
   "prompt": {
     "title": "See where you stand on the growth continuum",
     "chapterReference": "Paradigms and principles",
-    "text": "Growth runs from depending on others, through relying on yourself, to choosing to work with others on purpose. Rate a few life areas on where you sit right now, and revisit it later to see how you're moving.",
-    "glossText": "Growth continuum: dependence → independence → interdependence, the book's growth line.",
-    "whyItMatters": "Knowing where you stand in each area points you to the habits worth focusing on next — the ones that build self-reliance where you're still leaning on others, or that build real partnership once you're already standing on your own."
+    "text": "You grow from leaning on others, to standing on your own, to teaming up. Rate where you are in a few parts of your life. Come back in a month to see what's changed.",
+    "glossText": "The book calls the three stages dependence, independence and interdependence.",
+    "whyItMatters": "Where you stand shows which habits to work on next. Still leaning on others? Build your own footing first. Already on your own feet? Work on teaming up."
   },
   "editor": {
     "title": "Assessment",
@@ -34,7 +34,7 @@
     "1": {
       "title": "Dependence",
       "plainLabel": "I wait for others",
-      "description": "You look to other people or outside circumstances for the outcome here."
+      "description": "You count on other people, or on luck, to get results here."
     },
     "2": {
       "title": "Independence",
@@ -44,29 +44,31 @@
     "3": {
       "title": "Interdependence",
       "plainLabel": "We do it together",
-      "description": "You choose to combine your effort with others' here, and both sides gain from it."
+      "description": "You team up with others here, and you both come out ahead."
     }
   },
   "form": {
     "levelLabel": "Where you stand",
     "noteLabel": "Note (optional)",
-    "removeArea": "Remove this area",
+    "notePrompt": "What makes you say that?",
+    "removeArea": "Remove area",
     "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on.",
     "areaRemoved": "Area removed",
     "removeConfirmTitle": "Remove this area?",
-    "removeConfirmBody": "Its rating and note will be lost. You can undo this for a few seconds after removing it.",
+    "removeConfirmBody": "Its rating and note will be lost. You'll have a few seconds to undo it.",
     "removeConfirmButton": "Remove"
   },
   "areas": {
     "title": "Which areas do you want to rate?",
     "hint": "Pick as many as you like. You'll rate them one at a time.",
     "customLabel": "Add your own",
+    "customPrompt": "Is there another part of your life you want to rate?",
     "customPlaceholder": "e.g. Volunteering",
     "addButton": "Add",
     "continueButton": "Continue",
     "requiredHint": "Choose at least one area to continue.",
-    "duplicateError": "That area is already in the list.",
-    "lastAreaHint": "An assessment needs at least one area."
+    "duplicateError": "That area is already on the list.",
+    "lastAreaHint": "Keep at least one area."
   },
   "rate": {
     "title": "Rate each area",
@@ -81,7 +83,7 @@
   },
   "result": {
     "profileLabel": "Overall profile",
-    "profilePending": "Rate at least one area to see your overall profile.",
+    "profilePending": "Rate at least one area to see your overall picture.",
     "habitLink": "Habit {{number}} exercises",
     "deltaTitle": "Change since {{date}}",
     "newArea": "New",

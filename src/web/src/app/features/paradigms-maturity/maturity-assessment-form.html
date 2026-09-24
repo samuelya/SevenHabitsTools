@@ -54,6 +54,9 @@
         </p>
       }
 
+      <p id="maturity-custom-prompt" class="field-prompt">
+        {{ 'paradigmsMaturity.areas.customPrompt' | transloco }}
+      </p>
       <form class="custom-area" (submit)="onAddCustom($event)">
         <mat-form-field appearance="outline" class="custom-area-field" subscriptSizing="dynamic">
           <mat-label>{{ 'paradigmsMaturity.areas.customLabel' | transloco }}</mat-label>
@@ -64,7 +67,11 @@
             [placeholder]="'paradigmsMaturity.areas.customPlaceholder' | transloco"
             [value]="customName()"
             [attr.aria-invalid]="customNameDuplicate() ? 'true' : null"
-            [attr.aria-describedby]="customNameDuplicate() ? 'maturity-custom-duplicate' : null"
+            [attr.aria-describedby]="
+              customNameDuplicate()
+                ? 'maturity-custom-prompt maturity-custom-duplicate'
+                : 'maturity-custom-prompt'
+            "
             (input)="onCustomNameInput($event)"
           />
         </mat-form-field>
@@ -236,6 +243,9 @@
       }
     </mat-button-toggle-group>
 
+    <p class="field-prompt" [id]="'note-prompt-' + area.id">
+      {{ 'paradigmsMaturity.form.notePrompt' | transloco }}
+    </p>
     <mat-form-field appearance="outline" class="area-note">
       <mat-label>{{ 'paradigmsMaturity.form.noteLabel' | transloco }}</mat-label>
       <textarea
@@ -247,6 +257,7 @@
         cdkAutosizeMaxRows="6"
         [placeholder]="'paradigmsMaturity.form.notePlaceholder' | transloco"
         [value]="area.note ?? ''"
+        [attr.aria-describedby]="'note-prompt-' + area.id"
         (input)="onNoteInput(area.id, $event)"
       ></textarea>
     </mat-form-field>

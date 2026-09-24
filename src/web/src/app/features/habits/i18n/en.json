@@ -56,31 +56,31 @@
   },
   "about": {
     "paradigms": {
-      "inShort": "Before you change habits, it helps to notice the lens you're already looking through. This section explores how your paradigms shape what you see, and why looking at yourself first opens the door to real change."
+      "inShort": "Before you change a habit, look at the lens you already see through. The book calls that lens a paradigm. These exercises show how it shapes what you do and what you get."
     },
     "h1": {
-      "inShort": "Habit 1 is about owning your responses instead of waiting for circumstances to decide them for you. These exercises help you notice where your influence actually reaches, and practise choosing on purpose."
+      "inShort": "Habit 1 is about choosing how you respond, instead of letting things decide for you. You'll notice where you can make a difference, and act there on purpose."
     },
     "h2": {
-      "inShort": "Habit 2 asks you to picture where you're headed before you get moving. Here you'll shape a personal mission and the roles that matter most to you, so your daily choices point somewhere on purpose."
+      "inShort": "Habit 2 is about knowing where you're headed before you set off. You'll write down what you stand for and the roles that matter to you. Then your daily choices point somewhere."
     },
     "h3": {
-      "inShort": "Habit 3 turns intention into a weekly rhythm. These exercises help you protect time for what matters most, not just what shouts loudest."
+      "inShort": "Habit 3 turns what matters most into a weekly plan. You'll make time for the important things, not just the loudest ones."
     },
     "h4": {
-      "inShort": "Habit 4 looks for outcomes that work for everyone at the table, not just one side. Use these exercises to practise agreements built on mutual benefit rather than compromise or defeat."
+      "inShort": "Habit 4 looks for deals where both sides come out ahead. You'll practise agreements where nobody has to lose."
     },
     "h5": {
-      "inShort": "Habit 5 starts with really listening before making your case. These exercises build the habit of understanding someone else's view fully before asking to be understood in return."
+      "inShort": "Habit 5 is about really listening before you make your own case. You'll practise hearing someone out fully, then asking to be heard."
     },
     "h6": {
-      "inShort": "Habit 6 is about combining different perspectives into something better than any one of you could produce alone. These exercises practise valuing differences as a source of creative solutions."
+      "inShort": "Habit 6 is about combining different views into something better than either one. You'll practise treating differences as a source of new ideas."
     },
     "h7": {
-      "inShort": "Habit 7 is about renewing yourself across the areas that keep you effective — body, mind, heart and spirit. These exercises help you build habits of renewal instead of running on empty."
+      "inShort": "Habit 7 is about looking after yourself: body, mind, heart and spirit. You'll build small routines that keep you going, instead of running on empty."
     },
     "interdependence": {
-      "inShort": "Moving from independence to interdependence means investing deliberately in the relationships around you. These exercises track the small deposits and withdrawals that build or erode trust over time."
+      "inShort": "Working well with others takes trust, and trust grows in small steps. You'll track the small things that build it or wear it down. The book calls this an Emotional Bank Account."
     }
   },
   "exercises": {
@@ -111,7 +111,7 @@
     "paradigms-teach": {
       "title": "Teach it to learn it",
       "shortTitle": "Teach a chapter",
-      "hubActionLabel": "Teach this chapter",
+      "hubActionLabel": "Teach it",
       "sharedCount": {
         "one": "1 chapter shared",
         "other": "{{count}} chapters shared"

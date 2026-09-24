@@ -98,8 +98,13 @@
 }
 
 .action-prompt {
+  margin: 0;
   font-size: 0.875rem;
   font-weight: 500;
+}
+
+.field-prompt {
+  margin: 0;
 }
 
 // Suggested assets (issue #223): plain buttons styled as chips, the same look as the growth

@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * P/PC balance audit (issue #49): the reference **assessment** exercise (playbook §4). Happy path
@@ -35,25 +36,18 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<
-  'en' | 'ar',
-  { checklistItem: string; hubTitle: string; markDone: string; reopen: string; summary: string }
-> = {
-  en: {
-    checklistItem: 'Add an asset and name every one',
-    hubTitle: 'Results and capacity',
-    markDone: 'Mark done',
-    reopen: 'Reopen',
-    summary: '1 over-used',
-  },
-  ar: {
-    checklistItem: 'ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة',
-    hubTitle: 'النتائج والقدرة',
-    markDone: 'وضع علامة تم',
-    reopen: 'إعادة فتح',
-    summary: 'أصل واحد مُستنزف',
-  },
-};
+function textFor(locale: Locale) {
+  return {
+    checklistItem: t(locale, 'paradigmsPcBalance', 'checklist.named'),
+    hubTitle: t(locale, 'habits', 'exercises.paradigms-pc-balance.shortTitle'),
+    markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
+    reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
+    summary: t(locale, 'paradigmsPcBalance', 'history.summary.overUsed.one', { count: 1 }),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 test.describe('P/PC balance audit', () => {
   test('adds an over-used asset with a maintenance action, marks the exercise done, and it survives a reload', async ({

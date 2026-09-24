@@ -19,10 +19,10 @@
   },
   "deleteConfirm": {
     "title": "Delete this entry?",
-    "body": "You can undo this for a few seconds after deleting, using the Undo shown next.",
+    "body": "You'll have a few seconds to undo it.",
     "cancel": "Cancel",
     "delete": "Delete",
-    "dialogLoadError": "Couldn't load the delete dialog. Check your connection and try again."
+    "dialogLoadError": "Couldn't open this. Check your connection and try again."
   },
   "titles": {
     "home": "Home",
@@ -58,80 +58,80 @@
   },
   "data": {
     "migration": {
-      "schemaTooNew": "This file was saved by a newer version of the app."
+      "schemaTooNew": "This file comes from a newer version of the app."
     },
     "bootstrap": {
-      "corrupt": "The saved file is damaged or in a format this app cannot read.",
-      "storageBlocked": "Another tab of this app is still holding your data. Close the other tabs, then try again."
+      "corrupt": "Your saved data is damaged, or in a format this app can't read.",
+      "storageBlocked": "The app is open in another tab that's holding your data. Close the other tabs, then try again."
     },
     "error": {
       "title": "We couldn't read your saved data",
       "retry": "Try again",
-      "exportRaw": "Export raw file",
-      "importBackup": "Import a backup",
-      "importRefusedRecoveredElsewhere": "Another tab has already recovered your data, so this import wasn't applied. This tab is read-only and shows the data from that tab.",
-      "importRefusedRecoveringElsewhere": "Another tab is recovering your data, so this import wasn't applied. Select Try again in a moment to see that data.",
+      "exportRaw": "Export file",
+      "importBackup": "Import backup",
+      "importRefusedRecoveredElsewhere": "Another tab already recovered your data, so this import didn't go through. This tab is now read-only and shows that tab's data.",
+      "importRefusedRecoveringElsewhere": "Another tab is recovering your data, so this import didn't go through. Tap Try again in a moment to see it.",
       "reset": "Start fresh",
-      "resetConfirm": "This will permanently delete the saved data on this device. This cannot be undone.",
+      "resetConfirm": "This erases everything saved on this device. You can't undo it.",
       "cancel": "Cancel",
-      "confirmReset": "Yes, start fresh"
+      "confirmReset": "Erase all"
     },
     "readOnly": {
-      "banner": "Read-only — another tab is editing this data. This tab will refresh once that tab closes.",
-      "editRefused": "This tab is read-only, so that change wasn't made. Edit in the other tab, or close it to edit here.",
-      "editPending": "Still getting ready to save. Try that change again in a moment."
+      "banner": "Read-only: another tab is editing this data. This tab updates when that one closes.",
+      "editRefused": "This tab is read-only, so that change wasn't saved. Edit in the other tab, or close it to edit here.",
+      "editPending": "Still getting ready to save. Try that again in a moment."
     },
     "crossTab": {
       "reloadBlocked": "Reload this tab to get the latest version."
     },
     "saveError": {
       "message": "We couldn't save your latest changes.",
-      "strandedMessage": "Another tab took over; export your unsaved changes.",
+      "strandedMessage": "Another tab took over. Export your unsaved changes.",
       "exportNow": "Export now"
     },
     "indexedDb": {
-      "reloadRequired": "This tab needs to reload to keep saving your data.",
-      "unsavedBeforeReload": "This tab can no longer save. Export your unsaved changes before reloading.",
+      "reloadRequired": "Reload this tab to keep saving your data.",
+      "unsavedBeforeReload": "This tab can't save anymore. Export your unsaved changes, then reload.",
       "exportNow": "Export now",
-      "exported": "Your changes were exported. Reload to continue."
+      "exported": "Your changes are exported. Reload to carry on."
     },
     "snackbar": {
       "dismiss": "Dismiss"
     },
     "validation": {
-      "invalidModel": "This section of the saved data has an invalid format."
+      "invalidModel": "Part of your saved data is in the wrong format."
     },
     "pwa": {
       "offline": "You're offline. Your changes stay saved on this device.",
-      "updateAvailable": "A new version of this app is available.",
-      "updateRequired": "This app needs to reload to keep working.",
+      "updateAvailable": "A new version of the app is ready.",
+      "updateRequired": "Reload to keep the app working.",
       "reload": "Reload",
       "install": {
-        "message": "Install Seven Habits Tools for quick, offline access.",
+        "message": "Install Seven Habits Tools to open it fast, even offline.",
         "action": "Install",
-        "iosHint": "Install this app: tap the Share icon, then \"Add to Home Screen\"."
+        "iosHint": "To install, tap the Share icon, then \"Add to Home Screen\"."
       }
     },
     "import": {
       "errors": {
         "notJson": "That file isn't a JSON file this app can read.",
-        "invalid": "That file's data isn't in a shape this app recognises."
+        "invalid": "That file's data isn't in a format this app knows."
       },
-      "dialogLoadError": "Couldn't load the import dialog. Check your connection and try again.",
+      "dialogLoadError": "Couldn't open the import window. Check your connection and try again.",
       "title": "Import this file?",
-      "currentUpdatedAt": "Your current data was last edited",
-      "fileUpdatedAt": "The file was last edited",
-      "exportFirst": "Export current data first",
+      "currentUpdatedAt": "Your data here was last changed",
+      "fileUpdatedAt": "The file was last changed",
+      "exportFirst": "Export first",
       "replace": "Replace…",
-      "replaceHint": "Discards everything currently on this device.",
-      "replaceConfirm": "This will permanently replace all data on this device with the imported file. This cannot be undone.",
+      "replaceHint": "Export first if you want to keep what's here.",
+      "replaceConfirm": "This swaps everything on this device for the file's data. You can't undo it.",
       "confirmReplace": "Yes, replace",
       "cancel": "Cancel",
-      "importedSnackbar": "Import complete.",
-      "noPreviewCounts": "This file has no feature data to preview yet."
+      "importedSnackbar": "Import done.",
+      "noPreviewCounts": "This file has no exercise data to show yet."
     },
     "export": {
-      "reminder": "You've made changes since your last export. Back up your data from time to time.",
+      "reminder": "You've made changes since your last export. Back up your data now and then.",
       "action": "Export data"
     }
   }

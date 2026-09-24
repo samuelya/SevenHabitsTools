@@ -2,7 +2,7 @@
   "prompt": {
     "title": "Notice your paradigm",
     "text": "Before you change what you do, look at how you see things. This exercise catches you in the act: three short steps, about 15 minutes.",
-    "whyItMatters": "Two people can watch the same moment and tell two different stories, each sure they're just saying what happened. Once you've felt that gap in yourself, you can question the lens before you try to change a habit built on it. The book calls that lens a paradigm.",
+    "whyItMatters": "Two people can watch the same moment and tell two different stories. Each is sure they're just saying what happened. Once you've felt that gap, you can check your lens before changing a habit. The book calls that lens a paradigm.",
     "chapterReference": "Paradigms and principles"
   },
   "step1": {
@@ -14,7 +14,7 @@
       "label": "Your first guess",
       "placeholder": "e.g. They're annoyed about yesterday's meeting and are avoiding me."
     },
-    "revealButton": "Show the other side",
+    "revealButton": "Show why",
     "revealHint": "Write your guess first, then see the other side.",
     "viewBLabel": "The other side",
     "viewB": "Just before you waved, they got a message: their kid's school was calling. They were reading it and typing a reply as they walked. They never saw you.",
@@ -43,14 +43,14 @@
       "character": "Real change"
     },
     "difference": {
-      "prompt": "Looking at your three, what's the real difference between a quick fix and a real change? One sentence.",
+      "prompt": "What's the real difference between a quick fix and a real change? One sentence.",
       "label": "The difference",
       "placeholder": "e.g. A quick fix works while I'm watching it. A real change keeps working when I'm not."
     }
   },
   "step3": {
     "stepLabel": "See, do, get",
-    "intro": "How you see a situation shapes what you do, and what you do shapes what you get. Pick one situation that's bothering you and trace it twice: once as you see it now, once through a different lens.",
+    "intro": "How you see a situation shapes what you do. What you do shapes what you get. Pick one situation that's bothering you. Trace it twice: as you see it now, and through a different lens.",
     "currentLegend": "As you see it now",
     "altLegend": "Through a different lens",
     "see": { "label": "What you see" },
@@ -84,8 +84,8 @@
     "inShort": "You'll read a short scene and guess what happened, then see the other side. Then you'll sort three of your own change attempts into quick fixes and real changes. Last, you'll trace one situation through two lenses. About 15 minutes. You'll end with one situation you can look at differently this week.",
     "howTo": [
       "Read the hallway scene and write your first guess about why they didn't wave back.",
-      "Tap \"Show the other side\", then rate how hard it was to let go of your guess.",
-      "Write three things you've tried to change about yourself, and mark each one as a quick fix or a real change.",
+      "Tap \"Show why\", then rate how hard it was to let go of your guess.",
+      "Write three things you've tried to change about yourself. Mark each one a quick fix or a real change.",
       "In one sentence, say what the difference is between the two.",
       "Pick a situation that's bothering you. Write what you see, what you do, and what you get.",
       "Write the same situation through a different lens: what you'd see, do, and get.",
@@ -150,6 +150,6 @@
         ]
       }
     ],
-    "afterwards": "Over the next week, catch one moment where your first guess about someone turns out to be wrong. Come back and add it to your notes. Then go on to the next exercise on the list."
+    "afterwards": "This week, catch one moment when your first guess about someone turns out wrong. Come back and add it to your notes. Then go on to the next exercise on the list."
   }
 }

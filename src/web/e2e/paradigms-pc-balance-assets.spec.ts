@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Results and capacity (issue #223): suggested-asset chips stored by built-in key, Enter in a
@@ -12,22 +13,21 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT = {
-  en: {
-    chips: ['Sleep', 'Exercise', 'Savings', 'Income skills', 'Partner', 'Team'],
-    legend: 'Getting out: how much you rely on it now · Putting in: how much you maintain it.',
-    actionPrompt: "Name one thing you'll do to maintain it.",
-    overGloss: 'you get a lot out of it and put little back.',
-    duplicate: 'That asset is already in this audit.',
-  },
-  ar: {
-    chips: ['النوم', 'الرياضة', 'المدخرات', 'مهارات الكسب', 'شريك الحياة', 'فريق العمل'],
-    legend: 'الاستفادة: قد إيه بتعتمد عليه دلوقتي · الصيانة: قد إيه بتحافظ عليه.',
-    actionPrompt: 'اكتب حاجة واحدة هتعملها عشان تحافظ عليه.',
-    overGloss: 'بتاخد منه كتير وبترجّعله قليل.',
-    duplicate: 'هذا الأصل موجود بالفعل في هذا التقييم.',
-  },
-} as const;
+const BUILT_IN_ASSETS = ['sleep', 'exercise', 'savings', 'incomeSkills', 'partner', 'team'];
+
+function textFor(locale: Locale) {
+  const pc = (key: string) => t(locale, 'paradigmsPcBalance', key);
+  return {
+    chips: BUILT_IN_ASSETS.map((key) => pc(`asset.${key}`)),
+    legend: pc('form.legend'),
+    actionPrompt: pc('form.actionPrompt'),
+    overGloss: pc('statusGloss.overUsed'),
+    duplicate: pc('form.duplicateAsset'),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 const PC_BALANCE_URL = '/habits/paradigms/pc-balance';
 /** A saved audit's editor URL: the real id, not the draft's reserved `new` segment (#217). */

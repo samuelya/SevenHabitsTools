@@ -2,41 +2,47 @@
   "prompt": {
     "title": "Become a transition person",
     "chapterReference": "Paradigms and principles",
-    "text": "Some patterns get passed down without anyone choosing them — a way of arguing, a way of handling money, a way of reacting under pressure. Name the scripts you noticed you inherited, decide what to do with each one, and write the version you want to live by instead.",
-    "glossText": "The pattern you learned at home; the book calls it a script.",
-    "whyItMatters": "A 'transition person' is someone who stops a pattern instead of passing it on. Naming a script on purpose is what makes it possible to choose differently the next time it shows up."
+    "text": "Some patterns get passed down without anyone choosing them. Think of how you argue, handle money or react under stress. Name the ones you picked up and decide what to do with each. For the ones you change, write the new version.",
+    "glossText": "The pattern you learned at home. The book calls it a script.",
+    "whyItMatters": "A transition person stops a pattern instead of passing it on. Once you've named a pattern, you can choose differently the next time it shows up."
   },
   "list": {
-    "addButton": "Add a script",
-    "searchLabel": "Search scripts",
-    "empty": "No scripts yet. Add the first pattern you noticed you inherited.",
-    "noMatch": "No scripts match your search.",
-    "deleted": "Script deleted",
+    "addButton": "Add pattern",
+    "searchLabel": "Search patterns",
+    "empty": "No patterns yet. Add the first one you've noticed.",
+    "noMatch": "No patterns match your search.",
+    "deleted": "Pattern deleted",
     "undo": "Undo"
   },
   "editor": {
-    "newTitle": "New script",
-    "editTitle": "Edit script"
+    "newTitle": "New pattern",
+    "editTitle": "Edit pattern"
   },
   "form": {
-    "textLabel": "The script (what you say, do or expect)",
-    "textRequired": "Describe the script before moving on.",
+    "textLabel": "The pattern",
+    "textPrompt": "What's something you say, do or expect that you picked up from others?",
+    "textRequired": "Write the pattern first.",
     "sourceLabel": "Where it comes from",
     "effectLabel": "Its effect",
     "decisionLabel": "Your decision",
     "decisionHint": {
       "keep": "Nothing more to write. Keep it and move on.",
-      "rewrite": "Good call. Say it the way you want it to go from now on.",
-      "stop": "Good call. Something better can take its place."
+      "rewrite": "Good call. Next, write how you want it to go.",
+      "stop": "Good call. Next, write what you'll do instead."
     },
     "newScriptLabel": {
-      "rewrite": "What will you say or do instead?",
+      "rewrite": "Your new version",
+      "stop": "What you'll do instead"
+    },
+    "newScriptPrompt": {
+      "rewrite": "How do you want it to go from now on?",
       "stop": "What will you do instead of this?"
     },
-    "newScriptRequired": "Write what you'll do instead before moving on.",
-    "situationLabel": "Which situation this week will this show up in?",
-    "situationRequired": "Name a concrete situation this week.",
-    "delete": "Delete this script",
+    "newScriptRequired": "Write what you'll do instead.",
+    "situationLabel": "When it'll show up",
+    "situationPrompt": "When will this come up this week?",
+    "situationRequired": "Name one moment this week.",
+    "delete": "Delete pattern",
     "textPlaceholder": "e.g. When I'm stressed I go quiet and shut everyone out.",
     "newScriptPlaceholder": "e.g. When I'm stressed I say so, and ask for ten minutes to think.",
     "situationPlaceholder": "e.g. Thursday's talk about the bills with my partner."
@@ -65,8 +71,8 @@
   },
   "summary": {
     "total": {
-      "one": "1 script named",
-      "other": "{{count}} scripts named"
+      "one": "1 pattern named",
+      "other": "{{count}} patterns named"
     },
     "stopped": {
       "one": "1 stopped",

@@ -112,10 +112,11 @@
             </p>
 
             @if (isOverUsed(asset)) {
-              <label class="action-prompt" [for]="'action-' + asset.key">{{
-                'paradigmsPcBalance.form.actionLabel' | transloco
-              }}</label>
+              <p class="action-prompt" [id]="'action-prompt-' + asset.key">
+                {{ 'paradigmsPcBalance.form.actionPrompt' | transloco }}
+              </p>
               <mat-form-field appearance="outline" class="asset-action" subscriptSizing="dynamic">
+                <mat-label>{{ 'paradigmsPcBalance.form.actionLabel' | transloco }}</mat-label>
                 <textarea
                   matInput
                   cdkTextareaAutosize
@@ -127,8 +128,8 @@
                   [value]="asset.action ?? ''"
                   [attr.aria-describedby]="
                     isActionTouched(asset.key) && !asset.action?.trim()
-                      ? 'action-error-' + asset.key
-                      : null
+                      ? 'action-prompt-' + asset.key + ' action-error-' + asset.key
+                      : 'action-prompt-' + asset.key
                   "
                   (input)="onAssetActionChanged(asset.key, $event)"
                   (blur)="touchAction(asset.key)"
@@ -181,12 +182,18 @@
         </div>
       }
 
+      @let newAssetPromptId = 'new-asset-prompt-' + section.group;
+      <p class="field-prompt" [id]="newAssetPromptId">
+        {{ 'paradigmsPcBalance.form.newAssetPrompt' | transloco }}
+      </p>
       <div class="add-asset-row" [attr.data-add-group]="section.group">
         <mat-form-field appearance="outline" class="asset-name" subscriptSizing="dynamic">
           <mat-label>{{ 'paradigmsPcBalance.form.newAssetLabel' | transloco }}</mat-label>
           @let assetPlaceholder =
             'paradigmsPcBalance.form.' + section.group + 'AssetPlaceholder' | transloco;
           @let duplicate = duplicateGroup() === section.group;
+          @let newAssetDescribedBy =
+            duplicate ? newAssetPromptId + ' duplicate-' + section.group : newAssetPromptId;
           @if (first) {
             <input
               matInput
@@ -195,7 +202,7 @@
               [placeholder]="assetPlaceholder"
               [value]="draftNames()[section.group]"
               [attr.aria-invalid]="duplicate ? 'true' : null"
-              [attr.aria-describedby]="duplicate ? 'duplicate-' + section.group : null"
+              [attr.aria-describedby]="newAssetDescribedBy"
               (input)="onDraftNameInput(section.group, $event)"
               (keydown.enter)="onAddNamed(section.group, $event)"
             />
@@ -206,7 +213,7 @@
               [placeholder]="assetPlaceholder"
               [value]="draftNames()[section.group]"
               [attr.aria-invalid]="duplicate ? 'true' : null"
-              [attr.aria-describedby]="duplicate ? 'duplicate-' + section.group : null"
+              [attr.aria-describedby]="newAssetDescribedBy"
               (input)="onDraftNameInput(section.group, $event)"
               (keydown.enter)="onAddNamed(section.group, $event)"
             />
@@ -227,10 +234,14 @@
 
   <!-- One editor per audit: switching audits destroys the old one, which flushes its pending edit
        under its own audit's id and drops its session status (review finding on #215's PR). -->
+  <p class="field-prompt" id="pc-reflection-prompt">
+    {{ 'paradigmsPcBalance.form.reflectionPrompt' | transloco }}
+  </p>
   @for (bound of [audit()]; track bound.id) {
     <app-reflection-editor
       [value]="bound.reflection"
       [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
+      [promptId]="'pc-reflection-prompt'"
       [placeholder]="'paradigmsPcBalance.form.reflectionPlaceholder' | transloco"
       [sessionStatus]="true"
       [immediate]="unsaved()"

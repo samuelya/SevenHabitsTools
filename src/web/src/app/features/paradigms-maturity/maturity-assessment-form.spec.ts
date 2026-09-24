@@ -87,9 +87,14 @@ describe('MaturityAssessmentForm, phase 1: areas (#222)', () => {
     expect(setup.emitted).toHaveLength(0);
     expect(input.value).toBe('volunteering');
     expect(input.getAttribute('aria-invalid')).toBe('true');
-    expect(input.getAttribute('aria-describedby')).toBe('maturity-custom-duplicate');
+    expect(input.getAttribute('aria-describedby')).toBe(
+      'maturity-custom-prompt maturity-custom-duplicate',
+    );
+    expect(setup.host.querySelector('#maturity-custom-prompt')?.textContent?.trim()).toBe(
+      'Is there another part of your life you want to rate?',
+    );
     expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
-      'That area is already in the list.',
+      'That area is already on the list.',
     );
 
     typeCustomName(setup, 'volunteering abroad');
@@ -125,7 +130,7 @@ describe('MaturityAssessmentForm, phase 1: areas (#222)', () => {
 
     expect(setup.emitted).toHaveLength(1);
     expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
-      'That area is already in the list.',
+      'That area is already on the list.',
     );
   });
 
@@ -147,7 +152,7 @@ describe('MaturityAssessmentForm, phase 1: areas (#222)', () => {
     expect(setup.continued()).toBe(0);
     expect(setup.host.querySelector('.areas-phase')).not.toBeNull();
     expect(setup.host.querySelector('#maturity-custom-duplicate')?.textContent?.trim()).toBe(
-      'That area is already in the list.',
+      'That area is already on the list.',
     );
   });
 
@@ -239,7 +244,7 @@ describe('MaturityAssessmentForm, phase 1: areas (#222)', () => {
     expect(work.getAttribute('aria-disabled')).toBe('true');
     expect(work.getAttribute('aria-describedby')).toBe('maturity-last-area');
     expect(setup.host.querySelector('#maturity-last-area')?.textContent?.trim()).toBe(
-      'An assessment needs at least one area.',
+      'Keep at least one area.',
     );
     work.click();
     setup.fixture.detectChanges();

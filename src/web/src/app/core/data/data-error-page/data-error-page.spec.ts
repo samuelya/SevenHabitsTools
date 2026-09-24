@@ -41,7 +41,7 @@ describe('DataErrorPage', () => {
         provideTranslocoTesting(),
         { provide: STORAGE_ADAPTER, useValue: adapter },
         { provide: DEVICE_ID_SOURCE, useValue: { id: () => 'device-1' } },
-        // DocumentImportExportService (the new "Import a backup" control, #150) injects WEB_SHARE;
+        // DocumentImportExportService (the new 'Import backup' control, #150) injects WEB_SHARE;
         // its default factory reads navigator.userAgent, which the plain WINDOW fake below doesn't
         // have.
         { provide: WEB_SHARE, useValue: null },
@@ -79,11 +79,11 @@ describe('DataErrorPage', () => {
     fixture.detectChanges();
 
     expect(text(fixture, 'p')).toBe(
-      'The saved file is damaged or in a format this app cannot read.',
+      "Your saved data is damaged, or in a format this app can't read.",
     );
     expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual([
       'Try again',
-      'Import a backup',
+      'Import backup',
       'Start fresh',
     ]);
   });
@@ -94,7 +94,7 @@ describe('DataErrorPage', () => {
     fixture.detectChanges();
 
     expect(text(fixture, 'p')).toBe(
-      'Another tab of this app is still holding your data. Close the other tabs, then try again.',
+      "The app is open in another tab that's holding your data. Close the other tabs, then try again.",
     );
     // The intact document comes back once the other tab closes, so nothing here may overwrite it.
     expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual(['Try again']);
@@ -128,7 +128,7 @@ describe('DataErrorPage', () => {
     );
   });
 
-  it('#150: "Import a backup" replaces the corrupt document, recovers, and saves it', async () => {
+  it('#150: "Import backup" replaces the corrupt document, recovers, and saves it', async () => {
     const status = TestBed.inject(DocumentBootstrapStatus);
     status.reportCorrupt({ schemaVersion: 99 }, new Error('boom'));
     const fixture = TestBed.createComponent(DataErrorPage);
@@ -211,7 +211,7 @@ describe('DataErrorPage', () => {
     expect(status.state()).toBe('ready');
     expect(TestBed.inject(DocumentStore).document()).toEqual(stored);
     expect(open).toHaveBeenCalledWith(
-      expect.stringContaining('Another tab has already recovered your data'),
+      expect.stringContaining('Another tab already recovered your data'),
       'Dismiss',
     );
   });
@@ -265,9 +265,11 @@ describe('DataErrorPage', () => {
     fixture.detectChanges();
 
     expect(adapter.clear).not.toHaveBeenCalled();
-    expect(text(fixture, '.data-error-page__confirm')).toContain('permanently delete');
+    expect(text(fixture, '.data-error-page__confirm')).toContain(
+      'erases everything saved on this device',
+    );
     const confirmButtons = buttons(fixture).map((button) => button.textContent?.trim());
-    expect(confirmButtons).toEqual(['Cancel', 'Yes, start fresh']);
+    expect(confirmButtons).toEqual(['Cancel', 'Erase all']);
   });
 
   it('moves focus to Cancel when the confirmation appears', () => {
@@ -300,8 +302,8 @@ describe('DataErrorPage', () => {
     expect(adapter.clear).not.toHaveBeenCalled();
     expect(buttons(fixture).map((button) => button.textContent?.trim())).toEqual([
       'Try again',
-      'Export raw file',
-      'Import a backup',
+      'Export file',
+      'Import backup',
       'Start fresh',
     ]);
   });
@@ -318,7 +320,7 @@ describe('DataErrorPage', () => {
       ?.click();
     fixture.detectChanges();
     buttons(fixture)
-      .find((button) => button.textContent?.includes('Yes, start fresh'))
+      .find((button) => button.textContent?.includes('Erase all'))
       ?.click();
     await fixture.whenStable();
 
@@ -339,7 +341,7 @@ describe('DataErrorPage', () => {
       ?.click();
     fixture.detectChanges();
     buttons(fixture)
-      .find((button) => button.textContent?.includes('Yes, start fresh'))
+      .find((button) => button.textContent?.includes('Erase all'))
       ?.click();
     await fixture.whenStable();
 
@@ -367,7 +369,7 @@ describe('DataErrorPage', () => {
       ?.click();
     fixture.detectChanges();
     buttons(fixture)
-      .find((button) => button.textContent?.includes('Yes, start fresh'))
+      .find((button) => button.textContent?.includes('Erase all'))
       ?.click();
     await fixture.whenStable();
 
