@@ -2,6 +2,7 @@ import { PcAsset, PcAudit } from './pc-balance.model';
 import {
   isDraftWorthSaving,
   auditAverageBalance,
+  auditHistorySummary,
   balanceOf,
   checklistLabelsFrom,
   checklistLoaded,
@@ -41,6 +42,30 @@ function audit(overrides: Partial<PcAudit> = {}): PcAudit {
     ...overrides,
   };
 }
+
+describe('auditHistorySummary (issue #226)', () => {
+  it('is null with no assets yet', () => {
+    expect(auditHistorySummary(audit())).toBeNull();
+  });
+
+  it('counts the over-used assets, for appPlural', () => {
+    const assets = [
+      asset({ key: 'a', p: 5, pc: 1 }),
+      asset({ key: 'b', p: 4, pc: 2 }),
+      asset({ key: 'c', p: 1, pc: 5 }),
+    ];
+    expect(auditHistorySummary(audit({ assets }))).toEqual({
+      key: 'paradigmsPcBalance.history.summary.overUsed',
+      count: 2,
+    });
+  });
+
+  it('says none are over-used when none are', () => {
+    expect(auditHistorySummary(audit({ assets: [asset({ p: 1, pc: 5 })] }))).toEqual({
+      key: 'paradigmsPcBalance.history.summary.noneOverUsed',
+    });
+  });
+});
 
 describe('balanceOf/statusOf', () => {
   it('is over-used at a balance of 2 or more', () => {

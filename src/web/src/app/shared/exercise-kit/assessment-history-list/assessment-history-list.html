@@ -2,6 +2,15 @@
   @if (items().length) {
     <mat-nav-list>
       @for (item of items(); track item.id) {
+        <!-- "Date + summary" (issue #226): two same-day assessments are told apart by their
+             result, in the row and in its delete button's name. -->
+        @let dateText = localDate(item.date) | appDate: { dateStyle: 'medium' };
+        @let summaryText =
+          item.summary
+            ? item.summary.count !== undefined
+              ? (item.summary.key | appPlural: item.summary.count)
+              : (item.summary.key | transloco)
+            : '';
         <!-- The swipe host (issue #203), same shape as `ExerciseList`'s own row wrapper
              (`exercise-list.html`): a bin `<button>` can't nest inside the row's own `<button>`. -->
         <div
@@ -23,11 +32,11 @@
             (click)="itemSelected.emit(item.id)"
           >
             <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
-            <span matListItemTitle>{{
-              localDate(item.date) | appDate: { dateStyle: 'medium' }
-            }}</span>
-            @if (item.subtitle; as subtitle) {
-              <span matListItemLine>{{ subtitle }}</span>
+            <span matListItemTitle>{{ dateText }}</span>
+            @if (summaryText) {
+              <span matListItemLine class="assessment-history-list__summary">{{
+                summaryText
+              }}</span>
             }
           </button>
           @if (deletable()) {
@@ -36,7 +45,7 @@
               class="assessment-history-list__delete"
               [attr.aria-label]="
                 'exerciseKit.list.deleteAria'
-                  | transloco: { item: localDate(item.date) | appDate: { dateStyle: 'medium' } }
+                  | transloco: { item: summaryText ? dateText + ', ' + summaryText : dateText }
               "
               (click)="requestDelete(item)"
             >

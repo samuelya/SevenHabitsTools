@@ -1,6 +1,7 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
+  AssessmentResultSummary,
   latestAssessment,
   liveAssessments,
 } from '../../shared/exercise-kit/assessment-history.logic';
@@ -155,6 +156,22 @@ function averageOf(assets: readonly PcAsset[]): number | null {
  * rule for what a history row shows). */
 export function auditAverageBalance(audit: Pick<PcAudit, 'assets'>): number | null {
   return averageOf(audit.assets);
+}
+
+/** The audit's history-row summary (issue #226): how many assets are over-used ("2 over-used",
+ * plural-correct through `appPlural`), "None over-used" when none are, `null` with no assets yet.
+ * Over-use is the result the audit asks the user to act on (a maintenance action), so it is what
+ * tells two audits apart at a glance. */
+export function auditHistorySummary(
+  audit: Pick<PcAudit, 'assets'>,
+): AssessmentResultSummary | null {
+  if (audit.assets.length === 0) {
+    return null;
+  }
+  const overUsed = audit.assets.filter(isOverUsed).length;
+  return overUsed > 0
+    ? { key: 'paradigmsPcBalance.history.summary.overUsed', count: overUsed }
+    : { key: 'paradigmsPcBalance.history.summary.noneOverUsed' };
 }
 
 /** One group's counts and average balance — the audit's "group summary" (issue #49's acceptance

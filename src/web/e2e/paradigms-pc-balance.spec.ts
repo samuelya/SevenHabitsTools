@@ -15,19 +15,21 @@ function localeFor(projectName: string): 'en' | 'ar' {
 
 const TEXT: Record<
   'en' | 'ar',
-  { checklistItem: string; hubTitle: string; markDone: string; reopen: string }
+  { checklistItem: string; hubTitle: string; markDone: string; reopen: string; summary: string }
 > = {
   en: {
     checklistItem: 'Add an asset and name every one',
     hubTitle: 'Results and capacity',
     markDone: 'Mark done',
     reopen: 'Reopen',
+    summary: '1 over-used',
   },
   ar: {
     checklistItem: 'ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة',
     hubTitle: 'النتائج والقدرة',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
+    summary: 'أصل واحد مُستنزف',
   },
 };
 
@@ -74,6 +76,9 @@ test.describe('P/PC balance audit', () => {
     await expect(actionField).toBeVisible();
     await actionField.fill('Sleep by 10pm on weeknights');
 
+    // The date is editable (issue #226): a native date input, filled as ISO `YYYY-MM-DD`.
+    await form.locator('app-assessment-date-field input').fill('2026-03-14');
+
     if (isMobile) {
       await page.goBack();
       await expect(page).toHaveURL(/\/habits\/paradigms\/pc-balance$/);
@@ -91,6 +96,11 @@ test.describe('P/PC balance audit', () => {
     await page.waitForTimeout(1000);
     await page.reload();
     await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
+    // Date + result summary (issue #226), after a reload: the edited date was stored.
+    const row = page.locator('.assessment-history-list__item');
+    await expect(row).toContainText('14');
+    await expect(row).toContainText('2026');
+    await expect(row.locator('.assessment-history-list__summary')).toHaveText(text.summary);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');

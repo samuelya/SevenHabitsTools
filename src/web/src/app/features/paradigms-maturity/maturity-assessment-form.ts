@@ -24,6 +24,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AssessmentDateField } from '../../shared/exercise-kit/assessment-date-field/assessment-date-field';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import {
   AreaChip,
@@ -62,8 +63,8 @@ interface RemovedArea {
  * The editor for one assessment, in two phases (issue #222): pick the areas as chips (plus "Add
  * your own"), then rate them — one area per screen with Previous/Next on a phone, one expansion
  * panel per area above the handset breakpoint — under a single collapsible legend. Purely
- * presentational: `assessment` is the current value, `changed` emits the edited areas so the page
- * persists them at once, `continued` tells the page the user moved on to rating (which saves a new
+ * presentational: `assessment` is the current value, `changed` emits the edited areas (or date, #226) so the
+ * page persists them at once, `continued` tells the page the user moved on to rating (which saves a new
  * draft, #222 review), and `areaRemoveRequested` asks it to confirm removing an area that holds a
  * level or a note (#222 review); an empty area is removed at once.
  *
@@ -75,6 +76,7 @@ interface RemovedArea {
 @Component({
   selector: 'app-maturity-assessment-form',
   imports: [
+    AssessmentDateField,
     CdkTextareaAutosize,
     EditorInitialFocus,
     MatButtonModule,

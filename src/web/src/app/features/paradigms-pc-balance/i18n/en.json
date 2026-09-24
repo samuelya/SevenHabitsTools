@@ -14,7 +14,14 @@
     "newAudit": "New audit",
     "empty": "No audits yet. Start your first one.",
     "deleted": "Audit deleted",
-    "undo": "Undo"
+    "undo": "Undo",
+    "summary": {
+      "overUsed": {
+        "one": "{{count}} over-used",
+        "other": "{{count}} over-used"
+      },
+      "noneOverUsed": "None over-used"
+    }
   },
   "group": {
     "physical": "Physical",

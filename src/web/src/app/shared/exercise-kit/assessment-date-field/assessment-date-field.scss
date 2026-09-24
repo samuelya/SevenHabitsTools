@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+// A date needs about 11 characters plus the picker icon; full width on a phone would stretch it
+// across the editor for no reason.
+.assessment-date-field {
+  inline-size: 100%;
+  max-inline-size: 14rem;
+}

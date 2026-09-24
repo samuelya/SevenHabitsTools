@@ -9,6 +9,7 @@ import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
 import {
+  assessmentHistoryItems,
   localDateString,
   sortedByDateDesc,
 } from '../../shared/exercise-kit/assessment-history.logic';
@@ -23,7 +24,7 @@ import { builtInLabelsFrom, displayName, restoreAsset } from './pc-balance-asset
 import { PcBalanceAuditForm, PcReflectionChange } from './pc-balance-audit-form';
 import { PcBalanceSummary } from './pc-balance-summary';
 import {
-  auditAverageBalance,
+  auditHistorySummary,
   CHECKLIST_KEYS,
   checklistLabelsFrom,
   checklistLoaded,
@@ -102,12 +103,9 @@ export class PcBalancePage {
 
   protected readonly audits = computed(() => liveAudits(this.store.value()));
   protected readonly history = computed(() => sortedByDateDesc(this.audits()));
+  /** Date + "2 over-used" per row (issue #226), in the same date order as `history()`. */
   protected readonly historyItems = computed(() =>
-    this.history().map((audit) => ({
-      id: audit.id,
-      date: audit.date,
-      subtitle: balanceSubtitle(auditAverageBalance(audit)),
-    })),
+    assessmentHistoryItems(this.audits(), auditHistorySummary),
   );
   // Reactive labels (playbook §6): a cold load or a language switch updates the suggested chips
   // and the built-in asset titles. `null` until the scope has loaded, so the form (and a remove
@@ -265,10 +263,4 @@ export class PcBalancePage {
       this.progress.markDone(PC_BALANCE_MODEL_KEY);
     }
   }
-}
-
-/** A signed number only (no translated words), so it needs no reactive re-evaluation on a
- * language switch (architecture issue #1 §7: Western numerals by default). */
-function balanceSubtitle(averageBalance: number | null): string | undefined {
-  return averageBalance === null ? undefined : `${averageBalance > 0 ? '+' : ''}${averageBalance}`;
 }

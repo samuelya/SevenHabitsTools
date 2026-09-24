@@ -178,3 +178,71 @@ describe('PcBalancePage draft (issue #217)', () => {
     expect(TestBed.inject(DocumentStore).refusedEdits()).toBe(1);
   });
 });
+
+describe('PcBalancePage editable date (issue #226)', () => {
+  function dateInput(harness: RouterTestingHarness): HTMLInputElement {
+    return host(harness).querySelector('app-assessment-date-field input') as HTMLInputElement;
+  }
+
+  function typeDate(harness: RouterTestingHarness, value: string): void {
+    const input = dateInput(harness);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    harness.detectChanges();
+  }
+
+  it('defaults a new audit to today', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+
+    expect(dateInput(harness).value).toBe('2026-01-01');
+  });
+
+  it('keeps a date change alone in the draft, and stores it with the first real input', async () => {
+    const harness = await setUp();
+    const before = currentDocument();
+    await click(harness, '.add-button');
+
+    typeDate(harness, '2025-12-20');
+    expect(currentDocument()).toBe(before);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
+
+    typeReflection(harness, 'Rested more this month');
+    expect(storedAudits().map((audit) => audit.date)).toEqual(['2025-12-20']);
+  });
+
+  it('stores a date edit on a saved audit, and never a cleared one', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+    await harness.fixture.whenStable();
+
+    typeDate(harness, '2025-11-02');
+    expect(storedAudits()[0].date).toBe('2025-11-02');
+
+    typeDate(harness, '');
+    dateInput(harness).dispatchEvent(new Event('blur'));
+    expect(storedAudits()[0].date).toBe('2025-11-02');
+    expect(dateInput(harness).value).toBe('2025-11-02');
+  });
+
+  it('shows the stored date again when a read-only tab refuses the edit', async () => {
+    const harness = await setUp();
+    await click(harness, '.add-button');
+    typeReflection(harness, 'Rested more this month');
+    await harness.fixture.whenStable();
+    const lock = TestBed.inject(WRITER_LOCK) as unknown as {
+      role: ReturnType<typeof signal<WriterRole>>;
+      isWriter: ReturnType<typeof signal<boolean>>;
+    };
+    lock.role.set('reader');
+    lock.isWriter.set(false);
+
+    typeDate(harness, '2025-11-02');
+    await harness.fixture.whenStable();
+    harness.detectChanges();
+
+    expect(storedAudits()[0].date).toBe('2026-01-01');
+    expect(dateInput(harness).value).toBe('2026-01-01');
+  });
+});
