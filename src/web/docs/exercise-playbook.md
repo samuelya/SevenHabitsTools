@@ -25,8 +25,8 @@ issue #1 (§6 JSON rules, §7 frontend conventions, §9 testing bar).
 | Document path          | `habits.<habit>.<camelCaseName>`, as given in the issue's "Data model"                              | `habits.paradigms.scripts`                    |
 | Transloco scope        | the `exerciseId`; in templates use the camelCase alias Transloco derives from it                    | `paradigmsTransition.step.title`              |
 | Route title key        | root scope `titles.<exerciseId>` in `public/assets/i18n/{en,ar}.json`                               | `titles.paradigms-transition`                 |
-| Hub title/summary keys | `habits` scope: `exercises.<exerciseId>.title` / `.summary` in `features/habits/i18n/{en,ar}.json`  | `habits.exercises.paradigms-transition.title` |
-| Short title            | the *value* of the route title key and the hub title key, written ≤ 3 words (§8) — there is no separate `shortTitleKey` registry field yet; both keys already carry the short form and the chrome (top app bar, hub card) reads them as-is. A distinct field is deferred to #218 | `titles.paradigms-perception` = "Notice your paradigm" |
+| Hub title/summary keys | `habits` scope: `exercises.<exerciseId>.title` (long) / `.shortTitle` / `.summary` in `features/habits/i18n/{en,ar}.json`  | `habits.exercises.paradigms-transition.title` |
+| Short title            | `habits.exercises.<exerciseId>.shortTitle`, ≤ 3 words, set as the registry entry's required `shortTitleKey` (#218); the root route title `titles.<exerciseId>` holds the same wording. Chrome (top app bar, tab title, hub list, the hub's "Continue: …" button) shows only the short title; the long `title` is the page's `h1` (`prompt.title`) | `titles.paradigms-perception` = "Your paradigm" |
 | Guide key              | exercise's own Transloco scope, `guide` (§8) — `translateObjectSignal('guide', undefined, '<exerciseId>')`                                          | `paradigmsPerception.guide`                   |
 
 The hub page renders the title/summary in the `habits` scope, and shell code renders route titles
@@ -35,7 +35,7 @@ in the root scope. A key placed in the exercise's own scope throws there (`Throw
 ## 2. Wiring checklist (four registrations, one line each)
 
 1. `<slug>.model.ts`: `registerModel({ key, path, defaults, validate })` **and**
-   `registerExercise({ exerciseId, habit, titleKey, summaryKey, icon, route, isStarted })`, where
+   `registerExercise({ exerciseId, habit, titleKey, shortTitleKey, summaryKey, icon, route, isStarted })`, where
    `isStarted: storeStartedFactory<T>(key, isStarted)` (`shared/exercise-kit/exercise-started.ts`)
    wraps the pure `isStarted(value)` predicate from `<slug>.logic.ts` (list/assessment: any live
    record; worksheet: the record exists, #216). Both at module load, with the idempotent guard used in `shared/exercise-kit/exercise-kit.model.ts`. This file
@@ -218,7 +218,7 @@ convention to follow, not a component to add.
 
 | Ships | Where (reference file) |
 | --- | --- |
-| **Short title:** the route title (`titles.<exerciseId>`) and hub title (`habits.exercises.<exerciseId>.title`) values are each ≤ 3 words, since chrome (top app bar, hub card) renders them as-is — no separate registry field yet (§1; a `shortTitleKey` field is deferred to #218) | `perception.model.ts`'s `registerExercise()`; `public/assets/i18n/en.json`'s `titles.paradigms-perception`; `features/habits/i18n/en.json`'s `exercises.paradigms-perception.title` |
+| **Short title:** `shortTitleKey` in `registerExercise()` pointing at `habits.exercises.<exerciseId>.shortTitle` (≤ 3 words), and the route title `titles.<exerciseId>` set to the same words — every piece of chrome reads the short one, only the page `h1` and the hub's own heading keep the long title (§1, #218). A book term the page leans on gets a one-line first-use gloss through `ExercisePromptCard`'s `gloss` input (key `prompt.glossText`, عامية) | `perception.model.ts`'s `registerExercise()`; `public/assets/i18n/en.json`'s `titles.paradigms-perception`; `features/habits/i18n/en.json`'s `exercises.paradigms-perception.shortTitle`; `transition-page.html`'s `[gloss]` |
 | `doneChecklist(exercise, labels)` in `<slug>.logic.ts`, reducing the same per-item `met` map `isComplete()` reduces, so the gate button and the checklist it shows can never disagree — gate its rendering on `checklistLoaded(labels)`, the same load gate as the guide row below (`translateSignal` starts array keys at `['']`, so a naive read renders blank rows on a first, uncached visit) | `perception.logic.ts`'s `checklistMet()`, `doneChecklist()`, `checklistLoaded()`, `isComplete()` |
 | `DoneToggle`'s `checklist` input (the only gate message since #215 removed `disabledHint`). The gated button is `disabledInteractive` + `aria-disabled`, so it stays focusable and screen readers announce the checklist. A list/assessment exercise's checklist describes its item closest to passing: `closestMet()` in `shared/exercise-kit/done-checklist.logic.ts` | `done-toggle.ts`'s `checklist` input; `perception-page.html`'s `<app-done-toggle [checklist]="checklist()">`; `transition.logic.ts`'s `doneChecklist()` for a list |
 | A `guide` block in the exercise's own i18n scope — `inShort`, `howTo` (numbered steps), `examples` (§4's "Guide example" column: one card per step/item type/branch), `afterwards` — read with `translateObjectSignal` and gated on real content (`howTo.length`, since the signal starts at an empty object before the scope loads) | `features/paradigms-perception/i18n/en.json`'s `guide` key; `perception-page.ts`'s `guideContent`; `exercise-guide.ts`/`.html` |

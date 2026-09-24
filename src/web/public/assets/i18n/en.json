@@ -31,20 +31,20 @@
     "journal": "Journal",
     "settings": "Settings",
     "about": "About",
-    "paradigms": "Paradigms and principles",
-    "h1": "Habit 1: Be proactive",
-    "h2": "Habit 2: Begin with the end in mind",
-    "h3": "Habit 3: Put first things first",
-    "h4": "Habit 4: Think win-win",
-    "h5": "Habit 5: Seek first to understand, then to be understood",
-    "h6": "Habit 6: Synergize",
-    "h7": "Habit 7: Sharpen the saw",
-    "interdependence": "Paradigms of interdependence",
-    "paradigms-transition": "Become a transition person",
-    "paradigms-pc-balance": "Audit your results and capacity",
-    "paradigms-maturity": "See where you stand on the growth continuum",
-    "paradigms-teach": "Teach it to learn it",
-    "paradigms-perception": "Notice your paradigm",
+    "paradigms": "Paradigms",
+    "h1": "1 · Be proactive",
+    "h2": "2 · Begin with the end",
+    "h3": "3 · First things first",
+    "h4": "4 · Think win-win",
+    "h5": "5 · Understand first",
+    "h6": "6 · Synergize",
+    "h7": "7 · Sharpen the saw",
+    "interdependence": "Interdependence",
+    "paradigms-transition": "Transition person",
+    "paradigms-pc-balance": "Results and capacity",
+    "paradigms-maturity": "Growth continuum",
+    "paradigms-teach": "Teach a chapter",
+    "paradigms-perception": "Your paradigm",
     "devKit": "Exercise UI kit"
   },
   "language": {
@@ -115,7 +115,7 @@
     "import": {
       "errors": {
         "notJson": "That file isn't a JSON file this app can read.",
-        "invalid": "That file's data isn't in a shape this app recognizes."
+        "invalid": "That file's data isn't in a shape this app recognises."
       },
       "dialogLoadError": "Couldn't load the import dialog. Check your connection and try again.",
       "title": "Import this file?",

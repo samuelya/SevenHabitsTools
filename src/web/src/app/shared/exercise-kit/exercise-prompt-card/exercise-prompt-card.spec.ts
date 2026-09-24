@@ -18,6 +18,7 @@ function setUp(inputs: {
   chapterReference?: string;
   whyItMatters?: string;
   guide?: ExerciseGuideContent;
+  gloss?: string;
   expanded?: boolean;
   collapsedByDefault?: boolean;
 }) {
@@ -34,6 +35,7 @@ function setUp(inputs: {
   fixture.componentRef.setInput('chapterReference', inputs.chapterReference ?? null);
   fixture.componentRef.setInput('whyItMatters', inputs.whyItMatters ?? null);
   fixture.componentRef.setInput('guide', inputs.guide ?? null);
+  fixture.componentRef.setInput('gloss', inputs.gloss ?? null);
   if (inputs.collapsedByDefault !== undefined) {
     fixture.componentRef.setInput('collapsedByDefault', inputs.collapsedByDefault);
   }
@@ -57,6 +59,24 @@ describe('ExercisePromptCard', () => {
     const { fixture } = setUp({ prompt: 'List what you can control.', expanded: false });
 
     expect(fixture.nativeElement.textContent).toContain('List what you can control.');
+  });
+
+  it('shows the first-use gloss as an inline line under the prompt, even when collapsed (#218)', () => {
+    const { fixture } = setUp({
+      prompt: 'Name the scripts you inherited.',
+      gloss: 'The pattern you learned at home.',
+      expanded: false,
+    });
+
+    const gloss = fixture.nativeElement.querySelector('.visible-content .prompt-gloss');
+    expect(gloss?.textContent?.trim()).toBe('The pattern you learned at home.');
+    expect(fixture.nativeElement.querySelector('[matTooltip], [title]')).toBeNull();
+  });
+
+  it('renders no gloss line when none is given', () => {
+    const { fixture } = setUp({ prompt: 'List what you can control.' });
+
+    expect(fixture.nativeElement.querySelector('.prompt-gloss')).toBeNull();
   });
 
   it('shows no Read more button when no guide is given', () => {

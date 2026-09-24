@@ -124,6 +124,7 @@ export function registerMaturityModel(): void {
     exerciseId: MATURITY_MODEL_KEY,
     habit: 'paradigms',
     titleKey: 'habits.exercises.paradigms-maturity.title',
+    shortTitleKey: 'habits.exercises.paradigms-maturity.shortTitle',
     summaryKey: 'habits.exercises.paradigms-maturity.summary',
     icon: 'stairs',
     route: MATURITY_ROUTE,

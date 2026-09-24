@@ -240,12 +240,12 @@ test.describe('app shell smoke', () => {
   }) => {
     await setLanguage('en');
     await page.goto('/habits/h2');
-    await expect(page.getByTestId('page-title')).toHaveText('Habit 2: Begin with the end in mind');
+    await expect(page.getByTestId('page-title')).toHaveText('2 · Begin with the end');
 
     await page.getByRole('button', { name: 'Switch to Arabic' }).click();
 
-    await expect(page.getByTestId('page-title')).toHaveText('العادة 2: ابدأ والغاية في ذهنك');
-    await expect(page).toHaveTitle(/^العادة 2: ابدأ والغاية في ذهنك \| /);
+    await expect(page.getByTestId('page-title')).toHaveText('2 · ابدأ والغاية في ذهنك');
+    await expect(page).toHaveTitle(/^2 · ابدأ والغاية في ذهنك \| /);
   });
 
   test('reload keeps a seeded document', async ({ page, seedDocument }) => {

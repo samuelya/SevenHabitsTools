@@ -26,14 +26,14 @@ const TEXT: Record<
 > = {
   en: {
     checklistItem: 'Plan one chapter with a date',
-    hubActionLabel: 'Teach this',
+    hubActionLabel: 'Teach this chapter',
     markDone: 'Mark done',
     reopen: 'Reopen',
     sharedToggle: 'Shared',
   },
   ar: {
     checklistItem: 'خطّط لفصل واحد بميعاد',
-    hubActionLabel: 'علّم هذا',
+    hubActionLabel: 'علّم هذا الفصل',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     sharedToggle: 'تمت المشاركة',

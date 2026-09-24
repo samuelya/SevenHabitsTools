@@ -81,6 +81,15 @@ describe('MaturityPage', () => {
     );
   });
 
+  it('glosses the growth continuum inline under the prompt on first use (#218)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('.prompt-gloss')?.textContent?.trim()).toBe(
+      "Growth continuum: dependence → independence → interdependence, the book's growth line.",
+    );
+  });
+
   it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;

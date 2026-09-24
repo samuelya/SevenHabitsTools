@@ -43,7 +43,7 @@ const TEXT: Record<
   }
 > = {
   en: {
-    hubTitle: 'Notice your paradigm',
+    hubTitle: 'Your paradigm',
     reveal: 'Show the other side',
     character: 'Real change',
     next: 'Next',
@@ -55,7 +55,7 @@ const TEXT: Record<
     checklistItem: "Write why you think they didn't wave back",
   },
   ar: {
-    hubTitle: 'لاحظ إطارك الذهني',
+    hubTitle: 'إطارك الذهني',
     reveal: 'اعرض الوجه الآخر',
     character: 'تغيير حقيقي',
     next: 'التالي',

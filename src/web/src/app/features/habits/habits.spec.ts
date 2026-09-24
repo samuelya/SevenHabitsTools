@@ -23,7 +23,8 @@ import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-so
 const H2_MISSION: ExerciseRegistryEntry = {
   exerciseId: 'h2-mission',
   habit: 'h2',
-  titleKey: 'titles.paradigms',
+  titleKey: 'habits.paradigms.title',
+  shortTitleKey: 'titles.about',
   summaryKey: 'nav.back',
   icon: 'flag',
   route: 'habits/h2/mission',
@@ -33,6 +34,7 @@ const H2_ROLES: ExerciseRegistryEntry = {
   exerciseId: 'h2-roles',
   habit: 'h2',
   titleKey: 'titles.plan',
+  shortTitleKey: 'titles.plan',
   summaryKey: 'nav.back',
   icon: 'flag',
   route: 'habits/h2/roles',
@@ -47,6 +49,32 @@ describe('Habits feature', () => {
     const items = [...host.querySelectorAll('app-habits-page a')];
     expect(items.length).toBe(HABITS.length);
     expect(items[1].getAttribute('href')).toBe('/habits/h1');
+  });
+
+  it('lists every habit by its short title, not the long one (#218)', async () => {
+    configureApp({ handset: false });
+    const fixture = await renderShellAt('/habits');
+    const host = fixture.nativeElement as HTMLElement;
+    const transloco = TestBed.inject(TranslocoService);
+
+    const titles = [...host.querySelectorAll('app-habits-page [matListItemTitle]')].map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(titles).toEqual(HABITS.map((habit) => transloco.translate(habit.shortTitleKey)));
+    expect(titles[5]).toBe('5 · Understand first');
+  });
+
+  it('uses the short title for the hub page title and keeps the long one in its h1 (#218)', async () => {
+    configureApp({ handset: false });
+    const fixture = await renderShellAt('/habits/h5');
+    const host = fixture.nativeElement as HTMLElement;
+
+    expect(host.querySelector('[data-testid="page-title"]')?.textContent?.trim()).toBe(
+      '5 · Understand first',
+    );
+    expect(host.querySelector('app-habit-hub-page h1')?.textContent?.trim()).toBe(
+      'Habit 5: Seek first to understand, then to be understood',
+    );
   });
 
   // 'paradigms' now has a real registered exercise (#51's `paradigms-transition`), so it no
@@ -109,11 +137,18 @@ describe('Habits feature', () => {
       const links = [...host.querySelectorAll('app-habit-hub-page mat-nav-list a')];
       expect(links).toHaveLength(2);
       expect(links[0].getAttribute('href')).toBe('/habits/h2/mission');
-      expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.titleKey));
+      // Chrome shows the short title only; the long one belongs to the exercise page (#218).
+      expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.shortTitleKey));
+      expect(links[0].textContent).not.toContain(transloco.translate(H2_MISSION.titleKey));
       expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.summaryKey));
 
       const continueLink = host.querySelector('app-habit-hub-page .hub-continue');
       expect(continueLink?.getAttribute('href')).toBe('/habits/h2/mission');
+      expect(continueLink?.textContent?.trim()).toContain(
+        transloco.translate('habits.hub.continueButton', {
+          title: transloco.translate(H2_MISSION.shortTitleKey),
+        }),
+      );
     });
 
     it('shows a done badge and moves Continue to the next exercise once one is marked done', async () => {
@@ -221,6 +256,7 @@ describe('Habits feature', () => {
         exerciseId: 'h3-example',
         habit: 'h3',
         titleKey: 'titles.paradigms',
+        shortTitleKey: 'titles.paradigms',
         summaryKey: 'nav.back',
         icon: 'flag',
         route: 'habits/h3/example',

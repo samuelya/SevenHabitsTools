@@ -1,6 +1,9 @@
 <mat-card class="prompt-card" appearance="outlined">
   <mat-card-content class="visible-content">
     <p class="prompt">{{ prompt() }}</p>
+    @if (gloss(); as gloss) {
+      <p class="prompt-gloss">{{ gloss }}</p>
+    }
     @if (guide(); as guide) {
       <button type="button" class="read-more" (click)="openGuide()">
         {{ 'exerciseKit.promptCard.readMore' | transloco }}

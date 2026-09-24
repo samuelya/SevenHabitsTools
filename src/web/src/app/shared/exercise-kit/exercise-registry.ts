@@ -22,7 +22,12 @@ export interface ExerciseHubStatus {
 export interface ExerciseRegistryEntry {
   readonly exerciseId: string;
   readonly habit: HabitId;
+  /** The long, teaching title (`habits` scope): the exercise page's `h1`, never chrome. */
   readonly titleKey: string;
+  /** The ≤ 3-word title (`habits` scope) every piece of chrome renders — the hub list and its
+   * "Continue" button (issue #218). The route's toolbar/tab title is the root-scope
+   * `titles.<exerciseId>`, holding the same short wording. */
+  readonly shortTitleKey: string;
   /** One-line paraphrased summary shown under the title on the habit hub page (issue #31). */
   readonly summaryKey: string;
   readonly icon: string;

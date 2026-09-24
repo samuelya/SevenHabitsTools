@@ -48,6 +48,7 @@ describe('paradigms-transition model', () => {
       exerciseId: TRANSITION_MODEL_KEY,
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-transition.title',
+      shortTitleKey: 'habits.exercises.paradigms-transition.shortTitle',
       summaryKey: 'habits.exercises.paradigms-transition.summary',
       icon: 'compare_arrows',
       route: 'habits/paradigms/transition',

@@ -17,6 +17,7 @@ function entry(overrides: Partial<ExerciseRegistryEntry> = {}): ExerciseRegistry
     exerciseId: 'test-exercise',
     habit: 'paradigms',
     titleKey: 'title',
+    shortTitleKey: 'title',
     summaryKey: 'summary',
     icon: 'star',
     route: 'habits/paradigms/test',

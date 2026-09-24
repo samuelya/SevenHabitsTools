@@ -48,6 +48,9 @@ export class ExercisePromptCard {
   private readonly viewContainerRef = inject(ViewContainerRef);
 
   readonly prompt = input.required<string>();
+  /** A first-use gloss for a book term the prompt uses, as a grey line right under it, in the
+   * part that is always visible (issue #218: an inline line, never a tooltip). */
+  readonly gloss = input<string | null>(null);
   readonly chapterReference = input<string | null>(null);
   /** Shows the "why this matters" note when set. */
   readonly whyItMatters = input<string | null>(null);

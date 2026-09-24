@@ -133,7 +133,7 @@ describe('Shell', () => {
       const fixture = await renderShellAt('/habits/h4');
       const host = fixture.nativeElement as HTMLElement;
 
-      expect(text(host.querySelector('[data-testid="page-title"]'))).toBe('Habit 4: Think win-win');
+      expect(text(host.querySelector('[data-testid="page-title"]'))).toBe('4 · Think win-win');
       const back = host.querySelector<HTMLAnchorElement>('.top-bar__back');
       expect(back?.getAttribute('href')).toBe('/habits');
       expect(back?.getAttribute('aria-label')).toBe('Back');
