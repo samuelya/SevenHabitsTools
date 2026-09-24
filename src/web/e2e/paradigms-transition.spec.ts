@@ -29,7 +29,7 @@ const TEXT: Record<
 > = {
   en: {
     checklistItem: 'Add at least one pattern you learned at home',
-    hubTitle: 'Become a transition person',
+    hubTitle: 'Transition person',
     markDone: 'Mark done',
     reopen: 'Reopen',
     stopToggle: 'Stop',
@@ -39,7 +39,7 @@ const TEXT: Record<
   },
   ar: {
     checklistItem: 'ضيف على الأقل عادة واحدة أخدتها من بيتك',
-    hubTitle: 'كن حلقة انتقال إيجابية',
+    hubTitle: 'حلقة الانتقال',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     stopToggle: 'أوقفه',

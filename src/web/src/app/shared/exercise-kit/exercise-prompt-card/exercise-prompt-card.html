@@ -1,6 +1,16 @@
 <mat-card class="prompt-card" appearance="outlined">
   <mat-card-content class="visible-content">
+    <!-- `aria-hidden`: the page's visually hidden `h1` (`ExercisePage`) already announces these
+         exact words, so screen readers hear the title once while sighted users see it here. Only
+         while expanded: collapsed, the top bar already names the exercise and the line would push
+         the primary action below the fold at 360x800 (#218). -->
+    @if (expanded() && heading(); as heading) {
+      <p class="prompt-heading" aria-hidden="true">{{ heading }}</p>
+    }
     <p class="prompt">{{ prompt() }}</p>
+    @if (gloss(); as gloss) {
+      <p class="prompt-gloss">{{ gloss }}</p>
+    }
     @if (guide(); as guide) {
       <button type="button" class="read-more" (click)="openGuide()">
         {{ 'exerciseKit.promptCard.readMore' | transloco }}

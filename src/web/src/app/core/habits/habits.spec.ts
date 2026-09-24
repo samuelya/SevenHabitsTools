@@ -13,6 +13,7 @@ describe('habits', () => {
 
   it('finds a habit by id', () => {
     expect(findHabit('h2')?.titleKey).toBe('habits.h2.title');
+    expect(findHabit('h2')?.shortTitleKey).toBe('habits.h2.shortTitle');
     expect(findHabit('nope')).toBeUndefined();
   });
 });

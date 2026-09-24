@@ -105,6 +105,7 @@ export function registerPcBalanceModel(): void {
     exerciseId: PC_BALANCE_MODEL_KEY,
     habit: 'paradigms',
     titleKey: 'habits.exercises.paradigms-pc-balance.title',
+    shortTitleKey: 'habits.exercises.paradigms-pc-balance.shortTitle',
     summaryKey: 'habits.exercises.paradigms-pc-balance.summary',
     icon: 'balance',
     route: PC_BALANCE_ROUTE,

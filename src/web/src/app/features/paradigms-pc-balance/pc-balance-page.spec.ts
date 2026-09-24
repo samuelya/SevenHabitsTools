@@ -118,6 +118,16 @@ describe('PcBalancePage', () => {
     );
   });
 
+  it('glosses "over-used" inline under the prompt on first use (#218)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('.prompt')?.textContent).toContain('over-used');
+    expect(host.querySelector('.prompt-gloss')?.textContent?.trim()).toBe(
+      'Over-used: you get a lot out of it and put little back.',
+    );
+  });
+
   it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;

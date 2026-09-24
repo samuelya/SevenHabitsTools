@@ -19,10 +19,10 @@
   </div>
 }
 
-@if (continueRoute(); as route) {
-  <a mat-flat-button class="hub-continue" [routerLink]="'/' + route">
+@if (continueTarget(); as target) {
+  <a mat-flat-button class="hub-continue" [routerLink]="'/' + target.route">
     <mat-icon class="flip-in-rtl" aria-hidden="true">play_arrow</mat-icon>
-    {{ 'habits.hub.continue' | transloco }}
+    {{ 'habits.hub.continueButton' | transloco: { title: (target.shortTitleKey | transloco) } }}
   </a>
 }
 
@@ -32,9 +32,11 @@
   <mat-nav-list>
     @for (exercise of exercises(); track exercise.exerciseId) {
       @let done = progress.isDone(exercise.exerciseId)();
-      <a mat-list-item [routerLink]="'/' + exercise.route">
+      <a mat-list-item class="hub-exercise" [routerLink]="'/' + exercise.route">
         <mat-icon matListItemIcon aria-hidden="true">{{ exercise.icon }}</mat-icon>
-        <span matListItemTitle>{{ exercise.titleKey | transloco }}</span>
+        <span matListItemTitle class="hub-exercise-title">{{
+          exercise.shortTitleKey | transloco
+        }}</span>
         <span matListItemLine>{{ exercise.summaryKey | transloco }}</span>
         @if (done) {
           <span matListItemMeta class="hub-status">
@@ -59,10 +61,12 @@
         }
       </a>
     }
-    @for (entry of comingSoon(); track entry.titleKey + '-' + $index) {
-      <div mat-list-item class="hub-coming-soon">
+    @for (entry of comingSoon(); track entry.shortTitleKey + '-' + $index) {
+      <div mat-list-item class="hub-exercise hub-coming-soon">
         <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
-        <span matListItemTitle>{{ entry.titleKey | transloco }}</span>
+        <span matListItemTitle class="hub-exercise-title">{{
+          entry.shortTitleKey | transloco
+        }}</span>
         <span matListItemLine>{{ 'habits.hub.comingSoon' | transloco }}</span>
       </div>
     }

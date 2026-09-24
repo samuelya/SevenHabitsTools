@@ -54,6 +54,7 @@ describe('paradigms-perception model', () => {
       exerciseId: PERCEPTION_MODEL_KEY,
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-perception.title',
+      shortTitleKey: 'habits.exercises.paradigms-perception.shortTitle',
       summaryKey: 'habits.exercises.paradigms-perception.summary',
       icon: 'visibility',
       route: 'habits/paradigms/perception',

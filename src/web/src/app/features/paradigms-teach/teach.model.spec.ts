@@ -58,6 +58,7 @@ describe('paradigms-teach model', () => {
       exerciseId: TEACH_MODEL_KEY,
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-teach.title',
+      shortTitleKey: 'habits.exercises.paradigms-teach.shortTitle',
       summaryKey: 'habits.exercises.paradigms-teach.summary',
       icon: 'campaign',
       route: 'habits/paradigms/teach',

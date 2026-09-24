@@ -1,5 +1,9 @@
 import { EnvironmentProviders, importProvidersFrom } from '@angular/core';
-import { TranslocoTestingModule, provideTranslocoMissingHandler } from '@jsverse/transloco';
+import {
+  Translation,
+  TranslocoTestingModule,
+  provideTranslocoMissingHandler,
+} from '@jsverse/transloco';
 import { ThrowingMissingHandler } from '../core/i18n/throwing-missing-handler';
 import shellEn from '../../../public/assets/i18n/en.json';
 import shellAr from '../../../public/assets/i18n/ar.json';
@@ -24,6 +28,34 @@ import perceptionAr from '../features/paradigms-perception/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
+/** Every shipped translation file, keyed the way Transloco loads it (`<lang>` for the root scope,
+ * `<scope>/<lang>` for a feature scope). A new scope is added here once, for both its specs and
+ * `core/i18n/en-gb-spelling.spec.ts`. */
+export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
+  en: shellEn,
+  ar: shellAr,
+  'home/en': homeEn,
+  'home/ar': homeAr,
+  'habits/en': habitsEn,
+  'habits/ar': habitsAr,
+  'about/en': aboutEn,
+  'about/ar': aboutAr,
+  'settings/en': settingsEn,
+  'settings/ar': settingsAr,
+  'paradigms-transition/en': transitionEn,
+  'paradigms-transition/ar': transitionAr,
+  'paradigms-pc-balance/en': pcBalanceEn,
+  'paradigms-pc-balance/ar': pcBalanceAr,
+  'paradigms-maturity/en': maturityEn,
+  'paradigms-maturity/ar': maturityAr,
+  'paradigms-teach/en': teachEn,
+  'paradigms-teach/ar': teachAr,
+  'paradigms-perception/en': perceptionEn,
+  'paradigms-perception/ar': perceptionAr,
+  'exercise-kit/en': exerciseKitEn,
+  'exercise-kit/ar': exerciseKitAr,
+};
+
 /**
  * Real translations, loaded synchronously (`TranslocoTestingModule`, no HTTP) instead of a
  * loader — the same JSON the app ships, so a spec's rendered text always matches production and
@@ -39,30 +71,7 @@ export function provideTranslocoTesting(): EnvironmentProviders[] {
   return [
     importProvidersFrom(
       TranslocoTestingModule.forRoot({
-        langs: {
-          en: shellEn,
-          ar: shellAr,
-          'home/en': homeEn,
-          'home/ar': homeAr,
-          'habits/en': habitsEn,
-          'habits/ar': habitsAr,
-          'about/en': aboutEn,
-          'about/ar': aboutAr,
-          'settings/en': settingsEn,
-          'settings/ar': settingsAr,
-          'paradigms-transition/en': transitionEn,
-          'paradigms-transition/ar': transitionAr,
-          'paradigms-pc-balance/en': pcBalanceEn,
-          'paradigms-pc-balance/ar': pcBalanceAr,
-          'paradigms-maturity/en': maturityEn,
-          'paradigms-maturity/ar': maturityAr,
-          'paradigms-teach/en': teachEn,
-          'paradigms-teach/ar': teachAr,
-          'paradigms-perception/en': perceptionEn,
-          'paradigms-perception/ar': perceptionAr,
-          'exercise-kit/en': exerciseKitEn,
-          'exercise-kit/ar': exerciseKitAr,
-        },
+        langs: { ...TEST_TRANSLATIONS },
         preloadLangs: true,
         translocoConfig: {
           availableLangs: ['en', 'ar'],

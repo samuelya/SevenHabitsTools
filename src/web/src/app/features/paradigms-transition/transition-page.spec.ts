@@ -123,6 +123,15 @@ describe('TransitionPage', () => {
     expect(host.textContent).toContain('inherited');
   });
 
+  it('glosses "script" inline under the prompt on first use (#218)', async () => {
+    const harness = await setUp();
+    const host = harness.routeNativeElement as HTMLElement;
+
+    expect(host.querySelector('.prompt-gloss')?.textContent?.trim()).toBe(
+      'The pattern you learned at home; the book calls it a script.',
+    );
+  });
+
   it('shows no summary card and the gate checklist until the first item exists (#215)', async () => {
     const harness = await setUp();
     const host = harness.routeNativeElement as HTMLElement;

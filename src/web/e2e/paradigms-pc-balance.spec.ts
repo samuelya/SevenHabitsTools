@@ -19,13 +19,13 @@ const TEXT: Record<
 > = {
   en: {
     checklistItem: 'Add an asset and name every one',
-    hubTitle: 'Audit your results and capacity',
+    hubTitle: 'Results and capacity',
     markDone: 'Mark done',
     reopen: 'Reopen',
   },
   ar: {
     checklistItem: 'ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة',
-    hubTitle: 'قيّم نتائجك وقدرتك على الإنتاج',
+    hubTitle: 'النتائج والقدرة',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
   },

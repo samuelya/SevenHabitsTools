@@ -15,20 +15,27 @@ export type HabitId = (typeof HABIT_IDS)[number];
 
 export interface HabitDefinition {
   readonly id: HabitId;
+  /** The long title (`habits` scope): the hub page's `h1` only. */
   readonly titleKey: string;
+  /** The ≤ 3-word title (`habits` scope) for chrome such as the habits list (issue #218). */
+  readonly shortTitleKey: string;
   readonly icon: string;
 }
 
+function habit(id: HabitId, icon: string): HabitDefinition {
+  return { id, titleKey: `habits.${id}.title`, shortTitleKey: `habits.${id}.shortTitle`, icon };
+}
+
 export const HABITS: readonly HabitDefinition[] = [
-  { id: 'paradigms', titleKey: 'habits.paradigms.title', icon: 'visibility' },
-  { id: 'h1', titleKey: 'habits.h1.title', icon: 'bolt' },
-  { id: 'h2', titleKey: 'habits.h2.title', icon: 'flag' },
-  { id: 'h3', titleKey: 'habits.h3.title', icon: 'event_available' },
-  { id: 'h4', titleKey: 'habits.h4.title', icon: 'handshake' },
-  { id: 'h5', titleKey: 'habits.h5.title', icon: 'hearing' },
-  { id: 'h6', titleKey: 'habits.h6.title', icon: 'diversity_3' },
-  { id: 'h7', titleKey: 'habits.h7.title', icon: 'self_improvement' },
-  { id: 'interdependence', titleKey: 'habits.interdependence.title', icon: 'account_balance' },
+  habit('paradigms', 'visibility'),
+  habit('h1', 'bolt'),
+  habit('h2', 'flag'),
+  habit('h3', 'event_available'),
+  habit('h4', 'handshake'),
+  habit('h5', 'hearing'),
+  habit('h6', 'diversity_3'),
+  habit('h7', 'self_improvement'),
+  habit('interdependence', 'account_balance'),
 ];
 
 export function isHabitId(value: unknown): value is HabitId {

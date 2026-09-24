@@ -28,7 +28,7 @@ import {
   getRegisteredHubActions,
 } from '../../shared/exercise-kit/hub-action-registry';
 import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
-import { nextExerciseRoute } from './habit-hub.logic';
+import { nextExercise } from './habit-hub.logic';
 
 /** Hub for one habit: lists its registered exercises with progress, an unregistered "coming soon"
  * preview when the feature flag (`HABIT_HUB_COMING_SOON`) lists any, and a 'Continue' action to
@@ -72,8 +72,8 @@ export class HabitHubPage {
     () => this.exercises().length === 0 && this.comingSoon().length === 0,
   );
 
-  protected readonly continueRoute = computed(() =>
-    nextExerciseRoute(this.exercises(), (exerciseId) => this.progress.isDone(exerciseId)()),
+  protected readonly continueTarget = computed(() =>
+    nextExercise(this.exercises(), (exerciseId) => this.progress.isDone(exerciseId)()),
   );
 
   /** Every hub action (issue #52), shown on every *valid* habit's hub — unlike `exercises()`, not

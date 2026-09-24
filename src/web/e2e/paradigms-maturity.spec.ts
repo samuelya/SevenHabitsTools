@@ -29,7 +29,7 @@ const TEXT: Record<
 > = {
   en: {
     checklistItem: 'Rate every area in one assessment',
-    hubTitle: 'See where you stand on the growth continuum',
+    hubTitle: 'Growth continuum',
     markDone: 'Mark done',
     reopen: 'Reopen',
     cancel: 'Cancel',
@@ -38,7 +38,7 @@ const TEXT: Record<
   },
   ar: {
     checklistItem: 'قيّم كل المجالات في تقييم واحد',
-    hubTitle: 'اعرف موقعك على مسار النضج',
+    hubTitle: 'مسار النضج',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     cancel: 'إلغاء',

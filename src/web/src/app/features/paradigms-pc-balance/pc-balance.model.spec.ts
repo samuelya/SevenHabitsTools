@@ -48,6 +48,7 @@ describe('paradigms-pc-balance model', () => {
       exerciseId: PC_BALANCE_MODEL_KEY,
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-pc-balance.title',
+      shortTitleKey: 'habits.exercises.paradigms-pc-balance.shortTitle',
       summaryKey: 'habits.exercises.paradigms-pc-balance.summary',
       icon: 'balance',
       route: 'habits/paradigms/pc-balance',
