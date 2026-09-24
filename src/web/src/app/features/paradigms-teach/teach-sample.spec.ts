@@ -17,6 +17,7 @@ import type { ExerciseGuideContent } from '../../shared/exercise-kit/exercise-gu
 import {
   addSampleEntry,
   CHAPTER_STATUS_KINDS,
+  chapterStatus,
   guideForEntries,
   hubStatus,
   isComplete,
@@ -206,6 +207,15 @@ describe('samples (issue #232)', () => {
 
     expect(item.warning).toBe(false);
     expect(item.chips?.some((chip) => chip.warning)).toBe(false);
+  });
+
+  it('keeps "Planned by <date>" once the date has passed: no "Overdue" label either (bug #275)', () => {
+    const past = sample({ status: 'planned', plannedAt: '2026-01-03' });
+    const labels = labelsFrom(['h1'], ['Habit 1'], STATUS_LABELS, 'Example');
+    const item = toListItem('h1', past, labels, NOW, (date) => `<${date}>`);
+
+    expect(chapterStatus(past, NOW)).toEqual({ kind: 'planned', plannedAt: '2026-01-03' });
+    expect(item.chips).toEqual([{ label: 'Example' }, { label: 'planned', warning: false }]);
   });
 
   it("a shared example gets no sharedAt: it isn't a real share", () => {

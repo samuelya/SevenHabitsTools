@@ -227,7 +227,8 @@ export const CHAPTER_STATUS_KINDS: readonly ChapterStatusKind[] = [
 
 /** `entry`'s chapter status on `today`: no entry (or a planned one without a valid date) is "Not
  * planned"; a planned one is "Planned by <date>" until that date has passed, then "Overdue"; a
- * shared or skipped one says so, whatever its date. */
+ * shared or skipped one says so, whatever its date. A sample (issue #232) is never "Overdue": it
+ * keeps the example's own "Planned by <date>" (bug #275), since the user never made that plan. */
 export function chapterStatus(entry: TeachEntry | undefined, today: Date): ChapterStatus {
   if (!entry) {
     return { kind: 'notPlanned' };
@@ -238,7 +239,7 @@ export function chapterStatus(entry: TeachEntry | undefined, today: Date): Chapt
   if (!isValidPlannedAt(entry.plannedAt)) {
     return { kind: 'notPlanned' };
   }
-  return isOverdue(entry, today)
+  return !entry.sample && isOverdue(entry, today)
     ? { kind: 'overdue', plannedAt: entry.plannedAt }
     : { kind: 'planned', plannedAt: entry.plannedAt };
 }
@@ -321,7 +322,7 @@ export function draftFor(
  * `deletable: false` for a chapter with no entry yet (issue #203): the rows are the ten fixed
  * chapters, not one-to-one with what a delete removes, so a chapter with nothing filled in yet has
  * nothing to delete (playbook's "Deleting entries"). A sample (issue #232) leads with an "Example"
- * chip and never shows the done check or the overdue warning: it counts toward nothing. */
+ * chip and never shows the done check or "Overdue" (`chapterStatus`): it counts toward nothing. */
 export function toListItem(
   chapter: TeachChapter,
   entry: TeachEntry | undefined,
@@ -334,7 +335,7 @@ export function toListItem(
   const chipLabel =
     'plannedAt' in status ? label.replace(DATE_SLOT, formatDate(status.plannedAt)) : label;
   const keyIdea = firstLine(entry?.keyIdea);
-  const warning = !entry?.sample && status.kind === 'overdue';
+  const warning = status.kind === 'overdue';
   const statusChip: ExerciseListChip = { label: chipLabel, warning };
   return {
     id: chapter,
