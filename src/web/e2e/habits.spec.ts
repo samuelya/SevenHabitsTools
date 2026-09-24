@@ -23,7 +23,6 @@ const PARADIGMS_ORDER = [
 
 const TEXT = {
   en: {
-    browseHabits: 'Browse habits',
     comingSoon: 'Coming soon',
     later: 'Habits 2–7 and Interdependence: coming soon',
     notStarted: 'Not started',
@@ -33,7 +32,6 @@ const TEXT = {
     teachThisChapter: 'Teach this chapter',
   },
   ar: {
-    browseHabits: 'تصفح العادات',
     comingSoon: 'قريبًا',
     later: 'العادات 2–7 والترابط: قريبًا',
     notStarted: 'لم يبدأ',
@@ -66,13 +64,11 @@ async function expectNotTruncated(locator: Locator): Promise<void> {
 }
 
 test.describe('habits list and hub', () => {
-  test('Home links to the habits list: Paradigms available, Habit 1 next up, the rest collapsed', async ({
+  test('the habits list: Paradigms available, Habit 1 next up, the rest collapsed', async ({
     page,
   }, testInfo) => {
     const text = TEXT[localeFor(testInfo.project.name)];
-    await page.goto('/');
-    await page.getByRole('link', { name: text.browseHabits }).click();
-    await expect(page).toHaveURL(/\/habits$/);
+    await page.goto('/habits');
 
     const links = page.locator('app-habits-page a');
     await expect(links).toHaveCount(2);

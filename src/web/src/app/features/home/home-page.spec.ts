@@ -8,6 +8,11 @@ import { DocumentMeta } from '../../core/data/document.model';
 import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
+import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
+import {
+  resetExerciseRegistryForTesting,
+  snapshotExerciseRegistryForTesting,
+} from '../../shared/exercise-kit/exercise-registry';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { HomePage } from './home-page';
 
@@ -19,6 +24,15 @@ const BANNER = 'app-export-reminder-banner';
 // — like `pwa`'s own bare `registerModel()` call, not a test-only fixture — so this deliberately
 // never restores the registry to a prior snapshot afterward (see `backup.model.spec.ts`).
 beforeEach(() => registerBackupModel());
+
+// These specs cover the export reminder only (Today's content: `home.spec.ts`): an empty exercise
+// registry and a fake `ExerciseProgress` keep the page's progress sections inert.
+let registrySnapshot: ReturnType<typeof snapshotExerciseRegistryForTesting>;
+beforeEach(() => {
+  registrySnapshot = snapshotExerciseRegistryForTesting();
+  resetExerciseRegistryForTesting();
+});
+afterEach(() => resetExerciseRegistryForTesting(registrySnapshot));
 
 function setUp(
   options: {
@@ -57,6 +71,14 @@ function setUp(
       {
         provide: DocumentImportExportService,
         useValue: { canImport: signal(true), exportDocument },
+      },
+      {
+        provide: ExerciseProgress,
+        useValue: {
+          anyCompletion: signal(false),
+          isDone: () => signal(false),
+          progressFor: () => signal({ done: 0, total: 0 }),
+        },
       },
       {
         provide: CLOCK,

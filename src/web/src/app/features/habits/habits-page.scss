@@ -21,17 +21,6 @@
   white-space: normal;
 }
 
-.habit-progress {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.habit-progress-count {
-  color: var(--mat-sys-on-surface-variant, gray);
-  font-size: 0.75rem;
-}
-
 .habit-next-up .habit-title,
 .habit-later .habit-title,
 .habit-later-toggle .habit-title {

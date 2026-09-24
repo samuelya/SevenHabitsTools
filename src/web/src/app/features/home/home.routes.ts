@@ -8,6 +8,8 @@ export default [
     pathMatch: 'full',
     title: 'titles.home',
     component: HomePage,
-    providers: [provideTranslocoScope('home')],
+    // `habits`: exercise and habit short titles, progress counts and statuses are keys in that
+    // scope (the registry's contract, `exercise-registry.ts`).
+    providers: [provideTranslocoScope('home'), provideTranslocoScope('habits')],
   },
 ] satisfies Routes;

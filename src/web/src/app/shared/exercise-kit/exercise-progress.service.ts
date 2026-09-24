@@ -7,6 +7,7 @@ import { getRegisteredExercises } from './exercise-registry';
 import {
   HabitExerciseProgress,
   completedAtFor,
+  hasAnyCompletion,
   isExerciseDone,
   progressForHabit,
   reopenCompletion,
@@ -28,6 +29,11 @@ export class ExerciseProgress {
   private readonly isDoneCache = new Map<string, Signal<boolean>>();
   private readonly completedAtCache = new Map<string, Signal<string | null>>();
   private readonly progressForCache = new Map<HabitId, Signal<HabitExerciseProgress>>();
+
+  /** True once any exercise has been marked done, even if reopened since (issue #220). */
+  readonly anyCompletion: Signal<boolean> = computed(() =>
+    hasAnyCompletion(this.completions.value()),
+  );
 
   markDone(exerciseId: string): void {
     this.completions.update((completions) =>

@@ -45,7 +45,7 @@ describe('Shell', () => {
     });
 
     it.each([
-      ['/', 'Seven Habits Tools'],
+      ['/', 'Today'],
       ['/habits', 'Habits'],
       ['/settings', 'Settings'],
     ])("keeps %s's h1 for screen readers but hidden on screen", async (url, heading) => {
