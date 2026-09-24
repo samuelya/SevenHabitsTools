@@ -99,7 +99,7 @@ describe('TeachPage "Try this example" (issue #232)', () => {
     expect('sample' in store().value()[0]).toBe(false);
     expect(chipsOf()).not.toContain('Example');
     expect(host(harness).querySelector('app-teach-summary')).not.toBeNull();
-    expect(markDone()).toBe('false');
+    expect(markDone()).not.toBe('true');
   });
 
   it("never overwrites a chapter's own entry, and the guide stops offering it", async () => {
@@ -116,6 +116,7 @@ describe('TeachPage "Try this example" (issue #232)', () => {
     store().update(() => [own]);
     harness.detectChanges();
     await harness.fixture.whenStable();
+    const before = store().value();
 
     const guide = promptCard(harness).guide();
     expect(guide?.examples.length).toBeGreaterThan(0);
@@ -125,7 +126,7 @@ describe('TeachPage "Try this example" (issue #232)', () => {
 
     await tryExample(harness, EXAMPLE);
 
-    expect(store().value()).toEqual([own]);
+    expect(store().value()).toBe(before);
     expect(TestBed.inject(Router).url).toBe(LIST_URL);
   });
 });

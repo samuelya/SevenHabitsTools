@@ -223,9 +223,11 @@ export function editScript(
   });
 }
 
-const isSource = isOneOf(SCRIPT_SOURCES);
-const isEffect = isOneOf(SCRIPT_EFFECTS);
-const isDecision = isOneOf(SCRIPT_DECISIONS);
+// Built on first use, not at module load: `transition.model.ts` imports this file for its hub
+// status, so on that import path the enum arrays are still undefined while this module evaluates.
+const isSource = (value: unknown): value is ScriptSource => isOneOf(SCRIPT_SOURCES)(value);
+const isEffect = (value: unknown): value is ScriptEffect => isOneOf(SCRIPT_EFFECTS)(value);
+const isDecision = (value: unknown): value is ScriptDecision => isOneOf(SCRIPT_DECISIONS)(value);
 const optionalText = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 
