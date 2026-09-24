@@ -117,6 +117,31 @@
   padding-block: 8px;
 }
 
+// Material lays each text line out on a fixed baseline grid (an inline `::before` strut, a negative
+// bottom margin, `white-space: nowrap`), which keeps the title to one line whatever the clamp above
+// says. A chip row has its own auto height, so drop the grid there and let the title wrap to two
+// lines with an ellipsis (#225: a pattern the user wrote is often longer than one line at 360 px).
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-block: 0;
+  white-space: normal;
+  overflow: hidden;
+  line-height: 1.5rem;
+}
+
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__secondary-text {
+  margin-block: 0;
+  line-height: 1.25rem;
+}
+
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text::before,
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text::after,
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__secondary-text::before {
+  display: none;
+}
+
 ::ng-deep .exercise-list__item [matListItemLine].exercise-list__chips {
   display: flex;
   flex-wrap: wrap;

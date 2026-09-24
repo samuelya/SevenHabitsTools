@@ -326,14 +326,12 @@ test.describe('paradigms transition reflection', () => {
 
     // Two lines at most, ending in an ellipsis rather than overflowing into the chips.
     const title = row.locator('[matListItemTitle]');
-    const { lines, clipped } = await title.evaluate((element) => {
-      const lineHeight = parseFloat(getComputedStyle(element).lineHeight);
-      return {
-        lines: Math.round(element.clientHeight / lineHeight),
-        clipped: element.scrollHeight > element.clientHeight,
-      };
-    });
-    expect(lines).toBeLessThanOrEqual(2);
+    const { lines, clipped } = await title.evaluate((element) => ({
+      lines: element.clientHeight / parseFloat(getComputedStyle(element).lineHeight),
+      clipped: element.scrollHeight > element.clientHeight,
+    }));
+    expect(lines).toBeGreaterThan(1.5);
+    expect(lines).toBeLessThanOrEqual(2.1);
     expect(clipped).toBe(true);
     const titleBox = (await title.boundingBox())!;
     const chipsBox = (await row.locator('.exercise-list__chips').boundingBox())!;
