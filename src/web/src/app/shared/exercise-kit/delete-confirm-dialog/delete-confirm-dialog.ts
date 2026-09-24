@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import {
+  MAT_DIALOG_DATA,
   MatDialogActions,
   MatDialogClose,
   MatDialogContent,
@@ -15,13 +16,21 @@ import {
 } from '@angular/material/dialog';
 import { TranslocoPipe } from '@jsverse/transloco';
 
+/** Optional wording for a delete that isn't a whole entry (e.g. one area of an assessment, #222
+ * re-review R6), already translated by the caller; each one left out keeps the generic copy. */
+export interface DeleteConfirmDialogData {
+  readonly title?: string;
+  readonly body?: string;
+  readonly confirmLabel?: string;
+}
+
 /**
  * The one confirm-delete dialog every exercise's bin button and swipe-to-delete share (issue
  * #203's "shared pattern"): destructive styling on Delete, Cancel focused first, Escape/backdrop
  * both cancel (Angular Material's own default — no extra wiring needed here). It carries no
  * per-feature data: the trigger's own aria-label ("Delete <date/title>", `ExerciseList`'s and
  * `AssessmentHistoryList`'s bin button) already told the user which item, so this dialog's own
- * copy is deliberately generic, from the root i18n scope (`deleteConfirm.*`) — the same
+ * copy is generic by default (a caller may override it through `DeleteConfirmDialogData`), from the root i18n scope (`deleteConfirm.*`) — the same
  * root-scope-not-feature-scope choice `ImportConfirmDialog` makes, since `AppDialog.open()` opens
  * this from the root environment injector, not the calling route's own Transloco scope.
  *
@@ -45,6 +54,8 @@ import { TranslocoPipe } from '@jsverse/transloco';
 })
 export class DeleteConfirmDialog {
   private readonly dialogRef = inject(MatDialogRef<DeleteConfirmDialog, boolean>);
+  protected readonly data: DeleteConfirmDialogData =
+    inject<DeleteConfirmDialogData | null>(MAT_DIALOG_DATA, { optional: true }) ?? {};
 
   private readonly cancelButton = viewChild<HTMLButtonElement>('cancelButton');
 

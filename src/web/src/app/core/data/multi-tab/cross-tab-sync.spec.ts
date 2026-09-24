@@ -44,7 +44,7 @@ class FakeBroadcastBus {
 
 function sampleDoc(): RootDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     meta: { createdAt: 't', updatedAt: 't', appVersion: '0.0.0', deviceId: 'device-1' },
     profile: {},
     settings: {},
@@ -197,10 +197,10 @@ describe('CrossTabSync', () => {
   });
 
   it('runs a reloaded document through the same migrate-then-validate path as bootstrap', async () => {
-    // documentV1Fixture (also used by migrate-document.spec.ts) is already at
-    // CURRENT_SCHEMA_VERSION, since production has no version-bump migration yet — this proves
-    // reloadFromAdapter() routes through the shared resolveDocument() pipeline rather than
-    // bypassing it, matching document-bootstrap.spec.ts's own "migrates and loads" test.
+    // documentV1Fixture (also used by migrate-document.spec.ts) is a version behind
+    // CURRENT_SCHEMA_VERSION: the replaced document arriving migrated proves reloadFromAdapter()
+    // routes through the shared resolveDocument() pipeline rather than bypassing it, matching
+    // document-bootstrap.spec.ts's own "migrates and loads" test.
     const fixture = structuredClone(documentV1Fixture);
     const load = vi.fn().mockResolvedValue(fixture);
     const { crossTabSync, replaceDocument, bus } = setUp({ isWriter: false, load });
@@ -211,7 +211,10 @@ describe('CrossTabSync', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(replaceDocument).toHaveBeenCalledWith(fixture);
+    expect(replaceDocument).toHaveBeenCalledWith({
+      ...fixture,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+    });
   });
 
   it('leaves the store unchanged and shows a reload notice for a document from a newer schema version', async () => {

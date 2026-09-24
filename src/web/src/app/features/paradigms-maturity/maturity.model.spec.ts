@@ -1,3 +1,6 @@
+import documentV1Fixture from '../../testing/fixtures/document-v1.json';
+import documentV2Fixture from '../../testing/fixtures/document-v2.json';
+import { resolveDocument } from '../../core/data/document-validation';
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
 import {
@@ -34,6 +37,14 @@ const FULL_ASSESSMENT: MaturityAssessment = {
 describe('paradigms-maturity model', () => {
   it('registers at habits.paradigms.maturity', () => {
     expect(registration().path).toBe(MATURITY_PATH);
+  });
+
+  it('accepts the new friendships key and the no-longer-suggested community key (#222)', () => {
+    const areas = [
+      { id: 'k1', key: 'friendships', level: 2 },
+      { id: 'k2', key: 'community', level: 1 },
+    ];
+    expect(registration().validate?.([{ ...FULL_ASSESSMENT, areas }])).toBe(true);
   });
 
   it('defaults to an empty array', () => {
@@ -94,5 +105,33 @@ describe('paradigms-maturity model', () => {
   it('passes validateDocument() when the document contains this slice (export/import guarantee)', () => {
     const issues = validateDocument({ habits: { paradigms: { maturity: [FULL_ASSESSMENT] } } });
     expect(issues.filter((issue) => issue.path === MATURITY_PATH)).toEqual([]);
+  });
+
+  it('loads the v2 fixture, whose assessment holds a friendships area (#222 re-review R7)', () => {
+    const result = resolveDocument(structuredClone(documentV2Fixture));
+
+    if (!result.ok) {
+      throw new Error('the v2 fixture did not load');
+    }
+    const maturity = (result.document.habits['paradigms'] as { maturity: MaturityAssessment[] })
+      .maturity;
+    expect(maturity[0].areas.map((area) => area.key)).toEqual(['friendships', 'community']);
+  });
+
+  it('loads a v1 document holding assessments: migrated to v2, every area unchanged (#222)', () => {
+    const v1 = structuredClone(documentV1Fixture) as Record<string, unknown>;
+    const legacy = {
+      ...FULL_ASSESSMENT,
+      areas: [...FULL_ASSESSMENT.areas, { id: 'ar4', key: 'community', level: 2 }],
+    };
+    (v1['habits'] as Record<string, Record<string, unknown>>)['paradigms'] = { maturity: [legacy] };
+
+    const result = resolveDocument(v1);
+
+    if (!result.ok) {
+      throw new Error('the v1 document did not load');
+    }
+    expect(result.document.schemaVersion).toBe(2);
+    expect(result.document.habits).toEqual(v1['habits']);
   });
 });

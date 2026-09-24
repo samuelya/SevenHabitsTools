@@ -1,8 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { map } from 'rxjs';
+import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
@@ -20,6 +24,7 @@ import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prom
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { recordDraft } from '../../shared/exercise-kit/record-draft';
 import { MaturityAssessmentForm } from './maturity-assessment-form';
+import { restoreArea } from './maturity-areas.logic';
 import { MaturityResult } from './maturity-result';
 import { MaturitySummary } from './maturity-summary';
 import {
@@ -30,6 +35,7 @@ import {
   isComplete,
   editAssessment,
   liveAssessmentsOf,
+  removeArea,
   newAssessmentFields,
   overallProfile,
   removeAssessment,
@@ -43,6 +49,7 @@ import {
   MATURITY_LEVELS,
   MATURITY_MODEL_KEY,
   MATURITY_ROUTE,
+  MaturityArea,
   MaturityAssessment,
   MaturityAssessmentFields,
   MaturityLevel,
@@ -60,8 +67,9 @@ import {
  * `optionalParamMatcher`, never a `''`/`':itemId'` sibling pair.
  *
  * **Draft before record (issue #217):** "New assessment" opens the reserved `NEW_ITEM_ID` segment
- * on an in-memory draft (`recordDraft()`), stored on the first rating or note
- * (`isDraftWorthSaving()`), after which the URL moves to the real id — `TransitionPage`'s pattern.
+ * on an in-memory draft (`recordDraft()`), stored when the user continues from the area chips to
+ * rating (`isDraftWorthSaving()`, #222 review), after which the URL moves to the real id —
+ * `TransitionPage`'s pattern.
  */
 @Component({
   selector: 'app-maturity-page',
@@ -92,6 +100,13 @@ export class MaturityPage {
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly progress = inject(ExerciseProgress);
+  private readonly breakpoints = inject(BreakpointObserver);
+  /** Below `HANDSET_QUERY` the form rates one area per screen, above it one panel per area
+   * (issue #222). */
+  protected readonly handset = toSignal(
+    this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
+    { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
+  );
 
   /** The `:itemId` route param, bound through `withComponentInputBinding` — absent while the URL
    * has no trailing segment, i.e. while the history, not an assessment, is showing. */
@@ -133,15 +148,20 @@ export class MaturityPage {
       };
     });
   });
+  /** Bumped each time the store refuses an area edit (a read-only tab), so the form drops its own
+   * copy of the areas and shows the stored ones again (#222 re-review R2). */
+  protected readonly refusedEdits = signal(0);
+  /** The draft the user pressed Continue on: `isDraftWorthSaving()`'s signal to store it. */
+  private continuedDraftId: string | null = null;
   protected readonly draft = recordDraft<MaturityAssessment>({
     itemId: this.itemId,
     records: this.assessments,
     // Read when the draft opens: the latest assessment's areas, levels unset.
     create: () => {
       const now = this.clock.now();
-      return newRecord(newAssessmentFields(this.history()[0] ?? null, localDateString(now)), now);
+      return newRecord(newAssessmentFields(this.history(), localDateString(now)), now);
     },
-    isWorthSaving: isDraftWorthSaving,
+    isWorthSaving: (draft) => isDraftWorthSaving(draft, draft.id === this.continuedDraftId),
     save: (record) => this.store.update((assessments) => [...assessments, record]),
     update: (id, fields) =>
       this.store.update((assessments) => editAssessment(assessments, id, fields)),
@@ -205,9 +225,53 @@ export class MaturityPage {
     this.draft.start();
   }
 
-  /** The first real input saves a draft (`recordDraft()`), which then moves the URL to its id. */
+  /** Edits reach the store at once for a saved assessment; a new draft keeps them in memory until
+   * Continue. An edit that reached neither is refused, and the form is told so. */
   protected onAssessmentChanged(id: string, fields: Partial<MaturityAssessmentFields>): void {
-    this.draft.edit(id, fields);
+    if (!this.draft.edit(id, fields) && !this.draft.owns(id)) {
+      this.refusedEdits.update((count) => count + 1);
+    }
+  }
+
+  /** Continue into rating stores a new draft (`recordDraft()`), which then moves the URL to its
+   * id; on a saved assessment it changes nothing. */
+  protected onAssessmentContinued(id: string): void {
+    if (this.draft.owns(id)) {
+      this.continuedDraftId = id;
+      this.draft.edit(id, {});
+    }
+  }
+
+  /** Removing an area that holds a level or note: confirm → remove → undo, the shared pattern the
+   * assessment delete uses (#222 review), with Undo putting the area back where it was. */
+  protected onAreaRemoveRequested(id: string, areaId: string): void {
+    const areas = this.areasOf(id);
+    const index = areas.findIndex((area) => area.id === areaId);
+    if (index === -1) {
+      return;
+    }
+    const removed = areas[index];
+    void this.deleteWithUndo.confirmAndDelete({
+      confirm: {
+        title: this.transloco.translate('paradigmsMaturity.form.removeConfirmTitle'),
+        body: this.transloco.translate('paradigmsMaturity.form.removeConfirmBody'),
+        confirmLabel: this.transloco.translate('paradigmsMaturity.form.removeConfirmButton'),
+      },
+      deletedMessage: this.transloco.translate('paradigmsMaturity.form.areaRemoved'),
+      undoLabel: this.transloco.translate('paradigmsMaturity.history.undo'),
+      onConfirm: () => this.draft.edit(id, { areas: removeArea(this.areasOf(id), areaId) }),
+      onUndo: () => this.draft.edit(id, { areas: restoreArea(this.areasOf(id), removed, index) }),
+    });
+  }
+
+  /** The areas of assessment `id` as they stand now: the open assessment's (`draft.selected()`,
+   * stored or draft), else the stored one's, for an Undo tapped after the editor closed. */
+  private areasOf(id: string): readonly MaturityArea[] {
+    const selected = this.draft.selected();
+    if (selected?.id === id) {
+      return selected.areas;
+    }
+    return this.assessments().find((candidate) => candidate.id === id)?.areas ?? [];
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). The

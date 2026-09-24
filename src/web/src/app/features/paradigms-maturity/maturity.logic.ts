@@ -15,8 +15,8 @@ import {
   labelsLoaded,
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
+import { areaKeyOf } from './maturity-areas.logic';
 import {
-  MATURITY_AREA_KEYS,
   MATURITY_LEVELS,
   MaturityArea,
   MaturityAssessment,
@@ -95,16 +95,6 @@ export function checklistLoaded(labels: ChecklistLabels<MaturityChecklistKey>): 
   return labelsLoaded(CHECKLIST_KEYS, labels);
 }
 
-/** Already-translated display name: a custom or renamed name if set, otherwise the built-in
- * area's translated label — never both, never neither (issue #50's implementation notes:
- * "Displayed name = name ?? t(key)"). */
-export function displayName(
-  area: Pick<MaturityArea, 'key' | 'name'>,
-  builtInLabels: Readonly<Record<string, string>>,
-): string {
-  return area.name ?? (area.key ? (builtInLabels[area.key] ?? '') : '');
-}
-
 /** The level held by the most rated areas; a tie goes to the lower level (issue #50's
  * implementation notes) — `null` with no rated areas. */
 export function overallProfile(areas: readonly MaturityArea[]): MaturityLevel | null {
@@ -146,18 +136,21 @@ export function suggestedHabits(profile: MaturityLevel | null): readonly HabitId
   }
 }
 
-/** Symmetric in `a`/`b`: if *either* side carries a `key`, match strictly by key equality (so a
- * renamed built-in area only matches another area with the same `key`, never a same-named custom
- * one); only when neither has a `key` does it fall back to matching by `name`. A version that
- * checked only `a`'s `key` (review finding on #49/#50's PR) let `deltaFor(a, [b])` and
- * `removedAreas([a], [b])` disagree about the very same pair, since they call this with the
- * operands in opposite order. */
+/** Symmetric in `a`/`b`: if *either* side stands for a built-in (`areaKeyOf()`: its `key`, or a
+ * custom name equal to a built-in label), match strictly on that key (so a renamed built-in area
+ * only matches another area for the same key, never a same-named custom one, and a custom
+ * "Friendships" matches the built-in `friendships`, #222 review); only when neither does is it
+ * matched by `name`. A version that checked only `a`'s `key` (review finding on #49/#50's PR) let
+ * `deltaFor(a, [b])` and `removedAreas([a], [b])` disagree about the very same pair, since they
+ * call this with the operands in opposite order. */
 function matches(
   a: Pick<MaturityArea, 'key' | 'name'>,
   b: Pick<MaturityArea, 'key' | 'name'>,
 ): boolean {
-  if (a.key !== undefined || b.key !== undefined) {
-    return a.key === b.key;
+  const keyA = areaKeyOf(a);
+  const keyB = areaKeyOf(b);
+  if (keyA !== undefined || keyB !== undefined) {
+    return keyA === keyB;
   }
   return a.name === b.name;
 }
@@ -214,53 +207,51 @@ export function summarize(assessments: readonly MaturityAssessment[]): MaturityS
 }
 
 /** A new assessment dated today, pre-filling the area list (names/keys only) from the latest
- * assessment with every level unset — the six built-in areas when there is no previous assessment
- * (issue #50's implementation notes). */
+ * assessment that has any, every level unset; none without one, so the user picks them as chips
+ * (issue #222; #50 pre-filled the six built-ins). `history` is newest first. */
 export function newAssessmentFields(
-  latest: MaturityAssessment | null,
+  history: readonly MaturityAssessment[],
   today: string,
 ): MaturityAssessmentFields {
+  const latest = history.find((assessment) => assessment.areas.length > 0);
   const areas: MaturityArea[] = latest
     ? latest.areas.map((area) => ({ id: crypto.randomUUID(), key: area.key, name: area.name }))
-    : MATURITY_AREA_KEYS.map((key) => ({ id: crypto.randomUUID(), key }));
+    : [];
   return { date: today, areas };
 }
 
-/** Draft before record (issue #217): a new assessment's draft becomes a record on the first real
- * input — an area rated, a non-blank note, or the area list itself changed (one added, removed or
- * renamed) relative to `initial`, the draft `newAssessmentFields()` built. The areas pre-filled
- * from the latest assessment are not input, and neither is the pre-filled date. */
+/** Draft before record (issue #217): a new assessment's draft becomes a record once the user
+ * continues from the area chips to rating with at least one area (#222 review). Choosing chips
+ * alone is not enough, so choosing and clearing one leaves nothing behind. */
 export function isDraftWorthSaving(
   draft: Pick<MaturityAssessment, 'areas'>,
-  initial: Pick<MaturityAssessment, 'areas'>,
+  continued: boolean,
 ): boolean {
-  const shape = (areas: readonly MaturityArea[]): string =>
-    JSON.stringify(areas.map((area) => [area.id, area.key ?? null, area.name ?? null]));
-  return (
-    draft.areas.some((area) => area.level !== undefined || (area.note ?? '').trim() !== '') ||
-    shape(draft.areas) !== shape(initial.areas)
-  );
+  return continued && draft.areas.length > 0;
 }
 
-/** Appends a new custom area with no level. */
-export function addArea(areas: readonly MaturityArea[], name: string): MaturityArea[] {
-  return [...areas, { id: crypto.randomUUID(), name }];
-}
+/** The two phases of the editor (issue #222): pick the areas, then rate them. */
+export type MaturityFormPhase = 'areas' | 'rate';
 
-/** Renames the area `id`: stores `name`, and — for a built-in area — keeps `key` (issue #50's
- * implementation notes). A blank `name` clears back to `undefined` rather than freezing the area
- * on a permanently empty label — a built-in area then falls back to its translated label again
- * (`displayName()`) instead of showing nothing forever (review finding on #49/#50's PR). A no-op
- * copy if `id` is not found. */
-export function renameArea(
+/** Where the editor opens: a new draft, or an assessment with no areas, on the area picker; any
+ * other assessment straight on rating. */
+export function initialPhase(
   areas: readonly MaturityArea[],
-  id: string,
-  name: string,
-): MaturityArea[] {
-  const trimmed = name.trim();
-  return areas.map((area) =>
-    area.id === id ? { ...area, name: trimmed === '' ? undefined : name } : area,
-  );
+  isNewDraft: boolean,
+): MaturityFormPhase {
+  return isNewDraft || areas.length === 0 ? 'areas' : 'rate';
+}
+
+/** The area to open on: the first unrated one, else the first. */
+export function firstUnratedIndex(areas: readonly MaturityArea[]): number {
+  const index = areas.findIndex((area) => !isAreaRated(area));
+  return index === -1 ? 0 : index;
+}
+
+/** `index` kept inside `0 .. length - 1` (0 for an empty list), e.g. after the last area is
+ * removed while it was the one showing. */
+export function clampIndex(index: number, length: number): number {
+  return Math.max(0, Math.min(index, length - 1));
 }
 
 export function setAreaLevel(

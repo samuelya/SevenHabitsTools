@@ -4,10 +4,10 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/locale.pipe';
 import { HabitId } from '../../core/habits/habits';
 import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import { displayName } from './maturity-areas.logic';
 import {
   AreaDelta,
   deltaFor,
-  displayName,
   overallProfile,
   removedAreas,
   suggestedHabits,

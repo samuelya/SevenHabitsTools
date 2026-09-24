@@ -65,11 +65,39 @@ async function openDraft(harness: RouterTestingHarness): Promise<void> {
   await harness.fixture.whenStable();
 }
 
-/** A saved assessment: open the draft, then rate the first area, which saves it (issue #217). */
+/** Presses the area chip at `index` (issue #222). */
+function chooseArea(harness: RouterTestingHarness, index: number): void {
+  const chips = (harness.routeNativeElement as HTMLElement).querySelectorAll('.area-chip');
+  (chips[index] as HTMLButtonElement).click();
+  harness.detectChanges();
+}
+
+/** Continue from the chips to rating; on a new draft this saves it (#222 review). */
+function continueToRating(harness: RouterTestingHarness): void {
+  (
+    (harness.routeNativeElement as HTMLElement).querySelector('.continue-button') as HTMLElement
+  ).click();
+  harness.detectChanges();
+}
+
+/** A saved assessment of the six suggested areas, on the rating phase: open the draft, choose
+ * every chip and continue, which saves it. */
 async function addAssessment(harness: RouterTestingHarness): Promise<void> {
   await openDraft(harness);
-  rateArea(harness, 0, 2);
+  for (let i = 0; i < 6; i++) {
+    chooseArea(harness, i);
+  }
+  continueToRating(harness);
   await harness.fixture.whenStable();
+}
+
+function seed(...records: MaturityAssessment[]): void {
+  TestBed.runInInjectionContext(() =>
+    featureStore<MaturityAssessment[]>(MATURITY_MODEL_KEY).update((current) => [
+      ...current,
+      ...records,
+    ]),
+  );
 }
 
 function storedAssessments(): readonly MaturityAssessment[] {
@@ -82,12 +110,14 @@ function editorStatus(harness: RouterTestingHarness): string | undefined {
   return harness.routeNativeElement?.querySelector('.editor-status')?.textContent?.trim();
 }
 
+/** Rates the area at `index` through its three-segment control. The spec runs above the
+ * handset breakpoint, so every area's panel (and control) is in the DOM. */
 function rateArea(harness: RouterTestingHarness, index: number, level: 1 | 2 | 3): void {
-  const rows = (harness.routeNativeElement as HTMLElement).querySelectorAll('.area-row');
-  const radios = rows[index].querySelectorAll(
-    '.level-option input[type="radio"]',
-  ) as NodeListOf<HTMLInputElement>;
-  radios[level - 1].click();
+  const controls = (harness.routeNativeElement as HTMLElement).querySelectorAll('.level-control');
+  const options = controls[index].querySelectorAll(
+    '.level-option button',
+  ) as NodeListOf<HTMLButtonElement>;
+  options[level - 1].click();
   harness.detectChanges();
 }
 
@@ -134,14 +164,17 @@ describe('MaturityPage', () => {
     ).toBe(true);
   });
 
-  it('New assessment opens an unsaved draft at `new` with the six built-in areas (issue #217)', async () => {
+  it('New assessment opens an unsaved draft at `new` on the area chips, no area chosen (issues #217, #222)', async () => {
     const harness = await setUp();
     await openDraft(harness);
 
     expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
     const host = harness.routeNativeElement as HTMLElement;
-    expect(host.querySelectorAll('.area-row')).toHaveLength(6);
-    expect((host.querySelector('.area-row input') as HTMLInputElement).placeholder).toBe('Work');
+    const chips = Array.from(host.querySelectorAll('.area-chip'));
+    expect(chips).toHaveLength(6);
+    expect(chips.every((chip) => chip.getAttribute('aria-pressed') === 'false')).toBe(true);
+    expect(host.querySelector('.area-chip-label')?.textContent?.trim()).toBe('Work');
+    expect(host.querySelectorAll('.level-control')).toHaveLength(0);
     expect(editorStatus(harness)).toBe('New');
     expect(storedAssessments()).toHaveLength(0);
   });
@@ -156,15 +189,149 @@ describe('MaturityPage', () => {
     expect(storedAssessments()).toHaveLength(0);
   });
 
-  it('rating the first area saves the draft and moves the URL to its id (issue #217)', async () => {
+  it('choosing a chip keeps the draft in memory: chosen, cleared and closed stores nothing (#222 review)', async () => {
     const harness = await setUp();
-    await addAssessment(harness);
+    await openDraft(harness);
+    chooseArea(harness, 1);
+    await harness.fixture.whenStable();
+
+    expect(storedAssessments()).toHaveLength(0);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
+
+    chooseArea(harness, 1);
+    await harness.fixture.whenStable();
+    (harness.routeNativeElement!.querySelector('.editor-close') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+
+    expect(storedAssessments()).toHaveLength(0);
+  });
+
+  it('Continue saves the draft with its areas, moves the URL to its id and opens rating (#222 review)', async () => {
+    const harness = await setUp();
+    await openDraft(harness);
+    chooseArea(harness, 1);
+    continueToRating(harness);
+    await harness.fixture.whenStable();
 
     const stored = storedAssessments();
     expect(stored).toHaveLength(1);
-    expect(stored[0].areas[0].level).toBe(2);
+    expect(stored[0].areas.map((area) => area.key)).toEqual(['family']);
     expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${stored[0].id}`);
     expect(editorStatus(harness)).toBe('Saved');
+    const host = harness.routeNativeElement as HTMLElement;
+    expect(host.querySelector('.rate-phase')).not.toBeNull();
+  });
+
+  it('a new assessment copies the areas of the latest assessment that has any (#222 review)', async () => {
+    const harness = await setUp();
+    seed(
+      newRecord(
+        { date: '2025-11-01', areas: [{ id: 'o1', key: 'health', level: 2 }] } as const,
+        new Date('2025-11-01T00:00:00.000Z'),
+      ),
+      newRecord({ date: '2025-12-01', areas: [] } as const, new Date('2025-12-01T00:00:00.000Z')),
+    );
+    await openDraft(harness);
+
+    const pressed = Array.from(
+      (harness.routeNativeElement as HTMLElement).querySelectorAll(
+        '.area-chip[aria-pressed="true"] .area-chip-label',
+      ),
+    ).map((chip) => chip.textContent?.trim());
+    expect(pressed).toEqual(['Health']);
+  });
+
+  it('unpressing the chip of a rated area removes it only once DeleteWithUndo confirms; Undo puts it back (#222 review)', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp(undefined, deleteWithUndo);
+    const record = newRecord(
+      {
+        date: '2025-12-01',
+        areas: [
+          { id: 'x1', key: 'work', level: 2, note: 'Busy quarter' },
+          { id: 'x2', key: 'family' },
+        ],
+      } as const,
+      new Date('2025-12-01T00:00:00.000Z'),
+    );
+    seed(record);
+    await harness.navigateByUrl(`${LIST_URL}/${record.id}`);
+    await harness.fixture.whenStable();
+    const host = harness.routeNativeElement as HTMLElement;
+    (host.querySelector('.change-areas') as HTMLButtonElement).click();
+    harness.detectChanges();
+
+    chooseArea(harness, 0);
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].confirm?.title).toBe('Remove this area?');
+    expect(storedAssessments()[0].areas.map((area) => area.id)).toEqual(['x1', 'x2']);
+
+    deleteWithUndo.calls[0].onConfirm();
+    harness.detectChanges();
+    expect(storedAssessments()[0].areas.map((area) => area.id)).toEqual(['x2']);
+
+    deleteWithUndo.calls[0].onUndo();
+    harness.detectChanges();
+    expect(storedAssessments()[0].areas).toEqual(record.areas);
+
+    // An unrated, note-free area still toggles off at once, and only that area.
+    chooseArea(harness, 1);
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(storedAssessments()[0].areas.map((area) => area.id)).toEqual(['x1']);
+  });
+
+  it('a chip pressed in a read-only tab shows unpressed again: the store refused it (#222 re-review R2)', async () => {
+    const harness = await setUp();
+    const record = newRecord(
+      { date: '2025-12-01', areas: [{ id: 'x1', key: 'work', level: 2 }] } as const,
+      new Date('2025-12-01T00:00:00.000Z'),
+    );
+    seed(record);
+    await harness.navigateByUrl(`${LIST_URL}/${record.id}`);
+    await harness.fixture.whenStable();
+    const host = harness.routeNativeElement as HTMLElement;
+    (host.querySelector('.change-areas') as HTMLButtonElement).click();
+    harness.detectChanges();
+    (TestBed.inject(WRITER_LOCK).isWriter as ReturnType<typeof signal<boolean>>).set(false);
+
+    chooseArea(harness, 1);
+
+    expect(storedAssessments()[0].areas).toEqual(record.areas);
+    expect(host.querySelectorAll('.area-chip')[1].getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('an existing assessment opens on rating, every stored area with its level (#222)', async () => {
+    const harness = await setUp();
+    const record = newRecord(
+      {
+        date: '2025-12-01',
+        areas: [
+          { id: 'x1', key: 'community', level: 3 },
+          { id: 'x2', name: 'Volunteering', note: 'Weekends' },
+        ],
+      } as const,
+      new Date('2025-12-01T00:00:00.000Z'),
+    );
+    TestBed.runInInjectionContext(() =>
+      featureStore<MaturityAssessment[]>(MATURITY_MODEL_KEY).update((current) => [
+        ...current,
+        record,
+      ]),
+    );
+    await harness.navigateByUrl(`${LIST_URL}/${record.id}`);
+    await harness.fixture.whenStable();
+
+    const host = harness.routeNativeElement as HTMLElement;
+    const names = Array.from(host.querySelectorAll('.area-panel .area-name')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(names).toEqual(['Community', 'Volunteering']);
+    expect(host.querySelector('.area-level-summary')?.textContent?.trim()).toBe(
+      'We do it together',
+    );
+    expect((host.querySelectorAll('.area-note textarea')[1] as HTMLTextAreaElement).value).toBe(
+      'Weekends',
+    );
   });
 
   it('compares an unsaved draft with the latest saved assessment (issue #217)', async () => {

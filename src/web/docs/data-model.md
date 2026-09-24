@@ -58,7 +58,7 @@ registerModel({
     module graph — and therefore its own registry — instead of sharing one (and racing
     `resetRegistryForTesting()` calls) across every spec file in the run.
   - Within a single file, a test that needs to register its own temporary fixtures still shouldn't
-    wipe out real registrations another module in *that* file's graph already made (e.g.
+    wipe out real registrations another module in _that_ file's graph already made (e.g.
     `settings.model.ts`, `core/pwa/pwa.model.ts`, both imported transitively through
     `app.config.ts`). `snapshotRegistryForTesting()` / `resetRegistryForTesting(snapshot)` save and
     restore exactly what was there before, instead of leaving it empty — see `registry.spec.ts` and
@@ -69,7 +69,10 @@ This is what lets independent feature PRs land without touching a shared schema 
 ## Migrations
 
 `schemaVersion` is an integer, bumped on any breaking change to the root shape or a model's
-stored shape. `src/app/core/data/migrations/`:
+stored shape. Widening a model's `validate()` to accept values an older build rejects (a new enum
+value, such as #222's `friendships` area key) counts as breaking too: without the bump, an older
+build would reject a new document as corrupt instead of reporting "made by a newer version". Such a
+migration only stamps the version (`migration-v1-to-v2.ts`). `src/app/core/data/migrations/`:
 
 - `migration.ts` — the `Migration` interface: `{ from, to, migrate(doc) }`.
 - `migrations.ts` — `MIGRATIONS`, the ordered list; add new entries here, never reorder or
@@ -209,7 +212,7 @@ has a unit-testable fallback path and the whole stack degrades gracefully rather
 ## JSON export/import (`core/data/backup/`, issue #37)
 
 - `backup.model.ts` registers `settings.backup { lastExportedAt?, lastExportedDocumentUpdatedAt?,
-  reminderDays: 0 | 1 | 7 | 30 }` (`0` turns the reminder off) the same way any other feature model
+reminderDays: 0 | 1 | 7 | 30 }` (`0` turns the reminder off) the same way any other feature model
   does. The two export timestamps are deliberately separate (#159): `lastExportedAt` is wall-clock
   time the export happened — the anchor `export-reminder.logic.ts` measures `reminderDays` from;
   `lastExportedDocumentUpdatedAt` is the exported snapshot's own `meta.updatedAt` — used only to

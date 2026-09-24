@@ -6,8 +6,10 @@ import { storeStatusFactory } from '../../shared/exercise-kit/exercise-hub-statu
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
 import { hubStatus, isStarted } from './maturity.logic';
 
-/** The six built-in life areas (issue #50's acceptance criteria). Stored as a key, never
- * translated text (architecture issue #1 §6). */
+/** The built-in life areas: #50's six plus `friendships` (issue #222). Stored as a key, never
+ * translated text (architecture issue #1 §6). Adding a key keeps every stored document valid, but
+ * an older build's `validate()` would reject one holding it, hence schema v2 and its no-op
+ * migration (`migration-v1-to-v2.ts`), so that build reports "made by a newer version" instead. */
 export const MATURITY_AREA_KEYS = [
   'work',
   'family',
@@ -15,8 +17,20 @@ export const MATURITY_AREA_KEYS = [
   'health',
   'learning',
   'community',
+  'friendships',
 ] as const;
 export type MaturityAreaKey = (typeof MATURITY_AREA_KEYS)[number];
+
+/** The areas offered as chips on a new assessment, in the order issue #222 lists them.
+ * `community` is no longer offered but still renders wherever an assessment already holds it. */
+export const MATURITY_SUGGESTED_AREA_KEYS: readonly MaturityAreaKey[] = [
+  'work',
+  'family',
+  'health',
+  'money',
+  'friendships',
+  'learning',
+];
 
 /** The three-point continuum (issue #50's acceptance criteria): 1 dependence, 2 independence,
  * 3 interdependence. */

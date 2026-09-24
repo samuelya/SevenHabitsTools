@@ -62,6 +62,15 @@ describe('DeleteWithUndo', () => {
     expect(dialogOpen).toHaveBeenCalledTimes(1);
   });
 
+  it("passes the caller's own dialog wording through as the dialog's data (#222 re-review R6)", async () => {
+    const { service, dialogOpen } = setUp({ dialogResult: false });
+    const confirm = { title: 'Remove this area?', body: 'Lost.', confirmLabel: 'Remove' };
+
+    await service.confirmAndDelete(options({ confirm }));
+
+    expect(dialogOpen).toHaveBeenCalledWith(expect.anything(), { data: confirm });
+  });
+
   it('does not delete, and does not show a snackbar, when the dialog is cancelled (undefined result)', async () => {
     const { service, snackbarOpen } = setUp({ dialogResult: undefined });
     const onConfirm = vi.fn();
