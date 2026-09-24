@@ -14,6 +14,7 @@ import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
+import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { PcBalanceAuditForm, PcReflectionChange } from './pc-balance-audit-form';
 import { PcBalanceSummary } from './pc-balance-summary';
@@ -31,6 +32,7 @@ import {
   removeAudit,
   restoreAudit,
   summarize,
+  isStarted,
 } from './pc-balance.logic';
 import { PC_BALANCE_MODEL_KEY, PC_BALANCE_ROUTE, PcAudit, PcAuditFields } from './pc-balance.model';
 
@@ -70,6 +72,10 @@ export class PcBalancePage {
   private readonly transloco = inject(TranslocoService);
   private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<PcAudit[]>(PC_BALANCE_MODEL_KEY);
+  /** Any live record (issue #216), from the same pure predicate the registry's `isStarted` uses. */
+  protected readonly started = computed(() => isStarted(this.store.value()));
+  /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
+  protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly progress = inject(ExerciseProgress);
 
   /** The `:itemId` route param, bound through `withComponentInputBinding` — absent while the URL

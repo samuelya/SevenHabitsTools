@@ -51,6 +51,8 @@ describe('paradigms-maturity model', () => {
       summaryKey: 'habits.exercises.paradigms-maturity.summary',
       icon: 'stairs',
       route: 'habits/paradigms/maturity',
+      // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      isStarted: expect.any(Function),
     });
   });
 

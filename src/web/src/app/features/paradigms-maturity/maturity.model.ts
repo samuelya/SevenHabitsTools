@@ -2,6 +2,8 @@ import { BaseRecord } from '../../core/data/record';
 import { isArrayOf, isBaseRecord, isOptionalString } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
+import { isStarted } from './maturity.logic';
 
 /** The six built-in life areas (issue #50's acceptance criteria). Stored as a key, never
  * translated text (architecture issue #1 §6). */
@@ -125,6 +127,7 @@ export function registerMaturityModel(): void {
     summaryKey: 'habits.exercises.paradigms-maturity.summary',
     icon: 'stairs',
     route: MATURITY_ROUTE,
+    isStarted: storeStartedFactory<MaturityAssessment[]>(MATURITY_MODEL_KEY, isStarted),
   });
 }
 

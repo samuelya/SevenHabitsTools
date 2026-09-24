@@ -1,10 +1,16 @@
-import { signal } from '@angular/core';
+import { DebugElement, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router, Routes, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
 import '../../features/settings/settings.model';
+import { By } from '@angular/platform-browser';
+import { featureStore } from '../../core/data/feature-store';
+import { newRecord } from '../../core/data/record';
+import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
+import { MaturityPage } from './maturity-page';
+import { MATURITY_MODEL_KEY, MaturityAssessment } from './maturity.model';
 import {
   ConfirmAndDeleteOptions,
   DeleteWithUndo,
@@ -209,5 +215,32 @@ describe('MaturityPage', () => {
     expect(
       harness.routeNativeElement?.querySelectorAll('.assessment-history-list__item'),
     ).toHaveLength(1);
+  });
+});
+
+describe('MaturityPage intro card (issue #216)', () => {
+  function promptCardIn(debugElement: DebugElement): ExercisePromptCard {
+    return debugElement.query(By.directive(ExercisePromptCard)).componentInstance;
+  }
+
+  it('starts expanded on a first visit, before anything is saved (desktop)', async () => {
+    const harness = await setUp();
+    expect(promptCardIn(harness.fixture.debugElement).expanded()).toBe(true);
+  });
+
+  it('starts collapsed on a later visit once a live assessment exists (desktop)', async () => {
+    await setUp();
+    TestBed.runInInjectionContext(() =>
+      featureStore<MaturityAssessment[]>(MATURITY_MODEL_KEY).update((current) => [
+        ...current,
+        newRecord({ date: '2026-01-01', areas: [] } as const, new Date('2026-01-01T00:00:00.000Z')),
+      ]),
+    );
+
+    const fixture = TestBed.createComponent(MaturityPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(promptCardIn(fixture.debugElement).expanded()).toBe(false);
   });
 });

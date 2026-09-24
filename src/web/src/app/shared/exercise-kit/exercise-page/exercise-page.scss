@@ -48,6 +48,20 @@
   gap: 0.5rem;
 }
 
+// Readable width on desktop (issue #216), inherited by every exercise through this scaffold:
+// running text (the intro card) caps at 72ch, lists, steppers and forms at 640px. Start-aligned,
+// so under `dir="rtl"` the column hugs the inline-start edge with no extra rule; the footer bar
+// below stays full width (owner decision on #184). No effect at handset widths (both caps exceed
+// a 360px column) or in the split layout's narrow list column. Measured at 1280x800: the column
+// was 992px wide; now 647px (en) / 576px (ar, a narrower `ch`) for the intro and 640px below it.
+.intro-slot {
+  max-inline-size: 72ch;
+}
+
+.content-slot {
+  max-inline-size: 640px;
+}
+
 // Full-width bar across the content area, at the bottom edge of the viewport even when the list
 // is short, and staying visible while the page scrolls or in focus mode (owner decision on #184).
 // The two halves of that: `margin-block-start: auto` takes up the free space of a short page, and
@@ -280,7 +294,7 @@
   padding: 1rem;
 }
 
-// The form content itself may cap at 56rem for line length; the column does not.
+// Forms cap at 640px (issue #216, same as `.content-slot` above); the column itself does not.
 .scaffold.editing:not(.handset) .editor-body {
-  max-inline-size: 56rem;
+  max-inline-size: 640px;
 }

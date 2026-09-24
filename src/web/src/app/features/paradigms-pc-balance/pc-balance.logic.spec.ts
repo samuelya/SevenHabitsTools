@@ -20,6 +20,7 @@ import {
   restoreAudit,
   statusOf,
   summarize,
+  isStarted,
 } from './pc-balance.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
@@ -327,5 +328,21 @@ describe('isOverUsed', () => {
   it('mirrors statusOf', () => {
     expect(isOverUsed({ p: 5, pc: 1 })).toBe(true);
     expect(isOverUsed({ p: 3, pc: 3 })).toBe(false);
+  });
+});
+
+describe('isStarted (issue #216)', () => {
+  it('is false with no audits at all', () => {
+    expect(isStarted([])).toBe(false);
+  });
+
+  it('is false when every audit is tombstoned', () => {
+    expect(isStarted([audit({ deletedAt: NOW.toISOString() })])).toBe(false);
+  });
+
+  it('is true once any live audit exists', () => {
+    expect(
+      isStarted([audit({ id: 'x1', deletedAt: NOW.toISOString() }), audit({ id: 'x2' })]),
+    ).toBe(true);
   });
 });

@@ -18,6 +18,7 @@ import {
   summarize,
   toListItem,
   upsertEntry,
+  isStarted,
 } from './teach.logic';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
@@ -348,5 +349,21 @@ describe('isValidPlannedAt', () => {
   it('rejects a partial or malformed value', () => {
     expect(isValidPlannedAt('2026-01')).toBe(false);
     expect(isValidPlannedAt('not-a-date')).toBe(false);
+  });
+});
+
+describe('isStarted (issue #216)', () => {
+  it('is false with no entries at all', () => {
+    expect(isStarted([])).toBe(false);
+  });
+
+  it('is false when every entry is tombstoned', () => {
+    expect(isStarted([entry({ deletedAt: NOW.toISOString() })])).toBe(false);
+  });
+
+  it('is true once any live entry exists', () => {
+    expect(
+      isStarted([entry({ id: 'x1', deletedAt: NOW.toISOString() }), entry({ id: 'x2' })]),
+    ).toBe(true);
   });
 });

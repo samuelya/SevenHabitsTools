@@ -39,6 +39,12 @@ export function liveScripts(scripts: readonly Script[]): Script[] {
   return scripts.filter(isLive);
 }
 
+/** Started once any live script exists (issue #216) — the hub's "started" and the intro card's
+ * collapse both read this. */
+export function isStarted(scripts: readonly Script[]): boolean {
+  return scripts.some(isLive);
+}
+
 /** The four gate items (issue #215), in the order the item form asks for them. */
 export const CHECKLIST_KEYS = ['pattern', 'decision', 'newScript', 'situation'] as const;
 export type TransitionChecklistKey = (typeof CHECKLIST_KEYS)[number];

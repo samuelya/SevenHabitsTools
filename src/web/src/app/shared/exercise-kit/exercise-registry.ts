@@ -31,6 +31,11 @@ export interface ExerciseRegistryEntry {
    * `runInInjectionContext()`, so it may `inject()` (e.g. its own `featureStore`) the same way a
    * component field initializer would. Returns `null` while there's nothing to show. */
   readonly statusFactory?: () => Signal<ExerciseHubStatus | null>;
+  /** Whether the user has started this exercise (issue #216), same factory shape and calling
+   * convention as `statusFactory`. Absent means "not started": read it through
+   * `exerciseStartedSignal()` (`exercise-started.ts`), never directly. Build it with
+   * `storeStartedFactory()` from the exercise's own pure `isStarted(value)` predicate. */
+  readonly isStarted?: () => Signal<boolean>;
 }
 
 const registrations = new Map<string, ExerciseRegistryEntry>();

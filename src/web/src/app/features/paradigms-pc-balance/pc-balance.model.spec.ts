@@ -51,6 +51,8 @@ describe('paradigms-pc-balance model', () => {
       summaryKey: 'habits.exercises.paradigms-pc-balance.summary',
       icon: 'balance',
       route: 'habits/paradigms/pc-balance',
+      // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      isStarted: expect.any(Function),
     });
   });
 
