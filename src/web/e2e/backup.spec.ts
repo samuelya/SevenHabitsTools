@@ -15,7 +15,7 @@ const FILE_INPUT = 'input[type="file"]';
  * let assertions target the right one instead of hardcoding `en`. */
 const BACKUP_TEXT = {
   en: {
-    appName: 'Seven Habits Tools',
+    today: 'Today',
     exportButton: 'Export data',
     importButton: 'Import data',
     replaceButton: 'Replace…',
@@ -27,7 +27,7 @@ const BACKUP_TEXT = {
     alreadyRecovered: 'Another tab has already recovered your data',
   },
   ar: {
-    appName: 'أدوات العادات السبع',
+    today: 'اليوم',
     exportButton: 'تصدير البيانات',
     importButton: 'استيراد البيانات',
     replaceButton: 'استبدال…',
@@ -255,7 +255,7 @@ test.describe('JSON export/import', () => {
     });
 
     // The error page swaps for the shell once recovery reports ready.
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(text.today);
     await expect(async () => {
       const current = (await readCurrentDocument(page)) as { settings: { marker: string } };
       expect(current.settings.marker).toBe('recovered-from-corrupt');
@@ -268,7 +268,7 @@ test.describe('JSON export/import', () => {
     // `fixtures.ts` — which would mask a real persistence failure here.)
     const fresh = await context.newPage();
     await fresh.goto('/');
-    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText(text.appName);
+    await expect(fresh.getByRole('heading', { level: 1 })).toHaveText(text.today);
     const current = (await readCurrentDocument(fresh)) as { settings: { marker: string } };
     expect(current.settings.marker).toBe('recovered-from-corrupt');
   });
