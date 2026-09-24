@@ -263,6 +263,7 @@ describe('MaturityPage', () => {
 
     chooseArea(harness, 0);
     expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].confirm?.title).toBe('Remove this area?');
     expect(storedAssessments()[0].areas.map((area) => area.id)).toEqual(['x1', 'x2']);
 
     deleteWithUndo.calls[0].onConfirm();
@@ -277,6 +278,26 @@ describe('MaturityPage', () => {
     chooseArea(harness, 1);
     expect(deleteWithUndo.calls).toHaveLength(1);
     expect(storedAssessments()[0].areas.map((area) => area.id)).toEqual(['x1']);
+  });
+
+  it('a chip pressed in a read-only tab shows unpressed again: the store refused it (#222 re-review R2)', async () => {
+    const harness = await setUp();
+    const record = newRecord(
+      { date: '2025-12-01', areas: [{ id: 'x1', key: 'work', level: 2 }] } as const,
+      new Date('2025-12-01T00:00:00.000Z'),
+    );
+    seed(record);
+    await harness.navigateByUrl(`${LIST_URL}/${record.id}`);
+    await harness.fixture.whenStable();
+    const host = harness.routeNativeElement as HTMLElement;
+    (host.querySelector('.change-areas') as HTMLButtonElement).click();
+    harness.detectChanges();
+    (TestBed.inject(WRITER_LOCK).isWriter as ReturnType<typeof signal<boolean>>).set(false);
+
+    chooseArea(harness, 1);
+
+    expect(storedAssessments()[0].areas).toEqual(record.areas);
+    expect(host.querySelectorAll('.area-chip')[1].getAttribute('aria-pressed')).toBe('false');
   });
 
   it('an existing assessment opens on rating, every stored area with its level (#222)', async () => {

@@ -124,10 +124,32 @@ describe('adding and restoring areas (#222)', () => {
     expect(addCustomArea(renamed, 'DAY JOB', LABELS)).toEqual({ ok: false, reason: 'duplicate' });
   });
 
-  it('refuses a built-in label in either locale, listed or not (#222 review)', () => {
-    expect(addCustomArea([], 'Work', LABELS)).toEqual({ ok: false, reason: 'duplicate' });
-    expect(addCustomArea([], ' health', LABELS)).toEqual({ ok: false, reason: 'duplicate' });
-    expect(addCustomArea([], 'الصحة', LABELS)).toEqual({ ok: false, reason: 'duplicate' });
+  it('adds a built-in label not in the list as that built-in, in either locale (#222 re-review R1)', () => {
+    for (const [typed, key] of [
+      ['Community', 'community'],
+      [' health', 'health'],
+      ['الصحة', 'health'],
+    ] as const) {
+      const result = addCustomArea([area({ id: 'w' })], typed, LABELS);
+      expect(result.ok).toBe(true);
+      const added = result.ok ? result.areas[1] : undefined;
+      expect(added?.key).toBe(key);
+      expect(added?.name).toBeUndefined();
+    }
+  });
+
+  it('refuses a built-in label whose built-in is already listed, by key or by name (#222 review)', () => {
+    expect(addCustomArea([area({ id: 'w' })], 'work', LABELS)).toEqual({
+      ok: false,
+      reason: 'duplicate',
+    });
+    const custom = [area({ id: 'f', key: undefined, name: 'Friendships' })];
+    expect(addCustomArea(custom, 'FRIENDSHIPS', LABELS)).toEqual({
+      ok: false,
+      reason: 'duplicate',
+    });
+    const renamed = [area({ id: 'd', key: 'work', name: 'Day job' })];
+    expect(addCustomArea(renamed, 'Work', LABELS)).toEqual({ ok: false, reason: 'duplicate' });
   });
 
   it('restores a removed area where it was, once', () => {

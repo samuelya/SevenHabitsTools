@@ -111,9 +111,11 @@ export type AddCustomAreaResult =
   | { readonly ok: true; readonly areas: MaturityArea[] }
   | { readonly ok: false; readonly reason: 'blank' | 'duplicate' };
 
-/** "Add your own": appends an unrated custom area storing the trimmed `name`. Refused for a blank
- * name, a built-in's label in any locale (its chip is already offered) or the displayed name of an
- * area already in the list, compared case-insensitively (#222 review). */
+/** "Add your own": appends an unrated custom area storing the trimmed `name`. A built-in's label
+ * in any locale adds that built-in instead (`addBuiltInArea`), so a no-longer-suggested built-in
+ * such as Community can be added back (#222 re-review R1). Refused for a blank name, and for a
+ * name already in the list: an area's displayed name, or the built-in an area stands for,
+ * compared case-insensitively (#222 review). */
 export function addCustomArea(
   areas: readonly MaturityArea[],
   name: string,
@@ -124,11 +126,18 @@ export function addCustomArea(
     return { ok: false, reason: 'blank' };
   }
   const folded = fold(trimmed);
+  const key = builtInKeyForName(trimmed);
   if (
-    builtInKeyForName(trimmed) !== undefined ||
-    areas.some((area) => fold(displayName(area, builtInLabels)) === folded)
+    areas.some(
+      (area) =>
+        fold(displayName(area, builtInLabels)) === folded ||
+        (key !== undefined && areaKeyOf(area) === key),
+    )
   ) {
     return { ok: false, reason: 'duplicate' };
+  }
+  if (key !== undefined) {
+    return { ok: true, areas: addBuiltInArea(areas, key) };
   }
   return { ok: true, areas: [...areas, { id: crypto.randomUUID(), name: trimmed }] };
 }

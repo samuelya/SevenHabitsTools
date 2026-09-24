@@ -18,7 +18,16 @@
             type="button"
             class="area-chip"
             [class.area-chip--pressed]="chip.pressed"
+            [class.area-chip--locked]="chip.areaId !== undefined && chip.areaId === lockedAreaId()"
             [attr.aria-pressed]="chip.pressed ? 'true' : 'false'"
+            [attr.aria-disabled]="
+              chip.areaId !== undefined && chip.areaId === lockedAreaId() ? 'true' : null
+            "
+            [attr.aria-describedby]="
+              chip.areaId !== undefined && chip.areaId === lockedAreaId()
+                ? 'maturity-last-area'
+                : null
+            "
             (click)="onChipToggled(chip)"
           >
             @if (chip.pressed) {
@@ -28,6 +37,11 @@
           </button>
         }
       </div>
+      @if (lockedAreaId() !== null) {
+        <p id="maturity-last-area" class="phase-hint last-area-hint">
+          {{ 'paradigmsMaturity.areas.lastAreaHint' | transloco }}
+        </p>
+      }
 
       <form class="custom-area" (submit)="onAddCustom($event)">
         <mat-form-field appearance="outline" class="custom-area-field" subscriptSizing="dynamic">
@@ -196,7 +210,9 @@
       'paradigmsMaturity.form.levelLabel' | transloco
     }}</span>
     <mat-button-toggle-group
+      #levelGroup
       class="level-control"
+      [name]="'level-' + area.id"
       hideSingleSelectionIndicator
       [value]="area.level ?? null"
       [attr.aria-labelledby]="'level-label-' + area.id + ' area-name-' + area.id"
@@ -212,7 +228,9 @@
     <mat-form-field appearance="outline" class="area-note">
       <mat-label>{{ 'paradigmsMaturity.form.noteLabel' | transloco }}</mat-label>
       <textarea
+        #noteField
         matInput
+        [attr.data-area-id]="area.id"
         cdkTextareaAutosize
         cdkAutosizeMinRows="2"
         cdkAutosizeMaxRows="6"
@@ -229,8 +247,15 @@
     mat-icon-button
     type="button"
     class="remove-area"
+    disabledInteractive
+    [disabled]="area.id === lockedAreaId()"
     [attr.aria-label]="('paradigmsMaturity.form.removeArea' | transloco) + ': ' + nameOf(area)"
-    [matTooltip]="'paradigmsMaturity.form.removeArea' | transloco"
+    [matTooltip]="
+      (area.id === lockedAreaId()
+        ? 'paradigmsMaturity.areas.lastAreaHint'
+        : 'paradigmsMaturity.form.removeArea'
+      ) | transloco
+    "
     (click)="onRemoveArea(area.id)"
   >
     <mat-icon aria-hidden="true">delete</mat-icon>

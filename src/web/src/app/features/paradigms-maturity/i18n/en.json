@@ -46,7 +46,10 @@
     "noteLabel": "Note (optional)",
     "removeArea": "Remove this area",
     "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on.",
-    "areaRemoved": "Area removed"
+    "areaRemoved": "Area removed",
+    "removeConfirmTitle": "Remove this area?",
+    "removeConfirmBody": "Its rating and note will be lost. You can undo this for a few seconds after removing it.",
+    "removeConfirmButton": "Remove"
   },
   "areas": {
     "title": "Which areas do you want to rate?",
@@ -56,7 +59,8 @@
     "addButton": "Add",
     "continueButton": "Continue",
     "requiredHint": "Choose at least one area to continue.",
-    "duplicateError": "That area is already in the list."
+    "duplicateError": "That area is already in the list.",
+    "lastAreaHint": "An assessment needs at least one area."
   },
   "rate": {
     "title": "Rate each area",

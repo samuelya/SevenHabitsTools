@@ -1,5 +1,5 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -148,6 +148,9 @@ export class MaturityPage {
       };
     });
   });
+  /** Bumped each time the store refuses an area edit (a read-only tab), so the form drops its own
+   * copy of the areas and shows the stored ones again (#222 re-review R2). */
+  protected readonly refusedEdits = signal(0);
   /** The draft the user pressed Continue on: `isDraftWorthSaving()`'s signal to store it. */
   private continuedDraftId: string | null = null;
   protected readonly draft = recordDraft<MaturityAssessment>({
@@ -223,9 +226,11 @@ export class MaturityPage {
   }
 
   /** Edits reach the store at once for a saved assessment; a new draft keeps them in memory until
-   * Continue. */
+   * Continue. An edit that reached neither is refused, and the form is told so. */
   protected onAssessmentChanged(id: string, fields: Partial<MaturityAssessmentFields>): void {
-    this.draft.edit(id, fields);
+    if (!this.draft.edit(id, fields) && !this.draft.owns(id)) {
+      this.refusedEdits.update((count) => count + 1);
+    }
   }
 
   /** Continue into rating stores a new draft (`recordDraft()`), which then moves the URL to its
@@ -247,6 +252,11 @@ export class MaturityPage {
     }
     const removed = areas[index];
     void this.deleteWithUndo.confirmAndDelete({
+      confirm: {
+        title: this.transloco.translate('paradigmsMaturity.form.removeConfirmTitle'),
+        body: this.transloco.translate('paradigmsMaturity.form.removeConfirmBody'),
+        confirmLabel: this.transloco.translate('paradigmsMaturity.form.removeConfirmButton'),
+      },
       deletedMessage: this.transloco.translate('paradigmsMaturity.form.areaRemoved'),
       undoLabel: this.transloco.translate('paradigmsMaturity.history.undo'),
       onConfirm: () => this.draft.edit(id, { areas: removeArea(this.areasOf(id), areaId) }),
@@ -254,13 +264,14 @@ export class MaturityPage {
     });
   }
 
-  /** The areas of assessment `id` as they stand now: the stored one, else the open draft's. */
+  /** The areas of assessment `id` as they stand now: the open assessment's (`draft.selected()`,
+   * stored or draft), else the stored one's, for an Undo tapped after the editor closed. */
   private areasOf(id: string): readonly MaturityArea[] {
     const selected = this.draft.selected();
-    const assessment =
-      this.assessments().find((candidate) => candidate.id === id) ??
-      (selected?.id === id ? selected : null);
-    return assessment?.areas ?? [];
+    if (selected?.id === id) {
+      return selected.areas;
+    }
+    return this.assessments().find((candidate) => candidate.id === id)?.areas ?? [];
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). The

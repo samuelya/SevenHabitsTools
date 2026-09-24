@@ -1,4 +1,4 @@
-<h2 matDialogTitle>{{ 'deleteConfirm.title' | transloco }}</h2>
+<h2 matDialogTitle>{{ data.title ?? ('deleteConfirm.title' | transloco) }}</h2>
 
 <!-- `tabindex="0"`: `MatDialogContent`'s own `overflow-y: auto` can make this genuinely
      scrollable for a longer translation (Arabic's own body copy wraps to more lines than
@@ -6,7 +6,7 @@
      own e2e test), and a scrollable region with no focusable content of its own is otherwise
      unreachable by keyboard (WCAG 2.1.1). -->
 <div matDialogContent tabindex="0" class="delete-confirm-dialog">
-  <p>{{ 'deleteConfirm.body' | transloco }}</p>
+  <p>{{ data.body ?? ('deleteConfirm.body' | transloco) }}</p>
 </div>
 
 <div matDialogActions class="delete-confirm-dialog__actions">
@@ -20,6 +20,6 @@
     class="delete-confirm-dialog__delete"
     (click)="confirmDelete()"
   >
-    {{ 'deleteConfirm.delete' | transloco }}
+    {{ data.confirmLabel ?? ('deleteConfirm.delete' | transloco) }}
   </button>
 </div>

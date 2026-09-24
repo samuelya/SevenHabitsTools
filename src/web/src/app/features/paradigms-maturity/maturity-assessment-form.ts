@@ -14,9 +14,10 @@ import {
   output,
   untracked,
   viewChild,
+  viewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatButtonToggleGroup, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -107,13 +108,23 @@ export class MaturityAssessmentForm {
   readonly continued = output<void>();
   /** The id of an area with a level or note the user asked to remove; the page confirms first. */
   readonly areaRemoveRequested = output<string>();
+  /** How many edits the page's store has refused (a read-only tab): each one drops the form's own
+   * copy of the areas for the stored ones, so nothing looks saved that wasn't (#222 re-review R2). */
+  readonly refusedEdits = input(0);
 
   protected readonly levels = MATURITY_LEVELS;
 
   /** The areas as last edited here, else as the input has them. Every edit builds on this, not on
    * `assessment()`: two edits before the next change detection (a chip, then Enter in "Add your
-   * own") would otherwise build the second on the stale input and drop the first. */
-  protected readonly areas = linkedSignal(() => this.assessment().areas);
+   * own") would otherwise build the second on the stale input and drop the first. A refused edit
+   * (`refusedEdits`) resets it to the input, which the refusal left as stored. */
+  protected readonly areas = linkedSignal<
+    { areas: readonly MaturityArea[]; refused: number },
+    readonly MaturityArea[]
+  >({
+    source: () => ({ areas: this.assessment().areas, refused: this.refusedEdits() }),
+    computation: (source) => source.areas,
+  });
   private readonly assessmentId = computed(() => this.assessment().id);
 
   protected readonly customName = linkedSignal<string, string>({
@@ -165,6 +176,12 @@ export class MaturityAssessmentForm {
     areaChips(this.areas(), MATURITY_SUGGESTED_AREA_KEYS, this.builtInLabels()),
   );
   protected readonly hasAreas = computed(() => this.areas().length > 0);
+  /** The one area left of a saved assessment, which can't be removed: an assessment needs at least
+   * one area (#222 re-review R3). A new draft may still be emptied, back to the picker. */
+  protected readonly lockedAreaId = computed(() => {
+    const areas = this.areas();
+    return !this.isNew() && areas.length === 1 ? areas[0].id : null;
+  });
 
   /** An area whose removal the page is confirming, so the view can follow once (if) it goes. */
   private pendingRemoval: (RemovedArea & { readonly assessmentId: string }) | null = null;
@@ -173,6 +190,8 @@ export class MaturityAssessmentForm {
   private readonly areasHeading = viewChild<ElementRef<HTMLElement>>('areasHeading');
   private readonly rateHeading = viewChild<ElementRef<HTMLElement>>('rateHeading');
   private readonly areaHeading = viewChild<ElementRef<HTMLElement>>('areaHeading');
+  private readonly levelGroups = viewChildren('levelGroup', { read: MatButtonToggleGroup });
+  private readonly noteFields = viewChildren<ElementRef<HTMLTextAreaElement>>('noteField');
 
   constructor() {
     effect(() => {
@@ -187,6 +206,15 @@ export class MaturityAssessmentForm {
         untracked(() => this.afterAreaRemoved(pending, areas));
       }
     });
+    // A refused level or note leaves the control showing it: the bound value didn't change, so the
+    // template writes nothing. Put the stored value back on each control instead.
+    let refused = untracked(this.refusedEdits);
+    effect(() => {
+      if (this.refusedEdits() !== refused) {
+        refused = this.refusedEdits();
+        afterNextRender(() => this.resetRatingControls(), { injector: this.injector });
+      }
+    });
   }
 
   protected nameOf(area: Pick<MaturityArea, 'key' | 'name'>): string {
@@ -194,6 +222,9 @@ export class MaturityAssessmentForm {
   }
 
   protected onChipToggled(chip: AreaChip): void {
+    if (chip.areaId === this.lockedAreaId()) {
+      return;
+    }
     if (chip.areaId) {
       this.requestRemove(chip.areaId);
     } else if (chip.key) {
@@ -248,7 +279,9 @@ export class MaturityAssessmentForm {
   }
 
   protected onRemoveArea(id: string): void {
-    this.requestRemove(id);
+    if (id !== this.lockedAreaId()) {
+      this.requestRemove(id);
+    }
   }
 
   /** An area holding a level or note goes through the page's confirm (#222 review: a chip toggle
@@ -315,9 +348,24 @@ export class MaturityAssessmentForm {
     return [...this.areas()];
   }
 
+  /** Any edit here also ends a removal the page was confirming: the dialog is modal, so an edit
+   * after it means it was cancelled (#222 re-review R5). */
   private emitAreas(areas: MaturityArea[]): void {
+    this.pendingRemoval = null;
     this.areas.set(areas);
     this.changed.emit({ areas });
+  }
+
+  private resetRatingControls(): void {
+    const byId = new Map(this.areas().map((area) => [area.id, area]));
+    for (const group of this.levelGroups()) {
+      const id = group.name.replace(/^level-/, '');
+      group.value = byId.get(id)?.level ?? null;
+    }
+    for (const field of this.noteFields()) {
+      const element = field.nativeElement;
+      element.value = byId.get(element.dataset['areaId'] ?? '')?.note ?? '';
+    }
   }
 
   private focusAfterRender(target: () => ElementRef<HTMLElement> | null | undefined): void {

@@ -1,4 +1,5 @@
 import documentV1Fixture from '../../testing/fixtures/document-v1.json';
+import documentV2Fixture from '../../testing/fixtures/document-v2.json';
 import { resolveDocument } from '../../core/data/document-validation';
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
@@ -104,6 +105,17 @@ describe('paradigms-maturity model', () => {
   it('passes validateDocument() when the document contains this slice (export/import guarantee)', () => {
     const issues = validateDocument({ habits: { paradigms: { maturity: [FULL_ASSESSMENT] } } });
     expect(issues.filter((issue) => issue.path === MATURITY_PATH)).toEqual([]);
+  });
+
+  it('loads the v2 fixture, whose assessment holds a friendships area (#222 re-review R7)', () => {
+    const result = resolveDocument(structuredClone(documentV2Fixture));
+
+    if (!result.ok) {
+      throw new Error('the v2 fixture did not load');
+    }
+    const maturity = (result.document.habits['paradigms'] as { maturity: MaturityAssessment[] })
+      .maturity;
+    expect(maturity[0].areas.map((area) => area.key)).toEqual(['friendships', 'community']);
   });
 
   it('loads a v1 document holding assessments: migrated to v2, every area unchanged (#222)', () => {

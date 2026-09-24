@@ -86,6 +86,15 @@
   }
 }
 
+// The last area of a saved assessment: still pressed, but it can't be unpressed (#222 re-review R3).
+.area-chip--locked {
+  cursor: not-allowed;
+
+  &:hover {
+    background: var(--mat-sys-secondary-container, lightblue);
+  }
+}
+
 .area-chip-check {
   font-size: 18px;
   inline-size: 18px;

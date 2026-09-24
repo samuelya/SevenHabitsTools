@@ -3,6 +3,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { firstValueFrom } from 'rxjs';
 import { AppDialog } from '../../core/layout/app-dialog';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
+import type { DeleteConfirmDialogData } from './delete-confirm-dialog/delete-confirm-dialog';
 
 type DeleteConfirmDialogModule = typeof import('./delete-confirm-dialog/delete-confirm-dialog');
 
@@ -32,6 +33,9 @@ export interface ConfirmAndDeleteOptions {
   /** Performs the restore (`store.update((items) => restoreX(items, id, now))`); called only if
    * Undo is tapped before the snackbar times out. */
   readonly onUndo: () => void;
+  /** The dialog's title, body and confirm button, for a delete the generic "Delete this entry?"
+   * doesn't describe (#222 re-review R6); already translated, each optional. */
+  readonly confirm?: DeleteConfirmDialogData;
 }
 
 /**
@@ -64,9 +68,11 @@ export class DeleteWithUndo {
       return;
     }
     const { DeleteConfirmDialog } = dialogModule;
-    const ref = await this.dialog.open<InstanceType<typeof DeleteConfirmDialog>, unknown, boolean>(
-      DeleteConfirmDialog,
-    );
+    const ref = await this.dialog.open<
+      InstanceType<typeof DeleteConfirmDialog>,
+      DeleteConfirmDialogData,
+      boolean
+    >(DeleteConfirmDialog, { data: options.confirm ?? {} });
     const confirmed = await firstValueFrom(ref.afterClosed());
     if (!confirmed) {
       return;

@@ -10,7 +10,7 @@ describe('migrateDocument', () => {
       const migrated = migrateDocument(structuredClone(fixture) as Record<string, unknown>);
 
       expect(migrated['schemaVersion']).toBe(CURRENT_SCHEMA_VERSION);
-      expect(migrated).toEqual(documentV2Fixture);
+      expect(migrated).toEqual({ ...fixture, schemaVersion: CURRENT_SCHEMA_VERSION });
     }
   });
 

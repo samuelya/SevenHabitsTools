@@ -36,6 +36,7 @@
         [builtInLabels]="builtInLabels()"
         [handset]="handset()"
         [isNew]="draft.unsaved()"
+        [refusedEdits]="refusedEdits()"
         (changed)="onAssessmentChanged(assessment.id, $event)"
         (continued)="onAssessmentContinued(assessment.id)"
         (areaRemoveRequested)="onAreaRemoveRequested(assessment.id, $event)"
