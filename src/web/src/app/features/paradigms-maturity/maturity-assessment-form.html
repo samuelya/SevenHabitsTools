@@ -1,100 +1,230 @@
-<form class="maturity-assessment-form">
-  @for (area of assessment().areas; track area.id; let first = $first) {
-    <fieldset class="area-row">
-      <mat-form-field appearance="outline" class="area-name">
-        <mat-label>{{ 'paradigmsMaturity.form.areaNameLabel' | transloco }}</mat-label>
-        @if (first) {
-          <input
-            matInput
-            type="text"
-            appEditorInitialFocus
-            [value]="fieldValue(area)"
-            [attr.placeholder]="
-              placeholderFor(area) ?? ('paradigmsMaturity.form.areaNamePlaceholder' | transloco)
-            "
-            (input)="onAreaNameInput(area.id, $event)"
-          />
-        } @else {
-          <input
-            matInput
-            type="text"
-            [value]="fieldValue(area)"
-            [attr.placeholder]="
-              placeholderFor(area) ?? ('paradigmsMaturity.form.areaNamePlaceholder' | transloco)
-            "
-            (input)="onAreaNameInput(area.id, $event)"
-          />
-        }
-      </mat-form-field>
+<div class="maturity-assessment-form">
+  @if (phase() === 'areas') {
+    <section class="areas-phase" aria-labelledby="maturity-areas-title">
+      <h3
+        #areasHeading
+        id="maturity-areas-title"
+        class="phase-title"
+        tabindex="-1"
+        appEditorInitialFocus
+      >
+        {{ 'paradigmsMaturity.areas.title' | transloco }}
+      </h3>
+      <p class="phase-hint">{{ 'paradigmsMaturity.areas.hint' | transloco }}</p>
 
-      <div class="level-group">
-        <span [id]="'level-label-' + area.id" class="level-group-label">{{
-          'paradigmsMaturity.form.levelLabel' | transloco
-        }}</span>
-        <mat-radio-group
-          [value]="area.level ?? null"
-          [attr.aria-labelledby]="'level-label-' + area.id"
-          (change)="onLevelChanged(area.id, $event.value)"
-        >
-          @for (level of levels; track level) {
-            <mat-radio-button [value]="level" class="level-option">
-              <span class="level-title">{{
-                'paradigmsMaturity.level.' + level + '.title' | transloco
-              }}</span>
-              <span class="level-description">{{
-                'paradigmsMaturity.level.' + level + '.description' | transloco
-              }}</span>
-            </mat-radio-button>
-          }
-        </mat-radio-group>
+      <div class="area-chips" role="group" aria-labelledby="maturity-areas-title">
+        @for (chip of chips(); track chip.id) {
+          <button
+            type="button"
+            class="area-chip"
+            [class.area-chip--pressed]="chip.pressed"
+            [attr.aria-pressed]="chip.pressed ? 'true' : 'false'"
+            (click)="onChipToggled(chip)"
+          >
+            @if (chip.pressed) {
+              <mat-icon aria-hidden="true" class="area-chip-check">check</mat-icon>
+            }
+            <span class="area-chip-label">{{ chip.label }}</span>
+          </button>
+        }
       </div>
 
-      <mat-form-field appearance="outline" class="area-note">
-        <mat-label>{{ 'paradigmsMaturity.form.noteLabel' | transloco }}</mat-label>
-        <textarea
-          matInput
-          cdkTextareaAutosize
-          cdkAutosizeMinRows="2"
-          cdkAutosizeMaxRows="6"
-          [placeholder]="'paradigmsMaturity.form.notePlaceholder' | transloco"
-          [value]="area.note ?? ''"
-          (input)="onNoteInput(area.id, $event)"
-        ></textarea>
-      </mat-form-field>
+      <form class="custom-area" (submit)="onAddCustom($event)">
+        <mat-form-field appearance="outline" class="custom-area-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'paradigmsMaturity.areas.customLabel' | transloco }}</mat-label>
+          <input
+            matInput
+            type="text"
+            [placeholder]="'paradigmsMaturity.areas.customPlaceholder' | transloco"
+            [value]="customName()"
+            (input)="onCustomNameInput($event)"
+          />
+        </mat-form-field>
+        <button mat-stroked-button type="submit" class="add-custom-area">
+          <mat-icon aria-hidden="true">add</mat-icon>
+          {{ 'paradigmsMaturity.areas.addButton' | transloco }}
+        </button>
+      </form>
 
-      <button mat-stroked-button type="button" class="remove-area" (click)="onRemoveArea(area.id)">
-        <mat-icon aria-hidden="true">delete</mat-icon>
-        {{ 'paradigmsMaturity.form.removeArea' | transloco }}
-      </button>
-    </fieldset>
-  }
-
-  <div class="add-area-row">
-    <mat-form-field appearance="outline" class="area-name">
-      <mat-label>{{ 'paradigmsMaturity.form.newAreaLabel' | transloco }}</mat-label>
-      @let newAreaPlaceholder = 'paradigmsMaturity.form.areaNamePlaceholder' | transloco;
-      @if (hasAreas()) {
-        <input
-          matInput
-          type="text"
-          [placeholder]="newAreaPlaceholder"
-          [value]="newAreaName()"
-          (input)="onNewAreaNameInput($event)"
-        />
-      } @else {
-        <input
-          matInput
-          type="text"
+      <div class="continue-row">
+        <button
+          mat-flat-button
+          type="button"
+          class="continue-button"
+          disabledInteractive
+          [disabled]="!hasAreas()"
+          [attr.aria-describedby]="hasAreas() ? null : 'maturity-areas-required'"
+          (click)="onContinue()"
+        >
+          {{ 'paradigmsMaturity.areas.continueButton' | transloco }}
+        </button>
+        @if (!hasAreas()) {
+          <p id="maturity-areas-required" class="required-hint">
+            {{ 'paradigmsMaturity.areas.requiredHint' | transloco }}
+          </p>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="rate-phase" aria-labelledby="maturity-rate-title">
+      <div class="phase-header">
+        <h3
+          #rateHeading
+          id="maturity-rate-title"
+          class="phase-title"
+          tabindex="-1"
           appEditorInitialFocus
-          [placeholder]="newAreaPlaceholder"
-          [value]="newAreaName()"
-          (input)="onNewAreaNameInput($event)"
-        />
+        >
+          {{ 'paradigmsMaturity.rate.title' | transloco }}
+        </h3>
+        <button mat-button type="button" class="change-areas" (click)="onChangeAreas()">
+          {{ 'paradigmsMaturity.rate.changeAreasButton' | transloco }}
+        </button>
+      </div>
+
+      <mat-expansion-panel class="maturity-legend">
+        <mat-expansion-panel-header>
+          <mat-panel-title>{{ 'paradigmsMaturity.legend.title' | transloco }}</mat-panel-title>
+        </mat-expansion-panel-header>
+        <dl class="legend-list">
+          @for (level of levels; track level) {
+            <dt>{{ 'paradigmsMaturity.level.' + level + '.plainLabel' | transloco }}</dt>
+            <dd>
+              <span class="legend-term">{{
+                'paradigmsMaturity.level.' + level + '.title' | transloco
+              }}</span>
+              {{ 'paradigmsMaturity.level.' + level + '.description' | transloco }}
+            </dd>
+          }
+        </dl>
+      </mat-expansion-panel>
+
+      @if (handset()) {
+        @if (currentArea(); as area) {
+          <div class="area-screen">
+            <div class="area-screen-header">
+              <div class="area-heading-block" aria-live="polite" aria-atomic="true">
+                <p class="area-position">
+                  {{
+                    'paradigmsMaturity.rate.positionLabel'
+                      | transloco: { index: current() + 1, count: assessment().areas.length }
+                  }}
+                </p>
+                <h4 #areaHeading class="area-name" tabindex="-1" [id]="'area-name-' + area.id">
+                  {{ nameOf(area) }}
+                </h4>
+              </div>
+              <ng-container
+                [ngTemplateOutlet]="removeButton"
+                [ngTemplateOutletContext]="{ $implicit: area }"
+              />
+            </div>
+            <ng-container
+              [ngTemplateOutlet]="rating"
+              [ngTemplateOutletContext]="{ $implicit: area }"
+            />
+            <div class="area-pager">
+              @if (current() > 0) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="previous-area"
+                  (click)="onStep(-1, $any($event.currentTarget))"
+                >
+                  {{ 'paradigmsMaturity.rate.previousButton' | transloco }}
+                </button>
+              }
+              @if (current() < assessment().areas.length - 1) {
+                <button
+                  mat-flat-button
+                  type="button"
+                  class="next-area"
+                  (click)="onStep(1, $any($event.currentTarget))"
+                >
+                  {{ 'paradigmsMaturity.rate.nextButton' | transloco }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      } @else {
+        <mat-accordion multi class="area-panels">
+          @for (area of assessment().areas; track area.id; let i = $index) {
+            <mat-expansion-panel class="area-panel" [expanded]="i === current()">
+              <mat-expansion-panel-header>
+                <mat-panel-title class="area-name" [id]="'area-name-' + area.id">{{
+                  nameOf(area)
+                }}</mat-panel-title>
+                <mat-panel-description class="area-level-summary">
+                  {{
+                    (area.level
+                      ? 'paradigmsMaturity.level.' + area.level + '.plainLabel'
+                      : 'paradigmsMaturity.rate.notRatedLabel'
+                    ) | transloco
+                  }}
+                </mat-panel-description>
+              </mat-expansion-panel-header>
+              <ng-container
+                [ngTemplateOutlet]="rating"
+                [ngTemplateOutletContext]="{ $implicit: area }"
+              />
+              <mat-action-row>
+                <ng-container
+                  [ngTemplateOutlet]="removeButton"
+                  [ngTemplateOutletContext]="{ $implicit: area }"
+                />
+              </mat-action-row>
+            </mat-expansion-panel>
+          }
+        </mat-accordion>
       }
+    </section>
+  }
+</div>
+
+<ng-template #rating let-area>
+  <div class="area-rating">
+    <span class="level-group-label" [id]="'level-label-' + area.id">{{
+      'paradigmsMaturity.form.levelLabel' | transloco
+    }}</span>
+    <mat-button-toggle-group
+      class="level-control"
+      hideSingleSelectionIndicator
+      [value]="area.level ?? null"
+      [attr.aria-labelledby]="'level-label-' + area.id + ' area-name-' + area.id"
+      (change)="onLevelChanged(area.id, $event.value)"
+    >
+      @for (level of levels; track level) {
+        <mat-button-toggle class="level-option" [value]="level">{{
+          'paradigmsMaturity.level.' + level + '.plainLabel' | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+
+    <mat-form-field appearance="outline" class="area-note">
+      <mat-label>{{ 'paradigmsMaturity.form.noteLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="6"
+        [placeholder]="'paradigmsMaturity.form.notePlaceholder' | transloco"
+        [value]="area.note ?? ''"
+        (input)="onNoteInput(area.id, $event)"
+      ></textarea>
     </mat-form-field>
-    <button mat-stroked-button type="button" (click)="onAddArea()">
-      <mat-icon aria-hidden="true">add</mat-icon>
-      {{ 'paradigmsMaturity.form.addArea' | transloco }}
-    </button>
   </div>
-</form>
+</ng-template>
+
+<ng-template #removeButton let-area>
+  <button
+    mat-icon-button
+    type="button"
+    class="remove-area"
+    [attr.aria-label]="('paradigmsMaturity.form.removeArea' | transloco) + ': ' + nameOf(area)"
+    [matTooltip]="'paradigmsMaturity.form.removeArea' | transloco"
+    (click)="onRemoveArea(area.id)"
+  >
+    <mat-icon aria-hidden="true">delete</mat-icon>
+  </button>
+</ng-template>

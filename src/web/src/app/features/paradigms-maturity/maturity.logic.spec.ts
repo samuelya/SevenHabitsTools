@@ -1,7 +1,12 @@
 import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
   isDraftWorthSaving,
-  addArea,
+  addCustomArea,
+  areaChips,
+  clampIndex,
+  firstUnratedIndex,
+  initialPhase,
+  toggleBuiltInArea,
   checklistLabelsFrom,
   checklistLoaded,
   deltaFor,
@@ -15,7 +20,6 @@ import {
   removeArea,
   removeAssessment,
   removedAreas,
-  renameArea,
   restoreAssessment,
   setAreaLevel,
   setAreaNote,
@@ -223,19 +227,10 @@ describe('summarize', () => {
 });
 
 describe('newAssessmentFields', () => {
-  it('starts with the six built-in areas, unrated, when there is no previous assessment', () => {
+  it('starts with no areas when there is no previous assessment: the user picks chips (#222)', () => {
     const fields = newAssessmentFields(null, '2026-02-01');
     expect(fields.date).toBe('2026-02-01');
-    expect(fields.areas).toHaveLength(6);
-    expect(fields.areas.every((a) => a.level === undefined)).toBe(true);
-    expect(fields.areas.map((a) => a.key)).toEqual([
-      'work',
-      'family',
-      'money',
-      'health',
-      'learning',
-      'community',
-    ]);
+    expect(fields.areas).toEqual([]);
   });
 
   it('carries over names and keys from the latest assessment, levels and notes reset', () => {
@@ -255,27 +250,79 @@ describe('newAssessmentFields', () => {
   });
 });
 
-describe('addArea/renameArea/setAreaLevel/setAreaNote/removeArea', () => {
-  it('adds a custom area with no level', () => {
-    const result = addArea([], 'Volunteering');
+describe('area chips (#222)', () => {
+  const LABELS = { work: 'Work', family: 'Family', community: 'Community' };
+
+  it('offers every suggested key, pressed when the assessment holds it', () => {
+    const chips = areaChips([area({ id: 'a1', key: 'family' })], ['work', 'family'], LABELS);
+    expect(chips).toEqual([
+      { id: 'key:work', key: 'work', label: 'Work', pressed: false },
+      { id: 'key:family', key: 'family', label: 'Family', pressed: true },
+    ]);
+  });
+
+  it('adds a pressed chip for every other area: custom, renamed-custom and unsuggested built-ins', () => {
+    const chips = areaChips(
+      [
+        area({ id: 'c1', key: 'community' }),
+        area({ id: 'c2', key: undefined, name: 'Volunteering' }),
+        area({ id: 'c3', key: 'work', name: 'Day job' }),
+      ],
+      ['work'],
+      LABELS,
+    );
+    expect(chips).toEqual([
+      { id: 'key:work', key: 'work', label: 'Work', pressed: true },
+      { id: 'c1', areaId: 'c1', label: 'Community', pressed: true },
+      { id: 'c2', areaId: 'c2', label: 'Volunteering', pressed: true },
+    ]);
+  });
+
+  it('toggles a built-in area on, then off (every area with that key)', () => {
+    const added = toggleBuiltInArea([area({ id: 'x', key: 'family' })], 'work');
+    expect(added).toHaveLength(2);
+    expect(added[1]).toMatchObject({ key: 'work' });
+    expect(added[1].level).toBeUndefined();
+    expect(added[1].id).toBeTruthy();
+
+    const removed = toggleBuiltInArea([...added, area({ id: 'y', key: 'work' })], 'work');
+    expect(removed.map((a) => a.id)).toEqual(['x']);
+  });
+
+  it('adds a trimmed custom area, and nothing for a blank or already-listed name', () => {
+    const result = addCustomArea([], '  Volunteering ');
     expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({ name: 'Volunteering' });
-    expect(result[0].level).toBeUndefined();
-    expect(result[0].id).toBeTruthy();
+    expect(result![0]).toMatchObject({ name: 'Volunteering' });
+    expect(result![0].key).toBeUndefined();
+    expect(result![0].level).toBeUndefined();
+
+    expect(addCustomArea([], '   ')).toBeNull();
+    expect(addCustomArea(result!, 'volunteering')).toBeNull();
+  });
+});
+
+describe('editor phase and position (#222)', () => {
+  it('opens a new draft or an empty assessment on the area picker, anything else on rating', () => {
+    expect(initialPhase([area()], true)).toBe('areas');
+    expect(initialPhase([], false)).toBe('areas');
+    expect(initialPhase([area()], false)).toBe('rate');
   });
 
-  it('renames an area, keeping its key', () => {
-    const target = area({ id: 'a1', key: 'work' });
-    const result = renameArea([target], 'a1', 'Day job');
-    expect(result[0]).toMatchObject({ key: 'work', name: 'Day job' });
+  it('opens on the first unrated area, else the first', () => {
+    expect(firstUnratedIndex([area({ level: 1 }), area({ id: 'b' })])).toBe(1);
+    expect(firstUnratedIndex([area({ level: 1 })])).toBe(0);
+    expect(firstUnratedIndex([])).toBe(0);
   });
 
-  it('clears a blank name back to undefined instead of freezing on an empty string', () => {
-    const target = area({ id: 'a1', key: 'work', name: 'Day job' });
-    expect(renameArea([target], 'a1', '')[0].name).toBeUndefined();
-    expect(renameArea([target], 'a1', '   ')[0].name).toBeUndefined();
+  it('clamps an index into the list', () => {
+    expect(clampIndex(3, 3)).toBe(2);
+    expect(clampIndex(-1, 3)).toBe(0);
+    expect(clampIndex(1, 3)).toBe(1);
+    expect(clampIndex(2, 0)).toBe(0);
   });
+});
 
+describe('setAreaLevel/setAreaNote/removeArea', () => {
   it('sets an area level and note independently', () => {
     const target = area({ id: 'a1' });
     const withLevel = setAreaLevel([target], 'a1', 2);

@@ -16,9 +16,9 @@ import {
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import {
-  MATURITY_AREA_KEYS,
   MATURITY_LEVELS,
   MaturityArea,
+  MaturityAreaKey,
   MaturityAssessment,
   MaturityAssessmentFields,
   MaturityLevel,
@@ -214,21 +214,21 @@ export function summarize(assessments: readonly MaturityAssessment[]): MaturityS
 }
 
 /** A new assessment dated today, pre-filling the area list (names/keys only) from the latest
- * assessment with every level unset — the six built-in areas when there is no previous assessment
- * (issue #50's implementation notes). */
+ * assessment with every level unset — none when there is no previous assessment, so the user
+ * picks them as chips (issue #222; #50 pre-filled the six built-ins). */
 export function newAssessmentFields(
   latest: MaturityAssessment | null,
   today: string,
 ): MaturityAssessmentFields {
   const areas: MaturityArea[] = latest
     ? latest.areas.map((area) => ({ id: crypto.randomUUID(), key: area.key, name: area.name }))
-    : MATURITY_AREA_KEYS.map((key) => ({ id: crypto.randomUUID(), key }));
+    : [];
   return { date: today, areas };
 }
 
 /** Draft before record (issue #217): a new assessment's draft becomes a record on the first real
- * input — an area rated, a non-blank note, or the area list itself changed (one added, removed or
- * renamed) relative to `initial`, the draft `newAssessmentFields()` built. The areas pre-filled
+ * input — an area rated, a non-blank note, or the area list itself changed (a chip chosen or
+ * cleared, or a custom area added, issue #222) relative to `initial`, the draft `newAssessmentFields()` built. The areas pre-filled
  * from the latest assessment are not input, and neither is the pre-filled date. */
 export function isDraftWorthSaving(
   draft: Pick<MaturityAssessment, 'areas'>,
@@ -242,25 +242,85 @@ export function isDraftWorthSaving(
   );
 }
 
-/** Appends a new custom area with no level. */
-export function addArea(areas: readonly MaturityArea[], name: string): MaturityArea[] {
-  return [...areas, { id: crypto.randomUUID(), name }];
+/** One chip of phase 1, "Which areas do you want to rate?" (issue #222). A suggested built-in
+ * chip carries its `key` and toggles every area with that key; any other area already in the
+ * assessment (a custom name, or a built-in no longer suggested such as `community`) gets a pressed
+ * chip carrying its `areaId`, so an existing assessment shows every area it holds. */
+export interface AreaChip {
+  /** Stable `track` id: `key:<key>` for a suggested built-in, the area's own id otherwise. */
+  readonly id: string;
+  readonly label: string;
+  readonly pressed: boolean;
+  readonly key?: MaturityAreaKey;
+  readonly areaId?: string;
 }
 
-/** Renames the area `id`: stores `name`, and — for a built-in area — keeps `key` (issue #50's
- * implementation notes). A blank `name` clears back to `undefined` rather than freezing the area
- * on a permanently empty label — a built-in area then falls back to its translated label again
- * (`displayName()`) instead of showing nothing forever (review finding on #49/#50's PR). A no-op
- * copy if `id` is not found. */
-export function renameArea(
+export function areaChips(
   areas: readonly MaturityArea[],
-  id: string,
-  name: string,
+  suggested: readonly MaturityAreaKey[],
+  builtInLabels: Readonly<Record<string, string>>,
+): AreaChip[] {
+  const builtIn = suggested.map((key) => ({
+    id: `key:${key}`,
+    key,
+    label: builtInLabels[key] ?? '',
+    pressed: areas.some((area) => area.key === key),
+  }));
+  const others = areas
+    .filter((area) => area.key === undefined || !suggested.includes(area.key))
+    .map((area) => ({
+      id: area.id,
+      areaId: area.id,
+      label: displayName(area, builtInLabels),
+      pressed: true,
+    }));
+  return [...builtIn, ...others];
+}
+
+/** Chip toggle for a built-in area: removes every area with `key` if there is one, else appends a
+ * new unrated area with that key. */
+export function toggleBuiltInArea(
+  areas: readonly MaturityArea[],
+  key: MaturityAreaKey,
 ): MaturityArea[] {
+  return areas.some((area) => area.key === key)
+    ? areas.filter((area) => area.key !== key)
+    : [...areas, { id: crypto.randomUUID(), key }];
+}
+
+/** "Add your own": appends an unrated custom area storing the trimmed `name` — `null` (nothing
+ * to add) for a blank name or one a custom area already has, compared case-insensitively. */
+export function addCustomArea(areas: readonly MaturityArea[], name: string): MaturityArea[] | null {
   const trimmed = name.trim();
-  return areas.map((area) =>
-    area.id === id ? { ...area, name: trimmed === '' ? undefined : name } : area,
-  );
+  const folded = trimmed.toLocaleLowerCase();
+  if (trimmed === '' || areas.some((area) => area.name?.trim().toLocaleLowerCase() === folded)) {
+    return null;
+  }
+  return [...areas, { id: crypto.randomUUID(), name: trimmed }];
+}
+
+/** The two phases of the editor (issue #222): pick the areas, then rate them. */
+export type MaturityFormPhase = 'areas' | 'rate';
+
+/** Where the editor opens: a new draft, or an assessment with no areas, on the area picker; any
+ * other assessment straight on rating. */
+export function initialPhase(
+  areas: readonly MaturityArea[],
+  isNewDraft: boolean,
+): MaturityFormPhase {
+  return isNewDraft || areas.length === 0 ? 'areas' : 'rate';
+}
+
+/** The area to open on: the first unrated one, else the first. */
+export function firstUnratedIndex(areas: readonly MaturityArea[]): number {
+  const index = areas.findIndex((area) => !isAreaRated(area));
+  return index === -1 ? 0 : index;
+}
+
+/** `index` kept inside `0 .. length - 1` (0 for an empty list), e.g. after the last area is
+ * removed while it was the one showing. */
+export function clampIndex(index: number, length: number): number {
+  return Math.max(0, Math.min(index, length - 1));
 }
 
 export function setAreaLevel(

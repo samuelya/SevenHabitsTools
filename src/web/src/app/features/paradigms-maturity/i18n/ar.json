@@ -21,31 +21,51 @@
     "money": "المال",
     "health": "الصحة",
     "learning": "التعلّم",
-    "community": "المجتمع"
+    "community": "المجتمع",
+    "friendships": "الأصدقاء"
   },
   "level": {
     "1": {
       "title": "الاعتماد على الآخرين",
+      "plainLabel": "أنتظر الآخرين",
       "description": "تنتظر النتيجة هنا من أشخاص آخرين أو من ظروف خارجية."
     },
     "2": {
       "title": "الاعتماد على النفس",
+      "plainLabel": "أتولى الأمر بنفسي",
       "description": "تعتمد على جهدك وحكمك الخاص للوصول إلى نتائج هنا."
     },
     "3": {
       "title": "الاعتماد المتبادل",
+      "plainLabel": "نقوم به معاً",
       "description": "تختار هنا أن تضم جهدك إلى جهد الآخرين، ويستفيد الطرفان من ذلك."
     }
   },
   "form": {
-    "areaNameLabel": "المجال",
     "levelLabel": "أين تقف",
     "noteLabel": "ملاحظة (اختياري)",
     "removeArea": "احذف هذا المجال",
-    "newAreaLabel": "اسم المجال الجديد",
-    "addArea": "أضف مجالاً",
-    "areaNamePlaceholder": "مثلاً: الصحاب",
     "notePlaceholder": "مثلاً: لسه بستنى مديري يقولي أركز على إيه."
+  },
+  "areas": {
+    "title": "ما المجالات التي تريد تقييمها؟",
+    "hint": "اختار اللي انت عايزه، وهتقيّمهم واحد واحد.",
+    "customLabel": "أضف مجالاً آخر",
+    "customPlaceholder": "مثلاً: التطوع",
+    "addButton": "أضف",
+    "continueButton": "متابعة",
+    "requiredHint": "اختار مجال واحد على الأقل علشان تكمّل."
+  },
+  "rate": {
+    "title": "قيّم كل مجال",
+    "changeAreasButton": "تغيير المجالات",
+    "positionLabel": "المجال {{index}} من {{count}}",
+    "previousButton": "المجال السابق",
+    "nextButton": "المجال التالي",
+    "notRatedLabel": "لم يُقيَّم بعد"
+  },
+  "legend": {
+    "title": "معنى الإجابات الثلاث"
   },
   "result": {
     "profileLabel": "الملف العام",

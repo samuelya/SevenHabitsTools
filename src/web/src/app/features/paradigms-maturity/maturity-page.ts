@@ -1,8 +1,12 @@
+import { BreakpointObserver } from '@angular/cdk/layout';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
+import { map } from 'rxjs';
+import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
@@ -60,8 +64,8 @@ import {
  * `optionalParamMatcher`, never a `''`/`':itemId'` sibling pair.
  *
  * **Draft before record (issue #217):** "New assessment" opens the reserved `NEW_ITEM_ID` segment
- * on an in-memory draft (`recordDraft()`), stored on the first rating or note
- * (`isDraftWorthSaving()`), after which the URL moves to the real id — `TransitionPage`'s pattern.
+ * on an in-memory draft (`recordDraft()`), stored on the first area chosen, rating or note
+ * (`isDraftWorthSaving()`, issue #222), after which the URL moves to the real id — `TransitionPage`'s pattern.
  */
 @Component({
   selector: 'app-maturity-page',
@@ -92,6 +96,13 @@ export class MaturityPage {
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
   protected readonly progress = inject(ExerciseProgress);
+  private readonly breakpoints = inject(BreakpointObserver);
+  /** Below `HANDSET_QUERY` the form rates one area per screen, above it one panel per area
+   * (issue #222). */
+  protected readonly handset = toSignal(
+    this.breakpoints.observe(HANDSET_QUERY).pipe(map((state) => state.matches)),
+    { initialValue: this.breakpoints.isMatched(HANDSET_QUERY) },
+  );
 
   /** The `:itemId` route param, bound through `withComponentInputBinding` — absent while the URL
    * has no trailing segment, i.e. while the history, not an assessment, is showing. */

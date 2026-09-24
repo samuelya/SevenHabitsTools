@@ -36,6 +36,14 @@ describe('paradigms-maturity model', () => {
     expect(registration().path).toBe(MATURITY_PATH);
   });
 
+  it('accepts the new friendships key and the no-longer-suggested community key (#222)', () => {
+    const areas = [
+      { id: 'k1', key: 'friendships', level: 2 },
+      { id: 'k2', key: 'community', level: 1 },
+    ];
+    expect(registration().validate?.([{ ...FULL_ASSESSMENT, areas }])).toBe(true);
+  });
+
   it('defaults to an empty array', () => {
     expect(registration().defaults()).toEqual([]);
   });

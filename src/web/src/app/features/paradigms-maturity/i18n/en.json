@@ -21,31 +21,51 @@
     "money": "Money",
     "health": "Health",
     "learning": "Learning",
-    "community": "Community"
+    "community": "Community",
+    "friendships": "Friendships"
   },
   "level": {
     "1": {
       "title": "Dependence",
+      "plainLabel": "I wait for others",
       "description": "You look to other people or outside circumstances for the outcome here."
     },
     "2": {
       "title": "Independence",
+      "plainLabel": "I handle it myself",
       "description": "You rely on your own effort and judgement to get results here."
     },
     "3": {
       "title": "Interdependence",
+      "plainLabel": "We do it together",
       "description": "You choose to combine your effort with others' here, and both sides gain from it."
     }
   },
   "form": {
-    "areaNameLabel": "Area",
     "levelLabel": "Where you stand",
     "noteLabel": "Note (optional)",
     "removeArea": "Remove this area",
-    "newAreaLabel": "New area name",
-    "addArea": "Add area",
-    "areaNamePlaceholder": "e.g. Friendships",
     "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on."
+  },
+  "areas": {
+    "title": "Which areas do you want to rate?",
+    "hint": "Pick as many as you like. You'll rate them one at a time.",
+    "customLabel": "Add your own",
+    "customPlaceholder": "e.g. Volunteering",
+    "addButton": "Add",
+    "continueButton": "Continue",
+    "requiredHint": "Choose at least one area to continue."
+  },
+  "rate": {
+    "title": "Rate each area",
+    "changeAreasButton": "Change areas",
+    "positionLabel": "Area {{index}} of {{count}}",
+    "previousButton": "Previous area",
+    "nextButton": "Next area",
+    "notRatedLabel": "Not rated yet"
+  },
+  "legend": {
+    "title": "What the three answers mean"
   },
   "result": {
     "profileLabel": "Overall profile",

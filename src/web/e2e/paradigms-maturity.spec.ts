@@ -66,6 +66,40 @@ function longHistory(): {
   }));
 }
 
+/** One saved assessment of the six suggested areas, unrated: a form tall enough for the #213
+ * layout repros once every panel is expanded (a new assessment now starts on the short chip
+ * phase, issue #222). */
+function sixAreaAssessment(): {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  date: string;
+  areas: { id: string; key: string }[];
+} {
+  const now = '2026-01-01T00:00:00.000Z';
+  const keys = ['work', 'family', 'health', 'money', 'friendships', 'learning'];
+  return {
+    id: 'maturity-six-areas',
+    createdAt: now,
+    updatedAt: now,
+    date: '2026-01-01',
+    areas: keys.map((key) => ({ id: `area-${key}`, key })),
+  };
+}
+
+/** Desktop rates areas in expansion panels (issue #222): opens every one still closed. */
+async function expandAllPanels(page: Page): Promise<void> {
+  const panels = page.locator('app-maturity-assessment-form .area-panel');
+  const count = await panels.count();
+  for (let i = 0; i < count; i++) {
+    const header = panels.nth(i).locator('mat-expansion-panel-header');
+    if ((await header.getAttribute('aria-expanded')) !== 'true') {
+      await header.click();
+    }
+    await expect(header).toHaveAttribute('aria-expanded', 'true');
+  }
+}
+
 /** How much taller than its visible box `.page` (the shell's scroll container) is — 0 while the
  * split editor is the whole page area, which is the guarantee issue #213 restores. */
 async function pageOverflow(page: Page): Promise<number> {
@@ -91,14 +125,50 @@ test.describe('maturity continuum self-assessment', () => {
     await expect(page.locator('.done-checklist', { hasText: text.checklistItem })).toBeVisible();
 
     await page.locator('.add-button').click();
-    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/[^/]+$/);
+    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/new$/);
     const form = page.locator('app-maturity-assessment-form');
     await expect(form).toBeVisible();
 
-    const rows = form.locator('.area-row');
-    await expect(rows).toHaveCount(6);
-    for (let i = 0; i < 6; i++) {
-      await rows.nth(i).locator('.level-option input[type="radio"]').first().check();
+    // Phase 1 (issue #222): chips for the six suggested areas, none chosen; the first chip row is
+    // on screen without scrolling at 360x800, with a 10% margin for CI's wider fonts.
+    const chips = form.locator('.area-chip');
+    await expect(chips).toHaveCount(6);
+    await expect(form.locator('.area-chip[aria-pressed="true"]')).toHaveCount(0);
+    const chipBottom = (await chips.first().boundingBox())!;
+    const port = (await page.locator('main.page').boundingBox())!;
+    expect(chipBottom.y + chipBottom.height).toBeLessThanOrEqual(port.y + port.height * 0.9);
+
+    // The first chip saves the draft (issue #217); choosing it again would remove it.
+    await chips.nth(0).click();
+    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/(?!new$)[^/]+$/);
+    await expect(chips.nth(0)).toHaveAttribute('aria-pressed', 'true');
+    await chips.nth(2).click();
+    const custom = form.locator('.custom-area input');
+    await custom.fill('Volunteering');
+    await custom.press('Enter');
+    await expect(custom).toHaveValue('');
+    await expect(form.locator('.area-chip[aria-pressed="true"]')).toHaveCount(3);
+
+    await form.locator('.continue-button').click();
+    await expect(form.locator('.rate-phase')).toBeVisible();
+    await expect(form.locator('.maturity-legend')).toHaveCount(1);
+
+    if (isMobile) {
+      // One area per screen, Previous/Next.
+      for (let i = 0; i < 3; i++) {
+        await expect(form.locator('.area-rating')).toHaveCount(1);
+        await form.locator('.level-option').nth(1).click();
+        if (i < 2) {
+          await form.locator('.next-area').click();
+        }
+      }
+      await expect(form.locator('.next-area')).toHaveCount(0);
+    } else {
+      await expect(form.locator('.area-panel')).toHaveCount(3);
+      await expandAllPanels(page);
+      for (let i = 0; i < 3; i++) {
+        await form.locator('.area-panel').nth(i).locator('.level-option').nth(1).click();
+      }
     }
 
     await expect(page.locator('app-maturity-result .profile')).toBeVisible();
@@ -141,6 +211,17 @@ test.describe('maturity continuum self-assessment', () => {
     expect(
       editorResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
+
+    // Phase 2 (issue #222): the legend, the rating control and the pager or panels.
+    const form = page.locator('app-maturity-assessment-form');
+    await form.locator('.area-chip').first().click();
+    await form.locator('.continue-button').click();
+    await expect(form.locator('.rate-phase')).toBeVisible();
+    await form.locator('.maturity-legend mat-expansion-panel-header').click();
+    const ratingResults = await new AxeBuilder({ page }).analyze();
+    expect(
+      ratingResults.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+    ).toEqual([]);
   });
 
   // Issue #213: desktop split mode used to let a tall editor grow the grid row past the
@@ -150,25 +231,28 @@ test.describe('maturity continuum self-assessment', () => {
   // reach the bug.
   test('desktop split mode: the footer never overlaps the last area note field', async ({
     page,
+    seedDocument,
   }, testInfo) => {
     test.skip(
       testInfo.project.name.startsWith('mobile'),
       'split mode only exists at or above HANDSET_QUERY',
     );
     await page.setViewportSize({ width: 1280, height: 1500 });
-    await page.goto('/habits/paradigms/maturity');
+    const assessment = sixAreaAssessment();
+    await seedDocument({ habits: { paradigms: { maturity: [assessment] } } });
+    await page.goto(`/habits/paradigms/maturity/${assessment.id}`);
 
-    await page.locator('.add-button').click();
     const form = page.locator('app-maturity-assessment-form');
     await expect(form).toBeVisible();
+    await expandAllPanels(page);
 
-    const noteFields = form.locator('.area-row .area-note textarea');
+    const noteFields = form.locator('.area-panel .area-note textarea');
     const areaCount = await noteFields.count();
     for (let i = 0; i < areaCount; i++) {
       await noteFields.nth(i).fill('one\ntwo\nthree\nfour\nfive\nsix\nseven');
     }
 
-    const lastNote = form.locator('.area-row').last().locator('.area-note');
+    const lastNote = form.locator('.area-panel').last().locator('.area-note');
     await lastNote.scrollIntoViewIfNeeded();
     await expect(lastNote).toBeInViewport();
 
@@ -371,15 +455,19 @@ test.describe('maturity continuum self-assessment', () => {
   // DOM: moving the routed host into a wrapper is exactly what makes `:has()` stop matching.
   test('desktop split mode: a page that nests the scaffold still gets a usable editor', async ({
     page,
+    seedDocument,
   }, testInfo) => {
     test.skip(
       testInfo.project.name.startsWith('mobile'),
       'split mode only exists at or above HANDSET_QUERY',
     );
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/habits/paradigms/maturity');
-    await page.locator('.add-button').click();
+    // A tall form: six areas, every panel open (a new assessment's chip phase is short, #222).
+    const assessment = sixAreaAssessment();
+    await seedDocument({ habits: { paradigms: { maturity: [assessment] } } });
+    await page.goto(`/habits/paradigms/maturity/${assessment.id}`);
     await expect(page.locator('app-maturity-assessment-form')).toBeVisible();
+    await expandAllPanels(page);
 
     await page.locator('app-maturity-page').evaluate((host) => {
       const wrapper = document.createElement('div');
@@ -398,6 +486,12 @@ test.describe('maturity continuum self-assessment', () => {
     // (already covered by the perception page's own 360×800 viewport-budget tests) instead of
     // quietly re-measuring it here too.
     await page.locator('app-exercise-page .intro-slot').evaluate((el) => {
+      (el as HTMLElement).style.display = 'none';
+    });
+
+    // The seeded assessment's own history row goes too, for the same reason: this test needs the
+    // column an empty history gives, and a tall form now needs a saved assessment (#222).
+    await page.locator('app-assessment-history-list').evaluate((el) => {
       (el as HTMLElement).style.display = 'none';
     });
 
@@ -441,13 +535,8 @@ test.describe('maturity continuum self-assessment', () => {
     await page.locator('.add-button').click();
     const form = page.locator('app-maturity-assessment-form');
     await expect(form).toBeVisible();
-    // The first rating is what saves the draft (issue #217); an untouched one leaves no item.
-    await form
-      .locator('.area-row')
-      .first()
-      .locator('.level-option input[type="radio"]')
-      .first()
-      .check();
+    // The first chip is what saves the draft (issues #217, #222); an untouched one leaves no item.
+    await form.locator('.area-chip').first().click();
     await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/(?!new$)[^/]+$/);
     if (isMobile) {
       await page.goBack();
