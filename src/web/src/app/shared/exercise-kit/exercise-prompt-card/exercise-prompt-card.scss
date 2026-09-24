@@ -58,7 +58,10 @@
   font: var(--mat-sys-title-medium);
 }
 
+// The column's `gap` spaces these lines; a `p`'s default margins don't collapse in a flex column
+// and added 32 px above the primary action at 360x800 (#218).
 .prompt {
+  margin: 0;
   white-space: pre-line;
 }
 

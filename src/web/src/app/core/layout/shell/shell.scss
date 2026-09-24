@@ -110,6 +110,13 @@ a.side-nav__row:focus-visible {
   block-size: 100%;
 }
 
+// At 360 px the title-large scale leaves the longest short title ("2 · Begin with the end") only a
+// few pixels inside its box, and Linux fonts render wider than macOS (#218): a phone gets the
+// title-medium scale instead, with the ellipsis above as the last resort.
+.shell--handset .top-bar__title {
+  font: var(--mat-sys-title-medium);
+}
+
 .shell--handset .page {
   padding-block-end: 24px;
 }

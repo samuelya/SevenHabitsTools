@@ -48,8 +48,8 @@ export class ExercisePromptCard {
   private readonly guideOpener = inject(ExerciseGuideOpener);
   private readonly viewContainerRef = inject(ViewContainerRef);
 
-  /** The exercise's long title, shown visibly at the top of the card (issue #218: the long title
-   * appears in the intro card, the chrome shows the short one). */
+  /** The exercise's long title, shown at the top of the card while it is expanded (issue #218: the
+   * long title appears in the intro card, the chrome shows the short one). */
   readonly heading = input<string | null>(null);
   readonly prompt = input.required<string>();
   /** A first-use gloss for a book term the prompt uses, as a grey line right under it, in the

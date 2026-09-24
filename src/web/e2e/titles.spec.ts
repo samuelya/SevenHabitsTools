@@ -73,7 +73,11 @@ test.describe('short titles fit without truncation (#218)', () => {
       await expect(heading).not.toBeEmpty();
       const short = (await page.getByTestId('page-title').textContent())?.trim() ?? '';
       const long = (await heading.textContent())?.trim() ?? '';
-      // The h1 is visually hidden; the intro card shows the same long title to sighted users.
+      // The h1 is visually hidden; the intro card shows the same long title to sighted users
+      // while it is expanded (a phone, or a later visit, opens it collapsed).
+      const toggle = page.locator('app-exercise-prompt-card .toggle');
+      await expect(toggle).toBeVisible();
+      if ((await toggle.getAttribute('aria-expanded')) === 'false') await toggle.click();
       const visibleLong = page.locator('app-exercise-prompt-card .prompt-heading');
       await expect(visibleLong).toBeVisible();
       await expect(visibleLong).toHaveText(long);

@@ -75,16 +75,26 @@ describe('ExercisePromptCard', () => {
     expect(fixture.nativeElement.querySelector('[matTooltip], [title]')).toBeNull();
   });
 
-  it('shows the long title visibly, even when collapsed, hidden from assistive tech (#218)', () => {
+  it('shows the long title visibly when expanded, hidden from assistive tech (#218)', () => {
+    const { fixture } = setUp({
+      prompt: 'Name the scripts you inherited.',
+      heading: 'Become a transition person',
+      expanded: true,
+    });
+
+    const heading = fixture.nativeElement.querySelector('.visible-content .prompt-heading');
+    expect(heading?.textContent?.trim()).toBe('Become a transition person');
+    expect(heading?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('hides the long title while collapsed, so the primary action stays above the fold (#218)', () => {
     const { fixture } = setUp({
       prompt: 'Name the scripts you inherited.',
       heading: 'Become a transition person',
       expanded: false,
     });
 
-    const heading = fixture.nativeElement.querySelector('.visible-content .prompt-heading');
-    expect(heading?.textContent?.trim()).toBe('Become a transition person');
-    expect(heading?.getAttribute('aria-hidden')).toBe('true');
+    expect(fixture.nativeElement.querySelector('.prompt-heading')).toBeNull();
   });
 
   it('renders no gloss line when none is given', () => {
