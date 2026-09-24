@@ -15,7 +15,7 @@ import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
-import { PcBalanceAuditForm } from './pc-balance-audit-form';
+import { PcBalanceAuditForm, PcReflectionChange } from './pc-balance-audit-form';
 import { PcBalanceSummary } from './pc-balance-summary';
 import {
   addAudit,
@@ -164,15 +164,15 @@ export class PcBalancePage {
     }
   }
 
-  protected onAuditChanged(
-    id: string,
-    fields: Partial<PcAuditFields>,
-    form: PcBalanceAuditForm,
-  ): void {
-    const saved = this.store.update((audits) => editAudit(audits, id, fields));
-    if ('reflection' in fields) {
-      form.reportReflectionSaveOutcome(saved);
-    }
+  protected onAuditChanged(id: string, fields: Partial<PcAuditFields>): void {
+    this.store.update((audits) => editAudit(audits, id, fields));
+  }
+
+  protected onReflectionChanged(change: PcReflectionChange, form: PcBalanceAuditForm): void {
+    const saved = this.store.update((audits) =>
+      editAudit(audits, change.auditId, { reflection: change.reflection }),
+    );
+    form.reportReflectionSaveOutcome(change.auditId, saved);
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries"). */

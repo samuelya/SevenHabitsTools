@@ -146,10 +146,14 @@
     </fieldset>
   }
 
-  <app-reflection-editor
-    [value]="audit().reflection"
-    [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
-    [sessionStatus]="true"
-    (valueChange)="onReflectionChanged($event)"
-  />
+  <!-- One editor per audit: switching audits destroys the old one, which flushes its pending edit
+       under its own audit's id and drops its session status (review finding on #215's PR). -->
+  @for (bound of [audit()]; track bound.id) {
+    <app-reflection-editor
+      [value]="bound.reflection"
+      [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
+      [sessionStatus]="true"
+      (valueChange)="onReflectionChanged(bound.id, $event)"
+    />
+  }
 </form>

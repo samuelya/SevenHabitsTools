@@ -108,14 +108,14 @@ describe('isAuditComplete/isComplete', () => {
   });
 });
 
-const LABELS = checklistLabelsFrom(['Rate', 'Actions']);
+const LABELS = checklistLabelsFrom(['Name', 'Actions']);
 
 describe('doneChecklist', () => {
   const met = (audits: PcAudit[]) => doneChecklist(audits, LABELS).map((item) => item.met);
 
   it('lists both items, unmet, with no audits', () => {
     expect(doneChecklist([], LABELS)).toEqual([
-      { label: 'Rate', met: false },
+      { label: 'Name', met: false },
       { label: 'Actions', met: false },
     ]);
   });

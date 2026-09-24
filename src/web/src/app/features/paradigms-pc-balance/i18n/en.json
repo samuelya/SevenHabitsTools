@@ -42,7 +42,7 @@
     "underUsed": "Under-used"
   },
   "checklist": {
-    "rated": "Rate at least one asset",
+    "named": "Add an asset and name every one",
     "actions": "Name a maintenance action for any over-used asset"
   },
   "summary": {

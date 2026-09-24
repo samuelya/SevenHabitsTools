@@ -117,11 +117,12 @@ export function sharedCount(entries: readonly TeachEntry[]): number {
 export const CHECKLIST_KEYS = ['planned', 'shared'] as const;
 export type TeachChecklistKey = (typeof CHECKLIST_KEYS)[number];
 
-/** One entry's "met" map: an entry exists for a chapter once the user edits it, and always has a
- * `plannedAt` (defaulted to +48 h, `isValidPlannedAt()` refuses a cleared one), so `planned` is
- * met by any entry with a valid date; `shared` by its status. */
+/** One entry's "met" map: `planned` is met by an entry with a valid date, or by a shared one, so
+ * the done rule stays #52's "one live shared entry" even for an imported entry with a blank
+ * `plannedAt` (review finding on #215's PR); `shared` by its status. */
 function entryMet(entry: TeachEntry): ChecklistMet<TeachChecklistKey> {
-  return { planned: isValidPlannedAt(entry.plannedAt), shared: entry.status === 'shared' };
+  const shared = entry.status === 'shared';
+  return { planned: shared || isValidPlannedAt(entry.plannedAt), shared };
 }
 
 /** The checklist describes the live entry closest to complete (`closestMet()`). */

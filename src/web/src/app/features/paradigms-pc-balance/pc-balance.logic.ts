@@ -73,16 +73,17 @@ export function isAuditComplete(audit: Pick<PcAudit, 'assets'>): boolean {
 }
 
 /** The two gate items (issue #215). */
-export const CHECKLIST_KEYS = ['rated', 'actions'] as const;
+export const CHECKLIST_KEYS = ['named', 'actions'] as const;
 export type PcBalanceChecklistKey = (typeof CHECKLIST_KEYS)[number];
 
-/** One audit's "met" map: `rated` is at least one asset, every one of them named; `actions` is
+/** One audit's "met" map: `named` is at least one asset, every one of them named (sliders always
+ * hold a value, so a name is the only thing an asset can be missing); `actions` is
  * every over-used asset naming its action (not met by an audit with no assets). Both met is
  * exactly `isAuditComplete()`. */
 function auditMet(audit: PcAudit): ChecklistMet<PcBalanceChecklistKey> {
   const hasAssets = audit.assets.length > 0;
   return {
-    rated: hasAssets && audit.assets.every((asset) => Boolean(asset.name.trim())),
+    named: hasAssets && audit.assets.every((asset) => Boolean(asset.name.trim())),
     actions:
       hasAssets &&
       audit.assets.every((asset) => !isOverUsed(asset) || Boolean(asset.action?.trim())),

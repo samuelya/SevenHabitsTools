@@ -31,7 +31,8 @@
       <app-pc-balance-audit-form
         #auditForm
         [audit]="audit"
-        (changed)="onAuditChanged(audit.id, $event, auditForm)"
+        (changed)="onAuditChanged(audit.id, $event)"
+        (reflectionChanged)="onReflectionChanged($event, auditForm)"
       />
     }
   </div>

@@ -18,13 +18,13 @@ const TEXT: Record<
   { checklistItem: string; hubTitle: string; markDone: string; reopen: string }
 > = {
   en: {
-    checklistItem: 'Rate at least one asset',
+    checklistItem: 'Add an asset and name every one',
     hubTitle: 'Audit your results and capacity',
     markDone: 'Mark done',
     reopen: 'Reopen',
   },
   ar: {
-    checklistItem: 'قيّم على الأقل حاجة واحدة ليها قيمة عندك',
+    checklistItem: 'ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة',
     hubTitle: 'قيّم نتائجك وقدرتك على الإنتاج',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',

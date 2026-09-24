@@ -137,6 +137,10 @@ describe('sharedCount and isComplete', () => {
   it('is false with no shared entries', () => {
     expect(isComplete([entry({ status: 'planned' })])).toBe(false);
   });
+
+  it('is true for a shared entry with a blank plannedAt (#52 rule unchanged)', () => {
+    expect(isComplete([entry({ status: 'shared', plannedAt: '' })])).toBe(true);
+  });
 });
 
 const LABELS = checklistLabelsFrom(['Plan', 'Share']);
@@ -172,6 +176,8 @@ describe('doneChecklist', () => {
       [entry({ status: 'planned' })],
       [entry({ status: 'skipped' })],
       [entry({ status: 'shared' })],
+      [entry({ status: 'shared', plannedAt: '' })],
+      [entry({ status: 'planned', plannedAt: '' })],
       [entry({ status: 'shared', deletedAt: '2026-01-05T00:00:00.000Z' })],
     ];
     for (const entries of cases) {
