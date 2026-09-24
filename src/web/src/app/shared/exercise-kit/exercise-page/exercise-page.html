@@ -47,8 +47,15 @@
             {{ 'exerciseKit.editor.saving' | transloco }}
           } @else if (editorStatus() === 'saved') {
             {{ 'exerciseKit.editor.saved' | transloco }}
+          } @else if (editorStatus() === 'new') {
+            {{ 'exerciseKit.editor.new' | transloco }}
           }
         </span>
+        <!-- The primary exit (issue #217), at the inline end next to the status; the close/back
+             button stays the secondary one. Never disabled: finishing never blocks on validation. -->
+        <button mat-flat-button type="button" class="editor-done" (click)="finish()">
+          {{ 'exerciseKit.editor.done' | transloco }}
+        </button>
       </header>
       <div class="editor-body"><ng-content select="[editor]" /></div>
     </div>

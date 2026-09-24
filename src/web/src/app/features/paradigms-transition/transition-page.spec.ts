@@ -100,7 +100,8 @@ async function closeEditor(harness: RouterTestingHarness): Promise<void> {
   await harness.fixture.whenStable();
 }
 
-async function addScript(harness: RouterTestingHarness): Promise<void> {
+/** Taps "Add a script": opens the editor on an in-memory draft at `new` (issue #217). */
+async function openDraft(harness: RouterTestingHarness): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
   const addButton = host.querySelector('.add-button') as HTMLButtonElement;
   // A real click focuses the button first; jsdom's `.click()` doesn't, and the kit captures
@@ -108,6 +109,33 @@ async function addScript(harness: RouterTestingHarness): Promise<void> {
   addButton.focus();
   addButton.click();
   await harness.fixture.whenStable();
+}
+
+/** Adds a script the way a user does: open the draft, then type its text, which saves it. */
+async function addScript(
+  harness: RouterTestingHarness,
+  text = 'Silence means agreement',
+): Promise<void> {
+  await openDraft(harness);
+  itemForm(harness).changed.emit({ text });
+  harness.detectChanges();
+  await harness.fixture.whenStable();
+}
+
+function storedScripts(): readonly Script[] {
+  return TestBed.runInInjectionContext(() => featureStore<Script[]>(TRANSITION_MODEL_KEY).value());
+}
+
+function editorStatus(harness: RouterTestingHarness): string | undefined {
+  return harness.routeNativeElement?.querySelector('.editor-status')?.textContent?.trim();
+}
+
+function listItemCount(harness: RouterTestingHarness): number {
+  return (
+    harness.routeNativeElement?.querySelectorAll(
+      'app-exercise-list mat-nav-list .exercise-list__item',
+    ).length ?? 0
+  );
 }
 
 function itemForm(harness: RouterTestingHarness): TransitionItemForm {
@@ -158,16 +186,129 @@ describe('TransitionPage', () => {
     expect(markDone.getAttribute('aria-disabled') === 'true').toBe(true);
   });
 
-  it('adding a script navigates to its child route and opens the full-screen editor', async () => {
-    const harness = await setUp();
-    await addScript(harness);
-    const host = harness.routeNativeElement as HTMLElement;
+  describe('draft before record (issue #217)', () => {
+    it('Add opens the editor on a draft at `new`, stores nothing and reads "New"', async () => {
+      const harness = await setUp();
+      await openDraft(harness);
 
-    expect(TestBed.inject(Router).url).toMatch(new RegExp(`^${LIST_URL}/[^/]+$`));
-    expect(host.querySelector('app-transition-item-form')).not.toBeNull();
-    expect(
-      host.querySelectorAll('app-exercise-list mat-nav-list .exercise-list__item'),
-    ).toHaveLength(1);
+      expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
+      expect(harness.routeNativeElement?.querySelector('app-transition-item-form')).not.toBeNull();
+      expect(editorStatus(harness)).toBe('New');
+      expect(listItemCount(harness)).toBe(0);
+      expect(storedScripts()).toHaveLength(0);
+    });
+
+    it('backing out of an untouched draft leaves no item and no record', async () => {
+      const harness = await setUp();
+      await openDraft(harness);
+      await closeEditor(harness);
+
+      expect(TestBed.inject(Router).url).toBe(LIST_URL);
+      expect(listItemCount(harness)).toBe(0);
+      expect(storedScripts()).toHaveLength(0);
+    });
+
+    it('choosing options alone keeps the draft in memory; they are kept once text saves it', async () => {
+      const harness = await setUp();
+      await openDraft(harness);
+
+      itemForm(harness).changed.emit({ source: 'culture' });
+      itemForm(harness).changed.emit({ text: '   ' });
+      harness.detectChanges();
+      expect(storedScripts()).toHaveLength(0);
+      expect(editorStatus(harness)).toBe('New');
+
+      itemForm(harness).changed.emit({ text: 'Silence means agreement' });
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+
+      const stored = storedScripts();
+      expect(stored).toHaveLength(1);
+      expect(stored[0]).toMatchObject({ text: 'Silence means agreement', source: 'culture' });
+      expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${stored[0].id}`);
+      expect(editorStatus(harness)).toBe('Saved');
+      expect(listItemCount(harness)).toBe(1);
+    });
+
+    it('keeps the same form instance when the first keystroke moves the URL from `new` to the id', async () => {
+      const harness = await setUp();
+      await openDraft(harness);
+      const form = itemForm(harness);
+
+      form.changed.emit({ text: 'S' });
+      harness.detectChanges();
+      await harness.fixture.whenStable();
+
+      expect(itemForm(harness)).toBe(form);
+      form.changed.emit({ text: 'Si' });
+      harness.detectChanges();
+      expect(storedScripts()).toHaveLength(1);
+      expect(storedScripts()[0].text).toBe('Si');
+    });
+
+    it('clearing the text after the first save keeps the saved script (no un-save)', async () => {
+      const harness = await setUp();
+      await addScript(harness, 'a');
+
+      itemForm(harness).changed.emit({ text: '' });
+      harness.detectChanges();
+
+      expect(storedScripts()).toHaveLength(1);
+      expect(storedScripts()[0].text).toBe('');
+      expect(editorStatus(harness)).toBe('Saved');
+    });
+
+    it('a fresh navigation to `new` (a reload) opens an empty draft instead of redirecting', async () => {
+      const harness = await setUp();
+      await harness.navigateByUrl(`${LIST_URL}/new`);
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
+      const textarea = harness.routeNativeElement?.querySelector(
+        'app-transition-item-form textarea',
+      ) as HTMLTextAreaElement;
+      expect(textarea.value).toBe('');
+      expect(editorStatus(harness)).toBe('New');
+    });
+
+    it('a second Add after backing out starts from a fresh, empty draft', async () => {
+      const harness = await setUp();
+      await openDraft(harness);
+      itemForm(harness).changed.emit({ source: 'culture' });
+      await closeEditor(harness);
+      await openDraft(harness);
+
+      expect(itemForm(harness).script().source).toBe('family');
+    });
+
+    it("the form's delete button discards an unsaved draft without a confirm", async () => {
+      const deleteWithUndo = fakeDeleteWithUndo();
+      const harness = await setUp({ deleteWithUndo });
+      await openDraft(harness);
+
+      (
+        harness.routeNativeElement!.querySelector(
+          'app-transition-item-form .delete-button',
+        ) as HTMLButtonElement
+      ).click();
+      await harness.fixture.whenStable();
+
+      expect(deleteWithUndo.calls).toHaveLength(0);
+      expect(TestBed.inject(Router).url).toBe(LIST_URL);
+      expect(storedScripts()).toHaveLength(0);
+    });
+
+    it('the header Done button closes the editor', async () => {
+      const harness = await setUp();
+      await addScript(harness);
+
+      (harness.routeNativeElement!.querySelector('.editor-done') as HTMLButtonElement).click();
+      await harness.fixture.whenStable();
+
+      expect(TestBed.inject(Router).url).toBe(LIST_URL);
+      expect(harness.routeNativeElement?.querySelector('app-transition-item-form')).toBeNull();
+      expect(listItemCount(harness)).toBe(1);
+    });
   });
 
   it('editing the text updates the list item and enables Mark done for a kept script', async () => {

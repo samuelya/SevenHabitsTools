@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { DoneToggle } from '../done-toggle/done-toggle';
 import { EditorInitialFocus } from '../exercise-page/editor-initial-focus.directive';
-import { ExercisePage } from '../exercise-page/exercise-page';
+import { EditorStatus, ExercisePage } from '../exercise-page/exercise-page';
 import { ExerciseList } from '../exercise-list/exercise-list';
 import { ExerciseListItem } from '../exercise-list/exercise-list.logic';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
@@ -62,7 +62,7 @@ export class DevKitPage {
   protected readonly editorTitle = computed(
     () => this.items.find((item) => item.id === this.editingId())?.title ?? '',
   );
-  protected readonly editorStatus = signal<'saved' | 'saving' | null>('saved');
+  protected readonly editorStatus = signal<EditorStatus>('saved');
 
   protected readonly done = this.progress.isDone(DEMO_EXERCISE_ID);
   protected readonly completedAt = this.progress.completedAt(DEMO_EXERCISE_ID);

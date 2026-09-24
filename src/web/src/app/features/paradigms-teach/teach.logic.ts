@@ -210,6 +210,13 @@ export function labelsFrom(
   };
 }
 
+/** Draft before record (issue #217): a chapter's first edits become its entry once the key idea
+ * — the one always-required field — is non-blank. Status, dates, person or what was learned alone
+ * keep it a draft. */
+export function isDraftWorthSaving(fields: Partial<Pick<TeachEntryFields, 'keyIdea'>>): boolean {
+  return (fields.keyIdea ?? '').trim() !== '';
+}
+
 /** The editor's current value for `chapter`: its live entry's own fields, or fresh defaults if it
  * has none yet (issue #52's "a record is created the first time a chapter is filled"). The editor
  * form works from this plain `TeachEntryFields` value, never `TeachEntry` directly, since a

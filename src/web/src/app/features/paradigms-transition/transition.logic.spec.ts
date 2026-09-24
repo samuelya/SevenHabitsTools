@@ -1,5 +1,6 @@
 import { SCRIPT_EFFECTS, SCRIPT_SOURCES, Script } from './transition.model';
 import {
+  isDraftWorthSaving,
   addScript,
   checklistLabelsFrom,
   checklistLoaded,
@@ -202,6 +203,17 @@ describe('toListItem', () => {
       subtitle: 'Family · Harms',
       done: false,
     });
+  });
+});
+
+describe('isDraftWorthSaving (issue #217)', () => {
+  it('is false for blank or whitespace-only text', () => {
+    expect(isDraftWorthSaving({ text: '' })).toBe(false);
+    expect(isDraftWorthSaving({ text: '  \n ' })).toBe(false);
+  });
+
+  it('is true once the script text has a non-blank character', () => {
+    expect(isDraftWorthSaving({ text: 'a' })).toBe(true);
   });
 });
 

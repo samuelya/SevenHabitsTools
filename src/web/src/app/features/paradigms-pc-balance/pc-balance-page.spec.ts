@@ -10,6 +10,7 @@ import '../../features/settings/settings.model';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
+import { PcBalanceAuditForm } from './pc-balance-audit-form';
 import { PcBalancePage } from './pc-balance-page';
 import { PC_BALANCE_MODEL_KEY, PcAudit } from './pc-balance.model';
 import {
@@ -59,10 +60,31 @@ async function setUp(
   return RouterTestingHarness.create(LIST_URL);
 }
 
-async function addAudit(harness: RouterTestingHarness): Promise<void> {
+/** Taps "New audit": opens the editor on an in-memory draft at `new` (issue #217). */
+async function openDraft(harness: RouterTestingHarness): Promise<void> {
   const host = harness.routeNativeElement as HTMLElement;
   (host.querySelector('.add-button') as HTMLButtonElement).click();
   await harness.fixture.whenStable();
+}
+
+function auditForm(harness: RouterTestingHarness): PcBalanceAuditForm {
+  return harness.routeDebugElement!.query(By.directive(PcBalanceAuditForm)).componentInstance;
+}
+
+/** A saved audit: open the draft, then write a reflection, which saves it (issue #217). */
+async function addAudit(harness: RouterTestingHarness): Promise<void> {
+  await openDraft(harness);
+  auditForm(harness).changed.emit({ reflection: 'Rested more this month' });
+  harness.detectChanges();
+  await harness.fixture.whenStable();
+}
+
+function storedAudits(): readonly PcAudit[] {
+  return TestBed.runInInjectionContext(() => featureStore<PcAudit[]>(PC_BALANCE_MODEL_KEY).value());
+}
+
+function editorStatus(harness: RouterTestingHarness): string | undefined {
+  return harness.routeNativeElement?.querySelector('.editor-status')?.textContent?.trim();
 }
 
 /**
@@ -154,14 +176,52 @@ describe('PcBalancePage', () => {
     ).toBe(true);
   });
 
-  it('creating a new audit navigates to its child route and opens the editor', async () => {
+  it('New audit opens the editor on an unsaved draft at `new` (issue #217)', async () => {
     const harness = await setUp();
-    await addAudit(harness);
+    await openDraft(harness);
 
-    expect(TestBed.inject(Router).url).toMatch(new RegExp(`^${LIST_URL}/[^/]+$`));
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/new`);
     expect(
       (harness.routeNativeElement as HTMLElement).querySelector('app-pc-balance-audit-form'),
     ).not.toBeNull();
+    expect(editorStatus(harness)).toBe('New');
+    expect(storedAudits()).toHaveLength(0);
+  });
+
+  it('backing out of an untouched draft leaves no audit (issue #217)', async () => {
+    const harness = await setUp();
+    await openDraft(harness);
+    (harness.routeNativeElement!.querySelector('.editor-close') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(storedAudits()).toHaveLength(0);
+    expect(
+      harness.routeNativeElement?.querySelectorAll('.assessment-history-list__item'),
+    ).toHaveLength(0);
+  });
+
+  it('adding the first asset saves the draft and moves the URL to its id (issue #217)', async () => {
+    const harness = await setUp();
+    await openDraft(harness);
+    addAssetThroughForm(harness, 0, 'Sleep', 3, 3);
+    await harness.fixture.whenStable();
+
+    const stored = storedAudits();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].assets.map((asset) => asset.name)).toEqual(['Sleep']);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${stored[0].id}`);
+    expect(editorStatus(harness)).toBe('Saved');
+  });
+
+  it('the header Done button closes the editor (issue #217)', async () => {
+    const harness = await setUp();
+    await addAudit(harness);
+    (harness.routeNativeElement!.querySelector('.editor-done') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(storedAudits()).toHaveLength(1);
   });
 
   it('enables Mark done once every asset is complete, and disables it again for a new unresolved over-used one', async () => {

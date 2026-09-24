@@ -198,6 +198,20 @@ export function newAuditFields(latest: PcAudit | null, today: string): PcAuditFi
   };
 }
 
+/** Draft before record (issue #217): a new audit's draft becomes a record on the first real
+ * input — a non-blank reflection, or any change to its assets (one added, removed or renamed, a
+ * slider moved, an action typed) relative to `initial`, the draft `newAuditFields()` built. The
+ * assets copied from the latest audit are not input, and neither is the pre-filled date. */
+export function isDraftWorthSaving(
+  draft: Pick<PcAudit, 'assets' | 'reflection'>,
+  initial: Pick<PcAudit, 'assets'>,
+): boolean {
+  return (
+    draft.reflection.trim() !== '' ||
+    JSON.stringify(draft.assets) !== JSON.stringify(initial.assets)
+  );
+}
+
 /** Appends a new asset to one audit's asset list, both sliders starting at 3. */
 export function addAsset(
   assets: readonly PcAsset[],

@@ -441,6 +441,14 @@ test.describe('maturity continuum self-assessment', () => {
     await page.locator('.add-button').click();
     const form = page.locator('app-maturity-assessment-form');
     await expect(form).toBeVisible();
+    // The first rating is what saves the draft (issue #217); an untouched one leaves no item.
+    await form
+      .locator('.area-row')
+      .first()
+      .locator('.level-option input[type="radio"]')
+      .first()
+      .check();
+    await expect(page).toHaveURL(/\/habits\/paradigms\/maturity\/(?!new$)[^/]+$/);
     if (isMobile) {
       await page.goBack();
     } else {

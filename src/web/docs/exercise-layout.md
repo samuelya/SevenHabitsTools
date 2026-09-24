@@ -19,6 +19,7 @@ ad hoc markup:
   [editorTitle]="(isNewItem() ? '<exerciseId>.editor.newTitle' : '<exerciseId>.editor.editTitle') | transloco"
   [editorStatus]="editorStatus()"
   (editorClosed)="closeDetail()"
+  (done)="closeDetail()"
 >
   <app-exercise-prompt-card intro [prompt]="..." [chapterReference]="..." [whyItMatters]="..." />
 
@@ -98,11 +99,14 @@ ad hoc markup:
   history column's own max-content contribution back through the `1fr` track and overshoots
   `.page` by that much on every ordinary open. Both breakpoints
   share the same editor header (back/close button, `editorTitle()`, an `aria-live`
-  "Saved"/"Saving…" status) — the kit builds it; the page only supplies the three
-  inputs above.
-- **`editorStatus()`:** `'saved'` once `hasDetail()` — this page's `store.update()` calls are
-  synchronous, so every applied edit (including creating the item) is "saved" the instant it
-  lands; `null` otherwise. Only compute `'saving'` if a feature's own persistence genuinely has a
+  "New"/"Saved"/"Saving…" status, and a primary "Done" button at the inline end, #217) — the kit
+  builds it; the page only supplies the three inputs above and binds `(done)` to the same close
+  as `(editorClosed)`. "Done" never blocks on validation; the back/close button stays the
+  secondary exit.
+- **`editorStatus()`** (type `EditorStatus`): `null` without `hasDetail()`; `'new'` while the
+  editor shows an unsaved draft (`recordDraft().unsaved()`, see "Draft before record" below);
+  `'saved'` otherwise — `store.update()` is synchronous, so every applied edit is "saved" the
+  instant it lands. Only compute `'saving'` if a feature's own persistence genuinely has a
   pending-write state to report (none does yet).
 - **The footer slot** holds the summary and `app-done-toggle`, always. On handset it's not
   rendered at all while `editing()` (`showFooter`, the kit's own computed) — never conditionally
@@ -225,6 +229,25 @@ every page gets wrong the first time:
   above.
 - The back gesture, reload and deep links then come for free: they're just the browser's own
   history and URL handling over a real route, nothing the page has to implement.
+
+**Draft before record (#217, owner decision; supersedes "create the record on the Add
+button").** "Add"/"New" only navigates to the reserved segment `NEW_ITEM_ID` (`'new'`,
+`shared/exercise-kit/record-draft.ts`). The page's `recordDraft<T>({ itemId, records, create,
+isWorthSaving, save, now })` opens an in-memory draft (built with `newRecord()`, so it already has
+its final id) whenever `itemId` becomes `new` — which also reopens an empty draft on a reload of
+`.../new` — and drops it when `itemId` moves away. Nothing reaches the store, and so nothing
+reaches `DocumentPersistence` or IndexedDB, until the exercise's own pure
+`isDraftWorthSaving(draft, initial)` (`<slug>.logic.ts`: the first required field non-blank, or,
+for an assessment pre-filled from the latest one, the first real change) holds; then one
+`store.update()` appends it and the page navigates to the real id with `replaceUrl: true`. So:
+- `selected = itemId === NEW_ITEM_ID ? draft.current() : live.find(id)`; the redirect effect
+  exempts `NEW_ITEM_ID`.
+- Route the form's `changed` through `draft.owns(id) ? draft.edit(fields) : store.update(...)`;
+  the form keeps its instance across `new` → id (same id).
+- A delete on an unsaved draft just closes the editor. Once saved, it's a record like any other:
+  clearing its fields again doesn't un-save it (that would need a hard delete).
+- A fixed-row list with no Add (`paradigms-teach`) keeps a per-row pending-fields signal instead,
+  with the same "New" → "Saved" status and the same save rule.
 
 **Who moves focus, and when.** The kit owns the editor's opening and closing focus; the feature
 owns only what happens while the editor stays open. Mark the editor's first field with

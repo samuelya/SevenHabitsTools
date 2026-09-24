@@ -1,5 +1,6 @@
 import { PcAsset, PcAudit } from './pc-balance.model';
 import {
+  isDraftWorthSaving,
   addAsset,
   addAudit,
   auditAverageBalance,
@@ -344,5 +345,28 @@ describe('isStarted (issue #216)', () => {
     expect(
       isStarted([audit({ id: 'x1', deletedAt: NOW.toISOString() }), audit({ id: 'x2' })]),
     ).toBe(true);
+  });
+});
+
+describe('isDraftWorthSaving (issue #217)', () => {
+  const latest = {
+    assets: [{ key: 'a', name: 'Sleep', group: 'physical', p: 5, pc: 1 }],
+  } as unknown as PcAudit;
+  const initial = newAuditFields(latest, '2026-01-01');
+
+  it('is false for the untouched draft, copied assets and pre-filled date included', () => {
+    expect(isDraftWorthSaving(initial, initial)).toBe(false);
+    expect(isDraftWorthSaving({ ...initial, reflection: '  ' }, initial)).toBe(false);
+  });
+
+  it('is true once a slider moves, an asset is added or the reflection is written', () => {
+    const moved = initial.assets.map((asset) => ({ ...asset, p: 4 }));
+    expect(isDraftWorthSaving({ ...initial, assets: moved }, initial)).toBe(true);
+    const added = [
+      ...initial.assets,
+      { key: 'b', name: 'Car', group: 'physical' as const, p: 3, pc: 3 },
+    ];
+    expect(isDraftWorthSaving({ ...initial, assets: added }, initial)).toBe(true);
+    expect(isDraftWorthSaving({ ...initial, reflection: 'Rest more' }, initial)).toBe(true);
   });
 });

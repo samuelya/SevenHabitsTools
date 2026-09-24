@@ -31,7 +31,9 @@
   "editor": {
     "close": "إغلاق",
     "saved": "تم الحفظ",
-    "saving": "جارٍ الحفظ…"
+    "saving": "جارٍ الحفظ…",
+    "new": "جديد",
+    "done": "تم"
   },
   "reflection": {
     "characterCount": "{{count}} حرفًا",

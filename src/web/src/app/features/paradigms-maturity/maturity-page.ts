@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
+import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
 import {
@@ -13,15 +14,15 @@ import {
 } from '../../shared/exercise-kit/assessment-history.logic';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
+import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
 import { MaturityAssessmentForm } from './maturity-assessment-form';
 import { MaturityResult } from './maturity-result';
 import { MaturitySummary } from './maturity-summary';
 import {
-  addAssessment,
   CHECKLIST_KEYS,
   checklistLabelsFrom,
   checklistLoaded,
@@ -35,6 +36,7 @@ import {
   restoreAssessment,
   summarize,
   isStarted,
+  isDraftWorthSaving,
 } from './maturity.logic';
 import {
   MATURITY_AREA_KEYS,
@@ -56,6 +58,10 @@ import {
  * **Routing**, same pattern issue #187 set for the list type and #49 reused: the selected
  * assessment is the optional trailing URL segment `:itemId` (`maturity.routes.ts`), one route with
  * `optionalParamMatcher`, never a `''`/`':itemId'` sibling pair.
+ *
+ * **Draft before record (issue #217):** "New assessment" opens the reserved `NEW_ITEM_ID` segment
+ * on an in-memory draft (`recordDraft()`), stored on the first rating or note
+ * (`isDraftWorthSaving()`), after which the URL moves to the real id — `TransitionPage`'s pattern.
  */
 @Component({
   selector: 'app-maturity-page',
@@ -127,19 +133,45 @@ export class MaturityPage {
       };
     });
   });
-  protected readonly selectedAssessment = computed(
-    () => this.assessments().find((assessment) => assessment.id === this.itemId()) ?? null,
-  );
+  private readonly draft = recordDraft<MaturityAssessment>({
+    itemId: this.itemId,
+    records: this.assessments,
+    // Read when the draft opens: the latest assessment's areas, levels unset.
+    create: () => {
+      const now = this.clock.now();
+      return newRecord(newAssessmentFields(this.history()[0] ?? null, localDateString(now)), now);
+    },
+    isWorthSaving: isDraftWorthSaving,
+    save: (record) => this.store.update((assessments) => [...assessments, record]),
+    now: () => this.clock.now(),
+  });
+  protected readonly selectedAssessment = computed(() => {
+    const id = this.itemId();
+    return id === NEW_ITEM_ID
+      ? this.draft.current()
+      : (this.assessments().find((assessment) => assessment.id === id) ?? null);
+  });
+  /** An unsaved draft is compared with the latest stored assessment, exactly as it will be once
+   * saved: it takes part in the lookup as if it were already in the history. */
   protected readonly previous = computed(() => {
     const selected = this.selectedAssessment();
-    return selected ? previousAssessment(this.assessments(), selected.id) : null;
+    if (!selected) {
+      return null;
+    }
+    const assessments = this.draft.unsaved()
+      ? [...this.assessments(), selected]
+      : this.assessments();
+    return previousAssessment(assessments, selected.id);
   });
   protected readonly hasDetail = computed(() => this.selectedAssessment() !== null);
-  /** This page's `store.update()` is always synchronous, so there's no "saving" state to show —
-   * see the playbook's "Page layout" section. */
-  protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
-    this.hasDetail() ? 'saved' : null,
-  );
+  /** "New" for an unsaved draft (issue #217), otherwise "saved": this page's `store.update()` is
+   * always synchronous — see `exercise-layout.md`'s `editorStatus()`. */
+  protected readonly editorStatus = computed<EditorStatus>(() => {
+    if (!this.hasDetail()) {
+      return null;
+    }
+    return this.draft.unsaved() ? 'new' : 'saved';
+  });
   /** `null` until the first assessment exists (issue #215): no "0 assessments taken" card next
    * to the history's own empty-state text. */
   protected readonly summary = computed(() =>
@@ -169,7 +201,11 @@ export class MaturityPage {
     // `undefined`, not this input's own `null` default.
     effect(() => {
       const id = this.itemId();
-      if (id != null && !this.assessments().some((assessment) => assessment.id === id)) {
+      if (
+        id != null &&
+        id !== NEW_ITEM_ID &&
+        !this.assessments().some((assessment) => assessment.id === id)
+      ) {
         this.goToList();
       }
     });
@@ -177,8 +213,8 @@ export class MaturityPage {
 
   /** Absolute, not relative to `this.route` — see `TransitionPage.goTo()`'s doc comment for why
    * relative navigation doesn't resolve against this feature's lazily mounted route. */
-  private goTo(commands: readonly string[]): void {
-    void this.router.navigate([`/${MATURITY_ROUTE}`, ...commands]);
+  private goTo(commands: readonly string[], options?: { replaceUrl?: boolean }): void {
+    void this.router.navigate([`/${MATURITY_ROUTE}`, ...commands], options);
   }
 
   private goToList(): void {
@@ -193,22 +229,20 @@ export class MaturityPage {
     this.goToList();
   }
 
+  /** Opens the editor on an in-memory draft; nothing is stored yet (issue #217). */
   protected onNewAssessment(): void {
-    const now = this.clock.now();
-    const latest = this.history()[0] ?? null;
-    const fields: MaturityAssessmentFields = newAssessmentFields(latest, localDateString(now));
-    let createdId: string | null = null;
-    const applied = this.store.update((assessments) => {
-      const next = addAssessment(assessments, fields, now);
-      createdId = next[next.length - 1].id;
-      return next;
-    });
-    if (applied && createdId) {
-      this.goTo([createdId]);
-    }
+    this.goTo([NEW_ITEM_ID]);
   }
 
   protected onAssessmentChanged(id: string, fields: Partial<MaturityAssessmentFields>): void {
+    if (this.draft.owns(id)) {
+      // The edit that saves the draft moves the URL from `new` to the real id (`replaceUrl`, so
+      // back still returns to the history).
+      if (this.draft.edit(fields)) {
+        this.goTo([id], { replaceUrl: true });
+      }
+      return;
+    }
     this.store.update((assessments) => editAssessment(assessments, id, fields));
   }
 

@@ -7,7 +7,7 @@ import { BehaviorSubject, of } from 'rxjs';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExercisePromptCard } from '../exercise-prompt-card/exercise-prompt-card';
 import { EditorInitialFocus } from './editor-initial-focus.directive';
-import { ExercisePage } from './exercise-page';
+import { EditorStatus, ExercisePage } from './exercise-page';
 
 @Component({
   selector: 'app-host',
@@ -19,6 +19,7 @@ import { ExercisePage } from './exercise-page';
       editorTitle="Editing script"
       [editorStatus]="editorStatus()"
       (editorClosed)="onClosed()"
+      (done)="onDone()"
     >
       <app-exercise-prompt-card intro prompt="List what you can control." />
       <button #addButton type="button" class="body-content">Add</button>
@@ -31,11 +32,16 @@ import { ExercisePage } from './exercise-page';
 })
 class HostComponent {
   readonly editing = signal(false);
-  readonly editorStatus = signal<'saved' | 'saving' | null>(null);
+  readonly editorStatus = signal<EditorStatus>(null);
   closedCount = 0;
+  doneCount = 0;
 
   onClosed(): void {
     this.closedCount++;
+  }
+
+  onDone(): void {
+    this.doneCount++;
   }
 }
 
@@ -292,6 +298,35 @@ describe('ExercisePage', () => {
     fixture.detectChanges();
     host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('.editor-status')?.textContent?.trim()).toBe('Saved');
+  });
+
+  it('shows "New" for a draft no record exists for yet (issue #217)', () => {
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.componentInstance.editorStatus.set('new');
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.editor-status')?.textContent?.trim()).toBe('New');
+  });
+
+  it('has a never-disabled Done button after the status that emits done, not editorClosed (issue #217)', () => {
+    configureTestBed(false);
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.editing.set(true);
+    fixture.componentInstance.editorStatus.set('new');
+    fixture.detectChanges();
+    const header = (fixture.nativeElement as HTMLElement).querySelector('.editor-header')!;
+    const done = header.querySelector<HTMLButtonElement>('.editor-done')!;
+    expect(done.textContent?.trim()).toBe('Done');
+    expect(done.disabled).toBe(false);
+    // Last in the header row, so it sits at the inline end in both directions.
+    expect(header.lastElementChild).toBe(done);
+    expect(done.previousElementSibling?.classList).toContain('editor-status');
+
+    done.click();
+    expect(fixture.componentInstance.doneCount).toBe(1);
+    expect(fixture.componentInstance.closedCount).toBe(0);
   });
 
   it('collapses the intro card on entering focus mode and never re-expands it on exit', () => {

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
@@ -7,7 +16,7 @@ import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
-import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
+import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -20,6 +29,7 @@ import {
   doneChecklist,
   isComplete,
   draftFor,
+  isDraftWorthSaving,
   entryForChapter,
   labelsFrom,
   removeEntry,
@@ -35,6 +45,7 @@ import {
   TEACH_MODEL_KEY,
   TEACH_ROUTE,
   TEACH_STATUSES,
+  TeachChapter,
   TeachEntry,
   TeachEntryFields,
 } from './teach.model';
@@ -133,18 +144,34 @@ export class TeachPage {
     return chapter ? entryForChapter(this.entries(), chapter) : undefined;
   });
   protected readonly hasDetail = computed(() => this.selectedChapter() !== null);
+  /** Draft before record (issue #217): edits to a chapter with no entry yet, held in memory until
+   * its key idea is non-blank (`isDraftWorthSaving()`). Keyed by chapter and dropped by the
+   * constructor's effect as soon as another chapter (or none) is selected. */
+  private readonly pending = signal<{
+    readonly chapter: TeachChapter;
+    readonly fields: Partial<TeachEntryFields>;
+  } | null>(null);
   protected readonly draft = computed<TeachEntryFields | null>(() => {
     const chapter = this.selectedChapter();
-    return chapter ? draftFor(chapter, this.selectedEntry(), this.clock.now()) : null;
+    if (!chapter) {
+      return null;
+    }
+    const entry = this.selectedEntry();
+    const base = draftFor(chapter, entry, this.clock.now());
+    const pending = this.pending();
+    return !entry && pending?.chapter === chapter ? { ...base, ...pending.fields } : base;
   });
   /** Drives the editor header's title: a chapter with no entry yet, or one whose key idea is
    * still blank, is "new" even though a record may already exist for it. */
   protected readonly isNewEntry = computed(() => !this.draft()?.keyIdea.trim());
-  /** This page's `store.update()` is always synchronous, so there's no "saving" state to show
-   * (playbook's "Page layout" section). */
-  protected readonly editorStatus = computed<'saved' | 'saving' | null>(() =>
-    this.hasDetail() ? 'saved' : null,
-  );
+  /** "New" while the open chapter has no entry yet (issue #217), otherwise "saved": this page's
+   * `store.update()` is always synchronous — see `exercise-layout.md`'s `editorStatus()`. */
+  protected readonly editorStatus = computed<EditorStatus>(() => {
+    if (!this.hasDetail()) {
+      return null;
+    }
+    return this.selectedEntry() ? 'saved' : 'new';
+  });
   /** `null` until the first chapter has an entry (issue #215): no "0 of 10 chapters shared"
    * card before the user has touched any chapter. */
   protected readonly summary = computed(() =>
@@ -168,6 +195,16 @@ export class TeachPage {
   protected readonly completedAt = this.progress.completedAt(TEACH_MODEL_KEY);
 
   constructor() {
+    // Leaving a chapter (closing, back, or opening another) drops its unsaved edits (issue #217).
+    effect(() => {
+      const chapter = this.selectedChapter();
+      untracked(() => {
+        if (this.pending() !== null && this.pending()?.chapter !== chapter) {
+          this.pending.set(null);
+        }
+      });
+    });
+
     effect(() => {
       const id = this.itemId();
       if (id != null) {
@@ -217,7 +254,23 @@ export class TeachPage {
     if (!chapter) {
       return;
     }
-    this.store.update((entries) => upsertEntry(entries, chapter, fields, this.clock.now()));
+    if (this.selectedEntry()) {
+      this.store.update((entries) => upsertEntry(entries, chapter, fields, this.clock.now()));
+      return;
+    }
+    // No entry yet: keep the edit in memory until the key idea is non-blank, then create the
+    // entry with every field edited so far (issue #217).
+    const previous = this.pending();
+    const merged = { ...(previous?.chapter === chapter ? previous.fields : {}), ...fields };
+    if (!isDraftWorthSaving(merged)) {
+      this.pending.set({ chapter, fields: merged });
+      return;
+    }
+    if (this.store.update((entries) => upsertEntry(entries, chapter, merged, this.clock.now()))) {
+      this.pending.set(null);
+    } else {
+      this.pending.set({ chapter, fields: merged });
+    }
   }
 
   /** Confirm → delete → undo (issue #203's shared pattern, playbook's "Deleting entries").

@@ -1,5 +1,6 @@
 import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
+  isDraftWorthSaving,
   addArea,
   addAssessment,
   checklistLabelsFrom,
@@ -364,6 +365,33 @@ describe('isStarted (issue #216)', () => {
   it('is true once any live assessment exists', () => {
     expect(
       isStarted([assessment({ id: 'x1', deletedAt: NOW.toISOString() }), assessment({ id: 'x2' })]),
+    ).toBe(true);
+  });
+});
+
+describe('isDraftWorthSaving (issue #217)', () => {
+  const initial = newAssessmentFields(null, '2026-01-01');
+
+  it('is false for the untouched draft with its pre-filled areas', () => {
+    expect(isDraftWorthSaving(initial, initial)).toBe(false);
+  });
+
+  it('is false for a whitespace-only note', () => {
+    const areas = initial.areas.map((area, i) => (i === 0 ? { ...area, note: '  ' } : area));
+    expect(isDraftWorthSaving({ areas }, initial)).toBe(false);
+  });
+
+  it('is true once an area is rated or a note is written', () => {
+    const rated = initial.areas.map((area, i) => (i === 0 ? { ...area, level: 2 as const } : area));
+    expect(isDraftWorthSaving({ areas: rated }, initial)).toBe(true);
+    const noted = initial.areas.map((area, i) => (i === 0 ? { ...area, note: 'Busy' } : area));
+    expect(isDraftWorthSaving({ areas: noted }, initial)).toBe(true);
+  });
+
+  it('is true once the area list itself changes', () => {
+    expect(isDraftWorthSaving({ areas: initial.areas.slice(1) }, initial)).toBe(true);
+    expect(
+      isDraftWorthSaving({ areas: [...initial.areas, { id: 'x', name: 'Health' }] }, initial),
     ).toBe(true);
   });
 });

@@ -155,6 +155,13 @@ export function addScript(scripts: readonly Script[], fields: ScriptFields, now:
   return [...scripts, newRecord(fields, now)];
 }
 
+/** Draft before record (issue #217): a new script's draft becomes a record once its one always-
+ * required field, the script text, is non-blank. Choosing a source, effect or decision alone keeps
+ * it a draft. */
+export function isDraftWorthSaving(draft: Pick<ScriptFields, 'text'>): boolean {
+  return draft.text.trim() !== '';
+}
+
 /** Replaces the fields of the live script `id` with `fields`, leaving every other script alone;
  * a no-op copy if `id` is not found or already tombstoned. */
 export function editScript(
