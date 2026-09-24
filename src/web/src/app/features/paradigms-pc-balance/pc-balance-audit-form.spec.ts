@@ -140,9 +140,9 @@ describe('PcBalanceAuditForm', () => {
     expect(assets[0].action).toBe('Sleep by 10pm');
   });
 
-  it('removes the matching asset', () => {
+  it('removes an untouched suggested asset at once', () => {
     const fixture = setUp(
-      audit({ assets: [asset({ key: 'k1' }), asset({ key: 'k2', name: 'other' })] }),
+      audit({ assets: [asset({ key: 'sleep', name: '' }), asset({ key: 'k2', name: 'other' })] }),
     );
     const emitted: unknown[] = [];
     fixture.componentInstance.changed.subscribe((event) => emitted.push(event));

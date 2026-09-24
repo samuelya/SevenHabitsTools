@@ -2,6 +2,7 @@ import {
   addBuiltInAsset,
   addNamedAsset,
   builtInKeyForName,
+  builtInLabelsFrom,
   builtInKeyOf,
   displayName,
   firstOfEachStatus,
@@ -51,6 +52,15 @@ describe('displayName', () => {
   });
 });
 
+describe('builtInLabelsFrom', () => {
+  it('maps each built-in key to its label once every label has loaded, else null', () => {
+    const loaded = ['Sleep', 'Exercise', 'Savings', 'Income skills', 'Partner', 'Team'];
+    expect(builtInLabelsFrom(loaded)).toEqual(LABELS);
+    expect(builtInLabelsFrom(['', '', '', '', '', ''])).toBeNull();
+    expect(builtInLabelsFrom(['Sleep'])).toBeNull();
+  });
+});
+
 describe('suggestedAssets', () => {
   it("offers a group's two built-ins until the audit holds them", () => {
     expect(suggestedAssets([], 'physical')).toEqual(['sleep', 'exercise']);
@@ -61,6 +71,11 @@ describe('suggestedAssets', () => {
 
   it('treats an older custom asset named like a built-in as that built-in', () => {
     expect(suggestedAssets([asset({ name: 'exercise' })], 'physical')).toEqual(['sleep']);
+  });
+
+  it('hides a chip whose label an asset of another group is already shown under (F7)', () => {
+    const assets = [asset({ name: 'Sleep', group: 'human' })];
+    expect(suggestedAssets(assets, 'physical')).toEqual(['exercise']);
   });
 });
 
@@ -75,11 +90,16 @@ describe('addBuiltInAsset', () => {
     const assets = [asset({ key: 'u2', name: 'Sleep' })];
     expect(addBuiltInAsset(assets, 'sleep')).toEqual(assets);
   });
+
+  it('adds nothing when an asset of another group is shown under its name, in either language (F7)', () => {
+    expect(addBuiltInAsset([asset({ name: 'sleep', group: 'human' })], 'sleep')).toHaveLength(1);
+    expect(addBuiltInAsset([asset({ name: 'النوم', group: 'human' })], 'sleep')).toHaveLength(1);
+  });
 });
 
 describe('addNamedAsset', () => {
   it('appends a custom asset with the trimmed name and a fresh key', () => {
-    const result = addNamedAsset([], '  My back ', 'physical', LABELS);
+    const result = addNamedAsset([], '  My back ', 'physical');
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.assets).toEqual([
@@ -90,7 +110,7 @@ describe('addNamedAsset', () => {
   });
 
   it("adds the built-in for one of the group's labels, in either language", () => {
-    const result = addNamedAsset([], 'النوم', 'physical', LABELS);
+    const result = addNamedAsset([], 'النوم', 'physical');
     expect(result).toMatchObject({ ok: true, key: 'sleep' });
     if (result.ok) {
       expect(result.assets[0]).toMatchObject({ key: 'sleep', name: '' });
@@ -98,41 +118,53 @@ describe('addNamedAsset', () => {
   });
 
   it('refuses a blank name', () => {
-    expect(addNamedAsset([], '   ', 'physical', LABELS)).toEqual({ ok: false, reason: 'blank' });
+    expect(addNamedAsset([], '   ', 'physical')).toEqual({ ok: false, reason: 'blank' });
   });
 
   it('refuses a name the audit already holds, typed or built-in', () => {
     const assets = [asset({ name: 'My back' }), asset({ key: 'sleep', name: '' })];
-    expect(addNamedAsset(assets, 'my BACK', 'physical', LABELS)).toEqual({
+    expect(addNamedAsset(assets, 'my BACK', 'physical')).toEqual({
       ok: false,
       reason: 'duplicate',
     });
-    expect(addNamedAsset(assets, 'Sleep', 'physical', LABELS)).toEqual({
+    expect(addNamedAsset(assets, 'Sleep', 'physical')).toEqual({
       ok: false,
       reason: 'duplicate',
     });
-    expect(addNamedAsset(assets, 'النوم', 'physical', LABELS)).toEqual({
+    expect(addNamedAsset(assets, 'النوم', 'physical')).toEqual({
       ok: false,
       reason: 'duplicate',
     });
+  });
+
+  it('refuses a name a built-in is shown under in the other language, whichever came first (F7)', () => {
+    const sleep = asset({ key: 'sleep', name: '' });
+    expect(addNamedAsset([sleep], 'النوم', 'human')).toEqual({ ok: false, reason: 'duplicate' });
+    const typed = asset({ name: 'النوم', group: 'human' });
+    expect(addNamedAsset([typed], 'Sleep', 'physical')).toEqual({ ok: false, reason: 'duplicate' });
   });
 });
 
 describe('hasAssetData', () => {
   it('is true once a slider moved off 3 or an action is typed', () => {
-    expect(hasAssetData({ p: 3, pc: 3 })).toBe(false);
-    expect(hasAssetData({ p: 3, pc: 3, action: '  ' })).toBe(false);
-    expect(hasAssetData({ p: 4, pc: 3 })).toBe(true);
-    expect(hasAssetData({ p: 3, pc: 2 })).toBe(true);
-    expect(hasAssetData({ p: 3, pc: 3, action: 'Walk' })).toBe(true);
+    expect(hasAssetData({ name: '', p: 3, pc: 3 })).toBe(false);
+    expect(hasAssetData({ name: '', p: 3, pc: 3, action: '  ' })).toBe(false);
+    expect(hasAssetData({ name: '', p: 4, pc: 3 })).toBe(true);
+    expect(hasAssetData({ name: '', p: 3, pc: 2 })).toBe(true);
+    expect(hasAssetData({ name: '', p: 3, pc: 3, action: 'Walk' })).toBe(true);
+  });
+
+  it('counts a typed or renamed name as data (F8)', () => {
+    expect(hasAssetData({ name: 'My back', p: 3, pc: 3 })).toBe(true);
+    expect(hasAssetData({ name: '  ', p: 3, pc: 3 })).toBe(false);
   });
 });
 
 describe('restoreAsset', () => {
   it('puts the asset back at its index, or at the end of a shorter list', () => {
-    const a = asset({ key: 'a' });
-    const b = asset({ key: 'b' });
-    const c = asset({ key: 'c' });
+    const a = asset({ key: 'a', name: 'A' });
+    const b = asset({ key: 'b', name: 'B' });
+    const c = asset({ key: 'c', name: 'C' });
     expect(restoreAsset([a, c], b, 1)).toEqual([a, b, c]);
     expect(restoreAsset([a], c, 5)).toEqual([a, c]);
   });
@@ -140,6 +172,25 @@ describe('restoreAsset', () => {
   it('adds nothing when the asset is already there', () => {
     const a = asset({ key: 'a' });
     expect(restoreAsset([a], a, 0)).toEqual([a]);
+  });
+
+  it('puts the ratings back into a built-in re-added since, without a second row (F4)', () => {
+    const other = asset({ key: 'u9', name: 'My back' });
+    const removed = asset({ key: 'sleep', name: '', p: 5, pc: 1, action: 'Bed by 11' });
+    const readded = asset({ key: 'sleep', name: '' });
+    expect(restoreAsset([other, readded], removed, 0)).toEqual([other, removed]);
+  });
+
+  it('puts an older typed built-in back in place of the chip re-added since (F4)', () => {
+    const removed = asset({ key: 'u2', name: 'Sleep', p: 5, pc: 1 });
+    const readded = asset({ key: 'sleep', name: '' });
+    expect(restoreAsset([readded], removed, 0)).toEqual([removed]);
+  });
+
+  it('puts a custom asset back in place of one retyped under its name since (F4)', () => {
+    const removed = asset({ key: 'u2', name: 'Gym', p: 5 });
+    const retyped = asset({ key: 'u3', name: 'gym' });
+    expect(restoreAsset([retyped], removed, 0)).toEqual([removed]);
   });
 });
 

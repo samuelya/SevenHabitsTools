@@ -223,18 +223,86 @@ describe('PcBalanceAuditForm (#223)', () => {
     expect(host.querySelector(`#${label.htmlFor}`)?.tagName).toBe('TEXTAREA');
   });
 
-  it('asks the page to confirm removing an asset holding a rating; removes an untouched one', () => {
+  it('asks the page to confirm removing an asset holding a rating or a typed name; removes an untouched suggested one', () => {
     const harness = setUp(
-      audit({ assets: [asset({ key: 'a', p: 4 }), asset({ key: 'b', name: 'Knees' })] }),
+      audit({
+        assets: [
+          asset({ key: 'a', p: 4 }),
+          asset({ key: 'b', name: 'Knees' }),
+          asset({ key: 'sleep', name: '' }),
+        ],
+      }),
     );
     const removeButtons = () => harness.host.querySelectorAll<HTMLButtonElement>('.remove-asset');
 
     removeButtons()[0].click();
-    expect(harness.removeRequests).toEqual(['a']);
+    removeButtons()[1].click();
+    expect(harness.removeRequests).toEqual(['a', 'b']);
     expect(harness.emitted).toEqual([]);
 
-    removeButtons()[1].click();
-    expect(harness.emitted).toEqual([{ assets: [asset({ key: 'a', p: 4 })] }]);
+    removeButtons()[2].click();
+    expect(harness.emitted).toEqual([
+      { assets: [asset({ key: 'a', p: 4 }), asset({ key: 'b', name: 'Knees' })] },
+    ]);
+  });
+
+  describe('focus after a removal (F1)', () => {
+    const rated = (key: string, name: string) => asset({ key, name, p: 5, pc: 1 });
+    const addField = (harness: Harness) =>
+      harness.host.querySelector<HTMLInputElement>('[data-add-group="physical"] input');
+
+    async function requestRemoval(harness: Harness): Promise<void> {
+      harness.host.querySelector<HTMLButtonElement>('.remove-asset')!.click();
+      harness.fixture.detectChanges();
+      await harness.fixture.whenStable();
+    }
+
+    async function settle(harness: Harness, next: PcAudit): Promise<void> {
+      harness.fixture.componentRef.setInput('audit', next);
+      harness.fixture.detectChanges();
+      await harness.fixture.whenStable();
+      harness.fixture.detectChanges();
+    }
+
+    it('moves focus to the add field once the confirmed asset has gone', async () => {
+      const harness = setUp(audit({ assets: [rated('a', 'A'), rated('b', 'B')] }));
+      await requestRemoval(harness);
+
+      await settle(harness, audit({ assets: [rated('b', 'B')] }));
+
+      expect(document.activeElement).toBe(addField(harness));
+    });
+
+    it('leaves focus alone after a Cancel, when the asset goes later for another reason', async () => {
+      const harness = setUp(audit({ assets: [rated('a', 'A'), rated('b', 'B')] }));
+      await requestRemoval(harness);
+      harness.fixture.componentInstance.cancelAssetRemoval('a');
+
+      await settle(harness, audit({ assets: [rated('b', 'B')] }));
+
+      expect(document.activeElement).not.toBe(addField(harness));
+    });
+
+    it('leaves focus alone after a refused removal', async () => {
+      const harness = setUp(audit({ assets: [rated('a', 'A'), rated('b', 'B')] }));
+      await requestRemoval(harness);
+      harness.fixture.componentRef.setInput('refusedEdits', 1);
+      harness.fixture.detectChanges();
+      await harness.fixture.whenStable();
+
+      await settle(harness, audit({ assets: [rated('b', 'B')] }));
+
+      expect(document.activeElement).not.toBe(addField(harness));
+    });
+
+    it('leaves focus alone when another audit opens without that asset', async () => {
+      const harness = setUp(audit({ assets: [rated('a', 'A'), rated('b', 'B')] }));
+      await requestRemoval(harness);
+
+      await settle(harness, audit({ id: 'a2', assets: [rated('c', 'C')] }));
+
+      expect(document.activeElement).not.toBe(addField(harness));
+    });
   });
 
   it('offers no Remove on the only asset: an audit keeps at least one', () => {

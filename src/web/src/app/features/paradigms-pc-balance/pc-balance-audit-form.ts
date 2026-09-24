@@ -167,8 +167,14 @@ export class PcBalanceAuditForm {
 
   /** A typed asset waiting to be stored: its field clears once it is (or stays, if refused). */
   private pendingName: { readonly group: PcBalanceGroup; readonly key: string } | null = null;
-  /** An asset being removed: focus moves to its group's add field once it has gone. */
-  private pendingRemoval: { readonly group: PcBalanceGroup; readonly key: string } | null = null;
+  /** An asset being removed from audit `auditId`: focus moves to its group's add field once it
+   * has gone. Dropped on Cancel (`cancelAssetRemoval()`), on a refused edit and on another audit,
+   * so focus never jumps later for a removal that didn't happen. */
+  private pendingRemoval: {
+    readonly auditId: string;
+    readonly group: PcBalanceGroup;
+    readonly key: string;
+  } | null = null;
 
   constructor() {
     effect(() => {
@@ -184,12 +190,16 @@ export class PcBalanceAuditForm {
       if (this.refusedEdits() !== refused) {
         refused = this.refusedEdits();
         this.pendingName = null;
+        this.pendingRemoval = null;
       }
     });
     effect(() => {
       const assets = this.assets();
+      const auditId = this.auditId();
       const removal = this.pendingRemoval;
-      if (removal && !assets.some((asset) => asset.key === removal.key)) {
+      if (removal && removal.auditId !== auditId) {
+        this.pendingRemoval = null;
+      } else if (removal && !assets.some((asset) => asset.key === removal.key)) {
         this.pendingRemoval = null;
         this.focusAfterRender(`[data-add-group="${removal.group}"] input`);
       }
@@ -229,12 +239,7 @@ export class PcBalanceAuditForm {
   /** Enter in a group's field, or its Add button. */
   protected onAddNamed(group: PcBalanceGroup, event?: Event): void {
     event?.preventDefault();
-    const result = addNamedAsset(
-      this.assets(),
-      this.draftNames()[group],
-      group,
-      this.builtInLabels(),
-    );
+    const result = addNamedAsset(this.assets(), this.draftNames()[group], group);
     if (!result.ok) {
       this.duplicateGroup.set(result.reason === 'duplicate' ? group : null);
       return;
@@ -265,12 +270,22 @@ export class PcBalanceAuditForm {
     if (!this.removable()) {
       return;
     }
+    const removal = { auditId: this.auditId(), group: asset.group, key: asset.key };
     if (hasAssetData(asset)) {
+      this.pendingRemoval = removal;
       this.assetRemoveRequested.emit(asset.key);
     } else {
       this.emitAssets(removeAsset(this.assets(), asset.key));
+      this.pendingRemoval = removal;
     }
-    this.pendingRemoval = { group: asset.group, key: asset.key };
+  }
+
+  /** The page's confirm for `assetRemoveRequested` was cancelled: the asset stays, so focus stays
+   * where it is. */
+  cancelAssetRemoval(key: string): void {
+    if (this.pendingRemoval?.key === key) {
+      this.pendingRemoval = null;
+    }
   }
 
   protected onReflectionChanged(auditId: string, reflection: string): void {

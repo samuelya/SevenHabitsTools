@@ -1,5 +1,6 @@
 import documentV1Fixture from '../../testing/fixtures/document-v1.json';
 import documentV2Fixture from '../../testing/fixtures/document-v2.json';
+import { CURRENT_SCHEMA_VERSION } from '../../core/data/document.model';
 import { resolveDocument } from '../../core/data/document-validation';
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
@@ -131,7 +132,7 @@ describe('paradigms-maturity model', () => {
     if (!result.ok) {
       throw new Error('the v1 document did not load');
     }
-    expect(result.document.schemaVersion).toBe(2);
+    expect(result.document.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.document.habits).toEqual(v1['habits']);
   });
 });

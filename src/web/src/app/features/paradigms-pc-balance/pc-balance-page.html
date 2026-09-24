@@ -31,16 +31,18 @@
 
   <div editor>
     @if (draft.selected(); as audit) {
-      <app-pc-balance-audit-form
-        #auditForm
-        [audit]="audit"
-        [unsaved]="draft.unsaved()"
-        [builtInLabels]="builtInLabels()"
-        [refusedEdits]="refusedEdits()"
-        (changed)="onAuditChanged(audit.id, $event)"
-        (assetRemoveRequested)="onAssetRemoveRequested(audit.id, $event)"
-        (reflectionChanged)="onReflectionChanged($event, auditForm)"
-      />
+      @if (builtInLabels(); as labels) {
+        <app-pc-balance-audit-form
+          #auditForm
+          [audit]="audit"
+          [unsaved]="draft.unsaved()"
+          [builtInLabels]="labels"
+          [refusedEdits]="refusedEdits()"
+          (changed)="onAuditChanged(audit.id, $event)"
+          (assetRemoveRequested)="onAssetRemoveRequested(audit.id, $event, auditForm)"
+          (reflectionChanged)="onReflectionChanged($event, auditForm)"
+        />
+      }
     }
   </div>
 

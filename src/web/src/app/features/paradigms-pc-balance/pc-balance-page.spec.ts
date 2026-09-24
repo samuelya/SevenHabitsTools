@@ -7,6 +7,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
 import '../../features/settings/settings.model';
+import { DocumentStore } from '../../core/data/document.store';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
@@ -253,6 +254,39 @@ describe('PcBalancePage', () => {
 
     deleteWithUndo.calls[0].onUndo();
     harness.detectChanges();
+    expect(storedAudits()[0].assets.map((asset) => asset.name)).toEqual(['Knees', 'Car']);
+  });
+
+  it('a read-only tab opens no remove confirm and says nothing was removed (#223 F2)', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp(undefined, deleteWithUndo);
+    await addAudit(harness);
+    addAssetThroughForm(harness, 0, 'Knees', 5, 1);
+    addAssetThroughForm(harness, 1, 'Car', 3, 3);
+    (TestBed.inject(WRITER_LOCK).isWriter as ReturnType<typeof signal<boolean>>).set(false);
+    const refusedBefore = TestBed.inject(DocumentStore).refusedEdits();
+
+    const host = harness.routeNativeElement as HTMLElement;
+    (host.querySelector('.remove-asset') as HTMLButtonElement).click();
+    harness.detectChanges();
+
+    expect(deleteWithUndo.calls).toHaveLength(0);
+    expect(TestBed.inject(DocumentStore).refusedEdits()).toBe(refusedBefore + 1);
+    expect(storedAudits()[0].assets.map((asset) => asset.name)).toEqual(['Knees', 'Car']);
+  });
+
+  it('removing an unrated asset with a typed name still confirms, with Undo (#223 F8)', async () => {
+    const deleteWithUndo = fakeDeleteWithUndo();
+    const harness = await setUp(undefined, deleteWithUndo);
+    await addAudit(harness);
+    addAssetThroughForm(harness, 0, 'Knees', 3, 3);
+    addAssetThroughForm(harness, 1, 'Car', 3, 3);
+    const host = harness.routeNativeElement as HTMLElement;
+
+    (host.querySelector('.remove-asset') as HTMLButtonElement).click();
+
+    expect(deleteWithUndo.calls).toHaveLength(1);
+    expect(deleteWithUndo.calls[0].confirm?.title).toBe('Remove Knees?');
     expect(storedAudits()[0].assets.map((asset) => asset.name)).toEqual(['Knees', 'Car']);
   });
 

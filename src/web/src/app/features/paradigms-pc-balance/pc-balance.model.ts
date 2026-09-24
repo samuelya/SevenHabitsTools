@@ -39,7 +39,8 @@ export function isBuiltInAssetKey(key: string): key is PcBuiltInAssetKey {
  * `track` id — never a `BaseRecord.id`: a UUID for an asset the user named, or the built-in key
  * of a suggested asset (issue #223; one per audit, so still unique), whose `name` is then `''`
  * and whose label is translated at render. Playbook §3's `{ key?, name? }` rule, within the
- * existing required-string shape, so `validate()` and the schema version are unchanged.
+ * existing required-string shape, so `validate()` is unchanged; the stored value's meaning did
+ * change, hence schema v3 (`migration-v2-to-v3.ts`).
  */
 export interface PcAsset {
   readonly key: string;
