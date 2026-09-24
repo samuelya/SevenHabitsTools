@@ -1,4 +1,5 @@
 import { softDelete, touch, isLive } from '../../core/data/record';
+import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
   ChecklistLabels,
@@ -43,6 +44,12 @@ export function liveScripts(scripts: readonly Script[]): Script[] {
  * collapse both read this. */
 export function isStarted(scripts: readonly Script[]): boolean {
   return scripts.some(isLive);
+}
+
+/** The hub's in-progress text (issue #219): "3 patterns", one per live script; `null` with none. */
+export function hubStatus(scripts: readonly Script[]): ExerciseHubStatus | null {
+  const count = liveScripts(scripts).length;
+  return count > 0 ? { key: 'habits.exercises.paradigms-transition.patternCount', count } : null;
 }
 
 /** The four gate items (issue #215), in the order the item form asks for them. */

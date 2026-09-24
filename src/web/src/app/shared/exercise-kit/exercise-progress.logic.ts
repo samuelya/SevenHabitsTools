@@ -1,7 +1,7 @@
 import { HabitId } from '../../core/habits/habits';
 import { newRecord, touch } from '../../core/data/record';
 import { ExerciseCompletion } from './exercise-kit.model';
-import { ExerciseRegistryEntry, exercisesForHabit } from './exercise-registry';
+import { ExerciseRegistryEntry, exercisesForHabit, sortByOrder } from './exercise-registry';
 
 /** `done`/`total` exercises a habit has, per its registered `ExerciseRegistryEntry`s. */
 export interface HabitExerciseProgress {
@@ -84,4 +84,14 @@ export function progressForHabit(
   const exerciseIds = exercisesForHabit(registry, habit).map((entry) => entry.exerciseId);
   const done = exerciseIds.filter((exerciseId) => isExerciseDone(completions, exerciseId)).length;
   return { done, total: exerciseIds.length };
+}
+
+/** The "Continue" target (issue #219, for the habit hub and later Today): the first exercise in
+ * chapter order (`sortByOrder()`) that isn't done yet. `undefined` when every exercise is done, or
+ * none are given. Sorts itself, so a caller can't pass registration order by mistake. */
+export function nextExercise(
+  exercises: readonly ExerciseRegistryEntry[],
+  isDone: (exerciseId: string) => boolean,
+): ExerciseRegistryEntry | undefined {
+  return sortByOrder(exercises).find((exercise) => !isDone(exercise.exerciseId));
 }

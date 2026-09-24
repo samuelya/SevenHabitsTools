@@ -7,6 +7,7 @@ import {
   reopenCompletion,
   upsertDoneCompletion,
 } from './exercise-progress.logic';
+import { nextExercise } from './exercise-progress.logic';
 
 const NOW = new Date('2026-01-02T10:00:00.000Z');
 const LATER = new Date('2026-01-03T10:00:00.000Z');
@@ -125,7 +126,6 @@ describe('progressForHabit', () => {
       habit: 'h2',
       titleKey: 'mission.title',
       shortTitleKey: 'mission.shortTitle',
-      summaryKey: 'mission.summary',
       icon: 'flag',
       route: 'habits/h2/mission',
     },
@@ -134,7 +134,6 @@ describe('progressForHabit', () => {
       habit: 'h2',
       titleKey: 'roles.title',
       shortTitleKey: 'roles.shortTitle',
-      summaryKey: 'roles.summary',
       icon: 'flag',
       route: 'habits/h2/roles',
     },
@@ -143,7 +142,6 @@ describe('progressForHabit', () => {
       habit: 'h1',
       titleKey: 'proactive.title',
       shortTitleKey: 'proactive.shortTitle',
-      summaryKey: 'proactive.summary',
       icon: 'flag',
       route: 'habits/h1/proactive',
     },
@@ -158,5 +156,40 @@ describe('progressForHabit', () => {
 
   it('is 0/0 for a habit with no registered exercises', () => {
     expect(progressForHabit([], registry, 'h3')).toEqual({ done: 0, total: 0 });
+  });
+});
+
+describe('nextExercise (#219)', () => {
+  function entry(exerciseId: string, order?: number): ExerciseRegistryEntry {
+    return {
+      exerciseId,
+      habit: 'h2',
+      titleKey: `${exerciseId}.title`,
+      shortTitleKey: `${exerciseId}.shortTitle`,
+      icon: 'flag',
+      route: `habits/h2/${exerciseId}`,
+      ...(order === undefined ? {} : { order }),
+    };
+  }
+
+  it('is undefined when nothing is given', () => {
+    expect(nextExercise([], () => false)).toBeUndefined();
+  });
+
+  it('is the first exercise in chapter order that is not done, whatever the registration order', () => {
+    const exercises = [entry('roles', 20), entry('mission', 10), entry('goals', 30)];
+    expect(nextExercise(exercises, () => false)?.exerciseId).toBe('mission');
+    expect(nextExercise(exercises, (id) => id === 'mission')?.exerciseId).toBe('roles');
+  });
+
+  it('falls back to registration order for entries without an order', () => {
+    const exercises = [entry('mission'), entry('roles')];
+    expect(nextExercise(exercises, (id) => id === 'mission')?.shortTitleKey).toBe(
+      'roles.shortTitle',
+    );
+  });
+
+  it('is undefined once every exercise is done', () => {
+    expect(nextExercise([entry('mission'), entry('roles')], () => true)).toBeUndefined();
   });
 });

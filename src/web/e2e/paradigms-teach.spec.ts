@@ -93,7 +93,7 @@ test.describe('teach-to-learn tracker', () => {
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');
-    await expect(page.locator('app-habit-hub-page .hub-exercise-status')).toBeVisible();
+    await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
   });
 
   test('shows all ten chapters and highlights an overdue one', async ({ page, seedDocument }) => {

@@ -55,10 +55,12 @@ describe('paradigms-perception model', () => {
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-perception.title',
       shortTitleKey: 'habits.exercises.paradigms-perception.shortTitle',
-      summaryKey: 'habits.exercises.paradigms-perception.summary',
       icon: 'visibility',
       route: 'habits/paradigms/perception',
       // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      // Issue #219: chapter order on the hub, and the status column's in-progress text.
+      order: 10,
+      statusFactory: expect.any(Function),
       isStarted: expect.any(Function),
     });
   });

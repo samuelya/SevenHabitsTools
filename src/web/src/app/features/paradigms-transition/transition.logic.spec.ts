@@ -15,6 +15,7 @@ import {
   toListItem,
   isStarted,
 } from './transition.logic';
+import { hubStatus } from './transition.logic';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
 
@@ -319,5 +320,18 @@ describe('isStarted (issue #216)', () => {
     expect(
       isStarted([script({ id: 'x1', deletedAt: NOW.toISOString() }), script({ id: 'x2' })]),
     ).toBe(true);
+  });
+});
+
+describe('hubStatus (#219)', () => {
+  it('is null with no live script', () => {
+    expect(hubStatus([])).toBeNull();
+    expect(hubStatus([script({ deletedAt: NOW.toISOString() })])).toBeNull();
+  });
+
+  it('counts live scripts as patterns', () => {
+    expect(
+      hubStatus([script({ id: 'a' }), script({ id: 'b' }), script({ id: 'c', deletedAt: 'x' })]),
+    ).toEqual({ key: 'habits.exercises.paradigms-transition.patternCount', count: 2 });
   });
 });

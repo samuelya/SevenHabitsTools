@@ -59,9 +59,9 @@ describe('paradigms-teach model', () => {
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-teach.title',
       shortTitleKey: 'habits.exercises.paradigms-teach.shortTitle',
-      summaryKey: 'habits.exercises.paradigms-teach.summary',
       icon: 'campaign',
       route: 'habits/paradigms/teach',
+      order: 50,
     });
     expect(entry?.statusFactory).toBeInstanceOf(Function);
     expect(entry?.isStarted).toBeInstanceOf(Function);

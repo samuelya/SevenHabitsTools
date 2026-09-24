@@ -62,7 +62,6 @@ describe('ExerciseProgress', () => {
         habit: 'h2',
         titleKey: 'mission.title',
         shortTitleKey: 'mission.shortTitle',
-        summaryKey: 'mission.summary',
         icon: 'flag',
         route: 'habits/h2/mission',
       });
@@ -71,7 +70,6 @@ describe('ExerciseProgress', () => {
         habit: 'h2',
         titleKey: 'roles.title',
         shortTitleKey: 'roles.shortTitle',
-        summaryKey: 'roles.summary',
         icon: 'flag',
         route: 'habits/h2/roles',
       });

@@ -49,10 +49,12 @@ describe('paradigms-maturity model', () => {
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-maturity.title',
       shortTitleKey: 'habits.exercises.paradigms-maturity.shortTitle',
-      summaryKey: 'habits.exercises.paradigms-maturity.summary',
       icon: 'stairs',
       route: 'habits/paradigms/maturity',
       // Issue #216: built from this exercise's own pure `isStarted()` predicate.
+      // Issue #219: chapter order on the hub, and the status column's in-progress text.
+      order: 40,
+      statusFactory: expect.any(Function),
       isStarted: expect.any(Function),
     });
   });

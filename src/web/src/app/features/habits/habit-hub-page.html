@@ -1,21 +1,15 @@
 @if (habitDefinition(); as definition) {
-  <h1 class="page-heading">{{ definition.titleKey | transloco }}</h1>
-  <p class="hub-intro">{{ 'habits.hub.intro.' + definition.id | transloco }}</p>
-}
-
-@if (hubActions().length) {
-  <div class="hub-actions">
-    @for (action of hubActions(); track action.id) {
-      <a
-        mat-stroked-button
-        class="hub-action"
-        [routerLink]="'/' + action.route"
-        [queryParams]="queryParamsFor(action)"
-      >
-        <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
-        {{ action.labelKey | transloco }}
-      </a>
-    }
+  <div class="hub-heading">
+    <h1 class="page-heading">{{ definition.titleKey | transloco }}</h1>
+    <button
+      mat-icon-button
+      type="button"
+      class="hub-about"
+      [attr.aria-label]="'habits.hub.aboutHabit' | transloco"
+      (click)="openAbout(definition.id)"
+    >
+      <mat-icon aria-hidden="true">info</mat-icon>
+    </button>
   </div>
 }
 
@@ -27,48 +21,63 @@
 }
 
 @if (isEmpty()) {
-  <p>{{ 'habits.hub.noExercises' | transloco }}</p>
+  <p class="hub-empty">{{ 'habits.hub.noExercises' | transloco }}</p>
 } @else {
-  <mat-nav-list>
+  <mat-nav-list class="hub-list">
     @for (exercise of exercises(); track exercise.exerciseId) {
-      @let done = progress.isDone(exercise.exerciseId)();
+      @let status = rowStatusFor(exercise);
       <a mat-list-item class="hub-exercise" [routerLink]="'/' + exercise.route">
-        <mat-icon matListItemIcon aria-hidden="true">{{ exercise.icon }}</mat-icon>
-        <span matListItemTitle class="hub-exercise-title">{{
-          exercise.shortTitleKey | transloco
-        }}</span>
-        <span matListItemLine>{{ exercise.summaryKey | transloco }}</span>
-        @if (done) {
-          <span matListItemMeta class="hub-status">
-            <mat-icon aria-hidden="true">check_circle</mat-icon>
-            {{
-              'habits.hub.completedAt'
-                | transloco
-                  : {
-                      time:
-                        progress.completedAt(exercise.exerciseId)()
-                        | appDate: { dateStyle: 'medium' },
-                    }
-            }}
-          </span>
-        }
-        @if (statusFor(exercise); as statusSignal) {
-          @if (statusSignal(); as status) {
-            <span matListItemLine class="hub-exercise-status">
-              {{ status.key | appPlural: status.count }}
+        <span matListItemTitle class="hub-row">
+          <span class="hub-number" aria-hidden="true">{{ $index + 1 }}</span>
+          <span class="hub-exercise-title">{{ exercise.shortTitleKey | transloco }}</span>
+          @if (status.kind === 'done') {
+            <span class="hub-row-status hub-status">
+              <mat-icon aria-hidden="true">check_circle</mat-icon>
+              {{
+                'habits.hub.completedAt'
+                  | transloco: { time: status.completedAt | appDate: { dateStyle: 'medium' } }
+              }}
             </span>
+          } @else if (status.kind === 'progress') {
+            <span class="hub-row-status hub-exercise-status">
+              {{ status.status.key | appPlural: status.status.count : status.status.params }}
+            </span>
+          } @else if (status.kind === 'started') {
+            <span class="hub-row-status hub-in-progress">{{
+              'habits.hub.inProgress' | transloco
+            }}</span>
+          } @else {
+            <span class="hub-row-status hub-not-started">{{
+              'habits.hub.notStarted' | transloco
+            }}</span>
           }
-        }
+        </span>
       </a>
     }
     @for (entry of comingSoon(); track entry.shortTitleKey + '-' + $index) {
       <div mat-list-item class="hub-exercise hub-coming-soon">
-        <mat-icon matListItemIcon aria-hidden="true">hourglass_empty</mat-icon>
-        <span matListItemTitle class="hub-exercise-title">{{
-          entry.shortTitleKey | transloco
-        }}</span>
-        <span matListItemLine>{{ 'habits.hub.comingSoon' | transloco }}</span>
+        <span matListItemTitle class="hub-row">
+          <span class="hub-number" aria-hidden="true">{{ exercises().length + $index + 1 }}</span>
+          <span class="hub-exercise-title">{{ entry.shortTitleKey | transloco }}</span>
+          <span class="hub-row-status">{{ 'habits.hub.comingSoon' | transloco }}</span>
+        </span>
       </div>
     }
   </mat-nav-list>
+}
+
+@if (hubActions().length) {
+  <div class="hub-actions">
+    @for (action of hubActions(); track action.id) {
+      <a
+        mat-button
+        class="hub-action"
+        [routerLink]="'/' + action.route"
+        [queryParams]="queryParamsFor(action)"
+      >
+        <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+        {{ action.labelKey | transloco }}
+      </a>
+    }
+  </div>
 }

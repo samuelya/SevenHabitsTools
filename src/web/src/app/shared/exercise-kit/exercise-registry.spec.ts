@@ -1,8 +1,11 @@
 import {
+  ExerciseRegistryEntry,
+  exercisesForHabit,
   getRegisteredExercises,
   registerExercise,
   resetExerciseRegistryForTesting,
   snapshotExerciseRegistryForTesting,
+  sortByOrder,
 } from './exercise-registry';
 
 describe('exercise-registry', () => {
@@ -23,7 +26,6 @@ describe('exercise-registry', () => {
       habit: 'h2',
       titleKey: 'mission.title',
       shortTitleKey: 'mission.shortTitle',
-      summaryKey: 'mission.summary',
       icon: 'flag',
       route: 'habits/h2/mission',
     });
@@ -32,7 +34,6 @@ describe('exercise-registry', () => {
       habit: 'h2',
       titleKey: 'roles.title',
       shortTitleKey: 'roles.shortTitle',
-      summaryKey: 'roles.summary',
       icon: 'flag',
       route: 'habits/h2/roles',
     });
@@ -47,7 +48,6 @@ describe('exercise-registry', () => {
       habit: 'h2',
       titleKey: 'mission.title',
       shortTitleKey: 'mission.shortTitle',
-      summaryKey: 'mission.summary',
       icon: 'flag',
       route: 'habits/h2/mission',
     });
@@ -58,7 +58,6 @@ describe('exercise-registry', () => {
         habit: 'h2',
         titleKey: 'other',
         shortTitleKey: 'other',
-        summaryKey: 'other.summary',
         icon: 'flag',
         route: 'other',
       }),
@@ -72,7 +71,6 @@ describe('exercise-registry', () => {
       habit: 'h2',
       titleKey: 'mission.title',
       shortTitleKey: 'mission.shortTitle',
-      summaryKey: 'mission.summary',
       icon: 'flag',
       route: 'habits/h2/mission',
     });
@@ -83,10 +81,52 @@ describe('exercise-registry', () => {
         habit: 'h2',
         titleKey: 'roles.title',
         shortTitleKey: 'roles.shortTitle',
-        summaryKey: 'roles.summary',
         icon: 'flag',
         route: 'habits/h2/mission',
       }),
     ).toThrow('"habits/h2/mission"');
+  });
+});
+
+describe('sortByOrder / exercisesForHabit (#219)', () => {
+  function entry(exerciseId: string, order?: number, habit: 'h1' | 'h2' = 'h2') {
+    const base: ExerciseRegistryEntry = {
+      exerciseId,
+      habit,
+      titleKey: `${exerciseId}.title`,
+      shortTitleKey: `${exerciseId}.shortTitle`,
+      icon: 'flag',
+      route: `habits/${habit}/${exerciseId}`,
+    };
+    return order === undefined ? base : { ...base, order };
+  }
+
+  it('sorts by order, lowest first', () => {
+    const sorted = sortByOrder([entry('c', 30), entry('a', 10), entry('b', 20)]);
+    expect(sorted.map((e) => e.exerciseId)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('puts entries without an order last, in their given (registration) order', () => {
+    const sorted = sortByOrder([entry('x'), entry('b', 20), entry('y'), entry('a', 10)]);
+    expect(sorted.map((e) => e.exerciseId)).toEqual(['a', 'b', 'x', 'y']);
+  });
+
+  it('keeps the given order for equal orders and when nothing has an order', () => {
+    expect(sortByOrder([entry('b', 5), entry('a', 5)]).map((e) => e.exerciseId)).toEqual([
+      'b',
+      'a',
+    ]);
+    expect(sortByOrder([entry('b'), entry('a')]).map((e) => e.exerciseId)).toEqual(['b', 'a']);
+  });
+
+  it('does not mutate its input', () => {
+    const input = [entry('b', 2), entry('a', 1)];
+    sortByOrder(input);
+    expect(input.map((e) => e.exerciseId)).toEqual(['b', 'a']);
+  });
+
+  it('filters to one habit and returns it in chapter order', () => {
+    const registry = [entry('late', 20), entry('other', 1, 'h1'), entry('early', 10)];
+    expect(exercisesForHabit(registry, 'h2').map((e) => e.exerciseId)).toEqual(['early', 'late']);
   });
 });

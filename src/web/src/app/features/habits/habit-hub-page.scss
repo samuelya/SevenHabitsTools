@@ -1,4 +1,16 @@
-.hub-intro {
+.hub-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+
+  .page-heading {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
+}
+
+.hub-about {
+  flex: none;
   color: var(--mat-sys-on-surface-variant, gray);
 }
 
@@ -10,38 +22,59 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-block-end: 1rem;
+  margin-block-start: 0.5rem;
 }
 
 .hub-action {
   min-block-size: 44px;
 }
 
-.hub-exercise-status {
-  color: var(--mat-sys-on-surface-variant, gray);
-  font-size: 0.75rem;
+// A row wraps rather than ending in an ellipsis (#218, #219: nothing truncated at 360 px, whatever
+// the platform's font metrics). Material fixes a one-line item's height, so let it grow.
+.mat-mdc-list-item.hub-exercise {
+  block-size: auto;
+  min-block-size: var(--mat-list-list-item-one-line-container-height, 48px);
+  padding-block: 8px;
 }
 
-.hub-status {
+// number · title · status: one line when they fit; otherwise the status column drops under the
+// title (Linux renders text a few % wider than macOS, #218), never an ellipsis.
+.hub-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.75rem;
+  row-gap: 0.125rem;
+  white-space: normal;
+}
+
+.hub-number {
+  flex: none;
+  min-inline-size: 1.25rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-variant-numeric: tabular-nums;
+}
+
+.hub-exercise-title {
+  flex: 1 1 auto;
+  white-space: normal;
+}
+
+.hub-row-status {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+  margin-inline-start: auto;
   color: var(--mat-sys-on-surface-variant, gray);
   font-size: 0.75rem;
+
+  mat-icon {
+    inline-size: 1rem;
+    block-size: 1rem;
+    font-size: 1rem;
+  }
 }
 
 .hub-coming-soon {
   opacity: 0.7;
-}
-
-// A title wraps rather than ending in an ellipsis (#218: no truncated title at 360 px, whatever
-// the platform's font metrics). Material fixes a two- or three-line item's height, so let it grow.
-.mat-mdc-list-item.hub-exercise {
-  block-size: auto;
-  min-block-size: var(--mat-list-list-item-two-line-container-height, 64px);
-  padding-block: 8px;
-}
-
-.hub-exercise-title {
-  white-space: normal;
 }

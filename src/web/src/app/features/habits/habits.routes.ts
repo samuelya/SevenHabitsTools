@@ -22,7 +22,9 @@ export const habitTitle: ResolveFn<string> = (route) => {
 export default [
   {
     path: '',
-    providers: [provideTranslocoScope('habits')],
+    // `exercise-kit`: the hub's "About this habit" reuses the exercise guide dialog (#219), which
+    // reads its close label from that scope through the hub's own view container.
+    providers: [provideTranslocoScope('habits'), provideTranslocoScope('exercise-kit')],
     children: [
       { path: '', pathMatch: 'full', title: 'titles.habits', component: HabitsPage },
       { path: ':habit', canMatch: [habitIdMatch], title: habitTitle, component: HabitHubPage },

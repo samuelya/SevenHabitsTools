@@ -3,36 +3,40 @@ import {
   Component,
   Injector,
   Signal,
+  ViewContainerRef,
   computed,
   inject,
   input,
-  runInInjectionContext,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { RouterLink } from '@angular/router';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AppDatePipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
-import { findHabit, isHabitId } from '../../core/habits/habits';
+import { HabitId, findHabit, isHabitId } from '../../core/habits/habits';
+import { ExerciseGuideOpener } from '../../shared/exercise-kit/exercise-guide/exercise-guide-opener';
+import { exerciseStatusSignal } from '../../shared/exercise-kit/exercise-hub-status';
+import { nextExercise } from '../../shared/exercise-kit/exercise-progress.logic';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
-  ExerciseHubStatus,
   ExerciseRegistryEntry,
   exercisesForHabit,
   getRegisteredExercises,
 } from '../../shared/exercise-kit/exercise-registry';
+import { exerciseStartedSignal } from '../../shared/exercise-kit/exercise-started';
 import {
   HubActionEntry,
   getRegisteredHubActions,
 } from '../../shared/exercise-kit/hub-action-registry';
 import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
-import { nextExercise } from './habit-hub.logic';
+import { HubRowStatus, hubRowStatus } from './habit-hub.logic';
 
-/** Hub for one habit: lists its registered exercises with progress, an unregistered "coming soon"
- * preview when the feature flag (`HABIT_HUB_COMING_SOON`) lists any, and a 'Continue' action to
- * the first not-done exercise. */
+/** Hub for one habit (issue #219): its long title with an "About this habit" dialog, a 'Continue'
+ * action to the first not-done exercise, the exercises in chapter order with a status column, an
+ * unregistered "coming soon" preview when the feature flag (`HABIT_HUB_COMING_SOON`) lists any, and
+ * the hub actions ("Teach this chapter") last. */
 @Component({
   selector: 'app-habit-hub-page',
   imports: [
@@ -52,6 +56,9 @@ export class HabitHubPage {
   protected readonly progress = inject(ExerciseProgress);
   private readonly comingSoonRegistry = inject(HABIT_HUB_COMING_SOON);
   private readonly injector = inject(Injector);
+  private readonly guideOpener = inject(ExerciseGuideOpener);
+  private readonly viewContainerRef = inject(ViewContainerRef);
+  private readonly transloco = inject(TranslocoService);
 
   /** Route parameter, bound through `withComponentInputBinding`. */
   readonly habit = input.required<string>();
@@ -105,20 +112,36 @@ export class HabitHubPage {
     return params();
   }
 
-  /** One memoized status `Signal` per `exerciseId` (same reasoning as `ExerciseProgress`'s own
-   * caches): a list row calls this inline on every render, so a fresh `runInInjectionContext()`
-   * call each time would mint a new signal node per render instead of reusing one. */
-  private readonly statusCache = new Map<string, Signal<ExerciseHubStatus | null>>();
+  /** One memoized row status per `exerciseId` (same reasoning as `ExerciseProgress`'s own caches):
+   * a list row reads this inline on every render, so a fresh factory call each time would mint new
+   * signal nodes per render instead of reusing one. */
+  private readonly rowStatusCache = new Map<string, Signal<HubRowStatus>>();
 
-  protected statusFor(entry: ExerciseRegistryEntry): Signal<ExerciseHubStatus | null> | null {
-    if (!entry.statusFactory) {
-      return null;
-    }
-    let status = this.statusCache.get(entry.exerciseId);
+  protected rowStatusFor(entry: ExerciseRegistryEntry): HubRowStatus {
+    let status = this.rowStatusCache.get(entry.exerciseId);
     if (!status) {
-      status = runInInjectionContext(this.injector, entry.statusFactory);
-      this.statusCache.set(entry.exerciseId, status);
+      const started = exerciseStartedSignal(entry, this.injector);
+      const exerciseStatus = exerciseStatusSignal(entry, this.injector);
+      const done = this.progress.isDone(entry.exerciseId);
+      const completedAt = this.progress.completedAt(entry.exerciseId);
+      status = computed(() => hubRowStatus(done(), completedAt(), started(), exerciseStatus()));
+      this.rowStatusCache.set(entry.exerciseId, status);
     }
-    return status;
+    return status();
+  }
+
+  /** "About this habit" (issue #219): the hub's intro in the exercise guide dialog, whose other
+   * sections #231 fills in. */
+  protected openAbout(habit: HabitId): void {
+    void this.guideOpener.open(
+      {
+        inShort: this.transloco.translate(`habits.hub.intro.${habit}`),
+        howTo: [],
+        examples: [],
+        afterwards: '',
+      },
+      this.viewContainerRef,
+      this.transloco.translate('habits.hub.aboutHabit'),
+    );
   }
 }

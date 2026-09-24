@@ -1,4 +1,5 @@
 import { newRecord, touch } from '../../core/data/record';
+import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   ChangeAttempt,
   PerceptionChain,
@@ -169,6 +170,21 @@ export function isStepTwoComplete(exercise: PerceptionExercise): boolean {
 
 export function isStepThreeComplete(exercise: PerceptionExercise): boolean {
   return checklistMet(exercise).chains;
+}
+
+/** The hub's in-progress text (issue #219): "2 of 3 steps", counted with the same per-step checks
+ * the stepper shows. `null` before the worksheet exists (the hub then says "Not started"). */
+export function hubStatus(exercise: PerceptionExercise | null): ExerciseHubStatus | null {
+  if (exercise === null) {
+    return null;
+  }
+  const steps = [isStepOneComplete, isStepTwoComplete, isStepThreeComplete];
+  const count = steps.filter((isStepComplete) => isStepComplete(exercise)).length;
+  return {
+    key: 'habits.exercises.paradigms-perception.stepsDone',
+    count,
+    params: { total: steps.length },
+  };
 }
 
 /** `isComplete()` (issue #48's "Implementation notes", refined by #212's checklist): every

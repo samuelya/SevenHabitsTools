@@ -18,6 +18,7 @@ import {
   withSwitchDifficulty,
   withViewBRevealed,
 } from './perception.logic';
+import { hubStatus } from './perception.logic';
 import { PerceptionExercise } from './perception.model';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
@@ -220,5 +221,23 @@ describe('perception.logic', () => {
       expect(isStarted(null)).toBe(false);
       expect(isStarted(ensureExercise(null, NOW))).toBe(true);
     });
+  });
+});
+
+describe('hubStatus (#219)', () => {
+  it('is null before the worksheet exists', () => {
+    expect(hubStatus(null)).toBeNull();
+  });
+
+  it('counts the completed steps out of 3', () => {
+    const key = 'habits.exercises.paradigms-perception.stepsDone';
+    const started = withFirstView(ensureExercise(null, NOW), 'A view', NOW);
+    expect(hubStatus(started)).toEqual({ key, count: 0, params: { total: 3 } });
+    expect(hubStatus(withSwitchDifficulty(started, 3, NOW))).toEqual({
+      key,
+      count: 1,
+      params: { total: 3 },
+    });
+    expect(hubStatus(completeExercise())).toEqual({ key, count: 3, params: { total: 3 } });
   });
 });

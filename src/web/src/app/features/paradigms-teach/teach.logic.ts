@@ -1,5 +1,6 @@
 import { isLive, newRecord, softDelete, touch } from '../../core/data/record';
 import { localDateString } from '../../shared/exercise-kit/assessment-history.logic';
+import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
   ChecklistLabels,
@@ -117,6 +118,13 @@ export function isOverdue(entry: Pick<TeachEntry, 'status' | 'plannedAt'>, now: 
  * acceptance criteria; `teach.model.ts`'s `statusFactory` reads this). */
 export function sharedCount(entries: readonly TeachEntry[]): number {
   return entries.filter((entry) => isLive(entry) && entry.status === 'shared').length;
+}
+
+/** The hub's in-progress text (issues #52, #219): "2 chapters shared"; `null` before the first one
+ * is shared (a started exercise then reads "In progress"). */
+export function hubStatus(entries: readonly TeachEntry[]): ExerciseHubStatus | null {
+  const count = sharedCount(entries);
+  return count > 0 ? { key: 'habits.exercises.paradigms-teach.sharedCount', count } : null;
 }
 
 /** The two gate items (issue #215). */

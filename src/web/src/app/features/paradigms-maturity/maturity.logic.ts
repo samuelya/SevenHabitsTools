@@ -1,5 +1,6 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
+import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   latestAssessment,
   liveAssessments,
@@ -34,6 +35,13 @@ export function liveAssessmentsOf(
  * card's collapse both read this. */
 export function isStarted(assessments: readonly MaturityAssessment[]): boolean {
   return assessments.some(isLive);
+}
+
+/** The hub's in-progress text (issue #219): "1 assessment", one per live assessment; `null` with
+ * none. */
+export function hubStatus(assessments: readonly MaturityAssessment[]): ExerciseHubStatus | null {
+  const count = liveAssessments(assessments).length;
+  return count > 0 ? { key: 'habits.exercises.paradigms-maturity.assessmentCount', count } : null;
 }
 
 export function isAreaRated(area: Pick<MaturityArea, 'level'>): boolean {

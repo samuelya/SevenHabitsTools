@@ -1,40 +1,24 @@
-import { ExerciseRegistryEntry } from '../../shared/exercise-kit/exercise-registry';
-import { nextExercise } from './habit-hub.logic';
+import { hubRowStatus } from './habit-hub.logic';
 
-function entry(exerciseId: string, route: string): ExerciseRegistryEntry {
-  return {
-    exerciseId,
-    habit: 'h2',
-    titleKey: `${exerciseId}.title`,
-    shortTitleKey: `${exerciseId}.shortTitle`,
-    summaryKey: `${exerciseId}.summary`,
-    icon: 'flag',
-    route,
-  };
-}
+describe('hubRowStatus (#219)', () => {
+  const status = { key: 'x.count', count: 2 };
 
-describe('nextExercise', () => {
-  it('is undefined when nothing is registered', () => {
-    expect(nextExercise([], () => false)).toBeUndefined();
+  it('is done, with its date, whatever else is true', () => {
+    expect(hubRowStatus(true, '2026-01-01T00:00:00.000Z', true, status)).toEqual({
+      kind: 'done',
+      completedAt: '2026-01-01T00:00:00.000Z',
+    });
   });
 
-  it('is the first registered exercise, in registration order, that is not done', () => {
-    const exercises = [entry('mission', 'habits/h2/mission'), entry('roles', 'habits/h2/roles')];
-
-    const next = nextExercise(exercises, (id) => id === 'mission');
-    expect(next?.route).toBe('habits/h2/roles');
-    expect(next?.shortTitleKey).toBe('roles.shortTitle');
+  it("shows the exercise's own in-progress text when it has one", () => {
+    expect(hubRowStatus(false, null, true, status)).toEqual({ kind: 'progress', status });
   });
 
-  it('is the first exercise when none are done yet', () => {
-    const exercises = [entry('mission', 'habits/h2/mission'), entry('roles', 'habits/h2/roles')];
-
-    expect(nextExercise(exercises, () => false)?.route).toBe('habits/h2/mission');
+  it('falls back to a generic "In progress" once started', () => {
+    expect(hubRowStatus(false, null, true, null)).toEqual({ kind: 'started' });
   });
 
-  it('is undefined once every exercise is done', () => {
-    const exercises = [entry('mission', 'habits/h2/mission'), entry('roles', 'habits/h2/roles')];
-
-    expect(nextExercise(exercises, () => true)).toBeUndefined();
+  it('is "Not started" for an entry with neither a started signal nor a status', () => {
+    expect(hubRowStatus(false, null, false, null)).toEqual({ kind: 'notStarted' });
   });
 });

@@ -1,4 +1,3 @@
-import { Signal, computed, signal } from '@angular/core';
 import { BaseRecord } from '../../core/data/record';
 import {
   isArrayOf,
@@ -6,19 +5,18 @@ import {
   isOneOf,
   isOptionalString,
 } from '../../core/data/record-validators';
-import { featureStore } from '../../core/data/feature-store';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import {
-  ExerciseHubStatus,
   getRegisteredExercises,
   registerExercise,
 } from '../../shared/exercise-kit/exercise-registry';
+import { storeStatusFactory } from '../../shared/exercise-kit/exercise-hub-status';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
 import {
   getRegisteredHubActions,
   registerHubAction,
 } from '../../shared/exercise-kit/hub-action-registry';
-import { isStarted, sharedCount } from './teach.logic';
+import { hubStatus, isStarted } from './teach.logic';
 
 /** The ten book chapters a "teach it" commitment can be made for (issue #52's "Implementation
  * notes"): the nine habit hubs plus "Inside-Out Again", which has no habit hub of its own. Stored
@@ -120,25 +118,11 @@ export function registerTeachModel(): void {
       habit: 'paradigms',
       titleKey: 'habits.exercises.paradigms-teach.title',
       shortTitleKey: 'habits.exercises.paradigms-teach.shortTitle',
-      summaryKey: 'habits.exercises.paradigms-teach.summary',
       icon: 'campaign',
       route: TEACH_ROUTE,
+      order: 50,
       isStarted: storeStartedFactory<TeachEntry[]>(TEACH_MODEL_KEY, isStarted),
-      statusFactory: (): Signal<ExerciseHubStatus | null> => {
-        // Defensive, not just idempotent: this factory runs later, lazily, from the hub page's own
-        // `runInInjectionContext()` call at render time — a spec that reset the model registry
-        // without this feature's own model surviving (or re-registering) would otherwise throw
-        // *during change detection* instead of at a registration call this file controls (review
-        // finding on #52's PR).
-        if (!getRegisteredModels().some((model) => model.key === TEACH_MODEL_KEY)) {
-          return signal(null);
-        }
-        const store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
-        return computed(() => {
-          const count = sharedCount(store.value());
-          return count > 0 ? { key: 'habits.exercises.paradigms-teach.sharedCount', count } : null;
-        });
-      },
+      statusFactory: storeStatusFactory<TeachEntry[]>(TEACH_MODEL_KEY, hubStatus),
     });
   }
   // "Teach this" (issue #52): every habit hub gets a shortcut to this exercise, pre-selecting the
