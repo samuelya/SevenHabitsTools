@@ -45,10 +45,10 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 1. Worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there. (A fix round reuses the existing worktree and branch.)
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement, tests first where practical (xUnit + `WebApplicationFactory` for endpoints).
-4. Verify: `dotnet test --filter` while iterating, then `dotnet build -warnaserror && dotnet test` in `src/` once before pushing; infra: `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; workflows: `actionlint` if installed. Pipe long output through `tail -40`/`grep`.
+4. Verify: `dotnet build -warnaserror` in `src/`. **Don't run `dotnet test` or `wait-ci.sh`** (CLAUDE.md "Test cadence"): the tester runs them and posts failures for the next round; infra: `az bicep lint --file infra/main.bicep && az bicep build --file infra/app.bicep`; workflows: `actionlint` if installed. Pipe long output through `tail -40`/`grep`.
 5. Commit a WIP checkpoint whenever the tree holds more than an hour of work, so the turn cap (`maxTurns`) or a stop loses nothing and a fresh agent can continue. Before the PR: SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets, `.env` or local settings).
 6. Push and open the PR: copy `.github/PULL_REQUEST_TEMPLATE.md` to a scratch file, fill every section (tick a self-check row only after verifying it on this head; the tester treats a ticked-but-broken row as a bug), then `gh pr create --title "<type>: <summary> (#<issue>)" --body-file <that file>`. Then `scripts/gh/wait-ci.sh <pr>` with Bash timeout 600000; exit 2 means still running, so run it again. Red CI is still your round: fix, push, wait again.
-7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, CI state, anything needing a decision. Stop.
+7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, anything needing a decision. Stop.
 
 ## Escalation (what you do; the ladder is in CLAUDE.md)
 - **End every run with a round comment**, whatever the outcome: `scripts/gh/round.sh <issue> passed|failed|review-fix|polish <n>/2 <your model> "<evidence: verified SHA, what you changed, what you checked>"`. Never hand-write it; the metrics count its first line and compare the count against the coder runs the transcripts show.
@@ -59,7 +59,7 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 - Spec unclear: ask on the issue in one comment before building (the business-analyst answers); a wrong round costs far more than a question.
 
 ## Definition of done
-Acceptance criteria met, SOLID self-check summarised in the PR, build and tests green locally and in CI, PR open with `Closes #n`, `team-lead` messaged.
+Acceptance criteria met, SOLID self-check summarised in the PR, tests written, build green locally, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
 On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).

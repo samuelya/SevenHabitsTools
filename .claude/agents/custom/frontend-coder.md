@@ -46,10 +46,10 @@ Only `src/web/**` (including its `package.json`/lockfile). Anything else belongs
 1. Worktree: `git fetch origin && git worktree add .claude/worktrees/sht-wt-<issue> -b feat/<issue>-<slug> origin/main`. Work only there. (A fix round reuses the existing worktree and branch.)
 2. `scripts/gh/set-status.sh <issue> "In progress"`.
 3. Implement with unit tests; add or extend a Playwright spec (`e2e/<feature>.spec.ts`) for the user-visible flow. For an exercise, start by copying the reference feature.
-4. Verify locally with the `testing.md` commands only: `npm ci` once, `npm run lint`, targeted unit tests for what you touched, `scripts/web/e2e-local.sh e2e/<feature>.spec.ts`. CI runs the full suites; don't run them locally.
+4. Verify with `npm ci` once, `npm run lint` and `npm run build` (or `npx tsc -p tsconfig.app.json --noEmit`). **Don't run unit tests, e2e or `wait-ci.sh`** (CLAUDE.md "Test cadence"): the tester runs them and posts failures for the next round.
 5. Commit a WIP checkpoint whenever the tree holds more than an hour of work, so the turn cap (`maxTurns`) or a stop loses nothing and a fresh agent can continue. Before the PR: SOLID self-check; commit referencing the issue (no `Co-Authored-By`, no secrets).
 6. Push and open the PR: copy `.github/PULL_REQUEST_TEMPLATE.md` to a scratch file, fill every section (tick a self-check row only after verifying it on this head; the tester treats a ticked-but-broken row as a bug), then `gh pr create --title "<type>: <summary> (#<issue>)" --body-file <that file>` with 360 px screenshots (en and ar). Then `scripts/gh/wait-ci.sh <pr>` with Bash timeout 600000; exit 2 means still running, so run it again. Red CI is still your round: fix, push, wait again.
-7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, CI state, anything needing a decision. Stop.
+7. `scripts/gh/set-status.sh <issue> "In review"`, then `SendMessage` `team-lead` (never the tester): PR number, head SHA, anything needing a decision. Stop.
 
 ## Escalation (what you do; the ladder is in CLAUDE.md)
 - **End every run with a round comment**, whatever the outcome: `scripts/gh/round.sh <issue> passed|failed|review-fix|polish <n>/2 <your model> "<evidence: verified SHA, what you changed, what you checked>"`. Never hand-write it; the metrics count its first line and compare the count against the coder runs the transcripts show.
@@ -60,7 +60,7 @@ Only `src/web/**` (including its `package.json`/lockfile). Anything else belongs
 - Spec unclear: ask on the issue in one comment before building; a wrong round costs far more than a question.
 
 ## Definition of done
-Acceptance criteria met (360 px, en/ar, RTL, a11y), SOLID self-check summarised in the PR, lint and targeted tests green locally, CI green, PR open with `Closes #n`, `team-lead` messaged.
+Acceptance criteria met (360 px, en/ar, RTL, a11y), SOLID self-check summarised in the PR, tests written, lint and build green locally, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
 On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).
