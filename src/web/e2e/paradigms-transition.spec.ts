@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Transition-person reflection (issue #51): the reference "list" exercise, adopting the exercise
@@ -15,61 +16,32 @@ function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
-const TEXT: Record<
-  'en' | 'ar',
-  {
-    checklistItem: string;
-    hubTitle: string;
-    markDone: string;
-    reopen: string;
-    stopToggle: string;
-    rewriteToggle: string;
-    familyChip: string;
-    harmsChip: string;
-    keepHint: string;
-    rewriteLabel: string;
-    stopLabel: string;
-    situationLabel: string;
-    cancel: string;
-    delete: string;
-    undo: string;
-  }
-> = {
-  en: {
-    checklistItem: 'Add at least one pattern you learned at home',
-    hubTitle: 'Transition person',
-    markDone: 'Mark done',
-    reopen: 'Reopen',
-    stopToggle: 'Stop',
-    rewriteToggle: 'Rewrite',
-    familyChip: 'Family',
-    harmsChip: 'Harms',
-    keepHint: 'Nothing more to write. Keep it and move on.',
-    rewriteLabel: 'What will you say or do instead?',
-    stopLabel: 'What will you do instead of this?',
-    situationLabel: 'Which situation this week will this show up in?',
-    cancel: 'Cancel',
-    delete: 'Delete',
-    undo: 'Undo',
-  },
-  ar: {
-    checklistItem: 'ضيف على الأقل عادة واحدة أخدتها من بيتك',
-    hubTitle: 'حلقة الانتقال',
-    markDone: 'وضع علامة تم',
-    reopen: 'إعادة فتح',
-    stopToggle: 'أوقفه',
-    rewriteToggle: 'أعد صياغته',
-    familyChip: 'العائلة',
-    harmsChip: 'يضر',
-    keepHint: 'مفيش حاجة تانية تكتبها. خليها زي ما هي وكمّل.',
-    rewriteLabel: 'ماذا ستقول أو تفعل بدلاً من ذلك؟',
-    stopLabel: 'ماذا ستفعل بدلاً من هذا؟',
-    situationLabel: 'في أي موقف هذا الأسبوع سيظهر هذا؟',
-    cancel: 'إلغاء',
-    delete: 'حذف',
-    undo: 'تراجع',
-  },
-};
+function textFor(locale: Locale) {
+  const form = (key: string) => t(locale, 'paradigmsTransition', `form.${key}`);
+  return {
+    checklistItem: t(locale, 'paradigmsTransition', 'checklist.pattern'),
+    hubTitle: t(locale, 'habits', 'exercises.paradigms-transition.shortTitle'),
+    markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
+    reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
+    stopToggle: t(locale, 'paradigmsTransition', 'decision.stop'),
+    rewriteToggle: t(locale, 'paradigmsTransition', 'decision.rewrite'),
+    familyChip: t(locale, 'paradigmsTransition', 'source.family'),
+    harmsChip: t(locale, 'paradigmsTransition', 'effect.harms'),
+    keepHint: form('decisionHint.keep'),
+    rewriteLabel: form('newScriptLabel.rewrite'),
+    rewritePrompt: form('newScriptPrompt.rewrite'),
+    stopLabel: form('newScriptLabel.stop'),
+    stopPrompt: form('newScriptPrompt.stop'),
+    situationLabel: form('situationLabel'),
+    situationPrompt: form('situationPrompt'),
+    cancel: t(locale, 'root', 'deleteConfirm.cancel'),
+    delete: t(locale, 'root', 'deleteConfirm.delete'),
+    undo: t(locale, 'paradigmsTransition', 'list.undo'),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 /** A saved script's editor URL: the real id, not the draft's reserved `new` segment (#217). */
 const SAVED_SCRIPT_URL = /\/habits\/paradigms\/transition\/(?!new$)[^/]+$/;
@@ -359,9 +331,18 @@ test.describe('paradigms transition reflection', () => {
     await expect(form.locator('mat-label', { hasText: text.rewriteLabel })).toBeVisible();
     await expect(form.locator('mat-label', { hasText: text.situationLabel })).toBeVisible();
 
+    await expect(form.locator('#new-script-prompt')).toHaveText(text.rewritePrompt);
+
     await form.locator('button', { hasText: text.stopToggle }).click();
     await expect(form.locator('mat-label', { hasText: text.stopLabel })).toBeVisible();
     await expect(form.locator('mat-label', { hasText: text.situationLabel })).toBeVisible();
+    // Each free-text field asks its question above it and names it as its description (#228).
+    await expect(form.locator('#new-script-prompt')).toHaveText(text.stopPrompt);
+    await expect(form.locator('#situation-prompt')).toHaveText(text.situationPrompt);
+    await expect(form.locator('textarea').first()).toHaveAttribute(
+      'aria-describedby',
+      'text-prompt',
+    );
   });
 
   // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but

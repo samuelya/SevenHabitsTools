@@ -124,7 +124,7 @@ describe('IndexedDbUpgradeNotifier', () => {
     await supersede(context);
 
     expect(context.open).toHaveBeenCalledTimes(1);
-    expect(messageOf(context.open, 0)).toContain('reload');
+    expect(messageOf(context.open, 0)).toContain('Reload this tab');
     expect(actionOf(context.open, 0)).toBe('Reload');
   });
 
@@ -165,7 +165,7 @@ describe('IndexedDbUpgradeNotifier', () => {
 
     expect(context.reload).not.toHaveBeenCalled();
     expect(context.open).toHaveBeenCalledTimes(2);
-    expect(messageOf(context.open, 1)).toContain('can no longer save');
+    expect(messageOf(context.open, 1)).toContain("can't save anymore");
     expect(actionOf(context.open, 1)).toBe('Export now');
   });
 

@@ -245,7 +245,7 @@ describe('BackupSection', () => {
     fixture.detectChanges();
 
     expect(dialogOpen).not.toHaveBeenCalled();
-    expect(text(fixture, '.backup-section__error')).toContain("Couldn't load the import dialog");
+    expect(text(fixture, '.backup-section__error')).toContain("Couldn't open the import window");
   });
 
   it('#155: refuses a file dropped straight into the input without going through the Import button, on a read-only tab', async () => {
@@ -266,7 +266,7 @@ describe('BackupSection', () => {
     );
   });
 
-  it('#155: shows the read-only message, not "Import complete.", when replaceWithImport was refused', async () => {
+  it('#155: shows the read-only message, not "Import done.", when replaceWithImport was refused', async () => {
     // Simulates this tab losing the writer lock between opening the dialog and choosing Replace:
     // the service's own canImport() gate refuses the actual replace, returning false.
     const { fixture, replaceWithImport, snackbarOpen } = setUp({

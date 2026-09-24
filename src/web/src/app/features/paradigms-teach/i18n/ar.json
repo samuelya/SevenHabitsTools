@@ -21,13 +21,16 @@
   },
   "form": {
     "keyIdeaLabel": "الفكرة الأساسية، بكلماتك الخاصة",
+    "keyIdeaPrompt": "إيه الفكرة الواحدة من الفصل ده اللي عايز تفتكرها؟ قولها بكلامك.",
     "keyIdeaCount": "{{count}}/{{max}} حرفاً",
     "keyIdeaRequired": "اكتب الفكرة الأساسية قبل المتابعة.",
     "personLabel": "لمن ستشرحها",
+    "personPrompt": "مين ممكن تشرحهاله في اليومين الجايين؟",
     "plannedAtLabel": "متى تخطط لمشاركتها",
     "statusLabel": "الحالة",
     "sharedAt": "تمت المشاركة {{date}}",
     "learnedLabel": "ماذا تعلمت من تعليمها",
+    "learnedPrompt": "الشرح وضّحلك إيه؟",
     "keyIdeaPlaceholder": "مثلاً: الطريقة اللي بشوف بيها المشكلة بتحدد هعمل إيه فيها، فبراجع نظرتي الأول.",
     "personPlaceholder": "مثلاً: أختي",
     "learnedPlaceholder": "مثلاً: لما شرحتها اكتشفت إني لسه مش عارف أدي مثال من حياتي."

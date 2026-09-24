@@ -1,4 +1,7 @@
 <form class="transition-item-form">
+  <p class="field-prompt" id="text-prompt">
+    {{ 'paradigmsTransition.form.textPrompt' | transloco }}
+  </p>
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ 'paradigmsTransition.form.textLabel' | transloco }}</mat-label>
     <textarea
@@ -11,7 +14,9 @@
       required
       [placeholder]="'paradigmsTransition.form.textPlaceholder' | transloco"
       [value]="script().text"
-      [attr.aria-describedby]="isTouched('text') && !script().text.trim() ? 'text-error' : null"
+      [attr.aria-describedby]="
+        isTouched('text') && !script().text.trim() ? 'text-prompt text-error' : 'text-prompt'
+      "
       (input)="onTextInput($event)"
       (blur)="touch('text')"
     ></textarea>
@@ -76,6 +81,9 @@
   </fieldset>
 
   @if (needsNewScript()) {
+    <p class="field-prompt" id="new-script-prompt">
+      {{ 'paradigmsTransition.form.newScriptPrompt.' + script().decision | transloco }}
+    </p>
     <mat-form-field appearance="outline" class="field">
       <mat-label>{{
         'paradigmsTransition.form.newScriptLabel.' + script().decision | transloco
@@ -90,7 +98,9 @@
         [placeholder]="'paradigmsTransition.form.newScriptPlaceholder' | transloco"
         [value]="script().newScript ?? ''"
         [attr.aria-describedby]="
-          isTouched('newScript') && !script().newScript?.trim() ? 'new-script-error' : null
+          isTouched('newScript') && !script().newScript?.trim()
+            ? 'new-script-prompt new-script-error'
+            : 'new-script-prompt'
         "
         (input)="onNewScriptInput($event)"
         (blur)="touch('newScript')"
@@ -102,6 +112,9 @@
       </p>
     }
 
+    <p class="field-prompt" id="situation-prompt">
+      {{ 'paradigmsTransition.form.situationPrompt' | transloco }}
+    </p>
     <mat-form-field appearance="outline" class="field">
       <mat-label>{{ 'paradigmsTransition.form.situationLabel' | transloco }}</mat-label>
       <input
@@ -111,7 +124,9 @@
         [placeholder]="'paradigmsTransition.form.situationPlaceholder' | transloco"
         [value]="script().situation ?? ''"
         [attr.aria-describedby]="
-          isTouched('situation') && !script().situation?.trim() ? 'situation-error' : null
+          isTouched('situation') && !script().situation?.trim()
+            ? 'situation-prompt situation-error'
+            : 'situation-prompt'
         "
         (input)="onSituationInput($event)"
         (blur)="touch('situation')"

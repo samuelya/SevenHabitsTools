@@ -44,14 +44,14 @@ describe('ImportConfirmDialog', () => {
       preview: { updatedAt: DATA.preview.updatedAt, counts: [] },
     });
 
-    expect(text(fixture, '.import-confirm-dialog')).toContain('no feature data to preview yet');
+    expect(text(fixture, '.import-confirm-dialog')).toContain('no exercise data to show yet');
   });
 
-  it('closes with "export-first" when "Export current data first" is clicked', () => {
+  it('closes with "export-first" when "Export first" is clicked', () => {
     const { fixture, close } = setUp(DATA);
 
     buttons(fixture)
-      .find((button) => button.textContent?.includes('Export current data first'))
+      .find((button) => button.textContent?.includes('Export first'))
       ?.click();
 
     expect(close).toHaveBeenCalledWith('export-first');
@@ -66,7 +66,9 @@ describe('ImportConfirmDialog', () => {
     fixture.detectChanges();
 
     expect(close).not.toHaveBeenCalled();
-    expect(text(fixture, '.import-confirm-dialog__confirm')).toContain('permanently replace');
+    expect(text(fixture, '.import-confirm-dialog__confirm')).toContain(
+      'swaps everything on this device',
+    );
     expect(
       buttons(fixture)
         .filter((button) => fixture.nativeElement.contains(button))

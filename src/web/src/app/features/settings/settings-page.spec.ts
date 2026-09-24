@@ -48,7 +48,7 @@ describe('SettingsPage', () => {
   it('shows the "protected" message and a friendly usage estimate when persisted', () => {
     const { fixture } = setUp(true, { usageBytes: 1024 * 1024, quotaBytes: 100 * 1024 * 1024 });
 
-    expect(text(fixture, '#storage')).toContain('protected from automatic clearing');
+    expect(text(fixture, '#storage')).toContain("won't clear this data on its own");
     expect(text(fixture, '#storage')).toContain('using about 1.0 MB in this browser');
     // The quota is the browser's per-origin allowance, not the app's usage — never shown as
     // "used / quota" (#144).
@@ -71,7 +71,7 @@ describe('SettingsPage', () => {
   it('shows the "not available" message when the Storage Manager API is unsupported', () => {
     const { fixture } = setUp(null, null);
 
-    expect(text(fixture, '#storage')).toContain('not available in this browser');
+    expect(text(fixture, '#storage')).toContain("doesn't say whether");
   });
 
   it('does not show a usage line when there is no estimate yet', () => {

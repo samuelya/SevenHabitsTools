@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { Locator } from '@playwright/test';
 import { expect, test } from './fixtures';
+import { t, type Locale } from './i18n';
 
 /**
  * Habits list and habit hub (issues #31, #219), in both languages and at both viewport sizes
@@ -21,26 +22,21 @@ const PARADIGMS_ORDER = [
   '/habits/paradigms/teach',
 ];
 
-const TEXT = {
-  en: {
-    comingSoon: 'Coming soon',
-    later: 'Habits 2–7 and Interdependence: coming soon',
-    notStarted: 'Not started',
-    onePattern: '1 pattern',
-    aboutHabit: 'About this habit',
-    emptyState: 'coming soon',
-    teachThisChapter: 'Teach this chapter',
-  },
-  ar: {
-    comingSoon: 'قريبًا',
-    later: 'العادات 2–7 والترابط: قريبًا',
-    notStarted: 'لم يبدأ',
-    onePattern: 'نمط واحد',
-    aboutHabit: 'عن هذه العادة',
-    emptyState: 'ستتوفر قريبًا',
-    teachThisChapter: 'علّم هذا الفصل',
-  },
-};
+function textFor(locale: Locale) {
+  const habits = (key: string, params?: Record<string, number>) => t(locale, 'habits', key, params);
+  return {
+    comingSoon: habits('hub.comingSoon'),
+    later: habits('list.laterRange', { from: 2, to: 7 }),
+    notStarted: habits('hub.notStarted'),
+    onePattern: habits('exercises.paradigms-transition.patternCount.one'),
+    aboutHabit: habits('hub.aboutHabit'),
+    emptyState: habits('hub.noExercises'),
+    teachThisChapter: habits('exercises.paradigms-teach.hubActionLabel'),
+  };
+}
+
+/** Copy from the app's own translation files (`e2e/i18n.ts`), never a literal (issue #228). */
+const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';

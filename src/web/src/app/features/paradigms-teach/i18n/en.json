@@ -2,8 +2,8 @@
   "prompt": {
     "title": "Teach it to learn it",
     "chapterReference": "Paradigms and principles",
-    "text": "Pick each chapter's one idea you most want to keep, put it in your own words, and plan to explain it to someone within the next two days. Teaching it back is what turns a good idea you read into one you actually own.",
-    "whyItMatters": "Explaining something out loud, to a real person, exposes what you actually understood versus what you only recognised. A short commitment with a deadline is what makes that happen instead of staying a good intention."
+    "text": "For each chapter, pick the one idea you most want to keep. Put it in your own words. Then plan to explain it to someone in the next two days. Teaching it is how you really learn it.",
+    "whyItMatters": "Explaining an idea out loud shows what you really understood, and what you only recognised. A name and a date turn a good intention into something you'll do."
   },
   "list": {
     "searchLabel": "Search chapters",
@@ -20,15 +20,18 @@
     }
   },
   "form": {
-    "keyIdeaLabel": "The key idea, in your own words",
+    "keyIdeaLabel": "Key idea",
+    "keyIdeaPrompt": "What's the one idea from this chapter you most want to keep? Put it in your own words.",
     "keyIdeaCount": "{{count}}/{{max}} characters",
-    "keyIdeaRequired": "Write the key idea before moving on.",
+    "keyIdeaRequired": "Write the key idea first.",
     "personLabel": "Who you'll teach it to",
-    "plannedAtLabel": "When you plan to share it",
+    "personPrompt": "Who could you explain it to in the next two days?",
+    "plannedAtLabel": "When you'll share it",
     "statusLabel": "Status",
     "sharedAt": "Shared {{date}}",
-    "learnedLabel": "What you learned by teaching it",
-    "keyIdeaPlaceholder": "e.g. How I see a problem shapes what I do about it, so I check how I see it first.",
+    "learnedLabel": "What you learned",
+    "learnedPrompt": "What did explaining it show you?",
+    "keyIdeaPlaceholder": "e.g. How I see a problem shapes what I do. So I check how I see it first.",
     "personPlaceholder": "e.g. My sister",
     "learnedPlaceholder": "e.g. Explaining it showed me I couldn't give an example from my own life yet."
   },

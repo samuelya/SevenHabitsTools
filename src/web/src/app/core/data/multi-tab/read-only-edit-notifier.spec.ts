@@ -58,7 +58,7 @@ describe('ReadOnlyEditNotifier', () => {
     refusedEdits.set(1);
     TestBed.tick();
 
-    expect(open.mock.calls[0]![0]).toContain('Try that change again');
+    expect(open.mock.calls[0]![0]).toContain('Try that again');
   });
 
   it('does not report edits refused before it started', () => {

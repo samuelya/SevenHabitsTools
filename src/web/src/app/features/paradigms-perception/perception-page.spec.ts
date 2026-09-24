@@ -129,7 +129,7 @@ describe('PerceptionPage', () => {
     expect(host.textContent).not.toContain('They never saw you.');
 
     const revealButton = [...host.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === 'Show the other side',
+      (button) => button.textContent?.trim() === 'Show why',
     ) as HTMLButtonElement;
     expect(revealButton.disabled).toBe(true);
     expect(host.textContent).toContain('Write your guess first, then see the other side.');
@@ -155,7 +155,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show the other side',
+        (button) => button.textContent?.trim() === 'Show why',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
@@ -176,7 +176,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show the other side',
+        (button) => button.textContent?.trim() === 'Show why',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();
@@ -199,7 +199,7 @@ describe('PerceptionPage', () => {
     fixture.detectChanges();
     (
       [...host.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === 'Show the other side',
+        (button) => button.textContent?.trim() === 'Show why',
       ) as HTMLButtonElement
     ).click();
     fixture.detectChanges();

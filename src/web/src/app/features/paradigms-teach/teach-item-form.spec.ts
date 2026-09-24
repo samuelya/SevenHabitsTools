@@ -34,9 +34,30 @@ describe('TeachItemForm', () => {
     ].map((field) => field.placeholder);
 
     expect(placeholders).toEqual([
-      'e.g. How I see a problem shapes what I do about it, so I check how I see it first.',
+      'e.g. How I see a problem shapes what I do. So I check how I see it first.',
       'e.g. My sister',
       "e.g. Explaining it showed me I couldn't give an example from my own life yet.",
+    ]);
+  });
+
+  it('asks each free-text question above its field and names it as the description (#228)', () => {
+    const fixture = setUp(draft());
+    const element = fixture.nativeElement as HTMLElement;
+    const fields = [
+      ...element.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+        'textarea, input[type="text"]',
+      ),
+    ];
+    const promptFor = (field: Element) =>
+      (field.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => element.querySelector(`#${id}.field-prompt`)?.textContent?.trim())
+        .find(Boolean);
+
+    expect(fields.map(promptFor)).toEqual([
+      "What's the one idea from this chapter you most want to keep? Put it in your own words.",
+      'Who could you explain it to in the next two days?',
+      'What did explaining it show you?',
     ]);
   });
 

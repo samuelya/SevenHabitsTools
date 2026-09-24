@@ -125,6 +125,21 @@ describe('PcBalanceAuditForm', () => {
       'e.g. A 20-minute walk before work, three days a week.',
     ]);
     expect(placeholders('app-reflection-editor textarea')[0]).toContain('e.g. ');
+
+    // Each add-asset field and the notes field is described by the question above it (#228).
+    const promptsOf = (selector: string) =>
+      [...element.querySelectorAll(selector)].map((field) =>
+        (field.getAttribute('aria-describedby') ?? '')
+          .split(' ')
+          .map((id) => element.querySelector(`#${id}.field-prompt`)?.textContent?.trim())
+          .find(Boolean),
+      );
+    expect(promptsOf('.add-asset-row input')).toEqual(
+      Array(3).fill('What else here do you count on?'),
+    );
+    expect(promptsOf('app-reflection-editor textarea')).toEqual([
+      'What stands out when you look at the whole picture?',
+    ]);
   });
 
   it('shows the balance indicator and hides the action field while not over-used', () => {

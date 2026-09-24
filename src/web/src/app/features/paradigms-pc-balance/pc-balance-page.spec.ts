@@ -157,7 +157,7 @@ describe('PcBalancePage', () => {
 
     expect(host.querySelector('app-pc-balance-summary')).toBeNull();
     expect(host.querySelector('app-done-toggle .done-checklist')?.textContent).toContain(
-      'Add an asset and name every one',
+      'Add at least one asset, and name each one',
     );
 
     await addAudit(harness);

@@ -37,14 +37,14 @@ describe('TransitionSummary', () => {
     // fires and the counts stayed in Arabic while the rest of the page was English.
     const fixture = setUp({ stopped: 2, rewritten: 1, total: 5 });
     const transloco = TestBed.inject(TranslocoService);
-    expect(fixture.nativeElement.textContent).toContain('scripts named');
+    expect(fixture.nativeElement.textContent).toContain('patterns named');
 
     transloco.setActiveLang('ar');
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).not.toContain('scripts named');
+    expect(fixture.nativeElement.textContent).not.toContain('patterns named');
 
     transloco.setActiveLang('en');
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('scripts named');
+    expect(fixture.nativeElement.textContent).toContain('patterns named');
   });
 });

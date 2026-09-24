@@ -8,6 +8,10 @@
   inline-size: 100%;
 }
 
+.field-prompt {
+  margin: 0;
+}
+
 .field-error {
   color: var(--mat-sys-error, darkred);
   font-size: 0.75rem;

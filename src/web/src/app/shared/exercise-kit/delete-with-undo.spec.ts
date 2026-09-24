@@ -126,7 +126,7 @@ describe('DeleteWithUndo', () => {
     expect(dialogOpen).not.toHaveBeenCalled();
     expect(onConfirm).not.toHaveBeenCalled();
     expect(snackbarOpen).toHaveBeenCalledWith(
-      "Couldn't load the delete dialog. Check your connection and try again.",
+      "Couldn't open this. Check your connection and try again.",
       'Dismiss',
     );
   });

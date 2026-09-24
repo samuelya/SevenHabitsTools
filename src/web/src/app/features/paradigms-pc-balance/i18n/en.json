@@ -2,9 +2,9 @@
   "prompt": {
     "title": "Audit your results and capacity",
     "chapterReference": "Paradigms and principles",
-    "text": "Every asset you rely on — your body, your money, your relationships — produces results only as long as you also maintain it. Rate a few assets in each group on how much you're getting out of them right now and how much you're putting back in, and name one maintenance action for anything over-used.",
+    "text": "Anything that gives you value, like your health, money or friendships, needs looking after. Rate how much you get from each one, and how much you put back. For anything over-used, name one way to look after it.",
     "glossText": "Over-used: you get a lot out of it and put little back.",
-    "whyItMatters": "Chasing results while skipping maintenance works for a while, then the asset stops producing altogether. Naming the trade-off on purpose is what makes it possible to rebalance before that happens."
+    "whyItMatters": "Taking without looking after something works for a while. Then it wears out and stops giving. Spotting that early lets you fix the balance in time."
   },
   "editor": {
     "title": "Audit",
@@ -44,23 +44,26 @@
     "nameLabel": "Asset",
     "pLabel": "Getting out (P)",
     "pcLabel": "Putting in (PC)",
-    "actionLabel": "Name one thing you'll do to maintain it.",
-    "actionRequired": "Name one maintenance action for this over-used asset.",
-    "removeAsset": "Remove this asset",
-    "newAssetLabel": "New asset name",
+    "actionLabel": "How you'll look after it",
+    "actionPrompt": "What's one thing you'll do to look after it?",
+    "actionRequired": "Name one thing you'll do to look after it.",
+    "removeAsset": "Remove asset",
+    "newAssetLabel": "New asset",
+    "newAssetPrompt": "What else here do you count on?",
     "addAsset": "Add asset",
-    "reflectionLabel": "Reflection",
+    "reflectionLabel": "Notes",
+    "reflectionPrompt": "What stands out when you look at the whole picture?",
     "physicalAssetPlaceholder": "e.g. My back",
     "financialAssetPlaceholder": "e.g. My savings",
     "humanAssetPlaceholder": "e.g. My friendship with Sam",
     "actionPlaceholder": "e.g. A 20-minute walk before work, three days a week.",
     "reflectionPlaceholder": "e.g. I've been living off my savings and my sleep. This month I'll put some back into both.",
-    "legend": "Getting out: how much you rely on it now · Putting in: how much you maintain it.",
+    "legend": "Getting out: how much you rely on it now · Putting in: how much you look after it",
     "suggestions": "Suggestions: {{group}}",
     "addSuggested": "Add {{name}}",
-    "duplicateAsset": "That asset is already in this audit.",
+    "duplicateAsset": "You've already added that one.",
     "removeConfirmTitle": "Remove {{name}}?",
-    "removeConfirmBody": "Its ratings and maintenance action will be lost. You can undo this for a few seconds after removing it.",
+    "removeConfirmBody": "Its ratings and plan will be lost. You'll have a few seconds to undo it.",
     "removeConfirmButton": "Remove",
     "assetRemoved": "Asset removed"
   },
@@ -75,8 +78,8 @@
     "underUsed": "you put in more than you get out of it right now."
   },
   "checklist": {
-    "named": "Add an asset and name every one",
-    "actions": "Name a maintenance action for any over-used asset"
+    "named": "Add at least one asset, and name each one",
+    "actions": "Name one way to look after each over-used asset"
   },
   "summary": {
     "totalAudits": {

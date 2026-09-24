@@ -70,7 +70,7 @@ async function closeEditor(harness: RouterTestingHarness): Promise<void> {
   await harness.fixture.whenStable();
 }
 
-/** Taps "Add a script": opens the editor on an in-memory draft at `new`. */
+/** Taps 'Add pattern': opens the editor on an in-memory draft at `new`. */
 async function openDraft(harness: RouterTestingHarness): Promise<void> {
   (harness.routeNativeElement!.querySelector('.add-button') as HTMLButtonElement).click();
   await harness.fixture.whenStable();
