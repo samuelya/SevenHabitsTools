@@ -75,6 +75,12 @@ export function reopenCompletion(
   );
 }
 
+/** Whether any exercise has ever been marked done (issue #220's first-run check): a completion
+ * record exists, even one reopened since. Tombstoned records don't count. */
+export function hasAnyCompletion(completions: readonly ExerciseCompletion[]): boolean {
+  return completions.some((completion) => !completion.deletedAt);
+}
+
 /** `done`/`total` for every exercise registered to `habit` (`exercise-registry.ts`). */
 export function progressForHabit(
   completions: readonly ExerciseCompletion[],

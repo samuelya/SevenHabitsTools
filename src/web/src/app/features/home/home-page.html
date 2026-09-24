@@ -1,0 +1,76 @@
+@if (showExportReminder()) {
+  <app-export-reminder-banner
+    [message]="'data.export.reminder' | transloco"
+    [exportLabel]="'data.export.action' | transloco"
+    [dismissLabel]="'data.snackbar.dismiss' | transloco"
+    (exportNow)="exportNow()"
+    (dismiss)="dismissReminder()"
+  />
+}
+<!-- One title per page (#210 F-A5): the toolbar shows it; this h1 is for screen readers only. -->
+<h1 class="visually-hidden">{{ 'home.heading' | transloco }}</h1>
+
+@if (firstRun()) {
+  <p class="today-first-run">{{ 'home.firstRun' | transloco }}</p>
+}
+
+@if (continueTarget(); as target) {
+  @let status = continueStatus();
+  @let detail =
+    status === null
+      ? null
+      : status === 'started'
+        ? ('habits.hub.inProgress' | transloco)
+        : (status.key | appPlural: status.count : status.params);
+  <app-continue-card
+    class="today-continue"
+    [link]="'/' + target.exercise.route"
+    [label]="
+      'habits.hub.continueButton'
+        | transloco: { title: (target.exercise.shortTitleKey | transloco) }
+    "
+    [habitTitle]="target.habit.shortTitleKey | transloco"
+    [detail]="detail"
+  />
+} @else {
+  <p class="today-all-done">
+    @if (nextUpHabit(); as habit) {
+      {{ 'home.allDoneNextUp' | transloco: { habit: (habit.titleKey | transloco) } }}
+    } @else {
+      {{ 'home.allDone' | transloco }}
+    }
+  </p>
+}
+
+<section class="today-progress" aria-labelledby="today-progress-heading">
+  <h2 id="today-progress-heading" class="today-progress__heading">
+    {{ 'home.progressHeading' | transloco }}
+  </h2>
+  <mat-nav-list>
+    @for (row of progressRows(); track row.habit.id) {
+      <a
+        mat-list-item
+        class="today-habit"
+        [class.today-habit--next-up]="row.state === 'nextUp'"
+        [routerLink]="'/habits/' + row.habit.id"
+      >
+        <mat-icon matListItemIcon aria-hidden="true">{{ row.habit.icon }}</mat-icon>
+        <span matListItemTitle class="today-habit__row">
+          <span class="today-habit__title">{{ row.habit.shortTitleKey | transloco }}</span>
+          @if (row.state === 'available') {
+            @let progress = progressFor(row.habit.id)();
+            <app-habit-progress
+              [done]="progress.done"
+              [total]="progress.total"
+              [label]="
+                'habits.progress' | transloco: { done: progress.done, total: progress.total }
+              "
+            />
+          } @else {
+            <span class="today-habit__coming-soon">{{ 'habits.hub.comingSoon' | transloco }}</span>
+          }
+        </span>
+      </a>
+    }
+  </mat-nav-list>
+</section>

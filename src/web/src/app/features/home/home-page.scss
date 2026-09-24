@@ -1,0 +1,52 @@
+.today-first-run {
+  margin-block: 1rem;
+}
+
+.today-continue {
+  margin-block-end: 1.5rem;
+}
+
+.today-all-done {
+  margin-block: 0 1.5rem;
+}
+
+.today-progress__heading {
+  margin-block: 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+// Same row rules as the habits list (#218, #219): wrap, never an ellipsis, whatever the platform's
+// font metrics. Material fixes a one-line item's height, so let the item grow.
+.mat-mdc-list-item.today-habit {
+  block-size: auto;
+  min-block-size: var(--mat-list-list-item-one-line-container-height, 48px);
+  padding-block: 8px;
+}
+
+.today-habit__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  white-space: normal;
+}
+
+.today-habit__title {
+  white-space: normal;
+}
+
+.today-habit--next-up .today-habit__title {
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.today-habit__coming-soon {
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--mat-sys-outline-variant, lightgray);
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
