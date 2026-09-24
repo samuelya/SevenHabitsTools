@@ -2,8 +2,12 @@ import { TeachEntry } from './teach.model';
 import {
   isDraftWorthSaving,
   KEY_IDEA_MAX_LENGTH,
+  CHAPTER_STATUS_KINDS,
+  DATE_SLOT,
+  chapterStatus,
   checklistLabelsFrom,
   checklistLoaded,
+  firstLine,
   defaultPlannedAt,
   doneChecklist,
   draftFor,
@@ -24,6 +28,18 @@ import {
 import { hubStatus } from './teach.logic';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
+
+/** In `CHAPTER_STATUS_KINDS` order. */
+const STATUS_LABELS = CHAPTER_STATUS_KINDS.map(
+  (kind) =>
+    ({
+      notPlanned: 'Not planned',
+      planned: `Planned by ${DATE_SLOT}`,
+      overdue: 'Overdue',
+      shared: 'Shared',
+      skipped: 'Skipped',
+    })[kind],
+);
 
 function entry(overrides: Partial<TeachEntry> = {}): TeachEntry {
   return {
@@ -206,23 +222,76 @@ describe('summarize', () => {
 
 describe('labelsFrom', () => {
   it("falls back to an empty string for an index past a cold-load [''] array", () => {
-    const labels = labelsFrom(['paradigms', 'h1'], [''], ['planned', 'shared'], [''], undefined);
+    const labels = labelsFrom(['paradigms', 'h1'], [''], ['']);
     expect(labels.chapter.paradigms).toBe('');
     expect(labels.chapter.h1).toBe('');
-    expect(labels.overdue).toBe('');
+    expect(labels.status.overdue).toBe('');
   });
 
-  it('maps each chapter and status to its label', () => {
-    const labels = labelsFrom(
-      ['paradigms', 'h1'],
-      ['Paradigms', 'Habit 1'],
-      ['planned', 'shared'],
-      ['Planned', 'Shared'],
-      'Overdue',
-    );
+  it('maps each chapter and chapter status to its label, statuses in CHAPTER_STATUS_KINDS order', () => {
+    const labels = labelsFrom(['paradigms', 'h1'], ['Paradigms', 'Habit 1'], STATUS_LABELS);
     expect(labels.chapter.h1).toBe('Habit 1');
+    expect(labels.status.notPlanned).toBe('Not planned');
+    expect(labels.status.planned).toBe(`Planned by ${DATE_SLOT}`);
     expect(labels.status.shared).toBe('Shared');
-    expect(labels.overdue).toBe('Overdue');
+  });
+});
+
+describe('chapterStatus (issue #224)', () => {
+  // NOW is 2026-01-10 (local).
+  it('is "not planned" for a chapter with no entry', () => {
+    expect(chapterStatus(undefined, NOW)).toEqual({ kind: 'notPlanned' });
+  });
+
+  it('is "planned by" its date while that date is today or later', () => {
+    expect(chapterStatus(entry({ plannedAt: '2026-01-10' }), NOW)).toEqual({
+      kind: 'planned',
+      plannedAt: '2026-01-10',
+    });
+    expect(chapterStatus(entry({ plannedAt: '2026-01-22' }), NOW)).toEqual({
+      kind: 'planned',
+      plannedAt: '2026-01-22',
+    });
+  });
+
+  it('is "overdue" once the planned date has passed and it is not shared', () => {
+    expect(chapterStatus(entry({ plannedAt: '2026-01-09' }), NOW)).toEqual({
+      kind: 'overdue',
+      plannedAt: '2026-01-09',
+    });
+  });
+
+  it('is "shared" whatever the date, past or future', () => {
+    expect(chapterStatus(entry({ status: 'shared', plannedAt: '2026-01-01' }), NOW)).toEqual({
+      kind: 'shared',
+    });
+    expect(chapterStatus(entry({ status: 'shared', plannedAt: '2026-02-01' }), NOW)).toEqual({
+      kind: 'shared',
+    });
+  });
+
+  it('is "skipped" whatever the date', () => {
+    expect(chapterStatus(entry({ status: 'skipped', plannedAt: '2026-01-01' }), NOW)).toEqual({
+      kind: 'skipped',
+    });
+  });
+
+  it('is "not planned" for a planned entry without a valid date (never a permanent "Overdue")', () => {
+    expect(chapterStatus(entry({ plannedAt: '' }), NOW)).toEqual({ kind: 'notPlanned' });
+    expect(chapterStatus(entry({ plannedAt: '2026-13-01' }), NOW)).toEqual({ kind: 'notPlanned' });
+    expect(chapterStatus(entry({ plannedAt: '2026-02-30' }), NOW)).toEqual({ kind: 'notPlanned' });
+  });
+});
+
+describe('firstLine', () => {
+  it('returns the first non-blank line, trimmed', () => {
+    expect(firstLine('\n  First idea  \nSecond')).toBe('First idea');
+    expect(firstLine('One\r\nTwo')).toBe('One');
+  });
+
+  it("returns '' for blank or missing text", () => {
+    expect(firstLine('  \n ')).toBe('');
+    expect(firstLine(undefined)).toBe('');
   });
 });
 
@@ -251,40 +320,57 @@ describe('draftFor', () => {
 });
 
 describe('toListItem', () => {
-  const labels = labelsFrom(
-    ['h1'],
-    ['Habit 1'],
-    ['planned', 'shared', 'skipped'],
-    ['Planned', 'Shared', 'Skipped'],
-    'Overdue',
-  );
+  const labels = labelsFrom(['h1'], ['Habit 1'], STATUS_LABELS);
+  const formatDate = (isoDate: string) => `<${isoDate}>`;
 
-  it('shows just the chapter title, not done, for a chapter with no entry — and not deletable (issue #203)', () => {
-    expect(toListItem('h1', undefined, labels, NOW)).toEqual({
+  it('shows the chapter title and a "Not planned" chip for a chapter with no entry — not deletable (issue #203)', () => {
+    expect(toListItem('h1', undefined, labels, NOW, formatDate)).toEqual({
       id: 'h1',
       title: 'Habit 1',
+      chips: [{ label: 'Not planned', warning: false }],
       done: false,
+      warning: false,
       deletable: false,
     });
   });
 
-  it('shows the status as the subtitle, done once shared, and deletable once there is an entry', () => {
-    const item = toListItem('h1', entry({ status: 'shared' }), labels, NOW);
-    expect(item.subtitle).toBe('Shared');
+  it('shows the key idea\'s first line as the subtitle and a dated "Planned by" chip', () => {
+    const item = toListItem(
+      'h1',
+      entry({ keyIdea: 'Choose your response\nnot just react', plannedAt: '2026-01-22' }),
+      labels,
+      NOW,
+      formatDate,
+    );
+    expect(item.subtitle).toBe('Choose your response');
+    expect(item.chips).toEqual([{ label: 'Planned by <2026-01-22>', warning: false }]);
     expect(item.warning).toBe(false);
-    expect(item.done).toBe(true);
     expect(item.deletable).toBe(true);
   });
 
-  it('appends the overdue label once planned and past its date', () => {
+  it('has no subtitle while the key idea is blank', () => {
+    const item = toListItem('h1', entry({ keyIdea: '  ' }), labels, NOW, formatDate);
+    expect(item.subtitle).toBeUndefined();
+  });
+
+  it('shows a "Shared" chip and is done once shared', () => {
+    const item = toListItem('h1', entry({ status: 'shared' }), labels, NOW, formatDate);
+    expect(item.chips).toEqual([{ label: 'Shared', warning: false }]);
+    expect(item.done).toBe(true);
+    expect(item.warning).toBe(false);
+  });
+
+  it('shows an "Overdue" warning chip — text as well as colour — once planned and past its date', () => {
     const item = toListItem(
       'h1',
       entry({ status: 'planned', plannedAt: '2026-01-01' }),
       labels,
       NOW,
+      formatDate,
     );
-    expect(item.subtitle).toBe('Planned · Overdue');
+    expect(item.chips).toEqual([{ label: 'Overdue', warning: true }]);
     expect(item.warning).toBe(true);
+    expect(item.done).toBe(false);
   });
 });
 
@@ -351,6 +437,11 @@ describe('isValidPlannedAt', () => {
   it('rejects a partial or malformed value', () => {
     expect(isValidPlannedAt('2026-01')).toBe(false);
     expect(isValidPlannedAt('not-a-date')).toBe(false);
+  });
+
+  it('rejects a pattern-valid but impossible date', () => {
+    expect(isValidPlannedAt('2026-13-01')).toBe(false);
+    expect(isValidPlannedAt('2026-02-30')).toBe(false);
   });
 });
 

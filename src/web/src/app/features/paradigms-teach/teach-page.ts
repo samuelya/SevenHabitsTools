@@ -12,7 +12,10 @@ import { Router } from '@angular/router';
 import { translateSignal, TranslocoService, TranslocoPipe } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { isLive } from '../../core/data/record';
+import { LanguageStore } from '../../core/i18n/language-store';
+import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { CLOCK } from '../../core/time/clock';
+import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-list';
@@ -23,7 +26,9 @@ import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.se
 import { TeachItemForm } from './teach-item-form';
 import { TeachSummary } from './teach-summary';
 import {
+  CHAPTER_STATUS_KINDS,
   CHECKLIST_KEYS,
+  DATE_SLOT,
   checklistLabelsFrom,
   checklistLoaded,
   doneChecklist,
@@ -44,7 +49,6 @@ import {
   TEACH_CHAPTERS,
   TEACH_MODEL_KEY,
   TEACH_ROUTE,
-  TEACH_STATUSES,
   TeachChapter,
   TeachEntry,
   TeachEntryFields,
@@ -82,6 +86,7 @@ import {
 export class TeachPage {
   private readonly clock = inject(CLOCK);
   private readonly router = inject(Router);
+  private readonly languageStore = inject(LanguageStore);
   private readonly transloco = inject(TranslocoService);
   private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
@@ -108,21 +113,26 @@ export class TeachPage {
     undefined,
     'paradigms-teach',
   );
+  // `DATE_SLOT` as the `date` param keeps the placeholder in the translated template, so
+  // `toListItem()` can put each row's own date there (issue #224's "Planned by 22 Sep").
   private readonly statusLabels = translateSignal(
-    TEACH_STATUSES.map((status) => `status.${status}`),
-    undefined,
+    CHAPTER_STATUS_KINDS.map((kind) => `list.status.${kind}`),
+    { date: DATE_SLOT },
     'paradigms-teach',
   );
-  private readonly overdueLabel = translateSignal('list.overdue', undefined, 'paradigms-teach');
   private readonly labels = computed(() =>
-    labelsFrom(
-      TEACH_CHAPTERS,
-      this.chapterLabels(),
-      TEACH_STATUSES,
-      this.statusLabels(),
-      this.overdueLabel(),
-    ),
+    labelsFrom(TEACH_CHAPTERS, this.chapterLabels(), this.statusLabels()),
   );
+  /** "22 Sep" in the active language and numerals (`AppDatePipe`'s locale rule). English reads
+   * day-first, as en-GB (the app's English is British, #218; plain `en` would give "Sep 22"). */
+  private readonly formatShortDate = computed(() => {
+    const language = this.languageStore.language();
+    const format = new Intl.DateTimeFormat(
+      intlLocaleFor(language === 'en' ? 'en-GB' : language, this.languageStore.numerals()),
+      { day: 'numeric', month: 'short' },
+    );
+    return (isoDate: string) => format.format(parseIsoDate(isoDate));
+  });
 
   protected readonly entries = computed(() => this.store.value());
   protected readonly items = computed(() =>
@@ -132,6 +142,7 @@ export class TeachPage {
         entryForChapter(this.entries(), chapter),
         this.labels(),
         this.clock.now(),
+        this.formatShortDate(),
       ),
     ),
   );
@@ -161,9 +172,11 @@ export class TeachPage {
     const pending = this.pending();
     return !entry && pending?.chapter === chapter ? { ...base, ...pending.fields } : base;
   });
-  /** Drives the editor header's title: a chapter with no entry yet, or one whose key idea is
-   * still blank, is "new" even though a record may already exist for it. */
-  protected readonly isNewEntry = computed(() => !this.draft()?.keyIdea.trim());
+  /** The editor header names the chapter itself (issue #224: one noun, no "New commitment"). */
+  protected readonly editorTitle = computed(() => {
+    const chapter = this.selectedChapter();
+    return chapter ? this.labels().chapter[chapter] : '';
+  });
   /** "New" while the open chapter has no entry yet (issue #217), otherwise "saved": this page's
    * `store.update()` is always synchronous — see `exercise-layout.md`'s `editorStatus()`. */
   protected readonly editorStatus = computed<EditorStatus>(() => {

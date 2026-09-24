@@ -61,6 +61,9 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
    * doesn't silently grow a bin button and a swipe gesture nobody listens to. A row can further
    * opt itself out via its own `item.deletable` (`ExerciseListItem`'s own doc comment). */
   readonly deletable = input(false);
+  /** Opt-out (issue #224): `false` for a short fixed list (the ten Teach chapters) where search and
+   * sort only get in the way; the default keeps them for add-your-own lists. */
+  readonly searchable = input(true);
   readonly itemSelected = output<string>();
   /** Requested by a bin-button click or a committed swipe on a deletable row — never both for the
    * same gesture (`SwipeToDeleteDirective` suppresses the click a swipe produces). The caller runs
@@ -75,8 +78,11 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
   private readonly sortOverride = signal<ExerciseListSort | null>(null);
   protected readonly sort = computed(() => this.sortOverride() ?? this.initialSort());
 
-  /** Search and sort only once there's enough to search/sort through (#186). */
-  protected readonly showTools = computed(() => this.items().length >= LIST_TOOLS_MIN_ITEMS);
+  /** Search and sort only once there's enough to search/sort through (#186), and only for a
+   * caller that wants them (`searchable`, #224). */
+  protected readonly showTools = computed(
+    () => this.searchable() && this.items().length >= LIST_TOOLS_MIN_ITEMS,
+  );
 
   protected readonly visibleItems = computed(() =>
     sortExerciseItems(filterExerciseItems(this.items(), this.query()), this.sort()),

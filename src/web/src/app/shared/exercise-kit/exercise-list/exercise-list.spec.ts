@@ -164,6 +164,44 @@ describe('ExerciseList', () => {
     expect(fixture.nativeElement.querySelector('.sort')).not.toBeNull();
   });
 
+  it('hides search and sort at any length once searchable is false (issue #224)', () => {
+    TestBed.configureTestingModule({
+      providers: [provideTranslocoTesting(), provideTranslocoScope('exercise-kit')],
+    });
+    const fixture = TestBed.createComponent(ExerciseList);
+    fixture.componentRef.setInput('items', MANY_ITEMS);
+    fixture.componentRef.setInput('searchLabel', 'Search items');
+    fixture.componentRef.setInput('emptyMessage', 'No items yet.');
+    fixture.componentRef.setInput('searchable', false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.search')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.sort')).toBeNull();
+    expect(itemButtons(fixture)).toHaveLength(MANY_ITEMS.length);
+  });
+
+  it("renders a row's chips in order, marking a warning chip (issues #224, #225)", () => {
+    const fixture = setUp([
+      {
+        id: 'a',
+        title: 'Habit 1',
+        chips: [{ label: 'Family' }, { label: 'Overdue', warning: true }],
+      },
+      { id: 'b', title: 'Habit 2' },
+    ]);
+    const [first, second] = itemButtons(fixture);
+    const chips = [...first.querySelectorAll('.exercise-list__chip')];
+
+    expect(chips.map((chip) => chip.textContent?.trim())).toEqual(['Family', 'Overdue']);
+    expect(chips.map((chip) => chip.classList.contains('exercise-list__chip--warning'))).toEqual([
+      false,
+      true,
+    ]);
+    expect(first.classList).toContain('exercise-list__item--chips');
+    expect(second.querySelector('.exercise-list__chips')).toBeNull();
+    expect(second.classList).not.toContain('exercise-list__item--chips');
+  });
+
   it('renders no bin button when deletable is left at its default (issue #203)', () => {
     const fixture = setUp();
 

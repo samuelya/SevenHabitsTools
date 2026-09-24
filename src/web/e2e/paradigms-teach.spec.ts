@@ -19,7 +19,10 @@ const TEXT: Record<
   {
     checklistItem: string;
     hubActionLabel: string;
+    h1Title: string;
     markDone: string;
+    notPlanned: string;
+    overdue: string;
     reopen: string;
     sharedToggle: string;
   }
@@ -27,14 +30,20 @@ const TEXT: Record<
   en: {
     checklistItem: 'Plan one chapter with a date',
     hubActionLabel: 'Teach this chapter',
+    h1Title: 'Habit 1: Be proactive',
     markDone: 'Mark done',
+    notPlanned: 'Not planned',
+    overdue: 'Overdue',
     reopen: 'Reopen',
     sharedToggle: 'Shared',
   },
   ar: {
     checklistItem: 'خطّط لفصل واحد بميعاد',
     hubActionLabel: 'علّم هذا الفصل',
+    h1Title: 'العادة 1: كن مبادراً',
     markDone: 'وضع علامة تم',
+    notPlanned: 'غير مخطط',
+    overdue: 'متأخر',
     reopen: 'إعادة فتح',
     sharedToggle: 'تمت المشاركة',
   },
@@ -96,7 +105,11 @@ test.describe('teach-to-learn tracker', () => {
     await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
   });
 
-  test('shows all ten chapters and highlights an overdue one', async ({ page, seedDocument }) => {
+  test('shows all ten chapters with status chips, no search or sort, and highlights an overdue one (#224)', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo.project.name)];
     await seedDocument({
       habits: {
         paradigms: {
@@ -118,6 +131,23 @@ test.describe('teach-to-learn tracker', () => {
 
     await expect(page.locator('.exercise-list__item')).toHaveCount(10);
     await expect(page.locator('app-exercise-list .exercise-list__item--warning')).toHaveCount(1);
+    // Ten known rows: no search box, no sort toggle.
+    await expect(page.locator('app-exercise-list .search')).toHaveCount(0);
+    await expect(page.locator('app-exercise-list .sort')).toHaveCount(0);
+
+    // Every row has a status chip; the overdue one says so in words, not only in colour, and
+    // shows the key idea's first line.
+    await expect(page.locator('.exercise-list__item .exercise-list__chip')).toHaveCount(10);
+    const overdueRow = page.locator('.exercise-list__item--warning');
+    await expect(overdueRow.locator('.exercise-list__chip--warning')).toHaveText(text.overdue);
+    await expect(overdueRow).toContainText('Choose your response, not just react');
+    await expect(
+      page.locator('.exercise-list__item').first().locator('.exercise-list__chip'),
+    ).toHaveText(text.notPlanned);
+
+    // The editor is titled with the chapter's own name.
+    await overdueRow.click();
+    await expect(page.locator('app-exercise-page .editor-title')).toHaveText(text.h1Title);
   });
 
   test('accessibility: the exercise page and its open editor have no serious or critical violations', async ({

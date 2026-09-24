@@ -109,3 +109,63 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+// A row with chips (issues #224, #225) grows with its content instead of Material's fixed
+// two/three-line height, so a two-line title, a subtitle and the chip row never overlap.
+.exercise-list__item.exercise-list__item--chips {
+  block-size: auto;
+  padding-block: 8px;
+}
+
+// Material lays each text line out on a fixed baseline grid (an inline `::before` strut, a negative
+// bottom margin, `white-space: nowrap`), which keeps the title to one line whatever the clamp above
+// says. A chip row has its own auto height, so drop the grid there and let the title wrap to two
+// lines with an ellipsis (#225: a pattern the user wrote is often longer than one line at 360 px).
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-block: 0;
+  white-space: normal;
+  overflow: hidden;
+  line-height: 1.5rem;
+}
+
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__secondary-text {
+  margin-block: 0;
+  line-height: 1.25rem;
+}
+
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text::before,
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__primary-text::after,
+::ng-deep .exercise-list__item.exercise-list__item--chips .mdc-list-item__secondary-text::before {
+  display: none;
+}
+
+::ng-deep .exercise-list__item [matListItemLine].exercise-list__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-block-start: 0.25rem;
+  white-space: normal;
+  overflow: visible;
+}
+
+// Plain markup, not Material chips: non-interactive labels inside a row button (a nested
+// interactive chip would be invalid there). Same look as the habits list's "Coming soon" chip.
+.exercise-list__chip {
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--mat-sys-outline-variant, lightgray);
+  border-radius: 0.5rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  font: var(--mat-sys-label-medium);
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+// Colour plus the chip's own text ("Overdue"), never colour alone (#224).
+.exercise-list__chip--warning {
+  border-color: var(--mat-sys-error, darkred);
+  color: var(--mat-sys-error, darkred);
+}

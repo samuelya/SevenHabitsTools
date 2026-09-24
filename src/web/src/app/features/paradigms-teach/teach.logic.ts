@@ -1,5 +1,5 @@
 import { isLive, newRecord, softDelete, touch } from '../../core/data/record';
-import { localDateString } from '../../shared/exercise-kit/assessment-history.logic';
+import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
@@ -12,13 +12,7 @@ import {
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
-import {
-  TEACH_CHAPTERS,
-  TeachChapter,
-  TeachEntry,
-  TeachEntryFields,
-  TeachStatus,
-} from './teach.model';
+import { TEACH_CHAPTERS, TeachChapter, TeachEntry, TeachEntryFields } from './teach.model';
 
 /** Every entry starts here; the chapter, and any fields the caller supplies, are applied on top. */
 const DEFAULT_FIELDS: Omit<TeachEntryFields, 'chapter' | 'plannedAt'> = {
@@ -44,7 +38,14 @@ export function isKeyIdeaValid(keyIdea: string): boolean {
  * `true` — a chapter the user only *tried* to clear would show "Overdue" forever, including after
  * export/import (`isTeachEntry`'s `typeof === 'string'` structural check lets `''` through). */
 export function isValidPlannedAt(value: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  // The pattern alone lets an impossible date through (an imported or synced `2026-13-01`), which
+  // parses to Invalid Date and makes `Intl.DateTimeFormat.format` throw, taking the list down. A
+  // `NaN` check isn't enough either: `2026-02-30` rolls over to 2 March. Round-trip it instead.
+  const date = parseIsoDate(value);
+  return !isNaN(date.getTime()) && localDateString(date) === value;
 }
 
 /** `plannedAt`'s default: today + 48 hours (issue #52's acceptance criteria). `localDateString`
@@ -186,36 +187,82 @@ export function summarize(entries: readonly TeachEntry[], now: Date): TeachSumma
   };
 }
 
-/** Already-translated labels this page builds from its own Transloco scope — kept out of this
- * pure logic file so it stays testable without a translation service (playbook's "Reactive
- * labels" section). */
-export interface TeachLabels {
-  readonly chapter: Record<TeachChapter, string>;
-  readonly status: Record<TeachStatus, string>;
-  readonly overdue: string;
+/** A chapter row's status chip (issue #224), derived — never stored — from its entry's `status`
+ * and `plannedAt`. */
+export type ChapterStatus =
+  | { readonly kind: 'notPlanned' }
+  | { readonly kind: 'planned'; readonly plannedAt: string }
+  | { readonly kind: 'overdue'; readonly plannedAt: string }
+  | { readonly kind: 'shared' }
+  | { readonly kind: 'skipped' };
+export type ChapterStatusKind = ChapterStatus['kind'];
+export const CHAPTER_STATUS_KINDS: readonly ChapterStatusKind[] = [
+  'notPlanned',
+  'planned',
+  'overdue',
+  'shared',
+  'skipped',
+];
+
+/** `entry`'s chapter status on `today`: no entry (or a planned one without a valid date) is "Not
+ * planned"; a planned one is "Planned by <date>" until that date has passed, then "Overdue"; a
+ * shared or skipped one says so, whatever its date. */
+export function chapterStatus(entry: TeachEntry | undefined, today: Date): ChapterStatus {
+  if (!entry) {
+    return { kind: 'notPlanned' };
+  }
+  if (entry.status === 'shared' || entry.status === 'skipped') {
+    return { kind: entry.status };
+  }
+  if (!isValidPlannedAt(entry.plannedAt)) {
+    return { kind: 'notPlanned' };
+  }
+  return isOverdue(entry, today)
+    ? { kind: 'overdue', plannedAt: entry.plannedAt }
+    : { kind: 'planned', plannedAt: entry.plannedAt };
 }
 
-/** Builds `TeachLabels` from `translateSignal` output for each enum, plus the plain "Overdue"
- * label. `translateSignal` with an array key starts at `['']` (one placeholder, not one per key)
- * until the scope has loaded, so every index past 0 reads as `undefined` on a cold load — falling
- * back to `''` keeps the row blank instead of rendering the literal text "undefined" (playbook's
- * documented pitfall). */
+/** The placeholder a status label carries for its date (`list.status.planned`: "Planned by
+ * {{date}}"). The page translates the label with this as the `date` param, and `toListItem()`
+ * swaps in the formatted date per row: one translated template, not one translation per row. */
+export const DATE_SLOT = '%date%';
+
+/** Already-translated labels this page builds from its own Transloco scope — kept out of this
+ * pure logic file so it stays testable without a translation service (playbook's "Reactive
+ * labels" section). A `status` label may contain `DATE_SLOT`. */
+export interface TeachLabels {
+  readonly chapter: Record<TeachChapter, string>;
+  readonly status: Record<ChapterStatusKind, string>;
+}
+
+/** Builds `TeachLabels` from `translateSignal` output (chapters in `chapters` order, statuses in
+ * `CHAPTER_STATUS_KINDS` order). `translateSignal` with an array key starts at `['']` (one
+ * placeholder, not one per key) until the scope has loaded, so every index past 0 reads as
+ * `undefined` on a cold load — falling back to `''` keeps the row blank instead of rendering the
+ * literal text "undefined" (playbook's documented pitfall). */
 export function labelsFrom(
   chapters: readonly TeachChapter[],
   chapterLabels: readonly (string | undefined)[],
-  statuses: readonly TeachStatus[],
   statusLabels: readonly (string | undefined)[],
-  overdueLabel: string | undefined,
 ): TeachLabels {
   return {
     chapter: Object.fromEntries(
       chapters.map((chapter, index) => [chapter, chapterLabels[index] ?? '']),
     ) as Record<TeachChapter, string>,
     status: Object.fromEntries(
-      statuses.map((status, index) => [status, statusLabels[index] ?? '']),
-    ) as Record<TeachStatus, string>,
-    overdue: overdueLabel ?? '',
+      CHAPTER_STATUS_KINDS.map((kind, index) => [kind, statusLabels[index] ?? '']),
+    ) as Record<ChapterStatusKind, string>,
   };
+}
+
+/** The first non-blank line of `text`, trimmed; `''` when there is none. */
+export function firstLine(text: string | undefined): string {
+  return (
+    (text ?? '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line !== '') ?? ''
+  );
 }
 
 /** Draft before record (issue #217): a chapter's first edits become its entry once any free-text
@@ -243,29 +290,32 @@ export function draftFor(
   return { chapter, keyIdea: '', plannedAt: defaultPlannedAt(now), status: 'planned' };
 }
 
-/** Maps one chapter — with or without an entry yet — to the row `ExerciseList` renders.
- * `deletable: false` for a chapter with no entry yet (issue #203): unlike every other list
- * exercise, `paradigms-teach`'s rows are the ten fixed chapters, not one-to-one with what a delete
- * removes, so a chapter with nothing filled in yet has nothing to delete — `ExerciseList` reads
- * this to skip the row's own bin button and swipe (playbook's "Deleting entries"). */
+/** Maps one chapter — with or without an entry yet — to the row `ExerciseList` renders: the
+ * chapter's name, the key idea's first line (once written) and a status chip (issue #224).
+ * `formatDate` turns an ISO `plannedAt` into the short, localised date the chip shows ("22 Sep").
+ * `deletable: false` for a chapter with no entry yet (issue #203): the rows are the ten fixed
+ * chapters, not one-to-one with what a delete removes, so a chapter with nothing filled in yet has
+ * nothing to delete (playbook's "Deleting entries"). */
 export function toListItem(
   chapter: TeachChapter,
   entry: TeachEntry | undefined,
   labels: TeachLabels,
   now: Date,
+  formatDate: (isoDate: string) => string,
 ): ExerciseListItem {
-  if (!entry) {
-    return { id: chapter, title: labels.chapter[chapter], done: false, deletable: false };
-  }
-  const statusLabel = labels.status[entry.status];
-  const overdue = isOverdue(entry, now);
+  const status = chapterStatus(entry, now);
+  const label = labels.status[status.kind];
+  const chipLabel =
+    'plannedAt' in status ? label.replace(DATE_SLOT, formatDate(status.plannedAt)) : label;
+  const keyIdea = firstLine(entry?.keyIdea);
   return {
     id: chapter,
     title: labels.chapter[chapter],
-    subtitle: overdue ? `${statusLabel} · ${labels.overdue}` : statusLabel,
-    done: entry.status === 'shared',
-    warning: overdue,
-    deletable: true,
+    ...(keyIdea ? { subtitle: keyIdea } : {}),
+    chips: [{ label: chipLabel, warning: status.kind === 'overdue' }],
+    done: status.kind === 'shared',
+    warning: status.kind === 'overdue',
+    deletable: entry !== undefined,
   };
 }
 

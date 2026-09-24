@@ -9,13 +9,15 @@
     "searchLabel": "Search chapters",
     "empty": "No chapters yet.",
     "noMatch": "No chapters match your search.",
-    "overdue": "Overdue",
     "deleted": "Entry deleted",
-    "undo": "Undo"
-  },
-  "editor": {
-    "newTitle": "New commitment",
-    "editTitle": "Edit commitment"
+    "undo": "Undo",
+    "status": {
+      "notPlanned": "Not planned",
+      "planned": "Planned by {{date}}",
+      "overdue": "Overdue",
+      "shared": "Shared",
+      "skipped": "Skipped"
+    }
   },
   "form": {
     "keyIdeaLabel": "The key idea, in your own words",

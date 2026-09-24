@@ -60,6 +60,7 @@
     <mat-button-toggle-group
       [value]="script().decision"
       [attr.aria-label]="'paradigmsTransition.form.decisionLabel' | transloco"
+      aria-describedby="decision-hint"
       (change)="onDecisionChange($event.value)"
     >
       @for (decision of decisions; track decision) {
@@ -68,12 +69,17 @@
         }}</mat-button-toggle>
       }
     </mat-button-toggle-group>
-    <p class="decision-hint">{{ 'paradigmsTransition.form.decisionHint' | transloco }}</p>
+    <!-- Talks to the user about the choice just made (issue #225), never about the form. -->
+    <p id="decision-hint" class="decision-hint">
+      {{ 'paradigmsTransition.form.decisionHint.' + script().decision | transloco }}
+    </p>
   </fieldset>
 
   @if (needsNewScript()) {
     <mat-form-field appearance="outline" class="field">
-      <mat-label>{{ 'paradigmsTransition.form.newScriptLabel' | transloco }}</mat-label>
+      <mat-label>{{
+        'paradigmsTransition.form.newScriptLabel.' + script().decision | transloco
+      }}</mat-label>
       <textarea
         matInput
         #newScriptField
