@@ -20,8 +20,9 @@ const EXERCISE_ROUTES = [
 ];
 
 async function expectNotTruncated(locator: Locator): Promise<void> {
+  // `count()` doesn't wait: let the lazy route and its translations render first.
+  await expect(locator.first()).toBeVisible();
   const count = await locator.count();
-  expect(count).toBeGreaterThan(0);
   for (let index = 0; index < count; index++) {
     const item = locator.nth(index);
     await expect(item).toBeVisible();
@@ -67,9 +68,11 @@ test.describe('short titles fit without truncation (#218)', () => {
       await page.goto(route);
       await expectNotTruncated(page.getByTestId('page-title'));
 
+      // `textContent()` doesn't wait either: wait until the h1 holds its translated title.
+      const heading = page.locator('app-exercise-page h1');
+      await expect(heading).not.toBeEmpty();
       const short = (await page.getByTestId('page-title').textContent())?.trim() ?? '';
-      const long = (await page.locator('app-exercise-page h1').textContent())?.trim() ?? '';
-      expect(long.length).toBeGreaterThan(0);
+      const long = (await heading.textContent())?.trim() ?? '';
       // The h1 is visually hidden; the intro card shows the same long title to sighted users.
       const visibleLong = page.locator('app-exercise-prompt-card .prompt-heading');
       await expect(visibleLong).toBeVisible();
