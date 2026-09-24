@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 
 /**
@@ -9,25 +10,48 @@ import { expect, test } from './fixtures';
  * `desktop-ar`, per `playwright.config.ts`), same as `e2e/paradigms-transition.spec.ts`.
  */
 
+/** The stored audits' dates, as IndexedDB holds them (the document the JSON export writes). */
+async function storedAuditDates(page: Page): Promise<string[]> {
+  return page.evaluate(
+    () =>
+      new Promise<string[]>((resolve, reject) => {
+        const open = indexedDB.open('sevenhabits');
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const get = db.transaction('documents').objectStore('documents').get('current');
+          get.onsuccess = () => {
+            db.close();
+            const audits: { date: string }[] = get.result?.habits?.paradigms?.pcAudits ?? [];
+            resolve(audits.map((audit) => audit.date));
+          };
+          get.onerror = () => reject(get.error);
+        };
+      }),
+  );
+}
+
 function localeFor(projectName: string): 'en' | 'ar' {
   return projectName.endsWith('-ar') ? 'ar' : 'en';
 }
 
 const TEXT: Record<
   'en' | 'ar',
-  { checklistItem: string; hubTitle: string; markDone: string; reopen: string }
+  { checklistItem: string; hubTitle: string; markDone: string; reopen: string; summary: string }
 > = {
   en: {
     checklistItem: 'Add an asset and name every one',
     hubTitle: 'Results and capacity',
     markDone: 'Mark done',
     reopen: 'Reopen',
+    summary: '1 over-used',
   },
   ar: {
     checklistItem: 'ضيف حاجة ليها قيمة عندك واكتب اسم كل واحدة',
     hubTitle: 'النتائج والقدرة',
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
+    summary: 'أصل واحد مُستنزف',
   },
 };
 
@@ -74,6 +98,11 @@ test.describe('P/PC balance audit', () => {
     await expect(actionField).toBeVisible();
     await actionField.fill('Sleep by 10pm on weeknights');
 
+    // The date is editable (issue #226): a native date input, filled as ISO `YYYY-MM-DD`.
+    await form.locator('app-assessment-date-field input').fill('2026-03-14');
+    // Stored when the user leaves the field (issue #226 review), not on each keystroke.
+    await form.locator('app-assessment-date-field input').blur();
+
     if (isMobile) {
       await page.goBack();
       await expect(page).toHaveURL(/\/habits\/paradigms\/pc-balance$/);
@@ -91,10 +120,75 @@ test.describe('P/PC balance audit', () => {
     await page.waitForTimeout(1000);
     await page.reload();
     await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
+    // Date + result summary (issue #226), after a reload: the edited date was stored.
+    const row = page.locator('.assessment-history-list__item');
+    await expect(row).toContainText('14');
+    await expect(row).toContainText('2026');
+    await expect(row.locator('.assessment-history-list__summary')).toHaveText(text.summary);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');
     await expect(page.locator('app-habit-hub-page .hub-status')).toBeVisible();
+  });
+
+  // Issue #226 review: Chromium fires `input` and `change` for every segment typed, so saving on
+  // those stored each in-between date (typing 31 Aug over 25 Sep passes through 3 Sep). Arrow keys
+  // step the focused segment in every locale's field order, and every step is a valid past date.
+  test('a date edited segment by segment is stored once, when the user leaves the field', async ({
+    page,
+  }) => {
+    await page.goto('/habits/paradigms/pc-balance');
+    await page.locator('.add-button').click();
+    const form = page.locator('app-pc-balance-audit-form');
+    await form.locator('.add-asset-row input[type="text"]').first().fill('Sleep');
+    await form.locator('.add-asset-row button').first().click();
+
+    const dateInput = form.locator('app-assessment-date-field input');
+    const original = await dateInput.inputValue();
+    await expect.poll(() => storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.focus();
+    for (let step = 0; step < 3; step++) {
+      await dateInput.press('ArrowDown');
+    }
+    const typed = await dateInput.inputValue();
+    expect(typed).not.toBe(original);
+
+    // Longer than the 500 ms save debounce: nothing in between has been stored.
+    await page.waitForTimeout(1000);
+    expect(await storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.blur();
+    await expect.poll(() => storedAuditDates(page)).toEqual([typed]);
+    await expect(dateInput).toHaveValue(typed);
+  });
+
+  // Bug #271: typing digits auto-advances to the next segment, and Chromium fires that `change`
+  // with focus on `<body>`, so a "commit an unfocused change" path stored the in-between dates.
+  // `01 01 2025` is 1 Jan 2025 in either day/month order, and each in-between date is in the past.
+  test('a date typed digit by digit is stored once, when the user leaves the field', async ({
+    page,
+  }) => {
+    await page.goto('/habits/paradigms/pc-balance');
+    await page.locator('.add-button').click();
+    const form = page.locator('app-pc-balance-audit-form');
+    await form.locator('.add-asset-row input[type="text"]').first().fill('Sleep');
+    await form.locator('.add-asset-row button').first().click();
+
+    const dateInput = form.locator('app-assessment-date-field input');
+    const original = await dateInput.inputValue();
+    await expect.poll(() => storedAuditDates(page)).toEqual([original]);
+
+    await dateInput.focus();
+    await page.keyboard.type('01012025', { delay: 100 });
+    await expect(dateInput).toHaveValue('2025-01-01');
+
+    // Longer than the 500 ms save debounce: nothing in between has been stored.
+    await page.waitForTimeout(1000);
+    expect(await storedAuditDates(page)).toEqual([original]);
+
+    await page.keyboard.press('Enter');
+    await expect.poll(() => storedAuditDates(page)).toEqual(['2025-01-01']);
   });
 
   // Issue #213's shared fix (`exercise-page.scss`) applies to every split-mode editor, but

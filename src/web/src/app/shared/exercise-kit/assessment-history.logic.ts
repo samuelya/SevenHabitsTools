@@ -66,3 +66,50 @@ export function localDateString(now: Date): string {
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/** Whether `value` is a real calendar date in `YYYY-MM-DD` form — the only value an editable
+ * assessment date (issue #226) may store, and the one a history row can format (anything else,
+ * such as an imported `''` or `2026-13-01`, is titled "No date"). The pattern alone lets an
+ * impossible date through (`2026-13-01` parses to Invalid Date, which `AppDatePipe` renders as an
+ * empty string), and a `NaN` check isn't enough either: `2026-02-30` rolls over to 2 March
+ * (#224). So the value must round-trip through `parseIsoDate` → `localDateString` unchanged. A
+ * native `<input type="date">` emits `''` when cleared, which fails here too. */
+export function isValidIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = parseIsoDate(value);
+  return !isNaN(date.getTime()) && localDateString(date) === value;
+}
+
+/** A history row's result summary (issue #226), as a translation key rather than text so the row
+ * follows a language switch: resolved through `appPlural` with `count` when it has one ("2
+ * over-used"), else through `transloco` ("Mostly independence"). */
+export interface AssessmentResultSummary {
+  readonly key: string;
+  readonly count?: number;
+}
+
+/** One history row: the assessment's raw `YYYY-MM-DD` date (formatted by the list through
+ * `AppDatePipe`) plus its result summary, absent while the assessment has no result yet. */
+export interface AssessmentHistoryItem {
+  readonly id: string;
+  readonly date: string;
+  readonly summary?: AssessmentResultSummary;
+}
+
+/** The "date + summary" rows every assessment's history shows (issue #226): one per entry of
+ * `history`, in its order, each labelled by the exercise's own result rule `summaryOf`. `history`
+ * is the page's own already-ordered list (live, `sortedByDateDesc`), so the rows and the "latest"
+ * the page copies from never disagree, and the list isn't filtered and sorted twice. */
+export function assessmentHistoryItems<T extends DatedAssessment>(
+  history: readonly T[],
+  summaryOf: (assessment: T) => AssessmentResultSummary | null,
+): AssessmentHistoryItem[] {
+  return history.map((assessment) => {
+    const summary = summaryOf(assessment);
+    return summary === null
+      ? { id: assessment.id, date: assessment.date }
+      : { id: assessment.id, date: assessment.date, summary };
+  });
+}

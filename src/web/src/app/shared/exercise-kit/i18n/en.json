@@ -27,6 +27,10 @@
     "deleteAria": "Delete {{item}}",
     "untitled": "Untitled"
   },
+  "history": {
+    "deleteAria": "Delete {{date}}, {{summary}}",
+    "noDate": "No date"
+  },
   "detail": {
     "close": "Back to list"
   },

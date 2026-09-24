@@ -7,13 +7,19 @@
     "whyItMatters": "Knowing where you stand in each area points you to the habits worth focusing on next — the ones that build self-reliance where you're still leaning on others, or that build real partnership once you're already standing on your own."
   },
   "editor": {
-    "title": "Assessment"
+    "title": "Assessment",
+    "dateLabel": "Date"
   },
   "history": {
     "newAssessment": "New assessment",
     "empty": "No assessments yet. Start your first one.",
     "deleted": "Assessment deleted",
-    "undo": "Undo"
+    "undo": "Undo",
+    "mostly": {
+      "1": "Mostly dependence",
+      "2": "Mostly independence",
+      "3": "Mostly interdependence"
+    }
   },
   "area": {
     "work": "Work",

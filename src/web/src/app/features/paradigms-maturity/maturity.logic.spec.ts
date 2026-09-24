@@ -1,6 +1,7 @@
 import { MaturityArea, MaturityAssessment } from './maturity.model';
 import {
   isDraftWorthSaving,
+  assessmentHistorySummary,
   clampIndex,
   firstUnratedIndex,
   initialPhase,
@@ -42,6 +43,23 @@ function assessment(overrides: Partial<MaturityAssessment> = {}): MaturityAssess
     ...overrides,
   };
 }
+
+describe('assessmentHistorySummary (issue #226)', () => {
+  it('is null until an area is rated', () => {
+    expect(assessmentHistorySummary(assessment({ areas: [area()] }))).toBeNull();
+  });
+
+  it('names the overall profile as a "mostly" key, with no count', () => {
+    const areas = [
+      area({ id: 'x', level: 2 }),
+      area({ id: 'y', level: 2 }),
+      area({ id: 'z', level: 1 }),
+    ];
+    expect(assessmentHistorySummary(assessment({ areas }))).toEqual({
+      key: 'paradigmsMaturity.history.mostly.2',
+    });
+  });
+});
 
 describe('isAssessmentComplete/isComplete', () => {
   it('is false with no areas', () => {

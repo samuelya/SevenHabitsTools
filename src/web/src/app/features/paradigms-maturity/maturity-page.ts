@@ -12,6 +12,7 @@ import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
 import { AssessmentHistoryList } from '../../shared/exercise-kit/assessment-history-list/assessment-history-list';
 import {
+  assessmentHistoryItems,
   localDateString,
   previousAssessment,
   sortedByDateDesc,
@@ -37,7 +38,7 @@ import {
   liveAssessmentsOf,
   removeArea,
   newAssessmentFields,
-  overallProfile,
+  assessmentHistorySummary,
   removeAssessment,
   restoreAssessment,
   summarize,
@@ -114,7 +115,7 @@ export class MaturityPage {
 
   // Reactive labels (`translateSignal`, not `transloco.translate()` inside a `computed()`) — see
   // the playbook's "Reactive labels" section: a cold load or a language switch must still update
-  // `historyItems()`'s subtitle and the built-in area names passed to the form/result views.
+  // the profile titles and the built-in area names passed to the form/result views.
   private readonly builtInAreaLabels = translateSignal(
     MATURITY_AREA_KEYS.map((key) => `area.${key}`),
     undefined,
@@ -137,20 +138,19 @@ export class MaturityPage {
 
   protected readonly assessments = computed(() => liveAssessmentsOf(this.store.value()));
   protected readonly history = computed(() => sortedByDateDesc(this.assessments()));
-  protected readonly historyItems = computed(() => {
-    const labels = this.profileLabels();
-    return this.history().map((assessment) => {
-      const profile = overallProfile(assessment.areas);
-      return {
-        id: assessment.id,
-        date: assessment.date,
-        subtitle: profile !== null ? labels[profile] : undefined,
-      };
-    });
-  });
+  /** Date + "Mostly independence" per row (issue #226), in the same date order as `history()`;
+   * the summary is a key the list translates, so it follows a language switch on its own. */
+  protected readonly historyItems = computed(() =>
+    assessmentHistoryItems(this.history(), assessmentHistorySummary),
+  );
   /** Bumped each time the store refuses an area edit (a read-only tab), so the form drops its own
    * copy of the areas and shows the stored ones again (#222 re-review R2). */
   protected readonly refusedEdits = signal(0);
+  /** The latest date an assessment may carry (issue #226), read from the clock at each render so
+   * a tab left open overnight moves on with the day. */
+  protected today(): string {
+    return localDateString(this.clock.now());
+  }
   /** The draft the user pressed Continue on: `isDraftWorthSaving()`'s signal to store it. */
   private continuedDraftId: string | null = null;
   protected readonly draft = recordDraft<MaturityAssessment>({

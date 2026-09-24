@@ -1,4 +1,15 @@
 <div class="maturity-assessment-form">
+  <!-- Above both phases (issue #226): a saved assessment opens on rating, and its date must stay
+       editable there too. -->
+  <app-assessment-date-field
+    class="assessment-date"
+    [date]="assessment().date"
+    [label]="'paradigmsMaturity.editor.dateLabel' | transloco"
+    [max]="today()"
+    [refusedEdits]="refusedEdits()"
+    (dateChanged)="changed.emit({ date: $event })"
+  />
+
   @if (phase() === 'areas') {
     <section class="areas-phase" aria-labelledby="maturity-areas-title">
       <h3

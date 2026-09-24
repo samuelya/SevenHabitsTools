@@ -20,8 +20,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSliderModule } from '@angular/material/slider';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AppDatePipe } from '../../core/i18n/locale.pipe';
-import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import { AssessmentDateField } from '../../shared/exercise-kit/assessment-date-field/assessment-date-field';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
 import {
@@ -62,7 +61,7 @@ type GroupText = Readonly<Record<PcBalanceGroup, string>>;
 const NO_TEXT: GroupText = { physical: '', financial: '', human: '' };
 
 /**
- * The editor for one audit (issue #49, redesigned by #223): its date, the P/PC group summary once
+ * The editor for one audit (issue #49, redesigned by #223): its editable date (#226), the P/PC group summary once
  * an asset exists, and per group the assets with their sliders and computed status, two suggested
  * asset chips and a free-text add field; then a reflection. Purely presentational — `audit` is the
  * current value, `changed` emits the edited field(s) so the page persists through `featureStore`
@@ -82,7 +81,7 @@ const NO_TEXT: GroupText = { physical: '', financial: '', human: '' };
 @Component({
   selector: 'app-pc-balance-audit-form',
   imports: [
-    AppDatePipe,
+    AssessmentDateField,
     CdkTextareaAutosize,
     EditorInitialFocus,
     MatButtonModule,
@@ -105,6 +104,8 @@ export class PcBalanceAuditForm {
   /** Each built-in asset key's translated label (issue #223). */
   readonly builtInLabels = input.required<Readonly<Record<string, string>>>();
   /** How many edits the page's store has refused (a read-only tab). */
+  /** Today's `YYYY-MM-DD`, the latest date the date field accepts (issue #226). */
+  readonly today = input<string | null>(null);
   readonly refusedEdits = input(0);
   readonly changed = output<Partial<PcAuditFields>>();
   readonly reflectionChanged = output<PcReflectionChange>();
@@ -128,7 +129,6 @@ export class PcBalanceAuditForm {
   });
   private readonly auditId = computed(() => this.audit().id);
 
-  protected readonly localDate = computed(() => parseIsoDate(this.audit().date));
   protected readonly hasAssets = computed(() => this.assets().length > 0);
   /** Only the groups holding an asset: no "No assets yet" rows (issue #223). */
   protected readonly groupSummary = computed(() =>

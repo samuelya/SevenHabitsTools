@@ -2,6 +2,20 @@
   @if (items().length) {
     <mat-nav-list>
       @for (item of items(); track item.id) {
+        <!-- "Date + summary" (issue #226): two same-day assessments are told apart by their
+             result, in the row and in its delete button's name. -->
+        <!-- An imported record can carry an invalid date (''/'2026-13-01'): the model allows it,
+             so the row says "No date" instead of a blank title. -->
+        @let dateText =
+          isValidDate(item.date)
+            ? (localDate(item.date) | appDate: { dateStyle: 'medium' })
+            : ('exerciseKit.history.noDate' | transloco);
+        @let summaryText =
+          item.summary
+            ? item.summary.count !== undefined
+              ? (item.summary.key | appPlural: item.summary.count)
+              : (item.summary.key | transloco)
+            : '';
         <!-- The swipe host (issue #203), same shape as `ExerciseList`'s own row wrapper
              (`exercise-list.html`): a bin `<button>` can't nest inside the row's own `<button>`. -->
         <div
@@ -23,11 +37,11 @@
             (click)="itemSelected.emit(item.id)"
           >
             <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
-            <span matListItemTitle>{{
-              localDate(item.date) | appDate: { dateStyle: 'medium' }
-            }}</span>
-            @if (item.subtitle; as subtitle) {
-              <span matListItemLine>{{ subtitle }}</span>
+            <span matListItemTitle>{{ dateText }}</span>
+            @if (summaryText) {
+              <span matListItemLine class="assessment-history-list__summary">{{
+                summaryText
+              }}</span>
             }
           </button>
           @if (deletable()) {
@@ -35,8 +49,10 @@
               type="button"
               class="assessment-history-list__delete"
               [attr.aria-label]="
-                'exerciseKit.list.deleteAria'
-                  | transloco: { item: localDate(item.date) | appDate: { dateStyle: 'medium' } }
+                summaryText
+                  ? ('exerciseKit.history.deleteAria'
+                    | transloco: { date: dateText, summary: summaryText })
+                  : ('exerciseKit.list.deleteAria' | transloco: { item: dateText })
               "
               (click)="requestDelete(item)"
             >

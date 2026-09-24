@@ -42,9 +42,28 @@ function setUp(initial: PcAudit) {
 }
 
 describe('PcBalanceAuditForm', () => {
-  it('shows the audit date', () => {
+  it('shows the audit date in an editable date field (issue #226)', () => {
     const fixture = setUp(audit());
-    expect(fixture.nativeElement.textContent).toContain('2026');
+    const input = fixture.nativeElement.querySelector(
+      'app-assessment-date-field input',
+    ) as HTMLInputElement;
+    expect(input.type).toBe('date');
+    expect(input.value).toBe(audit().date);
+  });
+
+  it('emits a date edit through `changed` (issue #226)', () => {
+    const fixture = setUp(audit());
+    const changes: unknown[] = [];
+    fixture.componentInstance.changed.subscribe((change) => changes.push(change));
+    const input = fixture.nativeElement.querySelector(
+      'app-assessment-date-field input',
+    ) as HTMLInputElement;
+
+    input.value = '2025-12-31';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
+
+    expect(changes).toEqual([{ date: '2025-12-31' }]);
   });
 
   it('renders one asset row per live asset, grouped', () => {

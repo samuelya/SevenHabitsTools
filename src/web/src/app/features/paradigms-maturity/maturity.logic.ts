@@ -2,6 +2,7 @@ import { isLive, softDelete, touch } from '../../core/data/record';
 import { HabitId } from '../../core/habits/habits';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
+  AssessmentResultSummary,
   latestAssessment,
   liveAssessments,
 } from '../../shared/exercise-kit/assessment-history.logic';
@@ -119,6 +120,15 @@ export function overallProfile(areas: readonly MaturityArea[]): MaturityLevel | 
     }
   }
   return best;
+}
+
+/** The assessment's history-row summary (issue #226): its overall profile as "Mostly
+ * independence", `null` until an area is rated. */
+export function assessmentHistorySummary(
+  assessment: Pick<MaturityAssessment, 'areas'>,
+): AssessmentResultSummary | null {
+  const profile = overallProfile(assessment.areas);
+  return profile === null ? null : { key: `paradigmsMaturity.history.mostly.${profile}` };
 }
 
 /** Habits 1–3 for a dependence-dominant profile, 4–6 for independence, 7 for interdependence

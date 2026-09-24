@@ -1,6 +1,7 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
+  AssessmentResultSummary,
   latestAssessment,
   liveAssessments,
 } from '../../shared/exercise-kit/assessment-history.logic';
@@ -157,6 +158,22 @@ export function auditAverageBalance(audit: Pick<PcAudit, 'assets'>): number | nu
   return averageOf(audit.assets);
 }
 
+/** The audit's history-row summary (issue #226): how many assets are over-used ("2 over-used",
+ * plural-correct through `appPlural`), "None over-used" when none are, `null` with no assets yet.
+ * Over-use is the result the audit asks the user to act on (a maintenance action), so it is what
+ * tells two audits apart at a glance. */
+export function auditHistorySummary(
+  audit: Pick<PcAudit, 'assets'>,
+): AssessmentResultSummary | null {
+  if (audit.assets.length === 0) {
+    return null;
+  }
+  const overUsed = audit.assets.filter(isOverUsed).length;
+  return overUsed > 0
+    ? { key: 'paradigmsPcBalance.history.summary.overUsed', count: overUsed }
+    : { key: 'paradigmsPcBalance.history.summary.noneOverUsed' };
+}
+
 /** One group's counts and average balance — the audit's "group summary" (issue #49's acceptance
  * criteria). */
 export interface PcBalanceGroupSummary {
@@ -195,11 +212,13 @@ export function summarize(audits: readonly PcAudit[]): PcBalanceSummaryData {
   };
 }
 
-/** A new audit dated today, pre-filling asset names and groups from the latest audit with sliders
- * reset to 3 and no carried-over action (issue #49's implementation notes) — an empty asset list
- * when there is no previous audit. A suggested asset keeps its built-in key (issue #223); any
- * other gets a fresh one. */
-export function newAuditFields(latest: PcAudit | null, today: string): PcAuditFields {
+/** A new audit dated today, pre-filling asset names and groups from the latest audit that has any
+ * assets, with sliders reset to 3 and no carried-over action (issue #49's implementation notes) —
+ * an empty asset list without one. A newer audit whose assets were all removed isn't the template
+ * (#226 review; maturity's `newAssessmentFields` rule). A suggested asset keeps its built-in key
+ * (issue #223); any other gets a fresh one. `history` is newest first. */
+export function newAuditFields(history: readonly PcAudit[], today: string): PcAuditFields {
+  const latest = history.find((audit) => audit.assets.length > 0);
   return {
     date: today,
     assets: latest

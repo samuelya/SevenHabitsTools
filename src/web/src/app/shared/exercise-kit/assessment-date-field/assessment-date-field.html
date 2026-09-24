@@ -1,0 +1,13 @@
+<mat-form-field appearance="outline" class="assessment-date-field" subscriptSizing="dynamic">
+  <mat-label>{{ label() }}</mat-label>
+  <input
+    #dateInput
+    matInput
+    type="date"
+    required
+    [value]="shownDate()"
+    [attr.max]="max()"
+    (blur)="onBlur()"
+    (keydown.enter)="commit()"
+  />
+</mat-form-field>

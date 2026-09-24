@@ -1,8 +1,12 @@
 <form class="pc-balance-audit-form" (submit)="$event.preventDefault()">
-  <p class="audit-date">
-    {{ 'paradigmsPcBalance.editor.dateLabel' | transloco }}:
-    {{ localDate() | appDate: { dateStyle: 'medium' } }}
-  </p>
+  <app-assessment-date-field
+    class="audit-date"
+    [date]="audit().date"
+    [label]="'paradigmsPcBalance.editor.dateLabel' | transloco"
+    [max]="today()"
+    [refusedEdits]="refusedEdits()"
+    (dateChanged)="changed.emit({ date: $event })"
+  />
 
   <!-- Not rendered until the audit has an asset, and then only for the groups holding one: no
        "No assets yet" rows above empty fields (issue #223). -->

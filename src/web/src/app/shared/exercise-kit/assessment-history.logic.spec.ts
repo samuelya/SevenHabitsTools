@@ -1,5 +1,7 @@
 import {
+  assessmentHistoryItems,
   DatedAssessment,
+  isValidIsoDate,
   latestAssessment,
   liveAssessments,
   localDateString,
@@ -109,5 +111,46 @@ describe('localDateString', () => {
     // 23:59 local time is still "today" locally, whatever UTC day that instant falls on.
     const lateLocal = new Date(2026, 5, 15, 23, 59, 0);
     expect(localDateString(lateLocal)).toBe('2026-06-15');
+  });
+});
+
+describe('isValidIsoDate (issue #226)', () => {
+  it('accepts a real calendar date', () => {
+    expect(isValidIsoDate('2026-09-25')).toBe(true);
+    expect(isValidIsoDate('2028-02-29')).toBe(true);
+  });
+
+  it('rejects a cleared, partial or malformed value', () => {
+    for (const value of ['', '2026-9-25', '2026-09', '25/09/2026', '2026-09-25T00:00']) {
+      expect(isValidIsoDate(value)).toBe(false);
+    }
+  });
+
+  it('rejects an impossible date, including one that would roll over (#224)', () => {
+    for (const value of ['2026-02-30', '2026-13-01', '2026-00-10', '2027-02-29', '2026-04-31']) {
+      expect(isValidIsoDate(value)).toBe(false);
+    }
+  });
+});
+
+describe('assessmentHistoryItems (issue #226)', () => {
+  it('maps the given history to rows in its order, each with its summary', () => {
+    const items = assessmentHistoryItems(
+      [
+        assessment({ id: 'new', date: '2026-03-01' }),
+        assessment({ id: 'old', date: '2026-01-01' }),
+      ],
+      (entry) => ({ key: `summary.${entry.id}`, count: 2 }),
+    );
+    expect(items).toEqual([
+      { id: 'new', date: '2026-03-01', summary: { key: 'summary.new', count: 2 } },
+      { id: 'old', date: '2026-01-01', summary: { key: 'summary.old', count: 2 } },
+    ]);
+  });
+
+  it('leaves the summary out while an assessment has no result', () => {
+    expect(assessmentHistoryItems([assessment()], () => null)).toEqual([
+      { id: 'a1', date: '2026-01-01' },
+    ]);
   });
 });

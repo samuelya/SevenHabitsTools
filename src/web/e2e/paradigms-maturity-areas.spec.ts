@@ -16,7 +16,14 @@ function localeFor(projectName: string): 'en' | 'ar' {
 
 const TEXT: Record<
   'en' | 'ar',
-  { checklistItem: string; hubTitle: string; markDone: string; reopen: string; cancel: string }
+  {
+    checklistItem: string;
+    hubTitle: string;
+    markDone: string;
+    reopen: string;
+    cancel: string;
+    summary: string;
+  }
 > = {
   en: {
     checklistItem: 'Rate every area in one assessment',
@@ -24,6 +31,7 @@ const TEXT: Record<
     markDone: 'Mark done',
     reopen: 'Reopen',
     cancel: 'Cancel',
+    summary: 'Mostly independence',
   },
   ar: {
     checklistItem: 'قيّم كل المجالات في تقييم واحد',
@@ -31,6 +39,7 @@ const TEXT: Record<
     markDone: 'وضع علامة تم',
     reopen: 'إعادة فتح',
     cancel: 'إلغاء',
+    summary: 'في الغالب اعتماد على النفس',
   },
 };
 
@@ -122,6 +131,11 @@ test.describe('maturity continuum: areas and rating (#222)', () => {
 
     await expect(page.locator('app-maturity-result .profile')).toBeVisible();
 
+    // The date is editable on a saved assessment too (issue #226).
+    await form.locator('app-assessment-date-field input').fill('2026-03-14');
+    // Stored when the user leaves the field (issue #226 review), not on each keystroke.
+    await form.locator('app-assessment-date-field input').blur();
+
     // Unpressing a rated area's chip asks first; Cancel keeps it (#222 review).
     await form.locator('.change-areas').click();
     await chips.nth(0).click();
@@ -150,6 +164,10 @@ test.describe('maturity continuum: areas and rating (#222)', () => {
     await page.waitForTimeout(1000);
     await page.reload();
     await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);
+    // Date + result summary (issue #226), after a reload: the edited date was stored.
+    const row = page.locator('.assessment-history-list__item');
+    await expect(row).toContainText('14');
+    await expect(row.locator('.assessment-history-list__summary')).toHaveText(text.summary);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.goto('/habits/paradigms');

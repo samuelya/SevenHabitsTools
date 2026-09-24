@@ -3,21 +3,22 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe } from '../../../core/i18n/locale.pipe';
+import { AppPluralPipe } from '../../../core/i18n/plural.pipe';
 import { SwipeToDeleteDirective } from '../swipe-to-delete.directive';
-import { parseIsoDate } from '../assessment-history.logic';
+import {
+  isValidIsoDate,
+  parseIsoDate,
+  type AssessmentHistoryItem,
+} from '../assessment-history.logic';
 
-/** One row `AssessmentHistoryList` renders. `date` is the raw `YYYY-MM-DD` the row is for —
- * formatted by this component through `AppDatePipe`, not pre-formatted by the caller, so the row
- * stays correct across a language switch (`AppDatePipe` is impure and re-reads the active
- * language on every change-detection run; a title string built once in a page's own `computed()`
- * would otherwise freeze at whichever language was active on first render — the same "frozen
- * label" trap the playbook's "Reactive labels" section documents for `translateSignal`).
- * `subtitle` is already-translated display text, not a key. */
-export interface AssessmentHistoryItem {
-  readonly id: string;
-  readonly date: string;
-  readonly subtitle?: string;
-}
+/** Rows are built by `assessmentHistoryItems()` (`assessment-history.logic.ts`, issue #226): the
+ * raw `YYYY-MM-DD` date plus a result summary as a translation key. Both are resolved here, in the
+ * template — the date through `AppDatePipe`, the summary through `appPlural`/`transloco` — not
+ * pre-formatted by the caller, so a row stays correct across a language switch (both pipes are
+ * impure and re-read the active language; a label built once in a page's own `computed()` would
+ * freeze at whichever language was active on first render — the "frozen label" trap the
+ * playbook's "Reactive labels" section documents for `translateSignal`). */
+export type { AssessmentHistoryItem } from '../assessment-history.logic';
 
 /**
  * The read-only, newest-first log every **assessment** exercise (playbook §4) shows alongside its
@@ -29,7 +30,14 @@ export interface AssessmentHistoryItem {
  */
 @Component({
   selector: 'app-assessment-history-list',
-  imports: [AppDatePipe, MatIconModule, MatListModule, SwipeToDeleteDirective, TranslocoPipe],
+  imports: [
+    AppDatePipe,
+    AppPluralPipe,
+    MatIconModule,
+    MatListModule,
+    SwipeToDeleteDirective,
+    TranslocoPipe,
+  ],
   templateUrl: './assessment-history-list.html',
   styleUrl: './assessment-history-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,11 +54,14 @@ export class AssessmentHistoryList<T extends AssessmentHistoryItem = AssessmentH
    * entries"); the caller runs confirm → delete → undo (`DeleteWithUndo`). */
   readonly deleteRequested = output<string>();
 
-  /** Local midnight, not `new Date(item.date)`'s UTC midnight — see `AssessmentHistoryItem`'s own
-   * doc comment on `date` for why a raw `YYYY-MM-DD` string can't go through `AppDatePipe`
-   * directly. */
+  /** Local midnight, not `new Date(item.date)`'s UTC midnight (`parseIsoDate`'s doc comment): a
+   * raw `YYYY-MM-DD` string can't go through `AppDatePipe` directly. */
   protected localDate(date: string): Date {
     return parseIsoDate(date);
+  }
+
+  protected isValidDate(date: string): boolean {
+    return isValidIsoDate(date);
   }
 
   protected requestDelete(item: T): void {

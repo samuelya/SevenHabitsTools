@@ -2,6 +2,7 @@ import { PcAsset, PcAudit } from './pc-balance.model';
 import {
   isDraftWorthSaving,
   auditAverageBalance,
+  auditHistorySummary,
   balanceOf,
   checklistLabelsFrom,
   checklistLoaded,
@@ -41,6 +42,30 @@ function audit(overrides: Partial<PcAudit> = {}): PcAudit {
     ...overrides,
   };
 }
+
+describe('auditHistorySummary (issue #226)', () => {
+  it('is null with no assets yet', () => {
+    expect(auditHistorySummary(audit())).toBeNull();
+  });
+
+  it('counts the over-used assets, for appPlural', () => {
+    const assets = [
+      asset({ key: 'a', p: 5, pc: 1 }),
+      asset({ key: 'b', p: 4, pc: 2 }),
+      asset({ key: 'c', p: 1, pc: 5 }),
+    ];
+    expect(auditHistorySummary(audit({ assets }))).toEqual({
+      key: 'paradigmsPcBalance.history.summary.overUsed',
+      count: 2,
+    });
+  });
+
+  it('says none are over-used when none are', () => {
+    expect(auditHistorySummary(audit({ assets: [asset({ p: 1, pc: 5 })] }))).toEqual({
+      key: 'paradigmsPcBalance.history.summary.noneOverUsed',
+    });
+  });
+});
 
 describe('balanceOf/statusOf', () => {
   it('is over-used at a balance of 2 or more', () => {
@@ -222,7 +247,7 @@ describe('summarize', () => {
 
 describe('newAuditFields', () => {
   it('starts with no assets when there is no previous audit', () => {
-    expect(newAuditFields(null, '2026-02-01')).toEqual({
+    expect(newAuditFields([], '2026-02-01')).toEqual({
       date: '2026-02-01',
       assets: [],
       reflection: '',
@@ -235,7 +260,7 @@ describe('newAuditFields', () => {
         asset({ key: 'k1', name: 'Health', group: 'physical', p: 5, pc: 1, action: 'Rest' }),
       ],
     });
-    const fields = newAuditFields(latest, '2026-02-01');
+    const fields = newAuditFields([latest], '2026-02-01');
     expect(fields.date).toBe('2026-02-01');
     expect(fields.reflection).toBe('');
     expect(fields.assets).toHaveLength(1);
@@ -246,8 +271,19 @@ describe('newAuditFields', () => {
 
   it("keeps a suggested asset's built-in key (#223)", () => {
     const latest = audit({ assets: [asset({ key: 'sleep', name: '', p: 5, pc: 1 })] });
-    const fields = newAuditFields(latest, '2026-02-01');
+    const fields = newAuditFields([latest], '2026-02-01');
     expect(fields.assets[0]).toMatchObject({ key: 'sleep', name: '', p: 3, pc: 3 });
+  });
+
+  it('copies from the latest audit that has assets, skipping a newer empty one (#226 review)', () => {
+    const empty = audit({ id: 'empty', date: '2026-03-01', assets: [] });
+    const withAssets = audit({
+      id: 'full',
+      date: '2026-01-01',
+      assets: [asset({ name: 'Health' })],
+    });
+    const fields = newAuditFields([empty, withAssets], '2026-04-01');
+    expect(fields.assets.map((entry) => entry.name)).toEqual(['Health']);
   });
 });
 
@@ -356,7 +392,7 @@ describe('isDraftWorthSaving (issue #217)', () => {
   const latest = {
     assets: [{ key: 'a', name: 'Sleep', group: 'physical', p: 5, pc: 1 }],
   } as unknown as PcAudit;
-  const initial = newAuditFields(latest, '2026-01-01');
+  const initial = newAuditFields([latest], '2026-01-01');
 
   it('is false for the untouched draft, copied assets and pre-filled date included', () => {
     expect(isDraftWorthSaving(initial, initial)).toBe(false);

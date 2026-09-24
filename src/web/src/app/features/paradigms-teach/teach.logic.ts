@@ -1,5 +1,8 @@
 import { isLive, newRecord, softDelete, touch } from '../../core/data/record';
-import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  isValidIsoDate,
+  localDateString,
+} from '../../shared/exercise-kit/assessment-history.logic';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
@@ -38,14 +41,9 @@ export function isKeyIdeaValid(keyIdea: string): boolean {
  * `true` — a chapter the user only *tried* to clear would show "Overdue" forever, including after
  * export/import (`isTeachEntry`'s `typeof === 'string'` structural check lets `''` through). */
 export function isValidPlannedAt(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-  // The pattern alone lets an impossible date through (an imported or synced `2026-13-01`), which
-  // parses to Invalid Date and makes `Intl.DateTimeFormat.format` throw, taking the list down. A
-  // `NaN` check isn't enough either: `2026-02-30` rolls over to 2 March. Round-trip it instead.
-  const date = parseIsoDate(value);
-  return !isNaN(date.getTime()) && localDateString(date) === value;
+  // The shared rule (issue #226): the pattern plus a round trip, so neither an impossible
+  // `2026-13-01` nor a rolled-over `2026-02-30` gets through to `Intl.DateTimeFormat`.
+  return isValidIsoDate(value);
 }
 
 /** `plannedAt`'s default: today + 48 hours (issue #52's acceptance criteria). `localDateString`
