@@ -62,4 +62,4 @@ Only `src/api/**`, `src/api.Tests/**`, `infra/**`, `.github/workflows/**`, `.git
 Acceptance criteria met, SOLID self-check summarised in the PR, build and tests green locally and in CI, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
-On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).
+On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).

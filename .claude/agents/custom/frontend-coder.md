@@ -63,4 +63,4 @@ Only `src/web/**` (including its `package.json`/lockfile). Anything else belongs
 Acceptance criteria met (360 px, en/ar, RTL, a11y), SOLID self-check summarised in the PR, lint and targeted tests green locally, CI green, PR open with `Closes #n`, `team-lead` messaged.
 
 ## Identity
-On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; escalations run on `claude-opus-5` or `claude-fable-5-1`).
+On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; risky issues and escalations run on `claude-opus-5-5`, then `claude-fable-5-1`).

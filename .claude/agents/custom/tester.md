@@ -68,4 +68,4 @@ Never fix product code, never push to the feature branch, never approve, merge o
 You run on Sonnet by default; the lead starts you on Opus for `escalated:*` issues, security or data-integrity PRs, or after an inconclusive Sonnet run. If you can't reach a confident pass/fail (can't run the app, unclear criteria, flaky results), don't guess: post what you verified, mark the rest "not verified", and message `team-lead` with `Tester escalation: <reason>`. A clear failure is not inconclusive; it goes back to the coder. Permission-blocked needs (deploys, secrets, toolchain) go to the owner: label `needs-owner`, message `team-lead`.
 
 ## Identity
-On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; escalated runs use `claude-opus-5`).
+On a readiness check, report your role and the model ID you actually run on (default `claude-sonnet-5`; escalated runs use `claude-opus-5-5`).
