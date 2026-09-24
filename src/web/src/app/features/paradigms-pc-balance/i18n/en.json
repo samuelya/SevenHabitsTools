@@ -21,16 +21,23 @@
     "financial": "Financial",
     "human": "Human and relationships"
   },
+  "asset": {
+    "sleep": "Sleep",
+    "exercise": "Exercise",
+    "savings": "Savings",
+    "incomeSkills": "Income skills",
+    "partner": "Partner",
+    "team": "Team"
+  },
   "groupSummary": {
-    "noAssets": "No assets yet",
     "average": "Average balance: {{value}}",
     "counts": "{{over}} over-used · {{balanced}} balanced · {{under}} under-used"
   },
   "form": {
     "nameLabel": "Asset",
     "pLabel": "Getting out (P)",
-    "pcLabel": "Maintaining (PC)",
-    "actionLabel": "One maintenance action",
+    "pcLabel": "Putting in (PC)",
+    "actionLabel": "Name one thing you'll do to maintain it.",
     "actionRequired": "Name one maintenance action for this over-used asset.",
     "removeAsset": "Remove this asset",
     "newAssetLabel": "New asset name",
@@ -40,12 +47,25 @@
     "financialAssetPlaceholder": "e.g. My savings",
     "humanAssetPlaceholder": "e.g. My friendship with Sam",
     "actionPlaceholder": "e.g. A 20-minute walk before work, three days a week.",
-    "reflectionPlaceholder": "e.g. I've been living off my savings and my sleep. This month I'll put some back into both."
+    "reflectionPlaceholder": "e.g. I've been living off my savings and my sleep. This month I'll put some back into both.",
+    "legend": "Getting out: how much you rely on it now · Putting in: how much you maintain it.",
+    "suggestions": "Suggestions: {{group}}",
+    "addSuggested": "Add {{name}}",
+    "duplicateAsset": "That asset is already in this audit.",
+    "removeConfirmTitle": "Remove {{name}}?",
+    "removeConfirmBody": "Its ratings and maintenance action will be lost. You can undo this for a few seconds after removing it.",
+    "removeConfirmButton": "Remove",
+    "assetRemoved": "Asset removed"
   },
   "status": {
     "overUsed": "Over-used",
     "balanced": "Balanced",
     "underUsed": "Under-used"
+  },
+  "statusGloss": {
+    "overUsed": "you get a lot out of it and put little back.",
+    "balanced": "what you get out of it and what you put in are about even.",
+    "underUsed": "you put in more than you get out of it right now."
   },
   "checklist": {
     "named": "Add an asset and name every one",

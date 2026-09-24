@@ -1,12 +1,17 @@
 import { CdkTextareaAutosize } from '@angular/cdk/text-field';
 import {
+  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   effect,
+  ElementRef,
+  inject,
+  Injector,
   input,
+  linkedSignal,
   output,
-  signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,7 +25,14 @@ import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
 import {
-  addAsset,
+  addBuiltInAsset,
+  addNamedAsset,
+  displayName,
+  firstOfEachStatus,
+  hasAssetData,
+  suggestedAssets,
+} from './pc-balance-assets.logic';
+import {
   balanceOf as computeBalance,
   editAsset,
   groupSummaries,
@@ -31,11 +43,13 @@ import {
   statusOf as computeStatus,
 } from './pc-balance.logic';
 import {
+  isBuiltInAssetKey,
   PC_BALANCE_GROUPS,
   PcAsset,
   PcAudit,
   PcAuditFields,
   PcBalanceGroup,
+  PcBuiltInAssetKey,
 } from './pc-balance.model';
 
 /** A reflection edit and the audit it was typed into. */
@@ -44,20 +58,26 @@ export interface PcReflectionChange {
   readonly reflection: string;
 }
 
+type GroupText = Readonly<Record<PcBalanceGroup, string>>;
+const NO_TEXT: GroupText = { physical: '', financial: '', human: '' };
+
 /**
- * The editor for one audit (issue #49): its date, the P/PC group summary, every asset grouped by
- * physical/financial/human with its sliders and balance indicator, and a reflection. Purely
- * presentational — `audit` is the current value, `changed` emits the edited field(s) so the page
- * persists through `featureStore` immediately, the same autosave-on-edit convention
- * `TransitionItemForm` uses.
+ * The editor for one audit (issue #49, redesigned by #223): its date, the P/PC group summary once
+ * an asset exists, and per group the assets with their sliders and computed status, two suggested
+ * asset chips and a free-text add field; then a reflection. Purely presentational — `audit` is the
+ * current value, `changed` emits the edited field(s) so the page persists through `featureStore`
+ * immediately, the same autosave-on-edit convention `TransitionItemForm` uses.
  *
- * The reflection uses `ReflectionEditor`'s session status (issue #215): nothing until the first
- * keystroke, then "Saving…"/"Saved". Only the page knows whether a write landed, so it reports
- * back through `reportReflectionSaveOutcome()` after persisting a `reflectionChanged` edit.
+ * Every asset edit builds on `assets`, the list as last edited here, not on `audit()`: a chip
+ * tapped and Enter pressed before the next change detection would otherwise build the second edit
+ * on the stale input and drop the first. A refused edit (`refusedEdits`, a read-only tab) resets
+ * it and re-creates the asset controls from the stored values, and a typed name is only cleared
+ * once its asset is stored, so nothing looks saved that wasn't (#222's same rule).
  *
- * The form is reused across audits, so the editor is keyed per audit and every reflection edit
- * carries the id of the audit it was typed into: a debounced edit flushed while switching audits
- * lands on the audit it belongs to, not on the newly selected one (review finding on #215's PR).
+ * The reflection uses `ReflectionEditor`'s session status (issue #215); only the page knows
+ * whether a write landed, so it reports back through `reportReflectionSaveOutcome()`. The form is
+ * reused across audits, so the editor is keyed per audit and every reflection edit carries the id
+ * of the audit it was typed into (review finding on #215's PR).
  */
 @Component({
   selector: 'app-pc-balance-audit-form',
@@ -82,42 +102,96 @@ export class PcBalanceAuditForm {
   /** Whether `audit` is still an unsaved draft (issue #217): the reflection then skips its
    * debounce, so the draft is saved on the first real keystroke and nothing is left pending. */
   readonly unsaved = input(false);
+  /** Each built-in asset key's translated label (issue #223). */
+  readonly builtInLabels = input.required<Readonly<Record<string, string>>>();
+  /** How many edits the page's store has refused (a read-only tab). */
+  readonly refusedEdits = input(0);
   readonly changed = output<Partial<PcAuditFields>>();
   readonly reflectionChanged = output<PcReflectionChange>();
+  /** The key of an asset holding a rating or action the user asked to remove; the page confirms
+   * first. An untouched asset is removed through `changed` at once. */
+  readonly assetRemoveRequested = output<string>();
 
+  private readonly injector = inject(Injector);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly reflectionEditor = viewChild(ReflectionEditor);
 
   protected readonly sliderMin = SLIDER_MIN;
   protected readonly sliderMax = SLIDER_MAX;
 
+  protected readonly assets = linkedSignal<
+    { assets: readonly PcAsset[]; refused: number },
+    readonly PcAsset[]
+  >({
+    source: () => ({ assets: this.audit().assets, refused: this.refusedEdits() }),
+    computation: (source) => source.assets,
+  });
+  private readonly auditId = computed(() => this.audit().id);
+
   protected readonly localDate = computed(() => parseIsoDate(this.audit().date));
-  protected readonly groupSummary = computed(() => groupSummaries(this.audit().assets));
+  protected readonly hasAssets = computed(() => this.assets().length > 0);
+  /** Only the groups holding an asset: no "No assets yet" rows (issue #223). */
+  protected readonly groupSummary = computed(() =>
+    groupSummaries(this.assets()).filter((summary) => summary.averageBalance !== null),
+  );
   protected readonly groupSections = computed(() => {
-    const assets = this.audit().assets;
+    const assets = this.assets();
     return PC_BALANCE_GROUPS.map((group) => ({
       group,
       assets: assets.filter((asset) => asset.group === group),
+      suggested: suggestedAssets(assets, group),
     }));
   });
+  /** The group whose first asset is the audit's first: the legend sits above it. */
+  protected readonly legendGroup = computed(
+    () => this.groupSections().find((section) => section.assets.length > 0)?.group ?? null,
+  );
+  protected readonly glossedKeys = computed(() => firstOfEachStatus(this.assets()));
+  /** The only asset left can't be removed: an audit keeps at least one (#222's rule). */
+  protected readonly removable = computed(() => this.assets().length > 1);
 
-  private readonly draftNames = signal<Record<PcBalanceGroup, string>>({
-    physical: '',
-    financial: '',
-    human: '',
+  /** Per-group free text, kept until its asset is stored. */
+  protected readonly draftNames = linkedSignal<string, GroupText>({
+    source: this.auditId,
+    computation: () => NO_TEXT,
   });
-  private readonly touchedActionKeys = signal<ReadonlySet<string>>(new Set());
+  /** The group whose typed name was refused as already in the audit. */
+  protected readonly duplicateGroup = linkedSignal<string, PcBalanceGroup | null>({
+    source: this.auditId,
+    computation: () => null,
+  });
+  protected readonly touchedActionKeys = linkedSignal<string, ReadonlySet<string>>({
+    source: this.auditId,
+    computation: () => new Set(),
+  });
+
+  /** A typed asset waiting to be stored: its field clears once it is (or stays, if refused). */
+  private pendingName: { readonly group: PcBalanceGroup; readonly key: string } | null = null;
+  /** An asset being removed: focus moves to its group's add field once it has gone. */
+  private pendingRemoval: { readonly group: PcBalanceGroup; readonly key: string } | null = null;
 
   constructor() {
-    // The form is reused across selections (the page's own `@if (selectedAudit(); as audit)`
-    // stays truthy while the id changes underneath) — reset per-audit UI state when it does,
-    // same reasoning as `TransitionItemForm`'s own `touchedFields` reset.
-    let previousId: string | undefined;
     effect(() => {
-      const id = this.audit().id;
-      if (id !== previousId) {
-        previousId = id;
-        this.touchedActionKeys.set(new Set());
-        this.draftNames.set({ physical: '', financial: '', human: '' });
+      const stored = this.audit().assets;
+      const pending = this.pendingName;
+      if (pending && stored.some((asset) => asset.key === pending.key)) {
+        this.pendingName = null;
+        untracked(() => this.setDraftName(pending.group, ''));
+      }
+    });
+    let refused = untracked(this.refusedEdits);
+    effect(() => {
+      if (this.refusedEdits() !== refused) {
+        refused = this.refusedEdits();
+        this.pendingName = null;
+      }
+    });
+    effect(() => {
+      const assets = this.assets();
+      const removal = this.pendingRemoval;
+      if (removal && !assets.some((asset) => asset.key === removal.key)) {
+        this.pendingRemoval = null;
+        this.focusAfterRender(`[data-add-group="${removal.group}"] input`);
       }
     });
   }
@@ -126,8 +200,13 @@ export class PcBalanceAuditForm {
   protected balanceOf = computeBalance;
   protected isOverUsed = computeIsOverUsed;
 
-  protected draftName(group: PcBalanceGroup): string {
-    return this.draftNames()[group];
+  /** A suggested asset still under its built-in label: shown as a title, not a name field. */
+  protected isSuggested(asset: PcAsset): boolean {
+    return asset.name.trim() === '' && isBuiltInAssetKey(asset.key);
+  }
+
+  protected nameOf(asset: PcAsset): string {
+    return displayName(asset, this.builtInLabels());
   }
 
   protected isActionTouched(key: string): boolean {
@@ -141,17 +220,33 @@ export class PcBalanceAuditForm {
   }
 
   protected onDraftNameInput(group: PcBalanceGroup, event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.draftNames.update((draft) => ({ ...draft, [group]: value }));
+    this.setDraftName(group, (event.target as HTMLInputElement).value);
+    if (this.duplicateGroup() === group) {
+      this.duplicateGroup.set(null);
+    }
   }
 
-  protected onAddAsset(group: PcBalanceGroup): void {
-    const name = this.draftNames()[group].trim();
-    if (!name) {
+  /** Enter in a group's field, or its Add button. */
+  protected onAddNamed(group: PcBalanceGroup, event?: Event): void {
+    event?.preventDefault();
+    const result = addNamedAsset(
+      this.assets(),
+      this.draftNames()[group],
+      group,
+      this.builtInLabels(),
+    );
+    if (!result.ok) {
+      this.duplicateGroup.set(result.reason === 'duplicate' ? group : null);
       return;
     }
-    this.changed.emit({ assets: addAsset(this.audit().assets, name, group) });
-    this.draftNames.update((draft) => ({ ...draft, [group]: '' }));
+    this.pendingName = { group, key: result.key };
+    this.emitAssets(result.assets);
+  }
+
+  /** A suggested chip: the chip goes, so focus moves to the new asset's first rating control. */
+  protected onAddSuggested(key: PcBuiltInAssetKey): void {
+    this.emitAssets(addBuiltInAsset(this.assets(), key));
+    this.focusAfterRender(`[data-asset-key="${key}"] input[matSliderThumb]`);
   }
 
   protected onAssetNameChanged(key: string, event: Event): void {
@@ -166,8 +261,16 @@ export class PcBalanceAuditForm {
     this.onAssetChanged(key, { [field]: value });
   }
 
-  protected onRemoveAsset(key: string): void {
-    this.changed.emit({ assets: removeAsset(this.audit().assets, key) });
+  protected onRemoveAsset(asset: PcAsset): void {
+    if (!this.removable()) {
+      return;
+    }
+    if (hasAssetData(asset)) {
+      this.assetRemoveRequested.emit(asset.key);
+    } else {
+      this.emitAssets(removeAsset(this.assets(), asset.key));
+    }
+    this.pendingRemoval = { group: asset.group, key: asset.key };
   }
 
   protected onReflectionChanged(auditId: string, reflection: string): void {
@@ -183,6 +286,24 @@ export class PcBalanceAuditForm {
   }
 
   private onAssetChanged(key: string, fields: Partial<Omit<PcAsset, 'key'>>): void {
-    this.changed.emit({ assets: editAsset(this.audit().assets, key, fields) });
+    this.emitAssets(editAsset(this.assets(), key, fields));
+  }
+
+  /** Any edit here also ends a removal the page was confirming: the dialog is modal, so an edit
+   * after it means it was cancelled. */
+  private emitAssets(assets: PcAsset[]): void {
+    this.pendingRemoval = null;
+    this.assets.set(assets);
+    this.changed.emit({ assets });
+  }
+
+  private setDraftName(group: PcBalanceGroup, value: string): void {
+    this.draftNames.update((names) => ({ ...names, [group]: value }));
+  }
+
+  private focusAfterRender(selector: string): void {
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), {
+      injector: this.injector,
+    });
   }
 }

@@ -35,7 +35,10 @@
         #auditForm
         [audit]="audit"
         [unsaved]="draft.unsaved()"
+        [builtInLabels]="builtInLabels()"
+        [refusedEdits]="refusedEdits()"
         (changed)="onAuditChanged(audit.id, $event)"
+        (assetRemoveRequested)="onAssetRemoveRequested(audit.id, $event)"
         (reflectionChanged)="onReflectionChanged($event, auditForm)"
       />
     }

@@ -16,10 +16,30 @@ import { hubStatus, isStarted } from './pc-balance.logic';
 export const PC_BALANCE_GROUPS = ['physical', 'financial', 'human'] as const;
 export type PcBalanceGroup = (typeof PC_BALANCE_GROUPS)[number];
 
+/** The suggested assets (issue #223), two per group, in chip order. Stored as the asset's `key`,
+ * translated at render (`paradigmsPcBalance.asset.<key>`), never as text. */
+export const PC_SUGGESTED_ASSETS = {
+  physical: ['sleep', 'exercise'],
+  financial: ['savings', 'incomeSkills'],
+  human: ['partner', 'team'],
+} as const satisfies Record<PcBalanceGroup, readonly string[]>;
+export type PcBuiltInAssetKey = (typeof PC_SUGGESTED_ASSETS)[PcBalanceGroup][number];
+export const PC_BUILT_IN_ASSET_KEYS: readonly PcBuiltInAssetKey[] = PC_BALANCE_GROUPS.flatMap(
+  (group) => PC_SUGGESTED_ASSETS[group],
+);
+
+/** Whether an asset's `key` names a built-in (suggested) asset rather than being a UUID. */
+export function isBuiltInAssetKey(key: string): key is PcBuiltInAssetKey {
+  return (PC_BUILT_IN_ASSET_KEYS as readonly string[]).includes(key);
+}
+
 /**
  * One asset inside an audit. A nested value object, not a record: it's only ever edited through
- * its parent audit, which is the merge unit (architecture issue #1 §6). `key` is a plain string
- * used only as a stable `track` id — never a `BaseRecord.id`.
+ * its parent audit, which is the merge unit (architecture issue #1 §6). `key` is its stable
+ * `track` id — never a `BaseRecord.id`: a UUID for an asset the user named, or the built-in key
+ * of a suggested asset (issue #223; one per audit, so still unique), whose `name` is then `''`
+ * and whose label is translated at render. Playbook §3's `{ key?, name? }` rule, within the
+ * existing required-string shape, so `validate()` and the schema version are unchanged.
  */
 export interface PcAsset {
   readonly key: string;
