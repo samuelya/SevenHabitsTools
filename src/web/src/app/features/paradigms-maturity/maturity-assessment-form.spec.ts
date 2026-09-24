@@ -47,11 +47,22 @@ describe('MaturityAssessmentForm', () => {
     expect(input.placeholder).toBe('Work');
   });
 
-  it('shows a custom or renamed name instead of the built-in label, and no placeholder', () => {
+  it('shows a custom or renamed name instead of the built-in label, and the example placeholder (#230)', () => {
     const fixture = setUp(assessment({ areas: [area({ key: 'work', name: 'Day job' })] }));
     const input = fixture.nativeElement.querySelector('.area-row input') as HTMLInputElement;
     expect(input.value).toBe('Day job');
-    expect(input.placeholder).toBe('');
+    expect(input.placeholder).toBe('e.g. Friendships');
+  });
+
+  it('gives the note and new-area fields an example placeholder (#230)', () => {
+    const fixture = setUp(assessment({ areas: [area({ key: 'work' })] }));
+    const element = fixture.nativeElement as HTMLElement;
+    expect((element.querySelector('.area-note textarea') as HTMLTextAreaElement).placeholder).toBe(
+      'e.g. I still wait for my manager to tell me what to focus on.',
+    );
+    expect((element.querySelector('.add-area-row input') as HTMLInputElement).placeholder).toBe(
+      'e.g. Friendships',
+    );
   });
 
   it('emits the renamed area, keeping its key', () => {

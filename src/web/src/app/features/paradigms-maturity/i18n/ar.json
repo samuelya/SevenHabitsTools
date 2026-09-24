@@ -43,7 +43,9 @@
     "noteLabel": "ملاحظة (اختياري)",
     "removeArea": "احذف هذا المجال",
     "newAreaLabel": "اسم المجال الجديد",
-    "addArea": "أضف مجالاً"
+    "addArea": "أضف مجالاً",
+    "areaNamePlaceholder": "مثلاً: الصحاب",
+    "notePlaceholder": "مثلاً: لسه بستنى مديري يقولي أركز على إيه."
   },
   "result": {
     "profileLabel": "الملف العام",

@@ -43,7 +43,9 @@
     "noteLabel": "Note (optional)",
     "removeArea": "Remove this area",
     "newAreaLabel": "New area name",
-    "addArea": "Add area"
+    "addArea": "Add area",
+    "areaNamePlaceholder": "e.g. Friendships",
+    "notePlaceholder": "e.g. I still wait for my manager to tell me what to focus on."
   },
   "result": {
     "profileLabel": "Overall profile",

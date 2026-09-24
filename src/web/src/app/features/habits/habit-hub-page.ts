@@ -1,12 +1,15 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
   Injector,
   Signal,
+  TemplateRef,
   ViewContainerRef,
   computed,
   inject,
   input,
+  viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -43,6 +46,7 @@ import { HubRowStatus, hubRowStatus } from './habit-hub.logic';
     MatButtonModule,
     MatIconModule,
     MatListModule,
+    NgTemplateOutlet,
     RouterLink,
     TranslocoPipe,
     AppDatePipe,
@@ -130,18 +134,25 @@ export class HabitHubPage {
     return status();
   }
 
-  /** "About this habit" (issue #219): the hub's intro in the exercise guide dialog, whose other
-   * sections #231 fills in. */
+  /** This page's own "About this habit" section (#230), handed to the guide dialog as its `extra`
+   * template so the list reuses this page's status renderer and stays live while open. */
+  private readonly aboutExercises = viewChild.required<TemplateRef<unknown>>('aboutExercises');
+
+  /** "About this habit" (issues #219, #230) in the exercise guide dialog: In short
+   * (`habits.about.<habit>.inShort`), then the habit's exercises in order with their status. */
   protected openAbout(habit: HabitId): void {
     void this.guideOpener.open(
       {
-        inShort: this.transloco.translate(`habits.hub.intro.${habit}`),
+        inShort: this.transloco.translate(`habits.about.${habit}.inShort`),
         howTo: [],
         examples: [],
         afterwards: '',
       },
       this.viewContainerRef,
-      this.transloco.translate('habits.hub.aboutHabit'),
+      {
+        title: this.transloco.translate('habits.hub.aboutHabit'),
+        extra: this.aboutExercises(),
+      },
     );
   }
 }

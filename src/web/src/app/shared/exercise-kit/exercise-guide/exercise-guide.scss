@@ -69,3 +69,39 @@
   margin-inline-start: 0;
   color: var(--mat-sys-on-surface-variant, gray);
 }
+
+// A card example mirrors `ExerciseList`'s row (issue #230): a reserved icon slot so the title
+// lines up whether or not the item is done, then the title and its one-line subtitle.
+.example-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.example-item-icon {
+  flex: none;
+  inline-size: 24px;
+  block-size: 24px;
+  color: var(--mat-sys-primary);
+}
+
+.example-item-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.example-item-title {
+  font: var(--mat-sys-body-large);
+}
+
+.example-item-subtitle {
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.example-card--item .mat-mdc-card-content {
+  padding-block-start: 0.75rem;
+}

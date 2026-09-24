@@ -9,6 +9,7 @@
       cdkAutosizeMinRows="3"
       cdkAutosizeMaxRows="10"
       required
+      [placeholder]="'paradigmsTransition.form.textPlaceholder' | transloco"
       [value]="script().text"
       [attr.aria-describedby]="isTouched('text') && !script().text.trim() ? 'text-error' : null"
       (input)="onTextInput($event)"
@@ -80,6 +81,7 @@
         cdkAutosizeMinRows="3"
         cdkAutosizeMaxRows="10"
         required
+        [placeholder]="'paradigmsTransition.form.newScriptPlaceholder' | transloco"
         [value]="script().newScript ?? ''"
         [attr.aria-describedby]="
           isTouched('newScript') && !script().newScript?.trim() ? 'new-script-error' : null
@@ -100,6 +102,7 @@
         matInput
         type="text"
         required
+        [placeholder]="'paradigmsTransition.form.situationPlaceholder' | transloco"
         [value]="script().situation ?? ''"
         [attr.aria-describedby]="
           isTouched('situation') && !script().situation?.trim() ? 'situation-error' : null

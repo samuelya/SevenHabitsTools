@@ -35,7 +35,12 @@
     "removeAsset": "احذف هذا الأصل",
     "newAssetLabel": "اسم الأصل الجديد",
     "addAsset": "أضف أصلاً",
-    "reflectionLabel": "التأمل"
+    "reflectionLabel": "التأمل",
+    "physicalAssetPlaceholder": "مثلاً: ضهري",
+    "financialAssetPlaceholder": "مثلاً: التحويشة بتاعتي",
+    "humanAssetPlaceholder": "مثلاً: صحوبيتي مع سارة",
+    "actionPlaceholder": "مثلاً: أتمشى 20 دقيقة قبل الشغل، 3 أيام في الأسبوع.",
+    "reflectionPlaceholder": "مثلاً: بقالي فترة بصرف من التحويشة ومن نومي. الشهر ده هرجّع شوية للاتنين."
   },
   "status": {
     "overUsed": "مُستنزف",

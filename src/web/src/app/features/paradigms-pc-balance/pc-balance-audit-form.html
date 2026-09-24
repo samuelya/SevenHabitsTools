@@ -38,6 +38,9 @@
             <input
               matInput
               type="text"
+              [placeholder]="
+                'paradigmsPcBalance.form.' + section.group + 'AssetPlaceholder' | transloco
+              "
               [value]="asset.name"
               (input)="onAssetNameChanged(asset.key, $event)"
             />
@@ -89,6 +92,7 @@
                 cdkAutosizeMinRows="2"
                 cdkAutosizeMaxRows="6"
                 required
+                [placeholder]="'paradigmsPcBalance.form.actionPlaceholder' | transloco"
                 [value]="asset.action ?? ''"
                 [attr.aria-describedby]="
                   isActionTouched(asset.key) && !asset.action?.trim()
@@ -121,11 +125,14 @@
       <div class="add-asset-row">
         <mat-form-field appearance="outline" class="asset-name">
           <mat-label>{{ 'paradigmsPcBalance.form.newAssetLabel' | transloco }}</mat-label>
+          @let assetPlaceholder =
+            'paradigmsPcBalance.form.' + section.group + 'AssetPlaceholder' | transloco;
           @if (first) {
             <input
               matInput
               type="text"
               appEditorInitialFocus
+              [placeholder]="assetPlaceholder"
               [value]="draftName(section.group)"
               (input)="onDraftNameInput(section.group, $event)"
             />
@@ -133,6 +140,7 @@
             <input
               matInput
               type="text"
+              [placeholder]="assetPlaceholder"
               [value]="draftName(section.group)"
               (input)="onDraftNameInput(section.group, $event)"
             />
@@ -152,6 +160,7 @@
     <app-reflection-editor
       [value]="bound.reflection"
       [label]="'paradigmsPcBalance.form.reflectionLabel' | transloco"
+      [placeholder]="'paradigmsPcBalance.form.reflectionPlaceholder' | transloco"
       [sessionStatus]="true"
       [immediate]="unsaved()"
       (valueChange)="onReflectionChanged(bound.id, $event)"

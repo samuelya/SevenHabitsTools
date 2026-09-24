@@ -29,7 +29,10 @@
     "newScriptRequired": "Write the new script when you're rewriting or stopping this one.",
     "situationLabel": "A situation this week where it applies",
     "situationRequired": "Name a concrete situation this week.",
-    "delete": "Delete this script"
+    "delete": "Delete this script",
+    "textPlaceholder": "e.g. When I'm stressed I go quiet and shut everyone out.",
+    "newScriptPlaceholder": "e.g. When I'm stressed I say so, and ask for ten minutes to think.",
+    "situationPlaceholder": "e.g. Thursday's talk about the bills with my partner."
   },
   "source": {
     "family": "Family",
