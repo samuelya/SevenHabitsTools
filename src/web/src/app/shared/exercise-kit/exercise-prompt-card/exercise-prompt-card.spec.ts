@@ -125,6 +125,33 @@ describe('ExercisePromptCard', () => {
     expect(viewContainerRef).toBeInstanceOf(ViewContainerRef);
   });
 
+  it('re-emits a "Try this example" from the guide as exampleTried (#232)', () => {
+    const guideOpen = vi.fn().mockResolvedValue(undefined);
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        { provide: ExerciseGuideOpener, useValue: { open: guideOpen } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ExercisePromptCard);
+    fixture.componentRef.setInput('prompt', 'List what you can control.');
+    fixture.componentRef.setInput('guide', GUIDE);
+    fixture.detectChanges();
+    const tried: unknown[] = [];
+    fixture.componentInstance.exampleTried.subscribe((sample) => tried.push(sample));
+
+    readMoreButton(fixture)?.click();
+    const [, , options] = guideOpen.mock.calls[0] as [
+      unknown,
+      unknown,
+      { onTryExample: (sample: object) => void },
+    ];
+    options.onTryExample({ text: 'x' });
+
+    expect(tried).toEqual([{ text: 'x' }]);
+  });
+
   it('does not open a second guide dialog on a double-tap before the first open resolves', async () => {
     // Regression test for a review finding: `openGuide()` had no re-entrancy guard and `open()` is
     // async, so a double-tap opened two dialogs and two focus traps.

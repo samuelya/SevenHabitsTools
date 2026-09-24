@@ -3,6 +3,7 @@ import {
   isArrayOf,
   isBaseRecord,
   isOneOf,
+  isOptionalBoolean,
   isOptionalString,
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
@@ -54,6 +55,10 @@ export interface TeachEntry extends BaseRecord {
   readonly sharedAt?: string;
   readonly status: TeachStatus;
   readonly learned?: string;
+  /** A copy of a guide example the user asked for with "Try this example" (issue #232): shown with
+   * an "Example" chip and counted toward nothing until the user edits any field, which removes
+   * it. Absent means `false`. */
+  readonly sample?: boolean;
 }
 
 /** The fields a caller supplies when creating or editing an entry; base record fields come from
@@ -74,7 +79,7 @@ export const TEACH_ROUTE = 'habits/paradigms/teach';
 /** Guards a route query param (e.g. a "teach this" deep link's `?chapter=`) against the fixed
  * chapter keys. */
 export const isTeachChapter = isOneOf(TEACH_CHAPTERS);
-const isTeachStatus = isOneOf(TEACH_STATUSES);
+export const isTeachStatus = isOneOf(TEACH_STATUSES);
 
 function isTeachEntry(value: unknown): value is TeachEntry {
   if (!isBaseRecord(value)) {
@@ -88,7 +93,8 @@ function isTeachEntry(value: unknown): value is TeachEntry {
     typeof candidate['plannedAt'] === 'string' &&
     isOptionalString(candidate['sharedAt']) &&
     isTeachStatus(candidate['status']) &&
-    isOptionalString(candidate['learned'])
+    isOptionalString(candidate['learned']) &&
+    isOptionalBoolean(candidate['sample'])
   );
 }
 

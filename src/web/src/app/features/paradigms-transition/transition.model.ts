@@ -3,6 +3,7 @@ import {
   isArrayOf,
   isBaseRecord,
   isOneOf,
+  isOptionalBoolean,
   isOptionalString,
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
@@ -37,6 +38,10 @@ export interface Script extends BaseRecord {
   readonly decision: ScriptDecision;
   readonly newScript?: string;
   readonly situation?: string;
+  /** A copy of a guide example the user asked for with "Try this example" (issue #232): shown with
+   * an "Example" chip and counted toward nothing until the user edits any field, which removes
+   * it. Absent means `false`. */
+  readonly sample?: boolean;
 }
 
 /** The fields a caller supplies when creating a script; base record fields come from
@@ -54,9 +59,9 @@ export const TRANSITION_PATH = 'habits.paradigms.scripts';
  * shared with `transition-page.ts`'s own navigation so the two can never drift apart. */
 export const TRANSITION_ROUTE = 'habits/paradigms/transition';
 
-const isScriptSource = isOneOf(SCRIPT_SOURCES);
-const isScriptEffect = isOneOf(SCRIPT_EFFECTS);
-const isScriptDecision = isOneOf(SCRIPT_DECISIONS);
+export const isScriptSource = isOneOf(SCRIPT_SOURCES);
+export const isScriptEffect = isOneOf(SCRIPT_EFFECTS);
+export const isScriptDecision = isOneOf(SCRIPT_DECISIONS);
 
 function isScript(value: unknown): value is Script {
   if (!isBaseRecord(value)) {
@@ -69,7 +74,8 @@ function isScript(value: unknown): value is Script {
     isScriptEffect(candidate['effect']) &&
     isScriptDecision(candidate['decision']) &&
     isOptionalString(candidate['newScript']) &&
-    isOptionalString(candidate['situation'])
+    isOptionalString(candidate['situation']) &&
+    isOptionalBoolean(candidate['sample'])
   );
 }
 

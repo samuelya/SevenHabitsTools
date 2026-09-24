@@ -1,11 +1,16 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TemplateRef, ViewContainerRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { AppDialog } from '../../../core/layout/app-dialog';
 import { AppSnackbar } from '../../../core/layout/app-snackbar';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { ExerciseGuideContent } from './exercise-guide';
-import { EXERCISE_GUIDE_LOADER, ExerciseGuideOpener } from './exercise-guide-opener';
+import {
+  EXERCISE_GUIDE_LOADER,
+  ExerciseGuideOpener,
+  isTryExampleResult,
+} from './exercise-guide-opener';
 
 const CONTENT: ExerciseGuideContent = {
   inShort: 'In short.',
@@ -160,5 +165,44 @@ describe('ExerciseGuideOpener', () => {
 
     const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: unknown }];
     expect(config.data).toEqual({ content: CONTENT });
+  });
+
+  it('hands a "Try this example" close to onTryExample, and nothing else (#232)', async () => {
+    const closed = new Subject<unknown>();
+    const { service, dialogOpen } = setUp({
+      dialogOpen: vi.fn().mockResolvedValue({ afterClosed: () => closed }),
+    });
+    const onTryExample = vi.fn();
+
+    await service.open(CONTENT, fakeViewContainerRef(), { onTryExample });
+
+    const [, config] = dialogOpen.mock.calls[0] as [unknown, { data: unknown }];
+    expect(config.data).toEqual({ content: CONTENT });
+    expect(onTryExample).not.toHaveBeenCalled();
+    closed.next({ tryExample: { text: 'x' } });
+    expect(onTryExample).toHaveBeenCalledWith({ text: 'x' });
+  });
+
+  it('ignores a plain close (X, Escape, backdrop) for onTryExample (#232)', async () => {
+    const closed = new Subject<unknown>();
+    const { service } = setUp({
+      dialogOpen: vi.fn().mockResolvedValue({ afterClosed: () => closed }),
+    });
+    const onTryExample = vi.fn();
+
+    await service.open(CONTENT, fakeViewContainerRef(), { onTryExample });
+    closed.next('');
+
+    expect(onTryExample).not.toHaveBeenCalled();
+  });
+});
+
+describe('isTryExampleResult (#232)', () => {
+  it('is true only for an object carrying a tryExample object', () => {
+    expect(isTryExampleResult({ tryExample: {} })).toBe(true);
+    expect(isTryExampleResult(undefined)).toBe(false);
+    expect(isTryExampleResult('')).toBe(false);
+    expect(isTryExampleResult({ tryExample: 'x' })).toBe(false);
+    expect(isTryExampleResult({ tryExample: null })).toBe(false);
   });
 });

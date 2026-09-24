@@ -14,6 +14,8 @@ import {
   summarize,
   toListItem,
   isStarted,
+  countedScripts,
+  scriptFromExample,
 } from './transition.logic';
 import { hubStatus } from './transition.logic';
 
@@ -341,5 +343,63 @@ describe('hubStatus (#219)', () => {
     expect(
       hubStatus([script({ id: 'a' }), script({ id: 'b' }), script({ id: 'c', deletedAt: 'x' })]),
     ).toEqual({ key: 'habits.exercises.paradigms-transition.patternCount', count: 2 });
+  });
+});
+
+describe('samples (issue #232)', () => {
+  const sample = (overrides: Partial<Script> = {}) =>
+    script({ id: 'x', sample: true, ...overrides });
+
+  it('counts toward nothing while flagged: started, hub status, summary, done gate', () => {
+    const scripts = [sample({ decision: 'stop', newScript: 'n', situation: 's' })];
+
+    expect(isStarted(scripts)).toBe(false);
+    expect(hubStatus(scripts)).toBeNull();
+    expect(summarize(scripts)).toEqual({ stopped: 0, rewritten: 0, total: 0 });
+    expect(isComplete(scripts)).toBe(false);
+    expect(countedScripts([...scripts, script()])).toEqual([script()]);
+  });
+
+  it('shows an "Example" chip first and never the done check', () => {
+    const labels = labelsFrom(SCRIPT_SOURCES, ['Family'], SCRIPT_EFFECTS, ['Helps'], 'Example');
+    const item = toListItem(sample({ effect: 'helps' }), labels);
+
+    expect(item.chips?.map((chip) => chip.label)).toEqual(['Example', 'Family', 'Helps']);
+    expect(item.done).toBe(false);
+  });
+
+  it('any edit clears the flag, whichever field changed', () => {
+    const [edited] = editScript([sample()], 'x', { source: 'work' });
+
+    expect(edited.source).toBe('work');
+    expect('sample' in edited).toBe(false);
+    expect(isStarted([edited])).toBe(true);
+  });
+});
+
+describe('scriptFromExample (issue #232)', () => {
+  const valid = {
+    text: 'We pay bills early.',
+    source: 'family',
+    effect: 'helps',
+    decision: 'keep',
+  };
+
+  it('maps a valid example to script fields, keeping only non-blank optional text', () => {
+    expect(scriptFromExample(valid)).toEqual(valid);
+    expect(
+      scriptFromExample({ ...valid, decision: 'rewrite', newScript: 'Say so', situation: ' ' }),
+    ).toEqual({ ...valid, decision: 'rewrite', newScript: 'Say so' });
+  });
+
+  it.each([
+    ['not an object', 'text'],
+    ['null', null],
+    ['blank text', { ...valid, text: '  ' }],
+    ['unknown source', { ...valid, source: 'school' }],
+    ['unknown effect', { ...valid, effect: 'neutral' }],
+    ['unknown decision', { ...valid, decision: 'maybe' }],
+  ])('rejects %s', (_label, value) => {
+    expect(scriptFromExample(value)).toBeNull();
   });
 });

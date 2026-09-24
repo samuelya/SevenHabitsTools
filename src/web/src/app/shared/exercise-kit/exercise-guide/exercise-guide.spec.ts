@@ -110,6 +110,7 @@ describe('ExerciseGuide', () => {
               { label: 'The new script', value: 'I say what bothers me the same day.' },
               { label: 'A situation this week', value: 'Friday planning meeting.' },
             ],
+            sample: { text: 'I go quiet when I am angry', decision: 'rewrite' },
           },
           { kind: 'fields', title: 'Step 1', fields: [{ label: 'Label', value: 'Value' }] },
         ],
@@ -141,6 +142,28 @@ describe('ExerciseGuide', () => {
       expect(check?.getAttribute('aria-label')).toBe('Done');
       expect(cards[1].querySelector('.example-item-icon mat-icon')).toBeNull();
       expect(cards[1].querySelector('.example-item-icon')).not.toBeNull();
+    });
+
+    it('offers "Try this example" only on a card with a sample, closing with it (#232)', () => {
+      const { fixture, close } = setUp(CARDS);
+      const element = fixture.nativeElement as HTMLElement;
+      const cards = element.querySelectorAll('.example-card--item');
+
+      expect(cards[0].querySelector('.try-example')).toBeNull();
+      expect(element.querySelectorAll('.try-example')).toHaveLength(1);
+      const button = cards[1].querySelector('.try-example') as HTMLButtonElement;
+      expect(button.textContent?.trim()).toContain('Try this example');
+      // Every card's button reads the same, so it names its example through the card's title.
+      const describedBy = button.getAttribute('aria-describedby') as string;
+      expect(element.querySelector(`#${describedBy}`)?.textContent?.trim()).toBe(
+        'I go quiet when I am angry',
+      );
+
+      button.click();
+
+      expect(close).toHaveBeenCalledWith({
+        tryExample: { text: 'I go quiet when I am angry', decision: 'rewrite' },
+      });
     });
 
     it('still renders a fields example (kind omitted or "fields") as a titled field list', () => {

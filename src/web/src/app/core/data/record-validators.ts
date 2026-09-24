@@ -27,6 +27,12 @@ export function isOptionalString(value: unknown): value is string | undefined {
   return value === undefined || typeof value === 'string';
 }
 
+/** True when `value` is `undefined` or a boolean — an optional flag whose absence means `false`
+ * (e.g. a list record's `sample`, issue #232). */
+export function isOptionalBoolean(value: unknown): value is boolean | undefined {
+  return value === undefined || typeof value === 'boolean';
+}
+
 /** Builds a guard for a field stored as one of a fixed set of string keys (architecture issue #1
  * §6: "never store translated text", a stable key instead). */
 export function isOneOf<T extends string>(values: readonly T[]): (value: unknown) => value is T {

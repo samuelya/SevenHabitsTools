@@ -17,7 +17,8 @@
       "overdue": "Overdue",
       "shared": "Shared",
       "skipped": "Skipped"
-    }
+    },
+    "example": "Example"
   },
   "form": {
     "keyIdeaLabel": "Key idea",
@@ -99,7 +100,13 @@
             "label": "Status",
             "value": "Planned"
           }
-        ]
+        ],
+        "sample": {
+          "chapter": "paradigms",
+          "keyIdea": "How I see a problem shapes what I do. So I check how I see it first.",
+          "person": "My sister",
+          "status": "planned"
+        }
       },
       {
         "kind": "card",
@@ -119,7 +126,14 @@
             "label": "What you learned",
             "value": "\"Explaining it showed me I couldn't give an example from my own life yet.\""
           }
-        ]
+        ],
+        "sample": {
+          "chapter": "paradigms",
+          "keyIdea": "How I see a problem shapes what I do. So I check how I see it first.",
+          "person": "My sister",
+          "status": "shared",
+          "learned": "Explaining it showed me I couldn't give an example from my own life yet."
+        }
       }
     ],
     "afterwards": "Set the date before you close this, so the plan is real. After you've explained it, come back, set it to Shared and write what you learned. Do the same for each chapter you read."

@@ -6,11 +6,12 @@ import {
   inject,
   input,
   model,
+  output,
 } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { ExerciseGuideContent } from '../exercise-guide/exercise-guide';
+import type { ExerciseGuideContent, ExerciseGuideSample } from '../exercise-guide/exercise-guide';
 import { ExerciseGuideOpener } from '../exercise-guide/exercise-guide-opener';
 
 /**
@@ -64,6 +65,9 @@ export class ExercisePromptCard {
    * the first change (issue #212's "started" rule). */
   readonly collapsedByDefault = input(false);
   readonly expanded = model(true);
+  /** "Try this example" in the guide (issue #232): the chosen card example's `sample`, emitted
+   * once the dialog has closed and focus is back on "Read more". */
+  readonly exampleTried = output<ExerciseGuideSample>();
 
   /** Guards `openGuide()` against a double-tap (review finding on this PR): `open()` is async, so
    * without this a second tap before the first dialog opens starts a second one — two dialogs,
@@ -87,7 +91,9 @@ export class ExercisePromptCard {
     if (content !== null && !this.guideOpening) {
       this.guideOpening = true;
       void this.guideOpener
-        .open(content, this.viewContainerRef)
+        .open(content, this.viewContainerRef, {
+          onTryExample: (sample) => this.exampleTried.emit(sample),
+        })
         .finally(() => (this.guideOpening = false));
     }
   }

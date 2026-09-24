@@ -3,8 +3,9 @@ import { HabitId } from '../habits/habits';
 /** The schema version this build of the app reads and writes. Bump on breaking changes, when a
  * shipped model's `validate()` starts accepting values an older build would reject, and when a
  * stored value's meaning changes, and add a migration. v2: `paradigms-maturity`'s `friendships`
- * area key (#222). v3: `paradigms-pc-balance`'s built-in asset keys (#223). */
-export const CURRENT_SCHEMA_VERSION = 3;
+ * area key (#222). v3: `paradigms-pc-balance`'s built-in asset keys (#223). v4: the `sample` flag
+ * on `paradigms-transition`/`paradigms-teach` records (#232). */
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export interface DocumentMeta {
   readonly createdAt: string;

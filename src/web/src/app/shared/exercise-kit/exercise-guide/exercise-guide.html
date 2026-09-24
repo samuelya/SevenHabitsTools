@@ -55,7 +55,9 @@
                 }
               </span>
               <span class="example-item-text">
-                <span class="example-item-title">{{ example.title }}</span>
+                <span class="example-item-title" [id]="'example-title-' + $index">{{
+                  example.title
+                }}</span>
                 @if (example.subtitle) {
                   <span class="example-item-subtitle">{{ example.subtitle }}</span>
                 }
@@ -67,6 +69,23 @@
                 [ngTemplateOutletContext]="{ $implicit: example.fields }"
               />
             </mat-card-content>
+            @if (example.sample) {
+              <!-- "Try this example" (issue #232): closes the guide with the example's values so
+                   the exercise can open its editor on a new, pre-filled sample item. Described by
+                   the example's own title, since every card has the same button text. -->
+              <mat-card-actions align="end">
+                <button
+                  mat-stroked-button
+                  type="button"
+                  class="try-example"
+                  [matDialogClose]="{ tryExample: example.sample }"
+                  [attr.aria-describedby]="'example-title-' + $index"
+                >
+                  <mat-icon aria-hidden="true">edit_note</mat-icon>
+                  {{ 'exerciseKit.guide.tryExample' | transloco }}
+                </button>
+              </mat-card-actions>
+            }
           </mat-card>
         } @else {
           <mat-card appearance="outlined" class="example-card">

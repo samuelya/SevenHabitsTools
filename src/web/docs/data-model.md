@@ -74,8 +74,11 @@ value, such as #222's `friendships` area key) counts as breaking too: without th
 build would reject a new document as corrupt instead of reporting "made by a newer version". So
 does a changed **meaning** of a stored value that `validate()` still accepts (#223: an asset `key`
 of `sleep` with `name: ''` is a built-in asset; an older build reads it as a blank custom asset and
-loses the built-in identity when it copies the audit). Such a migration only stamps the version
-(`migration-v1-to-v2.ts`, `migration-v2-to-v3.ts`). `src/app/core/data/migrations/`:
+loses the built-in identity when it copies the audit). So does a new optional field an older build
+would ignore but misread (#232: `sample: true` on a script or teach entry counts toward nothing;
+an older build counts it and keeps the flag through its edits). Such a migration only stamps the
+version (`migration-v1-to-v2.ts`, `migration-v2-to-v3.ts`, `migration-v3-to-v4.ts`).
+`src/app/core/data/migrations/`:
 
 - `migration.ts` — the `Migration` interface: `{ from, to, migrate(doc) }`.
 - `migrations.ts` — `MIGRATIONS`, the ordered list; add new entries here, never reorder or

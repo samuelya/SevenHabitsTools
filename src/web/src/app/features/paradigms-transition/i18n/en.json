@@ -12,7 +12,8 @@
     "empty": "No patterns yet. Add the first one you've noticed.",
     "noMatch": "No patterns match your search.",
     "deleted": "Pattern deleted",
-    "undo": "Undo"
+    "undo": "Undo",
+    "example": "Example"
   },
   "editor": {
     "newTitle": "New pattern",
@@ -111,7 +112,13 @@
             "label": "Your decision",
             "value": "Keep"
           }
-        ]
+        ],
+        "sample": {
+          "text": "We pay every bill the day it arrives.",
+          "source": "family",
+          "effect": "helps",
+          "decision": "keep"
+        }
       },
       {
         "kind": "card",
@@ -138,7 +145,15 @@
             "label": "When it'll show up",
             "value": "\"Thursday's talk about the bills with my partner.\""
           }
-        ]
+        ],
+        "sample": {
+          "text": "When I'm stressed I go quiet and shut everyone out.",
+          "source": "family",
+          "effect": "harms",
+          "decision": "rewrite",
+          "newScript": "When I'm stressed I say so, and ask for ten minutes to think.",
+          "situation": "Thursday's talk about the bills with my partner."
+        }
       }
     ],
     "afterwards": "This week, watch for the moment you named. Try the new version once, even if it feels awkward. Then come back, add any pattern you noticed, and go on to the next exercise."

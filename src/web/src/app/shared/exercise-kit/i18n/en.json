@@ -13,7 +13,8 @@
     "exampleDone": "Done",
     "afterwards": "Afterwards",
     "close": "Close",
-    "loadError": "Couldn't open the guide. Check your connection and try again."
+    "loadError": "Couldn't open the guide. Check your connection and try again.",
+    "tryExample": "Try this example"
   },
   "stepper": {
     "back": "Back",
