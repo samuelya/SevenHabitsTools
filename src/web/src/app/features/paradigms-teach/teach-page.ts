@@ -21,7 +21,6 @@ import { ExerciseList } from '../../shared/exercise-kit/exercise-list/exercise-l
 import { EditorStatus, ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
 import type { ExerciseGuideSample } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
-import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
@@ -95,7 +94,8 @@ export class TeachPage {
   private readonly transloco = inject(TranslocoService);
   private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<TeachEntry[]>(TEACH_MODEL_KEY);
-  /** Any live record (issue #216), from the same pure predicate the registry's `isStarted` uses. */
+  /** Any counted entry (issues #216, #232), from the same pure predicate the registry's
+   * `isStarted` uses. */
   protected readonly started = computed(() => isStarted(this.store.value()));
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
@@ -198,10 +198,10 @@ export class TeachPage {
     }
     return this.selectedEntry() ? 'saved' : 'new';
   });
-  /** `null` until the first chapter has an entry (issue #215): no "0 of 10 chapters shared"
-   * card before the user has touched any chapter. */
+  /** `null` until the first chapter has a counted entry (issues #215, #232): no "0 of 10 chapters
+   * shared" card before the user has touched any chapter, nor one for a sample alone. */
   protected readonly summary = computed(() =>
-    this.entries().some(isCounted) ? summarize(this.entries(), this.clock.now()) : null,
+    this.started() ? summarize(this.entries(), this.clock.now()) : null,
   );
   protected readonly readyToMarkDone = computed(() => isComplete(this.entries()));
 
@@ -303,18 +303,20 @@ export class TeachPage {
    * Paradigms chapter) with a real entry flagged `sample` — the user asked for it (draft before
    * record's principle 5) — and opens that chapter's editor. The guide never offers it for a
    * chapter that already has an entry (`guideForEntries()`); if one appeared meanwhile, the
-   * user's entry is left alone and nothing opens. Refused, like any edit, in a read-only tab. */
+   * user's entry is left alone and nothing opens. Refused, like any edit, in a read-only tab.
+   * Tried from a chapter's blank editor, the move replaces that URL, so Back doesn't reopen it. */
   protected onExampleTried(sample: ExerciseGuideSample): void {
     const example = teachSampleFromExample(sample);
     if (example === null || entryForChapter(this.entries(), example.chapter)) {
       return;
     }
     const { chapter, fields } = example;
+    const replaceUrl = this.editorStatus() === 'new';
     if (
       this.store.update((entries) => addSampleEntry(entries, chapter, fields, this.clock.now()))
     ) {
       this.pending.set(null);
-      this.goTo([chapter]);
+      this.goTo([chapter], { replaceUrl });
     }
   }
 

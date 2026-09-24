@@ -59,9 +59,9 @@ export const TRANSITION_PATH = 'habits.paradigms.scripts';
  * shared with `transition-page.ts`'s own navigation so the two can never drift apart. */
 export const TRANSITION_ROUTE = 'habits/paradigms/transition';
 
-const isScriptSource = isOneOf(SCRIPT_SOURCES);
-const isScriptEffect = isOneOf(SCRIPT_EFFECTS);
-const isScriptDecision = isOneOf(SCRIPT_DECISIONS);
+export const isScriptSource = isOneOf(SCRIPT_SOURCES);
+export const isScriptEffect = isOneOf(SCRIPT_EFFECTS);
+export const isScriptDecision = isOneOf(SCRIPT_DECISIONS);
 
 function isScript(value: unknown): value is Script {
   if (!isBaseRecord(value)) {

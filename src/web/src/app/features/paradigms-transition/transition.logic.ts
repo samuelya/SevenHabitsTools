@@ -1,5 +1,4 @@
 import { softDelete, touch, isLive } from '../../core/data/record';
-import { isOneOf } from '../../core/data/record-validators';
 import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
 import {
   allMet,
@@ -17,9 +16,9 @@ import {
   ExerciseListItem,
 } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import {
-  SCRIPT_DECISIONS,
-  SCRIPT_EFFECTS,
-  SCRIPT_SOURCES,
+  isScriptDecision,
+  isScriptEffect,
+  isScriptSource,
   Script,
   ScriptDecision,
   ScriptEffect,
@@ -85,13 +84,13 @@ function scriptMet(script: Script): ChecklistMet<TransitionChecklistKey> {
   };
 }
 
-/** The checklist describes the live script closest to complete (`closestMet()`), so "Mark done"
+/** The checklist describes the counted script closest to complete (`closestMet()`), so "Mark done"
  * and the list it shows reduce the same map and can never disagree. */
 function checklistMet(scripts: readonly Script[]): ChecklistMet<TransitionChecklistKey> {
   return closestMet(countedScripts(scripts), CHECKLIST_KEYS, scriptMet);
 }
 
-/** Whether `DoneToggle` should be enabled: at least one live script is complete (issue #51's
+/** Whether `DoneToggle` should be enabled: at least one counted script is complete (issue #51's
  * "Implementation notes"), derived from the checklist (issue #215). */
 export function isComplete(scripts: readonly Script[]): boolean {
   return allMet(CHECKLIST_KEYS, checklistMet(scripts));
@@ -223,11 +222,6 @@ export function editScript(
   });
 }
 
-// Built on first use, not at module load: `transition.model.ts` imports this file for its hub
-// status, so on that import path the enum arrays are still undefined while this module evaluates.
-const isSource = (value: unknown): value is ScriptSource => isOneOf(SCRIPT_SOURCES)(value);
-const isEffect = (value: unknown): value is ScriptEffect => isOneOf(SCRIPT_EFFECTS)(value);
-const isDecision = (value: unknown): value is ScriptDecision => isOneOf(SCRIPT_DECISIONS)(value);
 const optionalText = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 
@@ -241,7 +235,12 @@ export function scriptFromExample(value: unknown): ScriptFields | null {
   const example = value as Record<string, unknown>;
   const text = optionalText(example['text']);
   const { source, effect, decision } = example;
-  if (text === undefined || !isSource(source) || !isEffect(effect) || !isDecision(decision)) {
+  if (
+    text === undefined ||
+    !isScriptSource(source) ||
+    !isScriptEffect(effect) ||
+    !isScriptDecision(decision)
+  ) {
     return null;
   }
   const newScript = optionalText(example['newScript']);
@@ -254,6 +253,18 @@ export function scriptFromExample(value: unknown): ScriptFields | null {
     ...(newScript === undefined ? {} : { newScript }),
     ...(situation === undefined ? {} : { situation }),
   };
+}
+
+const SAMPLE_KEYS = ['text', 'source', 'effect', 'decision', 'newScript', 'situation'] as const;
+
+/** The live, still-flagged sample made from these example `fields`, if the user already tried this
+ * example and hasn't made it their own yet (issue #232): trying it again opens that one rather
+ * than adding a copy. */
+export function liveSampleOf(scripts: readonly Script[], fields: ScriptFields): Script | undefined {
+  return scripts.find(
+    (script) =>
+      isLive(script) && script.sample && SAMPLE_KEYS.every((key) => script[key] === fields[key]),
+  );
 }
 
 /** Tombstones the script `id` (never removed, architecture issue #1 §6). */

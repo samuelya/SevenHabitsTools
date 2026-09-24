@@ -15,18 +15,18 @@ import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/ex
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prompt-card/intro-collapsed';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
-import { recordDraft } from '../../shared/exercise-kit/record-draft';
+import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
 import { TransitionItemForm } from './transition-item-form';
 import { TransitionSummary } from './transition-summary';
 import {
   CHECKLIST_KEYS,
   checklistLabelsFrom,
-  countedScripts,
   checklistLoaded,
   doneChecklist,
   editScript,
   isComplete,
   labelsFrom,
+  liveSampleOf,
   liveScripts,
   removeScript,
   restoreScript,
@@ -99,7 +99,8 @@ export class TransitionPage {
   private readonly transloco = inject(TranslocoService);
   private readonly deleteWithUndo = inject(DeleteWithUndo);
   private readonly store = featureStore<Script[]>(TRANSITION_MODEL_KEY);
-  /** Any live record (issue #216), from the same pure predicate the registry's `isStarted` uses. */
+  /** Any counted script (issues #216, #232), from the same pure predicate the registry's
+   * `isStarted` uses. */
   protected readonly started = computed(() => isStarted(this.store.value()));
   /** Read once by `ExercisePromptCard` at mount: collapsed once started, always on a phone. */
   protected readonly collapsedByDefault = introCollapsedByDefault(this.started);
@@ -171,7 +172,7 @@ export class TransitionPage {
   /** `null` until the first counted script exists (issues #215, #232): no "0 scripts named" card
    * next to the list's own empty-state text, nor one for a sample alone. */
   protected readonly summary = computed(() =>
-    countedScripts(this.store.value()).length > 0 ? summarize(this.store.value()) : null,
+    this.started() ? summarize(this.store.value()) : null,
   );
   protected readonly readyToMarkDone = computed(() => isComplete(this.store.value()));
 
@@ -223,15 +224,24 @@ export class TransitionPage {
   /** "Try this example" in the guide (issue #232): the user asked for this item, so it is a real
    * record at once (draft before record's principle 5), flagged `sample` until its first edit. The
    * editor opens on its id, not on `new`, so `recordDraft()` has no draft to track. Refused, like
-   * any edit, in a read-only tab — the store reports why — and then nothing opens. */
+   * any edit, in a read-only tab — the store reports why — and then nothing opens. An example
+   * already tried and not yet edited opens that sample instead of adding another (`liveSampleOf()`).
+   * Tried from a blank draft at `NEW_ITEM_ID`, the move replaces that URL, so Back doesn't reopen
+   * an empty draft. */
   protected onExampleTried(sample: ExerciseGuideSample): void {
     const fields = scriptFromExample(sample);
     if (fields === null) {
       return;
     }
+    const options = { replaceUrl: this.itemId() === NEW_ITEM_ID };
+    const existing = liveSampleOf(this.store.value(), fields);
+    if (existing) {
+      this.goTo([existing.id], options);
+      return;
+    }
     const record: Script = { ...newRecord(fields, this.clock.now()), sample: true };
     if (this.store.update((scripts) => [...scripts, record])) {
-      this.goTo([record.id]);
+      this.goTo([record.id], options);
     }
   }
 

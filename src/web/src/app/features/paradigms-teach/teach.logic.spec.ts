@@ -24,11 +24,7 @@ import {
   toListItem,
   upsertEntry,
   isStarted,
-  addSampleEntry,
-  guideForEntries,
-  teachSampleFromExample,
 } from './teach.logic';
-import type { ExerciseGuideContent } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
 import { hubStatus } from './teach.logic';
 
 const NOW = new Date('2026-01-10T00:00:00.000Z');
@@ -489,101 +485,5 @@ describe('hubStatus (#219)', () => {
       key: 'habits.exercises.paradigms-teach.sharedCount',
       count: 1,
     });
-  });
-});
-
-describe('samples (issue #232)', () => {
-  const sample = (overrides: Partial<TeachEntry> = {}) =>
-    entry({ sample: true, status: 'shared', ...overrides });
-
-  it('counts toward nothing while flagged: started, shared count, hub, summary, done gate', () => {
-    const entries = [sample({ status: 'planned', plannedAt: '2026-01-01' })];
-
-    expect(isStarted(entries)).toBe(false);
-    expect(sharedCount([sample()])).toBe(0);
-    expect(hubStatus([sample()])).toBeNull();
-    expect(summarize(entries, NOW)).toEqual({ shared: 0, overdue: 0, total: 10 });
-    expect(isComplete([sample()])).toBe(false);
-  });
-
-  it('shows an "Example" chip before the status chip and never the done check', () => {
-    const labels = labelsFrom(['h1'], ['Habit 1'], STATUS_LABELS, 'Example');
-    const item = toListItem('h1', sample(), labels, NOW, (date) => date);
-
-    expect(item.chips?.map((chip) => chip.label)).toEqual(['Example', 'Shared']);
-    expect(item.done).toBe(false);
-    expect(item.deletable).toBe(true);
-  });
-
-  it('any edit clears the flag, whichever field changed', () => {
-    const [edited] = upsertEntry([sample()], 'h1', { status: 'skipped' }, NOW);
-
-    expect(edited.status).toBe('skipped');
-    expect('sample' in edited).toBe(false);
-    expect(isStarted([edited])).toBe(true);
-  });
-
-  it("addSampleEntry creates the chapter's entry flagged as a sample", () => {
-    const [created] = addSampleEntry([], 'paradigms', { keyIdea: 'Idea', status: 'planned' }, NOW);
-
-    expect(created).toMatchObject({
-      chapter: 'paradigms',
-      keyIdea: 'Idea',
-      status: 'planned',
-      plannedAt: '2026-01-12',
-      sample: true,
-    });
-  });
-
-  it('addSampleEntry never touches a chapter that already has a live entry', () => {
-    const own = entry({ chapter: 'paradigms' });
-
-    expect(addSampleEntry([own], 'paradigms', { keyIdea: 'Idea', status: 'planned' }, NOW)).toEqual(
-      [own],
-    );
-  });
-});
-
-describe('teachSampleFromExample (issue #232)', () => {
-  const valid = { chapter: 'paradigms', keyIdea: 'Idea', status: 'shared', person: 'Sam' };
-
-  it('maps a valid example to its chapter and fields, keeping only non-blank optional text', () => {
-    expect(teachSampleFromExample({ ...valid, learned: ' ' })).toEqual({
-      chapter: 'paradigms',
-      fields: { keyIdea: 'Idea', status: 'shared', person: 'Sam' },
-    });
-  });
-
-  it.each([
-    ['null', null],
-    ['an unknown chapter', { ...valid, chapter: 'h9' }],
-    ['a blank key idea', { ...valid, keyIdea: ' ' }],
-    ['an unknown status', { ...valid, status: 'done' }],
-  ])('rejects %s', (_label, value) => {
-    expect(teachSampleFromExample(value)).toBeNull();
-  });
-});
-
-describe('guideForEntries (issue #232)', () => {
-  const guide: ExerciseGuideContent = {
-    inShort: 'x',
-    howTo: ['y'],
-    afterwards: 'z',
-    examples: [
-      { kind: 'card', title: 'A', fields: [], sample: { chapter: 'paradigms' } },
-      { title: 'B', fields: [] },
-    ],
-  };
-
-  it('keeps "Try this example" while the chapter has no live entry', () => {
-    expect(guideForEntries(guide, [entry({ chapter: 'paradigms', deletedAt: 'x' })])).toBe(guide);
-    expect(guideForEntries(null, [])).toBeNull();
-  });
-
-  it("drops it once the example's chapter has a live entry", () => {
-    const result = guideForEntries(guide, [entry({ chapter: 'paradigms' })]);
-
-    expect(result?.examples[0]).toMatchObject({ title: 'A', sample: undefined });
-    expect(result?.examples[1]).toBe(guide.examples[1]);
   });
 });

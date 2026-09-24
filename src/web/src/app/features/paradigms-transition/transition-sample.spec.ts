@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -113,6 +114,42 @@ describe('TransitionPage "Try this example" (issue #232)', () => {
     );
     expect(chips).not.toContain('Example');
     expect(host(harness).querySelector('app-transition-summary')).not.toBeNull();
+  });
+
+  it('opens the live sample of the same example instead of adding it again', async () => {
+    const harness = await setUp();
+    await tryExample(harness, EXAMPLE);
+    const [first] = storedScripts();
+    await harness.navigateByUrl(LIST_URL);
+
+    await tryExample(harness, EXAMPLE);
+
+    expect(storedScripts()).toHaveLength(1);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${first.id}`);
+  });
+
+  it("adds it again once the earlier copy is the user's own", async () => {
+    const harness = await setUp();
+    await tryExample(harness, EXAMPLE);
+    const form = harness.routeDebugElement!.query(By.directive(TransitionItemForm));
+    (form.componentInstance as TransitionItemForm).changed.emit({ source: 'work' });
+    await harness.fixture.whenStable();
+
+    await tryExample(harness, EXAMPLE);
+
+    expect(storedScripts()).toHaveLength(2);
+    expect(storedScripts()[1].sample).toBe(true);
+  });
+
+  it('Back skips the blank draft it was tried from (replaceUrl)', async () => {
+    const harness = await setUp();
+    await harness.navigateByUrl(`${LIST_URL}/new`);
+    await tryExample(harness, EXAMPLE);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${storedScripts()[0].id}`);
+
+    const location = TestBed.inject(Location);
+    location.back();
+    expect(location.path()).not.toBe(`${LIST_URL}/new`);
   });
 
   it('stores and opens nothing for an invalid example', async () => {

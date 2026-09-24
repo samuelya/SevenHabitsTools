@@ -87,7 +87,8 @@ export function isStarted(entries: readonly TeachEntry[]): boolean {
 /** Creates `chapter`'s entry on first edit, or edits its existing live one — never a second live
  * entry for the same chapter. Stamps `sharedAt` from `now` the moment `status` first becomes
  * `'shared'` (issue #52's "Implementation notes"); a later edit that leaves it `'shared'` doesn't
- * restamp it. */
+ * restamp it. A sample (issue #232) was never really shared, so the edit that makes it the user's
+ * own stamps `sharedAt` then, if its status is still `'shared'`. */
 export function upsertEntry(
   entries: readonly TeachEntry[],
   chapter: TeachChapter,
@@ -108,8 +109,9 @@ export function upsertEntry(
     ...fields,
     updatedAt: now.toISOString(),
   });
+  const previous = existing.sample ? undefined : existing;
   return entries.map((entry) =>
-    entry === existing ? withSharedAt(updated, existing, now) : entry,
+    entry === existing ? withSharedAt(updated, previous, now) : entry,
   );
 }
 
@@ -159,12 +161,12 @@ function entryMet(entry: TeachEntry): ChecklistMet<TeachChecklistKey> {
   return { planned: shared || isValidPlannedAt(entry.plannedAt), shared };
 }
 
-/** The checklist describes the live entry closest to complete (`closestMet()`). */
+/** The checklist describes the counted entry closest to complete (`closestMet()`). */
 function checklistMet(entries: readonly TeachEntry[]): ChecklistMet<TeachChecklistKey> {
   return closestMet(entries.filter(isCounted), CHECKLIST_KEYS, entryMet);
 }
 
-/** Whether `DoneToggle` should be enabled: at least one live entry is `'shared'` (issue #52's
+/** Whether `DoneToggle` should be enabled: at least one counted entry is `'shared'` (issue #52's
  * "Implementation notes"), derived from the checklist (issue #215). */
 export function isComplete(entries: readonly TeachEntry[]): boolean {
   return allMet(CHECKLIST_KEYS, checklistMet(entries));
@@ -319,7 +321,7 @@ export function draftFor(
  * `deletable: false` for a chapter with no entry yet (issue #203): the rows are the ten fixed
  * chapters, not one-to-one with what a delete removes, so a chapter with nothing filled in yet has
  * nothing to delete (playbook's "Deleting entries"). A sample (issue #232) leads with an "Example"
- * chip and never shows the done check: it counts toward nothing. */
+ * chip and never shows the done check or the overdue warning: it counts toward nothing. */
 export function toListItem(
   chapter: TeachChapter,
   entry: TeachEntry | undefined,
@@ -332,14 +334,15 @@ export function toListItem(
   const chipLabel =
     'plannedAt' in status ? label.replace(DATE_SLOT, formatDate(status.plannedAt)) : label;
   const keyIdea = firstLine(entry?.keyIdea);
-  const statusChip: ExerciseListChip = { label: chipLabel, warning: status.kind === 'overdue' };
+  const warning = !entry?.sample && status.kind === 'overdue';
+  const statusChip: ExerciseListChip = { label: chipLabel, warning };
   return {
     id: chapter,
     title: labels.chapter[chapter],
     ...(keyIdea ? { subtitle: keyIdea } : {}),
     chips: entry?.sample ? [{ label: labels.example ?? '' }, statusChip] : [statusChip],
     done: !entry?.sample && status.kind === 'shared',
-    warning: status.kind === 'overdue',
+    warning,
     deletable: entry !== undefined,
   };
 }
@@ -403,7 +406,8 @@ export function teachSampleFromExample(
 
 /** Creates `chapter`'s entry from a guide example, flagged `sample` (issue #232) — or, when the
  * chapter already has a live entry, leaves `entries` as they are: the example never overwrites
- * the user's own work, nor becomes a second entry for one chapter. */
+ * the user's own work, nor becomes a second entry for one chapter. A `'shared'` example gets no
+ * `sharedAt`: nothing was shared yet (`upsertEntry()` stamps it when the flag clears). */
 export function addSampleEntry(
   entries: readonly TeachEntry[],
   chapter: TeachChapter,
@@ -414,7 +418,9 @@ export function addSampleEntry(
     return [...entries];
   }
   return upsertEntry(entries, chapter, fields, now).map((entry) =>
-    entry.chapter === chapter && isLive(entry) ? { ...entry, sample: true } : entry,
+    entry.chapter === chapter && isLive(entry)
+      ? { ...entry, sharedAt: undefined, sample: true }
+      : entry,
   );
 }
 
