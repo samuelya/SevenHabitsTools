@@ -109,7 +109,6 @@ Use these words every time. The **English** column is the word the app uses. **�
 - Prompt, `step1.firstView.prompt` (عامية): "تفتكر ليه ما ردش عليك؟" This is colloquial because the key ends in `prompt`. Compare the فصحى label on the same field: `firstView.label` "تخمينك الأول".
 - Hint, `step1.revealHint` (عامية): "اكتب تخمينك الأول، وبعدين هوريك الوش التاني." It sits next to the فصحى button `revealButton` "اعرض الوجه الآخر": same idea, two registers, and each one is chosen by its key.
 
-
 ## The `documents/` reference folder
 
 `documents/` (repo root) holds a private local copy of the book, kept only so contributors can
