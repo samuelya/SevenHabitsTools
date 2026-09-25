@@ -1,0 +1,35 @@
+.start {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-inline-size: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font-weight: 500;
+}
+
+.field-prompt {
+  margin: 0;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.start-button {
+  min-block-size: 44px;
+  align-self: flex-start;
+}
+
+// Full width on handset, like the other exercises' primary action (#187).
+@media (max-width: 599.98px) {
+  .start-button {
+    inline-size: 100%;
+  }
+}

@@ -1,0 +1,40 @@
+<fieldset class="checkin">
+  <legend class="legend">{{ 'h1Challenge.checkin.legend' | transloco }}</legend>
+
+  @for (question of questions; track question) {
+    <mat-slide-toggle
+      class="question"
+      [checked]="answers()[question]"
+      (change)="onToggle(question, $event.checked)"
+    >
+      {{ 'h1Challenge.checkin.' + question + 'Prompt' | transloco }}
+    </mat-slide-toggle>
+  }
+
+  <p class="field-prompt" id="checkin-note-prompt">
+    {{ 'h1Challenge.checkin.notePrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Challenge.checkin.noteLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="2"
+      aria-describedby="checkin-note-prompt"
+      [placeholder]="'h1Challenge.checkin.notePlaceholder' | transloco"
+      [value]="note()"
+      (input)="onNoteInput($event)"
+    ></textarea>
+  </mat-form-field>
+
+  <div class="actions">
+    <button mat-flat-button type="button" class="save-button" (click)="save()">
+      {{ 'h1Challenge.checkin.saveButton' | transloco }}
+    </button>
+    <p class="saved-line" aria-live="polite">
+      @if (isSaved()) {
+        {{ 'h1Challenge.checkin.savedText' | transloco }}
+      }
+    </p>
+  </div>
+</fieldset>

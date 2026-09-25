@@ -1,0 +1,36 @@
+<fieldset class="start">
+  <legend class="legend">{{ 'h1Challenge.start.legend' | transloco }}</legend>
+
+  <mat-form-field appearance="outline" class="field date-field">
+    <mat-label>{{ 'h1Challenge.start.startDateLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      autocomplete="off"
+      [matDatepicker]="startPicker"
+      [max]="maxDate()"
+      [value]="startDateValue()"
+      (dateChange)="onDateChange($event)"
+    />
+    <mat-datepicker-toggle matIconSuffix [for]="startPicker" />
+    <mat-datepicker #startPicker />
+  </mat-form-field>
+
+  <p class="field-prompt" id="challenge-focus-prompt">
+    {{ 'h1Challenge.start.focusPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Challenge.start.focusLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      aria-describedby="challenge-focus-prompt"
+      [placeholder]="'h1Challenge.start.focusPlaceholder' | transloco"
+      (input)="onFocusInput($event)"
+    />
+  </mat-form-field>
+
+  <button mat-flat-button type="button" class="start-button" (click)="start()">
+    {{ 'h1Challenge.start.startButton' | transloco }}
+  </button>
+</fieldset>

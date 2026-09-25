@@ -1,0 +1,46 @@
+.checkin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-inline-size: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font-weight: 500;
+}
+
+// The whole row (toggle plus its prompt) is the label, so the touch target is the row: at least
+// 44 px tall (#1 §7).
+.question {
+  min-block-size: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.field-prompt {
+  margin: 0;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.save-button {
+  min-block-size: 44px;
+}
+
+.saved-line {
+  margin: 0;
+}

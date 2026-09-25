@@ -1,0 +1,9 @@
+.challenge-summary mat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.challenge-summary .line {
+  margin: 0;
+}

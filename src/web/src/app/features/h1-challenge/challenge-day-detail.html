@@ -1,0 +1,53 @@
+<section class="day-detail">
+  <h3 class="day-heading" tabindex="-1">
+    {{ 'h1Challenge.day.title' | transloco: { day: cell().day } }} ·
+    {{ when() | appDate: { weekday: 'long', day: 'numeric', month: 'long' } }}
+  </h3>
+  <p class="state">{{ 'h1Challenge.dayState.' + cell().state | transloco }}</p>
+
+  @if (checkin(); as checkin) {
+    @if (checkin.answers; as answers) {
+      <dl class="answers">
+        @for (question of questions; track question) {
+          <div class="answer">
+            <dt>{{ 'h1Challenge.checkin.' + question + 'Label' | transloco }}</dt>
+            <dd>{{ 'h1Challenge.answer.' + (answers[question] ? 'yes' : 'no') | transloco }}</dd>
+          </div>
+        }
+        @if (checkin.note) {
+          <div class="answer">
+            <dt>{{ 'h1Challenge.checkin.noteLabel' | transloco }}</dt>
+            <dd class="text">{{ checkin.note }}</dd>
+          </div>
+        }
+      </dl>
+    }
+    @if (checkin.skipped && checkin.skipReason) {
+      <dl class="answers">
+        <div class="answer">
+          <dt>{{ 'h1Challenge.skip.reasonLabel' | transloco }}</dt>
+          <dd class="text">{{ checkin.skipReason }}</dd>
+        </div>
+      </dl>
+    }
+  } @else if (canSkip()) {
+    <p class="field-prompt" id="skip-reason-prompt">
+      {{ 'h1Challenge.skip.reasonPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Challenge.skip.reasonLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        type="text"
+        autocomplete="off"
+        aria-describedby="skip-reason-prompt"
+        [placeholder]="'h1Challenge.skip.reasonPlaceholder' | transloco"
+        [value]="reason()"
+        (input)="onReasonInput($event)"
+      />
+    </mat-form-field>
+    <button mat-stroked-button type="button" class="skip-button" (click)="skip()">
+      {{ 'h1Challenge.skip.skipButton' | transloco }}
+    </button>
+  }
+</section>

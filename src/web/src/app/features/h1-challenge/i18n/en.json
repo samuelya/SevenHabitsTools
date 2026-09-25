@@ -1,0 +1,145 @@
+{
+  "prompt": {
+    "title": "Take the 30-day test",
+    "chapterReference": "Habit 1: Be Proactive",
+    "text": "For thirty days, act only on what you can affect. Keep small promises, and don't blame anyone. Check in each evening with four quick questions.",
+    "glossText": "This is the book's thirty-day test of being proactive: choosing your response instead of just reacting.",
+    "whyItMatters": "One good day proves nothing; thirty in a row change how you see yourself. The check-in is short so you'll actually do it. Missing a day isn't failing; stopping is."
+  },
+  "start": {
+    "legend": "Start a test",
+    "startDateLabel": "Start date",
+    "focusLabel": "Your focus",
+    "focusPrompt": "Optional: one area you want this month to be about.",
+    "focusPlaceholder": "e.g. How I talk to my teenager.",
+    "startButton": "Start test"
+  },
+  "day": {
+    "title": "Day {{day}} of 30",
+    "stripLegend": "Your 30 days"
+  },
+  "dayState": {
+    "checkedIn": "Checked in",
+    "skipped": "Skipped",
+    "missed": "Missed",
+    "today": "Today",
+    "future": "Coming up"
+  },
+  "checkin": {
+    "legend": "Tonight's check-in",
+    "influencePrompt": "Did you put your energy into things you can affect?",
+    "promisePrompt": "Did you keep a small promise today?",
+    "responsePrompt": "When something got to you, did you choose how to respond?",
+    "noBlamePrompt": "Did you get through the day without blaming anyone?",
+    "influenceLabel": "My influence",
+    "promiseLabel": "A promise",
+    "responseLabel": "My response",
+    "noBlameLabel": "No blame",
+    "noteLabel": "Note",
+    "notePrompt": "One line about today. What did you do differently?",
+    "notePlaceholder": "e.g. Didn't join the moaning about the new rota. Asked what we could change instead.",
+    "saveButton": "Save check-in",
+    "savedText": "Saved. See you tomorrow."
+  },
+  "answer": {
+    "yes": "Yes",
+    "no": "No"
+  },
+  "skip": {
+    "skipButton": "Mark skipped",
+    "reasonLabel": "Why",
+    "reasonPrompt": "What happened that day? One line is enough.",
+    "reasonPlaceholder": "e.g. Ill in bed all day."
+  },
+  "promises": {
+    "legend": "Promises due today",
+    "noneDueText": "No promises due today. Make one in Your promises.",
+    "seeButton": "See promises"
+  },
+  "promiseStatus": {
+    "open": "Open",
+    "kept": "Kept",
+    "broken": "Broken",
+    "withdrawn": "Withdrawn"
+  },
+  "mid": {
+    "legend": "Halfway",
+    "notePrompt": "Fifteen days in. What's changed in where your energy goes?",
+    "noteLabel": "Halfway note",
+    "notePlaceholder": "e.g. I catch myself faster. I still slip at home in the evening."
+  },
+  "final": {
+    "legend": "Day 30",
+    "notePrompt": "What's different now, and what will you keep doing?",
+    "noteLabel": "Final note",
+    "notePlaceholder": "e.g. Fewer arguments about things I can't change. I'll keep the one-line promise each morning.",
+    "finishButton": "Finish test"
+  },
+  "stop": {
+    "stopButton": "Stop test",
+    "confirmText": "Stop this test? Your check-ins stay in the list, and you can start a new one.",
+    "confirmButton": "Stop",
+    "cancelButton": "Keep going"
+  },
+  "summary": {
+    "streak": {
+      "one": "1-day streak",
+      "other": "{{count}}-day streak"
+    },
+    "checkedIn": {
+      "other": "Checked in {{count}} of 30 days"
+    },
+    "promisesText": "Kept {{kept}} of {{count}} promises this month"
+  },
+  "past": {
+    "legend": "Past tests"
+  },
+  "status": {
+    "active": "Running",
+    "completed": "Completed",
+    "stopped": "Stopped"
+  },
+  "checklist": {
+    "start": "Start the test",
+    "day30": "Reach day 30",
+    "final": "Write your final note"
+  },
+  "guide": {
+    "inShort": "You'll start a thirty-day run and answer four yes/no questions every evening. A minute a day. Halfway and at the end you'll write a few lines about what changed.",
+    "howTo": [
+      "Tap \"Start test\". Add a focus if you have one.",
+      "Each evening, answer the four questions and add one line if you like.",
+      "Missed a day? Mark it skipped and move on. The streak restarts; the test doesn't.",
+      "Check the promises due today; keep at least one.",
+      "On day 15, write the halfway note. On day 30, write the final one and tap \"Finish test\".",
+      "Then tap \"Mark done\". Start another test whenever you want a reset."
+    ],
+    "examples": [
+      {
+        "kind": "fields",
+        "title": "An evening check-in (day 8)",
+        "fields": [
+          { "label": "My influence", "value": "Yes" },
+          { "label": "A promise", "value": "Yes" },
+          { "label": "My response", "value": "No" },
+          { "label": "No blame", "value": "Yes" },
+          {
+            "label": "Note",
+            "value": "\"Didn't join the moaning about the new rota. Asked what we could change instead.\""
+          }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "Halfway note (day 15)",
+        "fields": [
+          {
+            "label": "Halfway note",
+            "value": "\"I catch myself faster. I still slip at home in the evening.\""
+          }
+        ]
+      }
+    ],
+    "afterwards": "Read your thirty notes in one sitting. Pick the one thing that made the biggest difference and keep doing it. Then move on to Habit 2, and come back for another test when life gets noisy."
+  }
+}

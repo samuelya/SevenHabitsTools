@@ -1,0 +1,18 @@
+<mat-card class="challenge-summary" appearance="outlined">
+  <mat-card-content>
+    @if (summary().streak > 0) {
+      <p class="line">{{ 'h1Challenge.summary.streak' | appPlural: summary().streak }}</p>
+    }
+    @if (summary().checkedIn > 0) {
+      <p class="line">{{ 'h1Challenge.summary.checkedIn' | appPlural: summary().checkedIn }}</p>
+    }
+    @if (summary().promises; as promises) {
+      <p class="line">
+        {{
+          'h1Challenge.summary.promisesText'
+            | transloco: { kept: promises.kept, count: promises.count }
+        }}
+      </p>
+    }
+  </mat-card-content>
+</mat-card>

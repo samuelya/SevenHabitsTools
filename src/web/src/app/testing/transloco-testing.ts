@@ -31,6 +31,8 @@ import circleEn from '../features/h1-circle/i18n/en.json';
 import circleAr from '../features/h1-circle/i18n/ar.json';
 import rehearsalEn from '../features/h1-rehearsal/i18n/en.json';
 import rehearsalAr from '../features/h1-rehearsal/i18n/ar.json';
+import challengeEn from '../features/h1-challenge/i18n/en.json';
+import challengeAr from '../features/h1-challenge/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
@@ -64,6 +66,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'h1-circle/ar': circleAr,
   'h1-rehearsal/en': rehearsalEn,
   'h1-rehearsal/ar': rehearsalAr,
+  'h1-challenge/en': challengeEn,
+  'h1-challenge/ar': challengeAr,
   'exercise-kit/en': exerciseKitEn,
   'exercise-kit/ar': exerciseKitAr,
 };

@@ -1,0 +1,31 @@
+<p class="strip-legend" [id]="legendId">{{ 'h1Challenge.day.stripLegend' | transloco }}</p>
+<!-- `keydown` on the group, not per button: one handler drives the roving tabindex. -->
+<div class="strip" role="group" [attr.aria-labelledby]="legendId" (keydown)="onKeydown($event)">
+  @for (cell of view(); track cell.date) {
+    <button
+      type="button"
+      class="cell"
+      [class]="'state-' + cell.state"
+      [class.is-today]="cell.isToday"
+      [class.is-selected]="cell.date === selectedDate()"
+      [appDayCell]="cell.date"
+      [attr.tabindex]="cell.date === tabStop() ? 0 : -1"
+      [attr.aria-pressed]="cell.date === selectedDate()"
+      [attr.aria-current]="cell.isToday ? 'date' : null"
+      [attr.aria-label]="
+        ('h1Challenge.day.title' | transloco: { day: cell.day }) +
+        ', ' +
+        (cell.when | appDate: { weekday: 'short', day: 'numeric', month: 'short' }) +
+        ': ' +
+        ('h1Challenge.dayState.' + cell.state | transloco)
+      "
+      (focus)="onFocus(cell.date)"
+      (click)="select(cell.date)"
+    >
+      <span class="cell-day" aria-hidden="true">{{ cell.day }}</span>
+      @if (icons[cell.state]; as icon) {
+        <mat-icon class="cell-icon" aria-hidden="true">{{ icon }}</mat-icon>
+      }
+    </button>
+  }
+</div>
