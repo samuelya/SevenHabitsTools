@@ -8,7 +8,7 @@ description: Periodic review of the agent development ecosystem. Measures token 
 Run every two weeks or every ten merged PRs, on Opus. Budget: about 15 turns. The numbers come from one script; never read transcripts, and read an agent definition or doc only when you are about to propose an edit to it.
 
 ## 1. Measure (one call)
-`scripts/gh/team-metrics.sh --weeks 2` (add `--weeks 4` for a monthly look). Sections: tokens by model and role, the most expensive agent runs (turns, median and max context per turn), merged PRs with round history, guard-hook blocks by rule, and the rates.
+`scripts/gh/team-metrics.sh --since <previous review's comment timestamp>` (so the window is exactly what changed since then; `--weeks 4` for a monthly look). Each merged PR lists its coder and tester runs and its coder+tester+review tokens. Sections: tokens by model and role, the most expensive agent runs (turns, median and max context per turn), merged PRs with round history, guard-hook blocks by rule, and the rates.
 
 ## 2. Compare with the previous review
 Find the log: `gh issue list -R samuelya/SevenHabitsTools --search "Ecosystem review log in:title" --state all --json number --jq '.[0].number'`, then `scripts/gh/issue-context.sh <n>`; the newest comment is the previous scorecard. Build this window's scorecard next to it:

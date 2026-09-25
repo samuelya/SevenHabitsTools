@@ -75,6 +75,7 @@ Token cost is a first-class constraint: the owner pays per token and has hit a m
 - **The owner sees it working before polish rounds.** Once CI is green and the feature does what the issue asked, hand the PR to the owner *before* spending another round on low-severity findings. The owner may not care about some of them, and that is far cheaper to learn before the round than after. Unfixed findings go on the PR as a list; the ones the owner wants become scope for the next issue. A high-severity finding — wrong data, lost work, a broken primary flow — is still fixed first, without asking.
 - **No rediscovery.** Anything two agents had to work out goes into the docs they read (`testing.md`, the playbook, agent definitions), not into lead memory, which subagents never see.
 - **Work in bursts.** Finish an issue and stop its agents rather than leaving several idle for hours.
+- **Lead starts fresh after each merge.** `/clear` once a PR merges and pick up from `/team-up` and the wave comments on #211: the state is on GitHub. One lead session ran 236 turns at a 173k median context, the largest on the team, and took 17 % of all tokens (#207 review 4).
 
 ## Working in parallel
 

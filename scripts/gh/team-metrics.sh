@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Usage: scripts/gh/team-metrics.sh [--weeks N]   (default 2)
+# Usage: scripts/gh/team-metrics.sh [--weeks N | --since YYYY-MM-DDTHH:MMZ]   (default --weeks 2)
+#   --since starts the window at the previous review's timestamp, so a review measures exactly
+#   what changed since the last one.
 # One read-only call that prints the numbers an ecosystem review (/eco-review) needs, so the review
 # never rediscovers them:
 #   1. Tokens by model and by role, and the most expensive agent runs (turns, context per turn),
@@ -15,19 +17,27 @@
 set -euo pipefail
 source "$(dirname "$0")/_lib.sh"
 
-weeks=2
+weeks=2; since=
 while (( $# )); do
   case "$1" in
     --weeks) weeks="${2:?--weeks needs a number}"; require_number "$weeks"; shift 2 ;;
+    --since) since="${2:?--since needs a timestamp}"; shift 2
+      [[ "$since" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}(:[0-9]{2})?Z?)?$ ]] || { echo "--since wants YYYY-MM-DD[THH:MM[:SS]Z]" >&2; exit 64; } ;;
     *) echo "Unknown argument: $1" >&2; exit 64 ;;
   esac
 done
-since=$(date -u -v-"$((weeks*7))"d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "$((weeks*7)) days ago" +%Y-%m-%dT%H:%M:%SZ)
+if [[ -n "$since" ]]; then
+  [[ "$since" == *T* ]] || since="${since}T00:00:00Z"
+  [[ "$since" == *Z ]] || since="${since}Z"
+  weeks=$(python3 -c "import datetime as d, sys; s=d.datetime.fromisoformat(sys.argv[1].replace('Z','+00:00')); print(round((d.datetime.now(d.timezone.utc)-s).total_seconds()/604800, 2))" "$since")
+else
+  since=$(date -u -v-"$((weeks*7))"d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "$((weeks*7)) days ago" +%Y-%m-%dT%H:%M:%SZ)
+fi
 day=${since%%T*}
 # The main checkout, even when run from a worktree: transcripts and guard.log live under it.
 root=$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")
 proj="$HOME/.claude/projects/$(sed 's#[/.]#-#g' <<<"$root")"
-echo "Window: last $weeks week(s), since $since"
+echo "Window: $weeks week(s), since $since"
 echo
 
 echo "=== 1. Tokens (transcripts under $proj)"
@@ -49,27 +59,45 @@ ROLES = ((r"business|^aba-", "business-analyst"),
 forked = {}  # agentId -> command name, from the launch records
 fork_src = {}  # agentId -> uuid of the assistant record that invoked the skill
 skill_args = {}  # assistant uuid -> args of its /code-review call ("high 234", "medium pull/170", "165")
+first_prompt = {}  # agentId -> the task the run was started with
 def role(agent):
     if not agent: return "lead"
     if agent in forked: return "code-review" if forked[agent] == "code-review" else f"skill:{forked[agent]}"
     for pat, name in ROLES:
         if re.search(pat, agent): return name
+    # An agent spawned without a name has a bare hex id; its task says what it was (#207 review 4:
+    # 13 of 13 first-round coders were unnamed, so every feature PR read "coder runs 0").
+    p = first_prompt.get(agent, "")
+    if re.match(r"\s*Implement issues? #\d+", p): return "coder"
+    if p.lstrip().startswith("Review target"): return "code-review"
     return "unnamed-agent"
-# A coder run's agent id carries the issue(s) it works: afe-212, afe-212-r4, afrontend-coder-28,
-# acoder-49-50. Counting runs per issue from the transcripts gives the review a number the issue's
-# round comments can be checked against: 4 coder runs against 0 round comments is the gap (#207).
-CODER_ID = re.compile(r"^a(?:frontend-coder|backend-coder|coder|fe|fc|be|bc)((?:-\d+)+)(?:-|$)")
-def issues_of(agent, rl):
-    if rl not in ("frontend-coder", "backend-coder", "coder"): return []
-    m3 = CODER_ID.match(agent or "")
-    return [int(n) for n in m3.group(1).split("-") if n] if m3 else []
+# A coder or tester run's agent id carries the issue(s) or the PR it works: afe-212, afe-212-r4,
+# acoder-49-50, afe-265-fix (PR #265), atest-259b. An unnamed coder's task names its issues in the
+# first sentence. Issues and PRs share one number space, so section 2 looks a number up both as a
+# linked issue and as the PR itself. Counting runs this way gives the review a number the round
+# comments can be checked against: 4 coder runs against 0 round comments is the gap (#207).
+RUN_ID = re.compile(r"^a(?:frontend-coder|backend-coder|coder|fe|fc|be|bc|test|qa)((?:-\d+)+)(?:[a-z]?-|[a-z]?$)")
+def numbers_of(agent, rl):
+    if rl not in ("frontend-coder", "backend-coder", "coder", "tester"): return []
+    m3 = RUN_ID.match(agent or "")
+    if m3: return [int(n) for n in m3.group(1).split("-") if n]
+    p = first_prompt.get(agent, "")
+    return [int(n) for n in re.findall(r"#(\d+)", re.split(r"\.\s", p, maxsplit=1)[0])] if rl == "coder" else []
 # One API request is stored as several streamed records sharing requestId; keep the max per field.
 req = {}
 for f in files:
     try: fh = open(f, encoding="utf-8", errors="replace")
     except OSError: continue
     with fh:
+        want_prompt = "subagents" in f
         for line in fh:
+            if want_prompt and '"user"' in line:
+                try: u0 = json.loads(line)
+                except ValueError: u0 = {}
+                if u0.get("type") == "user" and u0.get("agentId"):
+                    c = (u0.get("message") or {}).get("content")
+                    if isinstance(c, list): c = " ".join(b.get("text", "") for b in c if isinstance(b, dict))
+                    first_prompt[u0["agentId"]] = c or ""; want_prompt = False
             if '"toolUseResult"' in line and '"forked"' in line:
                 try: t = json.loads(line).get("toolUseResult") or {}
                 except ValueError: t = {}
@@ -123,8 +151,9 @@ for rl, cap_role in (("frontend-coder", "frontend-coder"), ("backend-coder", "ba
     print(f"{rl:<20} runs {len(t):>3}  median turns {statistics.median(t):>5.0f}  max {max(t):>4}  at cap ({cap or 'none'}): {hit}")
 per_issue = collections.defaultdict(list)
 for a, r in runs.items():
-    for n in issues_of(a, r["role"]): per_issue[n].append(a)
+    for n in numbers_of(a, r["role"]): per_issue[n].append(a)
 print("ISSUE_RUNS " + json.dumps({str(n): ids for n, ids in sorted(per_issue.items())}))
+print("RUN_INFO " + json.dumps({a: ["tester" if runs[a]["role"] == "tester" else "coder", sum(runs[a]["ctx"])] for ids in per_issue.values() for a in ids}))
 # /code-review cost per PR: a top-level review fork carries its /code-review args (level and PR);
 # the dimension forks it spawns (aangle-*) carry neither, so each is placed in the review fork that
 # was active in the same session when it started. Level "default" = the call named none.
@@ -145,7 +174,9 @@ print("REVIEW_RUNS " + json.dumps(reviews))
 print(f"TOTAL_INPUT_PROCESSED {sum(sum(r['ctx']) for r in runs.values())}")
 PY
 )
-echo "$input_total" | grep -vE '^(TOTAL_INPUT_PROCESSED|ISSUE_RUNS|REVIEW_RUNS)'
+echo "$input_total" | grep -vE '^(TOTAL_INPUT_PROCESSED|ISSUE_RUNS|RUN_INFO|REVIEW_RUNS)'
+run_info=$(grep '^RUN_INFO' <<<"$input_total" | cut -d' ' -f2-)
+run_info=${run_info:-'{}'}
 issue_runs=$(grep '^ISSUE_RUNS' <<<"$input_total" | cut -d' ' -f2-)
 issue_runs=${issue_runs:-'{}'}
 review_runs=$(grep '^REVIEW_RUNS' <<<"$input_total" | cut -d' ' -f2-)
@@ -154,13 +185,13 @@ input_total=$(grep '^TOTAL_INPUT_PROCESSED' <<<"$input_total" | cut -d' ' -f2)
 echo
 
 echo "=== 2. Merged PRs since $day"
-json=$(gql -f q="repo:$OWNER/$REPO is:pr is:merged merged:>=$day" -f query='
+json=$(gql -f q="repo:$OWNER/$REPO is:pr is:merged merged:>=$since" -f query='
   query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest {
     number title createdAt mergedAt comments { totalCount } files { totalCount }
     closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } }
       comments(last: 60) { nodes { body } } } } } } } }')
-bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$day" --json body --jq '[.[].body | scan("PR #([0-9]+)")[]] ' 2>/dev/null || echo '[]')
-jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" --argjson reviews "$review_runs" '
+bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$since" --json body --jq '[.[].body | scan("PR #([0-9]+)")[]] ' 2>/dev/null || echo '[]')
+jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" --argjson info "$run_info" --argjson reviews "$review_runs" '
   .data.search.nodes[] | select(.number != null)
   | .number as $n
   | (.closingIssuesReferences.nodes) as $is
@@ -171,11 +202,14 @@ jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" --argjson reviews "$re
       | ([$rf, $en] | max)] | add // 0) as $rounds
   | ([$reviews[] | select(.pr == $n)]) as $rv
   | ([$rv[].input] | add // 0) as $rvin
-  | ([$is[] | ($runs[(.number | tostring)] // [])] | add // [] | unique | length) as $cr
+  | ([($is[] | .number), $n] | map($runs[tostring] // []) | add // [] | unique) as $ids
+  | ([$ids[] | select($info[.][0] == "coder")] | length) as $cr
+  | ([$ids[] | select($info[.][0] == "tester")] | length) as $tr
+  | (([$ids[] | $info[.][1]] | add // 0) + $rvin) as $tok
   | ([$is[] | ([.comments.nodes[].body | select(test("^\\**(Round [0-9]+/[0-9]+|Escalation:)"; "i"))] | length)] | add // 0) as $rc
   | ([$is[].labels.nodes[].name | select(startswith("escalated:") or . == "needs-owner")] | unique | join(" ")) as $esc
   | ([$bugs[] | select(. == ($n | tostring))] | length) as $b
-  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)\(if $cr > 0 or $rc > 0 then "\n    coder runs \($cr) (transcripts) vs \($rc) round comments\(if $cr > $rc then "  <- unrecorded rounds" else "" end)" else "" end)\(if ($rv | length) > 0 then "\n    /code-review \($rv | map("\(.level) \((.input / 1e6 * 10 | round) / 10)M") | join(", ")) = \((($rvin / 1e6 * 10) | round) / 10)M" else "" end)",
+  | "#\(.number)  \(.title[0:80])\n    issues: \([$is[].number] | map(tostring) | join(",") | if . == "" then "-" else . end) | files \(.files.totalCount) | comments \(.comments.totalCount) | \(((((.mergedAt|fromdate)-(.createdAt|fromdate))/360)|round)/10)h open | failed rounds \($rounds) | bugs \($b)\(if $esc != "" then " | \($esc)" else "" end)\(if $cr > 0 or $rc > 0 then "\n    coder runs \($cr) (transcripts) vs \($rc) round comments\(if $cr > $rc then "  <- unrecorded rounds" else "" end) | tester runs \($tr) | coder+tester+review \((($tok / 1e6 * 10) | round) / 10)M" else "" end)\(if ($rv | length) > 0 then "\n    /code-review \($rv | map("\(.level) \((.input / 1e6 * 10 | round) / 10)M") | join(", ")) = \((($rvin / 1e6 * 10) | round) / 10)M" else "" end)",
     "ROW\t\($rounds)\t\($b)\t\(if $esc != "" then 1 else 0 end)\t\($cr)\t\($rc)\t\($rv | length)\t\($rvin)"
 ' <<<"$json" > /tmp/team-metrics.$$ || true
 grep -v '^ROW' /tmp/team-metrics.$$
