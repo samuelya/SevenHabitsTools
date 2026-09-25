@@ -74,7 +74,7 @@ Apply the rules in this order and stop at the first one that matches:
 1. **Last-segment suffix** from the table (`step2.kind.prompt` is عامية, because it ends in `prompt`; `guide.examples[].fields[].label` is فصحى, because it repeats the field's label).
 2. **Action keys count as `button`:** `close`, `back`, `next`, `markDone`, `reopen`, `save`, `delete`, `continue`. They are فصحى.
 3. **Path prefix** from the table: `kind.*`, `status.*`, `checklist.*`, `guide.*` (`step2.kind.technique` is فصحى; `guide.afterwards` is عامية).
-4. **Anything else:** if it names a thing, an option or a state (rating options, sort options, "Saved", aria labels), use فصحى. If the user reads it as a sentence or a story (scene text such as `step1.viewA`), use عامية.
+4. **Anything else:** if it names a thing, an option or a state (rating options, sort options, "Saved", aria labels), use فصحى. If the user reads it as a sentence or a story (scene text such as `step1.viewA`), use عامية. Error, banner, snackbar and confirmation messages are full sentences, so they are عامية too; a one- or two-word status ("Saved") stays فصحى (owner, PR #279).
 
 **Adding a new key?** Pick a name that lands in the right row: a new hint ends in `Hint`, a new button in `Button`.
 
