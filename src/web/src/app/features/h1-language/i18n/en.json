@@ -10,7 +10,10 @@
     "startButton": "Start listening",
     "endButton": "End day",
     "newButton": "New day",
-    "runningText": "Listening day running: {{hours}} h left. Add every phrase you catch.",
+    "runningText": {
+      "one": "Listening day running: 1 h left. Add every phrase you catch.",
+      "other": "Listening day running: {{count}} h left. Add every phrase you catch."
+    },
     "endedTitle": "Your listening day",
     "summaryText": "{{reactive}} gave the choice away, {{proactive}} owned it. {{rewritten}} rewritten."
   },

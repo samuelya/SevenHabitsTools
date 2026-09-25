@@ -316,17 +316,23 @@ function withoutUndefined<T extends object>(record: T): T {
 }
 
 /** Replaces the fields of the live phrase `id` with `fields`, leaving every other one alone. Any
- * edit makes a sample the user's own. */
+ * edit makes a sample the user's own; one without a day that becomes counted while a day is
+ * `running` is stamped with that day's id, as a saved draft is (`phraseToSave`). */
 export function editPhrase(
   phrases: readonly Phrase[],
   id: string,
   fields: Partial<PhraseFields>,
+  running: ListeningDay | null,
 ): Phrase[] {
-  return phrases.map((phrase) =>
-    phrase.id === id && isLive(phrase)
-      ? withoutUndefined(withoutSample({ ...phrase, ...phraseEdit(fields) }))
-      : phrase,
-  );
+  return phrases.map((phrase) => {
+    if (phrase.id !== id || !isLive(phrase)) {
+      return phrase;
+    }
+    const edited = withoutUndefined(withoutSample({ ...phrase, ...phraseEdit(fields) }));
+    return phrase.sample === true && running !== null && phrase.listeningDayId === undefined
+      ? { ...edited, listeningDayId: running.id }
+      : edited;
+  });
 }
 
 /** A saved draft as it is stored: emptied optional fields dropped, and stamped with the running

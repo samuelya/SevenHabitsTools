@@ -77,12 +77,24 @@ function isPhrase(value: unknown): value is Phrase {
   );
 }
 
+/** `YYYY-MM-DDTHH:mm[:ss[.sss]]` with `Z` or an offset, as `Date.toISOString()` writes it. */
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
+/** A parseable ISO datetime: an imported `startedAt: "garbage"` would otherwise read as a day that
+ * has ended and meet the "day" checklist item. */
+function isIsoDateTime(value: unknown): value is string {
+  return typeof value === 'string' && ISO_DATE_TIME.test(value) && !Number.isNaN(Date.parse(value));
+}
+
 function isListeningDay(value: unknown): value is ListeningDay {
   if (!isBaseRecord(value)) {
     return false;
   }
   const candidate = value as unknown as Record<string, unknown>;
-  return typeof candidate['startedAt'] === 'string' && isOptionalString(candidate['endedAt']);
+  return (
+    isIsoDateTime(candidate['startedAt']) &&
+    (candidate['endedAt'] === undefined || isIsoDateTime(candidate['endedAt']))
+  );
 }
 
 const isPhraseArray = isArrayOf(isPhrase);

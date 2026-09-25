@@ -2,7 +2,7 @@
   @if (hoursLeft() !== null) {
     <p class="day-banner">
       <mat-icon aria-hidden="true">hearing</mat-icon>
-      <span>{{ 'h1Language.day.runningText' | transloco: { hours: hoursLeft() } }}</span>
+      <span>{{ 'h1Language.day.runningText' | appPlural: hoursLeft() }}</span>
     </p>
   }
 </div>

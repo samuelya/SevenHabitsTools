@@ -109,6 +109,20 @@ describe('h1-language model', () => {
     expect(registration().validate?.(day({ ...DAY, endedAt: 5 }))).toBe(false);
   });
 
+  it('rejects a day whose startedAt or endedAt is not a parseable ISO datetime', () => {
+    const day = (value: unknown) => ({ phrases: [], listeningDays: [value] });
+    expect(registration().validate?.(day({ ...DAY, startedAt: 'garbage' }))).toBe(false);
+    expect(registration().validate?.(day({ ...DAY, startedAt: '2026-13-01T09:00:00.000Z' }))).toBe(
+      false,
+    );
+    expect(registration().validate?.(day({ ...DAY, startedAt: 'March 7, 2026' }))).toBe(false);
+    expect(registration().validate?.(day({ ...DAY, endedAt: 'garbage' }))).toBe(false);
+    expect(registration().validate?.(day({ ...DAY, endedAt: '' }))).toBe(false);
+    expect(registration().validate?.(day({ ...DAY, startedAt: '2026-01-01T10:00+02:00' }))).toBe(
+      true,
+    );
+  });
+
   it('rejects an array, a missing array and null', () => {
     expect(registration().validate?.([])).toBe(false);
     expect(registration().validate?.({ phrases: [] })).toBe(false);

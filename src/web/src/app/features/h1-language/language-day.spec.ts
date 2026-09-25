@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideTranslocoScope } from '@jsverse/transloco';
+import { TranslocoService, provideTranslocoScope } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { LanguageDay } from './language-day';
 import { DayState } from './language.logic';
@@ -47,6 +47,30 @@ describe('LanguageDay', () => {
     );
     (element.querySelector('.end-day-button') as HTMLButtonElement).click();
     expect(ended).toEqual(['d1']);
+  });
+
+  it('pluralises the hours left in en (one/other) and ar (one/two/few/many)', () => {
+    const { fixture, element } = setUp({ kind: 'running', day: DAY, hoursLeft: 1 });
+    const banner = () => element.querySelector('.day-banner')?.textContent ?? '';
+    const show = (hours: number) => {
+      fixture.componentRef.setInput('state', { kind: 'running', day: DAY, hoursLeft: hours });
+      fixture.detectChanges();
+      return banner();
+    };
+    expect(banner()).toContain('Listening day running: 1 h left.');
+    expect(show(24)).toContain('Listening day running: 24 h left.');
+
+    const transloco = TestBed.inject(TranslocoService);
+    transloco.setActiveLang('ar');
+    try {
+      expect(show(1)).toContain('باقي ساعة واحدة.');
+      expect(show(2)).toContain('باقي ساعتين.');
+      expect(show(5)).toContain('باقي 5 ساعات.');
+      expect(show(11)).toContain('باقي 11 ساعة.');
+      expect(show(24)).toContain('باقي 24 ساعة.');
+    } finally {
+      transloco.setActiveLang('en');
+    }
   });
 
   it('shows the ended summary and New day', () => {

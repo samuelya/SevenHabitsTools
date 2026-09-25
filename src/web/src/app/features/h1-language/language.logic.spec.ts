@@ -30,6 +30,7 @@ import {
   streak,
   toListItem,
 } from './language.logic';
+import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
 
 /** Local 09:00 on 2026-03-10; the day it starts runs until 09:00 on 2026-03-11. */
 const START = new Date(2026, 2, 10, 9, 0, 0);
@@ -337,12 +338,29 @@ describe('drafts and edits', () => {
   it('editPhrase edits only the live phrase, clears emptied fields and drops the sample flag', () => {
     const a = phrase({ id: 'a', reframe: 'x', sample: true });
     const b = phrase({ id: 'b' });
-    const [editedA, editedB] = editPhrase([a, b], 'a', { reframe: '' });
+    const [editedA, editedB] = editPhrase([a, b], 'a', { reframe: '' }, null);
     expect(editedA).not.toHaveProperty('reframe');
     expect(editedA).not.toHaveProperty('sample');
     expect(editedB).toBe(b);
     const deleted = phrase({ id: 'c', deletedAt: 'x' });
-    expect(editPhrase([deleted], 'c', { text: 'y' })[0]).toBe(deleted);
+    expect(editPhrase([deleted], 'c', { text: 'y' }, null)[0]).toBe(deleted);
+  });
+
+  it('editPhrase stamps a sample made counted during a running day, and nothing else', () => {
+    const running = day({ id: 'run' });
+    const sample = phrase({ id: 's', sample: true });
+    const [stamped] = editPhrase([sample], 's', { text: 'I must' }, running);
+    expect(stamped).not.toHaveProperty('sample');
+    expect(stamped.listeningDayId).toBe('run');
+    expect(isCounted(stamped)).toBe(true);
+
+    expect(editPhrase([sample], 's', { text: 'x' }, null)[0]).not.toHaveProperty('listeningDayId');
+    const earlier = phrase({ id: 'e', sample: true, listeningDayId: 'old' });
+    expect(editPhrase([earlier], 'e', { text: 'x' }, running)[0].listeningDayId).toBe('old');
+    const counted = phrase({ id: 'c' });
+    expect(editPhrase([counted], 'c', { text: 'x' }, running)[0]).not.toHaveProperty(
+      'listeningDayId',
+    );
   });
 
   it('removes with a tombstone and restores', () => {

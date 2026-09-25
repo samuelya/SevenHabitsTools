@@ -166,7 +166,15 @@ export class LanguagePage {
         ],
       })),
     update: (id, fields) =>
-      this.store.update((log) => ({ ...log, phrases: editPhrase(log.phrases, id, fields) })),
+      this.store.update((log) => ({
+        ...log,
+        phrases: editPhrase(
+          log.phrases,
+          id,
+          fields,
+          runningDay(log.listeningDays, this.clock.now()),
+        ),
+      })),
     navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
     now: () => this.clock.now(),
   });
