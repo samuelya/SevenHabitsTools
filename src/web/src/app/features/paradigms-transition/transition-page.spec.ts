@@ -126,6 +126,15 @@ function itemForm(harness: RouterTestingHarness): TransitionItemForm {
   return harness.routeDebugElement!.query(By.directive(TransitionItemForm)).componentInstance;
 }
 
+/** jsdom has no `scrollIntoView`; `ExercisePage` calls it on the selected row in the split
+ * layout. */
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+afterEach(() => {
+  delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+});
+
 describe('TransitionPage', () => {
   it('renders the prompt card title and prompt', async () => {
     const harness = await setUp();

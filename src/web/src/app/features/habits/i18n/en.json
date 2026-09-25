@@ -123,6 +123,18 @@
       "stepsDone": {
         "other": "{{count}} of {{total}} steps"
       }
+    },
+    "h1-commitments": {
+      "title": "Make small promises and keep them",
+      "shortTitle": "Your promises",
+      "openCount": {
+        "one": "1 open",
+        "other": "{{count}} open"
+      },
+      "keptOf": {
+        "one": "{{kept}} of 1 kept",
+        "other": "{{kept}} of {{count}} kept"
+      }
     }
   }
 }

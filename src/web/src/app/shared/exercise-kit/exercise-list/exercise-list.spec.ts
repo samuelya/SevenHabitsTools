@@ -88,6 +88,16 @@ describe('ExerciseList', () => {
     expect(row.querySelector('mat-icon')?.textContent?.trim()).toBe('warning');
   });
 
+  // Review finding 10 (PR #282): the label brings its own punctuation.
+  it('reads the translated warning label before the title, adding no separator', () => {
+    const fixture = setUp([
+      { id: 'a', title: 'Call Mum', warning: true, warningLabel: 'Overdue:' },
+    ]);
+    const title = (fixture.nativeElement as HTMLElement).querySelector('[matListItemTitle]');
+    expect(title?.querySelector('.visually-hidden')?.textContent?.trim()).toBe('Overdue:');
+    expect(title?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Overdue: Call Mum');
+  });
+
   it('carries both the selected and warning classes on a row that is both (issue #52)', () => {
     const fixture = setUp(
       [{ id: 'a', title: 'Overdue item', warning: true }],

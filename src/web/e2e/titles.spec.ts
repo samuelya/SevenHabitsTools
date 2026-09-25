@@ -17,6 +17,7 @@ const EXERCISE_ROUTES = [
   '/habits/paradigms/pc-balance',
   '/habits/paradigms/maturity',
   '/habits/paradigms/teach',
+  '/habits/h1/commitments',
 ];
 
 async function expectNotTruncated(locator: Locator): Promise<void> {

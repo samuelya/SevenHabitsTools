@@ -1,0 +1,99 @@
+<app-exercise-page
+  [title]="'h1Commitments.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (isNewCommitment() ? 'h1Commitments.editor.newTitle' : 'h1Commitments.editor.editTitle')
+      | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h1Commitments.prompt.title' | transloco"
+    [prompt]="'h1Commitments.prompt.text' | transloco"
+    [gloss]="'h1Commitments.prompt.glossText' | transloco"
+    [chapterReference]="'h1Commitments.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h1Commitments.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAdd()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h1Commitments.list.addButton' | transloco }}
+  </button>
+
+  @if (list().length) {
+    <mat-chip-listbox
+      class="filters"
+      [attr.aria-label]="'h1Commitments.filter.label' | transloco"
+      [value]="filter()"
+      (change)="onFilterChange($event)"
+    >
+      @for (option of filters; track option) {
+        <mat-chip-option [value]="option">{{
+          'h1Commitments.filter.' + option | transloco
+        }}</mat-chip-option>
+      }
+    </mat-chip-listbox>
+    @if (sources().length) {
+      <div class="source-filter">
+        <span class="filter-label" aria-hidden="true">{{
+          'h1Commitments.filter.sourceLabel' | transloco
+        }}</span>
+        <mat-chip-listbox
+          class="filters"
+          [attr.aria-label]="'h1Commitments.filter.sourceLabel' | transloco"
+          [value]="sourceFilter()"
+          (change)="onSourceFilterChange($event)"
+        >
+          @for (source of sources(); track source) {
+            <mat-chip-option [value]="source">{{ sourceTitles()[source] }}</mat-chip-option>
+          }
+        </mat-chip-listbox>
+      </div>
+    }
+  }
+
+  <app-exercise-list
+    [items]="items()"
+    [selectedId]="itemId()"
+    initialSort="none"
+    [searchLabel]="'h1Commitments.list.searchLabel' | transloco"
+    [emptyMessage]="emptyKey() | transloco"
+    [noMatchMessage]="'h1Commitments.list.noMatch' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (deleteRequested)="onItemDeleted($event)"
+  />
+
+  <div editor>
+    @if (draft.selected(); as commitment) {
+      <app-commitments-item-form
+        [commitment]="commitment"
+        [canResolve]="!draft.unsaved()"
+        [sourceLine]="selectedSource().line"
+        [sourceRoute]="selectedSource().route"
+        (changed)="onItemChanged(commitment.id, $event)"
+        (resolved)="onResolved(commitment.id, $event)"
+        (reopened)="onReopened(commitment.id)"
+        (deleted)="onItemDeleted(commitment.id)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-commitments-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

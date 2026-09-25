@@ -1,0 +1,160 @@
+<form class="commitments-item-form">
+  @if (sourceLine(); as line) {
+    @if (sourceRoute(); as route) {
+      <a class="source-line" [routerLink]="'/' + route">{{ line }}</a>
+    } @else {
+      <p class="source-line">{{ line }}</p>
+    }
+  }
+
+  <p class="field-prompt" id="text-prompt">{{ 'h1Commitments.form.textPrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Commitments.form.textLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #textField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="2"
+      cdkAutosizeMaxRows="8"
+      required
+      [readonly]="!isOpen()"
+      [placeholder]="'h1Commitments.form.textPlaceholder' | transloco"
+      [value]="commitment().text"
+      [attr.aria-describedby]="
+        isTouched('text') && !commitment().text.trim() ? 'text-prompt text-error' : 'text-prompt'
+      "
+      (input)="onTextInput($event)"
+      (blur)="touch('text')"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: no `NgControl` here (playbook §6). -->
+  @if (isTouched('text') && !commitment().text.trim()) {
+    <p id="text-error" class="field-error" role="alert">
+      {{ 'h1Commitments.form.textRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="option-group">
+    <legend>{{ 'h1Commitments.form.toWhomLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="commitment().toWhom"
+      [disabled]="!isOpen()"
+      [attr.aria-label]="'h1Commitments.form.toWhomLabel' | transloco"
+      (change)="onToWhomChange($event.value)"
+    >
+      @for (recipient of recipients; track recipient) {
+        <mat-button-toggle [value]="recipient">{{
+          'h1Commitments.toWhom.' + recipient | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  @if (commitment().toWhom === 'other') {
+    <p class="field-prompt" id="person-prompt">
+      {{ 'h1Commitments.form.personNamePrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Commitments.form.personNameLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        type="text"
+        autocomplete="off"
+        aria-describedby="person-prompt"
+        [readonly]="!isOpen()"
+        [placeholder]="'h1Commitments.form.personNamePlaceholder' | transloco"
+        [value]="commitment().personName ?? ''"
+        (input)="onPersonNameInput($event)"
+      />
+    </mat-form-field>
+  }
+
+  <p class="field-prompt" id="due-prompt">{{ 'h1Commitments.form.dueDatePrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field date-field">
+    <mat-label>{{ 'h1Commitments.form.dueDateLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      #dueInput
+      autocomplete="off"
+      aria-describedby="due-prompt"
+      [matDatepicker]="duePicker"
+      [readonly]="!isOpen()"
+      [value]="dueDate()"
+      (dateChange)="onDueDateChange($event, dueInput)"
+    />
+    <mat-datepicker-toggle matIconSuffix [for]="duePicker" [disabled]="!isOpen()" />
+    <mat-datepicker #duePicker />
+  </mat-form-field>
+
+  <section class="status" [attr.aria-label]="'h1Commitments.form.statusLabel' | transloco">
+    <p class="status-line" aria-live="polite">
+      {{ 'h1Commitments.form.statusLabel' | transloco }}:
+      <strong>{{ 'h1Commitments.status.' + commitment().status | transloco }}</strong>
+      @if (resolvedOn(); as resolvedOn) {
+        · {{ 'h1Commitments.form.resolvedOnLabel' | transloco }}
+        {{ resolvedOn | appDate: { dateStyle: 'medium' } }}
+      }
+    </p>
+    <div class="status-buttons">
+      @if (isOpen()) {
+        <button
+          mat-flat-button
+          type="button"
+          [disabled]="!canResolve()"
+          (click)="resolved.emit('kept')"
+        >
+          <mat-icon aria-hidden="true">check</mat-icon>
+          {{ 'h1Commitments.form.keptButton' | transloco }}
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="!canResolve()"
+          (click)="resolved.emit('broken')"
+        >
+          <mat-icon aria-hidden="true">close</mat-icon>
+          {{ 'h1Commitments.form.brokenButton' | transloco }}
+        </button>
+        <button
+          mat-button
+          type="button"
+          [disabled]="!canResolve()"
+          (click)="resolved.emit('withdrawn')"
+        >
+          {{ 'h1Commitments.form.withdrawButton' | transloco }}
+        </button>
+      } @else {
+        <button mat-stroked-button type="button" (click)="reopened.emit()">
+          <mat-icon aria-hidden="true">replay</mat-icon>
+          {{ 'h1Commitments.form.reopenButton' | transloco }}
+        </button>
+      }
+    </div>
+
+    @if (isBroken()) {
+      <p class="field-prompt" id="repair-prompt">
+        {{ 'h1Commitments.form.repairNotePrompt' | transloco }}
+      </p>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>{{ 'h1Commitments.form.repairNoteLabel' | transloco }}</mat-label>
+        <textarea
+          matInput
+          #repairNoteField
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="2"
+          cdkAutosizeMaxRows="8"
+          aria-describedby="repair-prompt"
+          [placeholder]="'h1Commitments.form.repairNotePlaceholder' | transloco"
+          [value]="commitment().repairNote ?? ''"
+          (input)="onRepairNoteInput($event)"
+        ></textarea>
+      </mat-form-field>
+    }
+  </section>
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h1Commitments.form.delete' | transloco }}
+  </button>
+</form>

@@ -29,7 +29,7 @@ const TEXT = {
 };
 
 test.describe('Today', () => {
-  test('first run: the paragraph, a Continue card to the first exercise and two progress rows', async ({
+  test('first run: the paragraph, a Continue card to the first exercise and three progress rows', async ({
     page,
   }, testInfo) => {
     const text = TEXT[localeFor(testInfo.project.name)];
@@ -39,9 +39,10 @@ test.describe('Today', () => {
     const card = page.getByRole('link', { name: text.continue });
     await expect(card).toHaveAttribute('href', '/habits/paradigms/perception');
     const rows = page.locator('.today-progress a');
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
     await expect(rows.nth(0)).toHaveAttribute('href', '/habits/paradigms');
     await expect(rows.nth(1)).toHaveAttribute('href', '/habits/h1');
+    await expect(rows.nth(2)).toHaveAttribute('href', '/habits/h2');
   });
 
   test('the Continue card is fully visible without scrolling, with the export reminder showing too', async ({

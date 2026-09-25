@@ -143,6 +143,26 @@
       "stepsDone": {
         "other": "الخطوات المنجزة: {{count}} من {{total}}"
       }
+    },
+    "h1-commitments": {
+      "title": "اصنع وعودًا صغيرة والتزم بها",
+      "shortTitle": "وعودك",
+      "openCount": {
+        "zero": "لا وعود مفتوحة",
+        "one": "وعد واحد مفتوح",
+        "two": "وعدان مفتوحان",
+        "few": "{{count}} وعود مفتوحة",
+        "many": "{{count}} وعدًا مفتوحًا",
+        "other": "{{count}} وعد مفتوح"
+      },
+      "keptOf": {
+        "zero": "تم الوفاء بـ{{kept}} من {{count}}",
+        "one": "تم الوفاء بـ{{kept}} من {{count}}",
+        "two": "تم الوفاء بـ{{kept}} من {{count}}",
+        "few": "تم الوفاء بـ{{kept}} من {{count}}",
+        "many": "تم الوفاء بـ{{kept}} من {{count}}",
+        "other": "تم الوفاء بـ{{kept}} من {{count}}"
+      }
     }
   }
 }
