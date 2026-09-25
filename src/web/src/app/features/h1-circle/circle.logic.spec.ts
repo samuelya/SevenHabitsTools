@@ -2,6 +2,7 @@ import {
   canMakePromise,
   checklistLabelsFrom,
   checklistLoaded,
+  concernEdit,
   concernFromExample,
   controlChange,
   doneChecklist,
@@ -206,6 +207,15 @@ describe('editConcern, removeConcern and restoreConcern', () => {
   it('clears a due date set to an empty string', () => {
     const [edited] = editConcern([concern({ dueDate: '2026-02-03' })], 'c1', { dueDate: '' });
     expect('dueDate' in edited).toBe(false);
+  });
+
+  it('clears an empty or invalid due date before either path merges it (concernEdit)', () => {
+    expect(concernEdit({ dueDate: '' })).toEqual({ dueDate: undefined });
+    expect('dueDate' in concernEdit({ dueDate: '' })).toBe(true);
+    expect(concernEdit({ dueDate: '2026-02-30' })).toEqual({ dueDate: undefined });
+    expect(concernEdit({ dueDate: '2026-02-03' })).toEqual({ dueDate: '2026-02-03' });
+    const fields = { title: 'x' };
+    expect(concernEdit(fields)).toBe(fields);
   });
 
   it('leaves a tombstoned or other concern alone', () => {

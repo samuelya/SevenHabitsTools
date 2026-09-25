@@ -219,6 +219,16 @@ export function isDraftWorthSaving(
   return [draft.title, draft.have, draft.be, draft.firstStep, draft.letGoNote].some(hasText);
 }
 
+/** `fields` as an edit may apply them on either path, the unsaved draft's raw merge
+ * (`record-draft.ts`) or `editConcern`: an empty or invalid `dueDate` (a cleared date field)
+ * becomes `undefined`, which clears it, so it never reaches storage. Every other field the form
+ * emits is already valid. */
+export function concernEdit(fields: Partial<ConcernFields>): Partial<ConcernFields> {
+  return 'dueDate' in fields && !(fields.dueDate !== undefined && isValidIsoDate(fields.dueDate))
+    ? { ...fields, dueDate: undefined }
+    : fields;
+}
+
 /** Replaces the fields of the live concern `id` with `fields`, leaving every other one alone. An
  * empty `dueDate` clears it (a cleared date field). Any edit makes a sample the user's own. */
 export function editConcern(

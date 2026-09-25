@@ -5,6 +5,7 @@ import { provideRouter, Routes, withComponentInputBinding } from '@angular/route
 import { RouterTestingHarness } from '@angular/router/testing';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { featureStore } from '../../core/data/feature-store';
+import { getRegisteredModels } from '../../core/data/registry';
 import { CLOCK } from '../../core/time/clock';
 // Side-effect only: `DoneToggle`'s caption and the date adapter read `settings` via `featureStore`.
 import '../../features/settings/settings.model';
@@ -154,6 +155,22 @@ describe('CirclePage', () => {
     await harness.fixture.whenStable();
     expect(concerns()).toHaveLength(1);
     expect(concerns()[0].control).toBe('none');
+  });
+
+  it('a due date cleared on the draft never reaches storage (review finding 1)', async () => {
+    const harness = await setUp();
+
+    await openDraft(harness);
+    itemForm(harness).changed.emit({ dueDate: '2026-03-05' });
+    itemForm(harness).changed.emit({ dueDate: '' });
+    itemForm(harness).changed.emit({ title: 'B' });
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+
+    const [stored] = concerns();
+    expect(stored.dueDate).toBeUndefined();
+    const model = getRegisteredModels().find((entry) => entry.key === CIRCLE_MODEL_KEY)!;
+    expect(model.validate?.(concerns())).toBe(true);
   });
 
   it('groups concerns under their headings, affectable first, and hides an empty group', async () => {

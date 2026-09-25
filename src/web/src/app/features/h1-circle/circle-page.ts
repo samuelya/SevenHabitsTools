@@ -27,6 +27,7 @@ import {
   CHECKLIST_KEYS,
   checklistLabelsFrom,
   checklistLoaded,
+  concernEdit,
   concernFromExample,
   doneChecklist,
   editConcern,
@@ -209,7 +210,7 @@ export class CirclePage {
   }
 
   protected onItemChanged(id: string, fields: Partial<ConcernFields>): void {
-    this.draft.edit(id, fields);
+    this.draft.edit(id, concernEdit(fields));
   }
 
   /** "Make it a promise" (issue #53): makes a promise to self from the first step through the
