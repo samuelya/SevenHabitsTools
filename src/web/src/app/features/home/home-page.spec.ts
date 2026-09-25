@@ -7,6 +7,7 @@ import { ExportReminderDismissal } from '../../core/data/backup/export-reminder-
 import { DocumentMeta } from '../../core/data/document.model';
 import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
+import { LanguageStore } from '../../core/i18n/language-store';
 import { CLOCK } from '../../core/time/clock';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
@@ -79,6 +80,12 @@ function setUp(
           isDone: () => signal(false),
           progressFor: () => signal({ done: 0, total: 0 }),
         },
+      },
+      // The page only reads the language/numerals for its Continue card's numbers; a stub keeps
+      // the `settings` models out of this export-reminder spec.
+      {
+        provide: LanguageStore,
+        useValue: { language: signal('en'), numerals: signal('western') },
       },
       {
         provide: CLOCK,
