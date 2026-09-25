@@ -61,7 +61,7 @@ describe('LanguageItemForm', () => {
     expect(element.querySelectorAll('textarea')[1].placeholder).toBe(
       "e.g. I'll stay till six tonight, and tomorrow I'll ask for the plan earlier.",
     );
-    expect((element.querySelector('input') as HTMLInputElement).placeholder).toBe(
+    expect((element.querySelector('input[type="text"]') as HTMLInputElement).placeholder).toBe(
       'e.g. Team call, 5 pm',
     );
   });
