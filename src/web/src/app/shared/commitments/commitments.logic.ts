@@ -109,10 +109,21 @@ export interface CommitmentEdit {
 
 const OPEN_FIELDS = ['text', 'dueDate', 'toWhom', 'personName'] as const;
 
-/** `record` with every key whose value is `undefined` removed, so a cleared optional field leaves
- * no key behind in the document. */
-function compact<T extends object>(record: T): T {
-  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)) as T;
+/** Optional text fields an empty string clears. */
+const CLEARABLE_FIELDS: readonly string[] = ['dueDate', 'personName', 'repairNote'];
+
+/** `c` as it is stored: no key with an `undefined` value, a cleared (`''`) due date, name or
+ * repair note removed, and no person's name on a promise to oneself. The one place these rules
+ * live: every write (`insert()` and each edit below) goes through it. */
+export function tidyCommitment(c: Commitment): Commitment {
+  return Object.fromEntries(
+    Object.entries(c).filter(
+      ([key, value]) =>
+        value !== undefined &&
+        !(value === '' && CLEARABLE_FIELDS.includes(key)) &&
+        !(key === 'personName' && c.toWhom === 'self'),
+    ),
+  ) as unknown as Commitment;
 }
 
 /** Applies `change` to the live promise `id` and bumps `updatedAt`; any edit makes a sample the
@@ -128,13 +139,14 @@ function changeOne(
       return c;
     }
     const changed = change(c);
-    return changed === null ? c : touch(compact(withoutSample(changed)), now);
+    return changed === null ? c : touch(tidyCommitment(withoutSample(changed)), now);
   });
 }
 
 /** Edits the promise `id`. The promise's own fields (text, due date, who it's to) change only
  * while it is open; the repair note only while it is broken. An empty due date or name clears
- * it. Returns the list unchanged (same content) when nothing may change. */
+ * it, and a promise to oneself keeps no person's name. Returns the list unchanged (same content)
+ * when nothing may change. */
 export function editCommitment(
   list: readonly Commitment[],
   id: string,
@@ -146,18 +158,19 @@ export function editCommitment(
     if (c.status === 'open') {
       for (const key of OPEN_FIELDS) {
         if (key in edit) {
-          allowed[key] = edit[key] === '' && key !== 'text' ? undefined : edit[key];
+          allowed[key] = edit[key];
         }
       }
     }
     if (c.status === 'broken' && 'repairNote' in edit) {
-      allowed['repairNote'] = edit.repairNote === '' ? undefined : edit.repairNote;
+      allowed['repairNote'] = edit.repairNote;
     }
     return Object.keys(allowed).length === 0 ? null : ({ ...c, ...allowed } as Commitment);
   });
 }
 
-/** Resolves the promise `id` to `status` on `today`. A repair note is kept only for `broken`. */
+/** Resolves the open promise `id` to `status` on `today`; one already resolved is left alone, so
+ * `resolvedOn` never moves. A repair note is stored only for `broken`. */
 export function resolveCommitment(
   list: readonly Commitment[],
   id: string,
@@ -166,18 +179,24 @@ export function resolveCommitment(
   now: Date,
   repairNote?: string,
 ): Commitment[] {
-  return changeOne(list, id, now, (c) => ({
-    ...c,
-    status,
-    resolvedOn: today,
-    ...(status === 'broken' && repairNote !== undefined ? { repairNote } : {}),
-  }));
+  return changeOne(list, id, now, (c) =>
+    c.status !== 'open'
+      ? null
+      : {
+          ...c,
+          status,
+          resolvedOn: today,
+          repairNote: status === 'broken' ? repairNote : undefined,
+        },
+  );
 }
 
-/** Sets the promise `id` back to open and clears `resolvedOn`. */
+/** Sets the promise `id` back to open and clears `resolvedOn` and the repair note. */
 export function reopenCommitment(list: readonly Commitment[], id: string, now: Date): Commitment[] {
   return changeOne(list, id, now, (c) =>
-    c.status === 'open' ? null : { ...c, status: 'open', resolvedOn: undefined },
+    c.status === 'open'
+      ? null
+      : { ...c, status: 'open', resolvedOn: undefined, repairNote: undefined },
   );
 }
 
@@ -193,6 +212,6 @@ export function restoreCommitment(
   now: Date,
 ): Commitment[] {
   return list.map((c) =>
-    c.id === id && !isLive(c) ? touch(compact({ ...c, deletedAt: undefined }), now) : c,
+    c.id === id && !isLive(c) ? touch(tidyCommitment({ ...c, deletedAt: undefined }), now) : c,
   );
 }

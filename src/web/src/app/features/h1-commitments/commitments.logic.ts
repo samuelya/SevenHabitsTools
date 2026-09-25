@@ -27,6 +27,7 @@ import {
   ExerciseListItem,
 } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
+import { isValidIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 
 /** The page's own rules for the Promises exercise (issue #57). The shared, cross-tool rules
  * (overdue, rates, edits) are in `shared/commitments/commitments.logic.ts`. */
@@ -61,15 +62,27 @@ function commitmentMet(c: Commitment): ChecklistMet<CommitmentsChecklistKey> {
   };
 }
 
-function checklistMet(list: readonly Commitment[]): ChecklistMet<CommitmentsChecklistKey> {
-  return closestMet(list.filter(isCounted), CHECKLIST_KEYS, commitmentMet);
+/** A Kept promise with text: what opens the gate. A promise typed, cleared and marked Kept
+ * doesn't. */
+function opensGate(c: Commitment): boolean {
+  const met = commitmentMet(c);
+  return met.promise && met.kept;
 }
 
-/** "Mark done" is enabled once a counted promise is Kept (issue #57). The checklist still
- * describes the promise closest to that; whenever this is `false` its `kept` row is unmet, so the
- * gated button never shows a fully ticked checklist. The due date row is advice, not a gate. */
+/** The checklist describes a promise that opens the gate when there is one (so both its `promise`
+ * and `kept` rows are met), otherwise the counted promise closest to it (so they never both are). */
+function checklistMet(list: readonly Commitment[]): ChecklistMet<CommitmentsChecklistKey> {
+  const counted = list.filter(isCounted);
+  const passing = counted.filter(opensGate);
+  return closestMet(passing.length ? passing : counted, CHECKLIST_KEYS, commitmentMet);
+}
+
+/** "Mark done" is enabled once a counted promise with text is Kept (issue #57): exactly when the
+ * checklist's `promise` and `kept` rows are both met, so the two never disagree. The due date row
+ * is advice, not a gate. */
 export function isComplete(list: readonly Commitment[]): boolean {
-  return list.some((c) => isCounted(c) && c.status === 'kept');
+  const met = checklistMet(list);
+  return met.promise && met.kept;
 }
 
 export function doneChecklist(
@@ -141,12 +154,15 @@ export interface CommitmentsSummary {
   readonly last30: IntegrityRate | null;
 }
 
+/** The summary's recent window, in days. */
+export const SUMMARY_WINDOW_DAYS = 30;
+
 export function summarize(list: readonly Commitment[], today: string): CommitmentsSummary | null {
   const allTime = integrityRate(list, { today });
   if (allTime.rate === null) {
     return null;
   }
-  const last30 = integrityRate(list, { today, windowDays: 30 });
+  const last30 = integrityRate(list, { today, windowDays: SUMMARY_WINDOW_DAYS });
   return { allTime, last30: last30.rate === null ? null : last30 };
 }
 
@@ -217,7 +233,10 @@ export function toListItem(
   return {
     id: c.id,
     title: c.text.split(/\r?\n/).find((line) => line.trim() !== '') ?? '',
-    subtitle: [c.dueDate ? labels.formatDate(c.dueDate) : '', labels.status[c.status]]
+    subtitle: [
+      c.dueDate && isValidIsoDate(c.dueDate) ? labels.formatDate(c.dueDate) : '',
+      labels.status[c.status],
+    ]
       .filter((part) => part !== '')
       .join(' · '),
     ...(chips.length ? { chips } : {}),

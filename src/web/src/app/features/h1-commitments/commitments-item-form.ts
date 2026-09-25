@@ -30,7 +30,11 @@ import {
   CommitmentRecipient,
   CommitmentResolution,
 } from '../../shared/commitments/commitments.model';
-import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  isValidIsoDate,
+  localDateString,
+  parseIsoDate,
+} from '../../shared/exercise-kit/assessment-history.logic';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 
 /**
@@ -83,10 +87,9 @@ export class CommitmentsItemForm {
   protected readonly recipients = COMMITMENT_RECIPIENTS;
   protected readonly isOpen = computed(() => this.commitment().status === 'open');
   protected readonly isBroken = computed(() => this.commitment().status === 'broken');
-  protected readonly dueDate = computed(() => {
-    const date = this.commitment().dueDate;
-    return date ? parseIsoDate(date) : null;
-  });
+  /** The stored dates as `Date`s, `null` when absent or not a real date (never an Invalid Date). */
+  protected readonly dueDate = computed(() => dateOrNull(this.commitment().dueDate));
+  protected readonly resolvedOn = computed(() => dateOrNull(this.commitment().resolvedOn));
 
   private readonly textField = viewChild<ElementRef<HTMLTextAreaElement>>('textField');
   private readonly repairNoteField = viewChild<ElementRef<HTMLTextAreaElement>>('repairNoteField');
@@ -153,10 +156,10 @@ export class CommitmentsItemForm {
   protected onRepairNoteInput(event: Event): void {
     this.changed.emit({ repairNote: (event.target as HTMLTextAreaElement).value });
   }
+}
 
-  protected localDate(date: string): Date {
-    return parseIsoDate(date);
-  }
+function dateOrNull(date: string | undefined): Date | null {
+  return date !== undefined && isValidIsoDate(date) ? parseIsoDate(date) : null;
 }
 
 /** Runs `react` only when `source()` changes, with the previous value (`undefined` at first). */

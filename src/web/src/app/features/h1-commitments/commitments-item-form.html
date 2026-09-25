@@ -91,9 +91,9 @@
     <p class="status-line" aria-live="polite">
       {{ 'h1Commitments.form.statusLabel' | transloco }}:
       <strong>{{ 'h1Commitments.status.' + commitment().status | transloco }}</strong>
-      @if (commitment().resolvedOn; as resolvedOn) {
+      @if (resolvedOn(); as resolvedOn) {
         · {{ 'h1Commitments.form.resolvedOnLabel' | transloco }}
-        {{ localDate(resolvedOn) | appDate: { dateStyle: 'medium' } }}
+        {{ resolvedOn | appDate: { dateStyle: 'medium' } }}
       }
     </p>
     <div class="status-buttons">

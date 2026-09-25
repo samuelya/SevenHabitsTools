@@ -18,7 +18,7 @@ import {
   CommitmentResolution,
 } from '../../shared/commitments/commitments.model';
 import { CommitmentsService } from '../../shared/commitments/commitments.service';
-import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import { isValidIsoDate, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import type { ExerciseGuideSample } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
@@ -30,6 +30,7 @@ import { introCollapsedByDefault } from '../../shared/exercise-kit/exercise-prom
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
 import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
+import { todaySignal } from '../../shared/exercise-kit/today';
 import { CommitmentsItemForm } from './commitments-item-form';
 import { CommitmentsSummary } from './commitments-summary';
 import {
@@ -107,6 +108,8 @@ export class CommitmentsPage {
   });
 
   private readonly sourceExercises = sourceExercises();
+  /** The local date of `CLOCK`, updated at midnight. */
+  private readonly today = todaySignal();
 
   protected readonly progress = inject(ExerciseProgress);
   protected readonly guideContent = exerciseGuideSignal(H1_COMMITMENTS_ID);
@@ -152,7 +155,7 @@ export class CommitmentsPage {
       overdue: this.overdueLabel(),
       sourceTemplate: this.sourceTemplate(),
       sourceTitles: this.sourceTitles(),
-      formatDate: (date) => format.format(parseIsoDate(date)),
+      formatDate: (date) => (isValidIsoDate(date) ? format.format(parseIsoDate(date)) : ''),
     };
   });
 
@@ -210,11 +213,6 @@ export class CommitmentsPage {
   protected readonly done = this.progress.isDone(H1_COMMITMENTS_ID);
   protected readonly completedAt = this.progress.completedAt(H1_COMMITMENTS_ID);
 
-  /** The local date of `CLOCK` now. */
-  private today(): string {
-    return localDateString(this.clock.now());
-  }
-
   /** Absolute navigation, for the reason `TransitionPage.goTo()` gives. */
   private goTo(commands: readonly string[], options?: { replaceUrl?: boolean }): void {
     void this.router.navigate([`/${H1_COMMITMENTS_ROUTE}`, ...commands], options);
@@ -261,15 +259,9 @@ export class CommitmentsPage {
     }
   }
 
-  /** A cleared due date or name is removed rather than stored as `''`. */
+  /** A cleared field arrives as `''`; `CommitmentsService` removes it when it stores. */
   protected onItemChanged(id: string, edit: CommitmentEdit): void {
-    const fields: Partial<Commitment> = Object.fromEntries(
-      Object.entries(edit).map(([key, value]) => [
-        key,
-        value === '' && key !== 'text' ? undefined : value,
-      ]),
-    );
-    this.draft.edit(id, fields);
+    this.draft.edit(id, edit);
   }
 
   protected onResolved(id: string, status: CommitmentResolution): void {

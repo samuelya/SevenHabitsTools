@@ -10,7 +10,7 @@ import { TranslocoService } from '@jsverse/transloco';
 import { featureStore } from '../../../core/data/feature-store';
 import { Numerals } from '../../../core/i18n/language';
 import { intlLocaleFor } from '../../../core/i18n/locale.logic';
-import { datePartOrder, parseLocalDate } from './locale-date.logic';
+import { DatePartOrder, datePartOrder, parseLocalDate } from './locale-date.logic';
 
 /**
  * Material's native date adapter, following the app's language and numerals (the same locale
@@ -19,19 +19,29 @@ import { datePartOrder, parseLocalDate } from './locale-date.logic';
  */
 @Injectable()
 export class LocaleDateAdapter extends NativeDateAdapter {
+  /** `datePartOrder()` of the current locale, worked out once per locale, not per keystroke. */
+  private partOrder: DatePartOrder = datePartOrder('en');
+
   constructor() {
     super();
     const transloco = inject(TranslocoService);
     const lang = toSignal(transloco.langChanges$, { initialValue: transloco.getActiveLang() });
     const numerals = featureStore<Numerals>('numerals');
-    effect(() => this.setLocale(intlLocaleFor(lang(), numerals.value())));
+    const locale = (): string => intlLocaleFor(lang(), numerals.value());
+    // Now, so the first render already formats and parses in the app's locale; the effect only
+    // follows later changes.
+    this.setLocale(locale());
+    effect(() => this.setLocale(locale()));
+  }
+
+  override setLocale(locale: unknown): void {
+    super.setLocale(locale);
+    this.partOrder = datePartOrder(String(locale));
   }
 
   override parse(value: unknown, parseFormat?: unknown): Date | null {
     if (typeof value === 'string') {
-      return value.trim() === ''
-        ? null
-        : (parseLocalDate(value, datePartOrder(String(this.locale))) ?? this.invalid());
+      return value.trim() === '' ? null : (parseLocalDate(value, this.partOrder) ?? this.invalid());
     }
     return super.parse(value, parseFormat);
   }

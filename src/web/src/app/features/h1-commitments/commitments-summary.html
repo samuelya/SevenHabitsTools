@@ -6,7 +6,12 @@
         {{
           'h1Commitments.summary.last30Text'
             | transloco
-              : { kept: last30.kept, count: last30.kept + last30.broken, rate: last30.rate }
+              : {
+                  days: (windowDays | appNumber),
+                  kept: (last30.kept | appNumber),
+                  count: (last30.kept + last30.broken | appNumber),
+                  rate: (last30.rate | appNumber),
+                }
         }}
       </p>
     }
@@ -15,7 +20,11 @@
       {{
         'h1Commitments.summary.allTimeText'
           | transloco
-            : { kept: allTime.kept, count: allTime.kept + allTime.broken, rate: allTime.rate }
+            : {
+                kept: (allTime.kept | appNumber),
+                count: (allTime.kept + allTime.broken | appNumber),
+                rate: (allTime.rate | appNumber),
+              }
       }}
     </p>
   </mat-card-content>

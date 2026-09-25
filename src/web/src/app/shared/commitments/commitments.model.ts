@@ -7,6 +7,7 @@ import {
   isOptionalString,
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
+import { isValidIsoDate } from '../exercise-kit/assessment-history.logic';
 
 /** Who a promise is made to (issue #57). Stored as a key, translated at render. */
 export const COMMITMENT_RECIPIENTS = ['self', 'other'] as const;
@@ -60,6 +61,11 @@ export const COMMITMENTS_PATH = 'shared.commitments';
 export const isCommitmentRecipient = isOneOf(COMMITMENT_RECIPIENTS);
 export const isCommitmentStatus = isOneOf(COMMITMENT_STATUSES);
 
+/** Absent, or a real `YYYY-MM-DD` date: an imported "2026-13-01" is rejected, not stored. */
+function isOptionalIsoDate(value: unknown): value is string | undefined {
+  return value === undefined || (typeof value === 'string' && isValidIsoDate(value));
+}
+
 function isOptionalSource(value: unknown): value is CommitmentSource | undefined {
   if (value === undefined) {
     return true;
@@ -80,9 +86,9 @@ function isCommitment(value: unknown): value is Commitment {
     typeof candidate['text'] === 'string' &&
     isCommitmentRecipient(candidate['toWhom']) &&
     isOptionalString(candidate['personName']) &&
-    isOptionalString(candidate['dueDate']) &&
+    isOptionalIsoDate(candidate['dueDate']) &&
     isCommitmentStatus(candidate['status']) &&
-    isOptionalString(candidate['resolvedOn']) &&
+    isOptionalIsoDate(candidate['resolvedOn']) &&
     isOptionalString(candidate['repairNote']) &&
     isOptionalSource(candidate['source']) &&
     isOptionalBoolean(candidate['sample'])

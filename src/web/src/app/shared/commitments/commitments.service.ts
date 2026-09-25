@@ -10,6 +10,7 @@ import {
   reopenCommitment,
   resolveCommitment,
   restoreCommitment,
+  tidyCommitment,
 } from './commitments.logic';
 import {
   COMMITMENTS_MODEL_KEY,
@@ -65,7 +66,7 @@ export class CommitmentsService {
   /** Stores a record built by the caller, id included: the Promises page's draft-before-record
    * (issue #217) and its guide samples (issue #232), which must keep the id already in the URL. */
   insert(record: Commitment): boolean {
-    return this.store.update((list) => [...list, record]);
+    return this.store.update((list) => [...list, tidyCommitment(record)]);
   }
 
   /** Edits `id`: text, due date and who it's to while open; the repair note while broken. */

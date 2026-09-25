@@ -15,7 +15,7 @@
     "deleted": "تم حذف الوعد",
     "undo": "تراجع",
     "example": "مثال",
-    "overdue": "متأخر",
+    "overdue": "متأخر:",
     "sourceText": "من: {{exercise}}"
   },
   "editor": {
@@ -66,7 +66,7 @@
   },
   "summary": {
     "title": "أداؤك",
-    "last30Text": "آخر 30 يوم: وفيت بـ{{kept}} من {{count}} ({{rate}}٪)",
+    "last30Text": "آخر {{days}} يوم: وفيت بـ{{kept}} من {{count}} ({{rate}}٪)",
     "allTimeText": "من الأول: وفيت بـ{{kept}} من {{count}} ({{rate}}٪)"
   },
   "checklist": {
