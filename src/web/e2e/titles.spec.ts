@@ -20,6 +20,7 @@ const EXERCISE_ROUTES = [
   '/habits/h1/rehearsal',
   '/habits/h1/circle',
   '/habits/h1/commitments',
+  '/habits/h1/challenge',
 ];
 
 async function expectNotTruncated(locator: Locator): Promise<void> {
