@@ -17,6 +17,7 @@ import {
 } from '../../shared/commitments/commitments.model';
 import { DELETE_CONFIRM_DIALOG_LOADER } from '../../shared/exercise-kit/delete-with-undo';
 import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit.model';
+import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { ChallengeCheckinForm } from './challenge-checkin-form';
 import { ChallengeDayDetail } from './challenge-day-detail';
@@ -114,6 +115,22 @@ async function settle(harness: RouterTestingHarness): Promise<void> {
   harness.detectChanges();
   await harness.fixture.whenStable();
   harness.detectChanges();
+}
+
+/** "Stop test" awaits the dialog loader, the dialog and its close: let those promises run. */
+async function afterDialog(harness: RouterTestingHarness): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve));
+  await settle(harness);
+}
+
+/** Types into a note editor's textarea, as the user would (the 1 s save stays pending). */
+function type(textarea: HTMLTextAreaElement, value: string): void {
+  textarea.value = value;
+  textarea.dispatchEvent(new Event('input'));
+}
+
+function dayHeading(harness: RouterTestingHarness): HTMLElement | null {
+  return host(harness).querySelector('app-challenge-day-detail .day-heading');
 }
 
 function markDone(harness: RouterTestingHarness): HTMLButtonElement {
@@ -248,14 +265,69 @@ describe('ChallengePage', () => {
     await settle(harness);
     confirmStop = false;
     button(harness, 'Stop test').click();
-    await settle(harness);
+    await afterDialog(harness);
     expect(stored()[0].status).toBe('active');
     confirmStop = true;
     button(harness, 'Stop test').click();
-    await settle(harness);
+    await afterDialog(harness);
     expect(stored()[0]).toMatchObject({ status: 'stopped', endedOn: '2026-03-31' });
     expect(text(harness)).toContain('Start a test');
     expect(markDone(harness).getAttribute('aria-disabled')).toBe('true');
+  });
+
+  // Review finding 1 (PR #286): a note typed within the 1 s debounce is stored before the end.
+  it('stores a final note typed just before Finish', async () => {
+    const harness = await setUp(dayOf(30));
+    seed(challenge({ finalNote: 'Fewer' }));
+    await settle(harness);
+    const textareas = host(harness).querySelectorAll<HTMLTextAreaElement>(
+      'app-reflection-editor textarea',
+    );
+    type(textareas[1], 'Fewer arguments at home.');
+    button(harness, 'Finish test').click();
+    await settle(harness);
+    expect(stored()[0]).toMatchObject({
+      status: 'completed',
+      finalNote: 'Fewer arguments at home.',
+    });
+  });
+
+  it('stores a halfway note typed just before Stop', async () => {
+    const harness = await setUp(dayOf(20));
+    seed(challenge());
+    await settle(harness);
+    type(
+      host(harness).querySelector<HTMLTextAreaElement>('app-reflection-editor textarea')!,
+      'I catch myself faster.',
+    );
+    button(harness, 'Stop test').click();
+    await afterDialog(harness);
+    expect(stored()[0]).toMatchObject({ status: 'stopped', midNote: 'I catch myself faster.' });
+  });
+
+  // Review finding 2 (PR #286): a save replaces the test object but keeps the selected day.
+  it('keeps the selected day and focus through a note save and "Mark skipped"', async () => {
+    const harness = await setUp(dayOf(15));
+    document.body.appendChild(harness.fixture.nativeElement);
+    seed(challenge());
+    await settle(harness);
+    host(harness).querySelectorAll<HTMLButtonElement>('.strip .cell')[2].click();
+    await settle(harness);
+    expect(dayHeading(harness)?.textContent).toContain('Day 3');
+
+    const editor = harness.routeDebugElement!.query(By.directive(ReflectionEditor));
+    (editor.componentInstance as ReflectionEditor).valueChange.emit('Less moaning.');
+    await settle(harness);
+    expect(stored()[0].midNote).toBe('Less moaning.');
+    expect(dayHeading(harness)?.textContent).toContain('Day 3');
+
+    const detail = harness.routeDebugElement!.query(By.directive(ChallengeDayDetail));
+    (detail.componentInstance as ChallengeDayDetail).skipped.emit('');
+    await settle(harness);
+    expect(stored()[0].checkins).toEqual([{ date: '2026-03-03', skipped: true }]);
+    expect(dayHeading(harness)?.textContent).toContain('Day 3');
+    expect(document.activeElement).toBe(dayHeading(harness));
+    expect(host(harness).querySelector('app-challenge-checkin-form')).toBeNull();
   });
 
   it('opens a past test read-only by its id', async () => {

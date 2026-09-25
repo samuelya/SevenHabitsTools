@@ -94,8 +94,15 @@ export class ReflectionEditor implements OnDestroy {
   private pendingSave = false;
 
   ngOnDestroy(): void {
+    this.flush();
+  }
+
+  /** Emits a pending debounced edit now. For a caller about to change the record this editor
+   * writes into (issue #56: "Finish test" must store a note typed within the debounce first). */
+  flush(): void {
     clearTimeout(this.debounceTimer);
     if (this.pendingSave) {
+      this.pendingSave = false;
       this.valueChange.emit(this.draft());
     }
   }

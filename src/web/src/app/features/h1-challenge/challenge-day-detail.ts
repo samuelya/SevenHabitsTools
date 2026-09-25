@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  linkedSignal,
+  output,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatInputModule } from '@angular/material/input';
 import { TranslocoPipe } from '@jsverse/transloco';
@@ -27,7 +34,11 @@ export class ChallengeDayDetail {
 
   protected readonly questions = CHECKIN_QUESTIONS;
   protected readonly when = computed(() => parseIsoDate(this.cell().date));
-  protected readonly reason = signal('');
+  /** Cleared whenever another day is shown: the page reuses this component across days. */
+  protected readonly reason = linkedSignal({
+    source: () => this.cell().date,
+    computation: () => '',
+  });
 
   protected onReasonInput(event: Event): void {
     this.reason.set((event.target as HTMLInputElement).value);

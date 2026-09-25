@@ -42,9 +42,20 @@ function tabStops(fixture: ComponentFixture<ChallengeDayStrip>): number[] {
     .filter((day) => day !== null);
 }
 
+/** CDK's `ListKeyManager` reads `keyCode`, not `key`. */
+const KEY_CODES: Readonly<Record<string, number>> = {
+  End: 35,
+  Home: 36,
+  ArrowLeft: 37,
+  ArrowUp: 38,
+  ArrowRight: 39,
+  ArrowDown: 40,
+};
+
 function press(fixture: ComponentFixture<ChallengeDayStrip>, key: string): void {
+  const keyCode = KEY_CODES[key];
   (document.activeElement as HTMLElement).dispatchEvent(
-    new KeyboardEvent('keydown', { key, bubbles: true }),
+    new KeyboardEvent('keydown', { key, keyCode, which: keyCode, bubbles: true }),
   );
   fixture.detectChanges();
 }

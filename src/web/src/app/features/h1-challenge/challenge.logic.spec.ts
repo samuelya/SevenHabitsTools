@@ -141,10 +141,26 @@ describe('challenge.logic', () => {
       expect(cells.every((cell) => cell.state === 'missed' && !cell.isToday)).toBe(true);
     });
 
-    it('reads an ended test as past: every unrecorded day is missed', () => {
-      const stopped = challenge({ status: 'stopped', endedOn: '2026-03-03' });
-      const cells = dayStates(stopped, '2026-03-03');
+    it('reads a completed test as past: every unrecorded day is missed', () => {
+      const completed = challenge({ status: 'completed', endedOn: DAY_30 });
+      const cells = dayStates(completed, '2026-04-20');
       expect(cells.every((cell) => cell.state === 'missed' && !cell.isToday)).toBe(true);
+    });
+
+    it('reads a stopped test as of its stop date: the days after it are coming up', () => {
+      const stopped = challenge({
+        status: 'stopped',
+        endedOn: '2026-03-03',
+        checkins: [answered('2026-03-02')],
+      });
+      const cells = dayStates(stopped, '2026-04-20');
+      expect(cells.slice(0, 3).map((cell) => cell.state)).toEqual([
+        'missed',
+        'checkedIn',
+        'missed',
+      ]);
+      expect(cells.slice(3).every((cell) => cell.state === 'future')).toBe(true);
+      expect(cells.some((cell) => cell.isToday)).toBe(false);
     });
   });
 

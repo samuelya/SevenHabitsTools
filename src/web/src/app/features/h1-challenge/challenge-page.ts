@@ -10,6 +10,7 @@ import {
   input,
   linkedSignal,
   untracked,
+  viewChildren,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -151,11 +152,17 @@ export class ChallengePage {
     const shown = this.shown();
     return shown ? anchorDate(shown, this.today()) : '';
   });
-  /** The day open under the strip: tonight's check-in by default, reset when the test shown or
-   * the date changes. */
-  protected readonly selectedDate = linkedSignal<string | null>(() => {
-    const shown = this.shown();
-    return shown && canCheckIn(shown, this.today()) ? this.today() : null;
+  /** The test shown and today's date: a save replaces the test object but keeps this key. */
+  private readonly selectionKey = computed(() => `${this.shown()?.id ?? ''}|${this.today()}`);
+  /** The day open under the strip: tonight's check-in by default, reset only when the test shown
+   * (its id) or today's date changes, so a save keeps the user's selection. */
+  protected readonly selectedDate = linkedSignal<string, string | null>({
+    source: this.selectionKey,
+    computation: () =>
+      untracked(() => {
+        const shown = this.shown();
+        return shown && canCheckIn(shown, this.today()) ? this.today() : null;
+      }),
   });
   protected readonly selectedCell = computed(
     () => this.cells().find((cell) => cell.date === this.selectedDate()) ?? null,
@@ -230,6 +237,8 @@ export class ChallengePage {
   });
   protected readonly done = this.progress.isDone(CHALLENGE_MODEL_KEY);
   protected readonly completedAt = this.progress.completedAt(CHALLENGE_MODEL_KEY);
+  /** The halfway and final note editors, flushed before the test ends. */
+  private readonly noteEditors = viewChildren(ReflectionEditor);
 
   constructor() {
     // Opening a past test moves focus to its heading; closing it returns focus to its row.
@@ -303,14 +312,26 @@ export class ChallengePage {
   }
 
   protected onSkipped(date: string, reason: string): void {
-    this.updateActive((c) => withSkip(c, date, reason, this.today(), this.clock.now()));
+    if (this.updateActive((c) => withSkip(c, date, reason, this.today(), this.clock.now()))) {
+      // "Mark skipped" leaves the page; the day's heading keeps focus on the same day.
+      this.focusAfterRender('.day-detail .day-heading');
+    }
   }
 
   protected onNoteChanged(field: ChallengeNote, text: string, editor: ReflectionEditor): void {
     editor.reportSaveOutcome(this.updateActive((c) => withNote(c, field, text, this.clock.now())));
   }
 
+  /** Stores a note typed within the editor's debounce while the test still runs: once it has
+   * ended, `updateActive()` writes nothing and the edit would be lost. */
+  private flushNotes(): void {
+    for (const editor of this.noteEditors()) {
+      editor.flush();
+    }
+  }
+
   protected onFinish(): void {
+    this.flushNotes();
     if (this.updateActive((c) => finishChallenge(c, this.today(), this.clock.now()))) {
       this.focusAfterRender('h1');
     }
@@ -333,6 +354,7 @@ export class ChallengePage {
     if (!(await firstValueFrom(ref.afterClosed()))) {
       return;
     }
+    this.flushNotes();
     if (this.updateActive((c) => stopChallenge(c, this.today(), this.clock.now()))) {
       this.focusAfterRender('h1');
     }

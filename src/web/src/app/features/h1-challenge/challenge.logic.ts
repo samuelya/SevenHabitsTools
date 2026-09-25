@@ -107,14 +107,17 @@ export interface DayCell {
   readonly isToday: boolean;
 }
 
-/** The 30 cells as of `today`. An ended test is read as of the day after its window, so every
- * unrecorded day reads as missed and none as today or coming up. */
+/** The 30 cells as of `today`. An ended test has no today. A completed test is read as of the
+ * day after its window, so every unrecorded day reads as missed. A stopped test is read as of its
+ * stop date: an unrecorded day up to it is missed, the days after it never came (coming up). */
 export function dayStates(c: Challenge, today: string): DayCell[] {
-  const asOf = c.status === 'active' ? today : addDays(lastDay(c), 1);
+  const active = c.status === 'active';
+  const ended = c.status === 'stopped' && c.endedOn ? c.endedOn : lastDay(c);
+  const asOf = active ? today : addDays(ended, 1);
   return Array.from({ length: CHALLENGE_DAYS }, (_, index) => {
     const date = addDays(c.startDate, index);
     const checkin = checkinOn(c, date);
-    const isToday = date === asOf;
+    const isToday = active && date === asOf;
     let state: DayState;
     if (checkin?.skipped) {
       state = 'skipped';

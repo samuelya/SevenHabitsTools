@@ -56,6 +56,12 @@
     "noneDueText": "No promises due today. Make one in Your promises.",
     "seeButton": "See promises"
   },
+  "promiseStatus": {
+    "open": "Open",
+    "kept": "Kept",
+    "broken": "Broken",
+    "withdrawn": "Withdrawn"
+  },
   "mid": {
     "legend": "Halfway",
     "notePrompt": "Fifteen days in. What's changed in where your energy goes?",

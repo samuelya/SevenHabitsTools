@@ -123,6 +123,28 @@ describe('ReflectionEditor', () => {
     });
   });
 
+  describe('flush()', () => {
+    it('emits a pending edit at once, and the debounce then emits nothing more', async () => {
+      const fixture = setUp('');
+      const emitted: string[] = [];
+      fixture.componentInstance.valueChange.subscribe((text) => emitted.push(text));
+      typeInto(fixture, 'Typed just now.');
+      fixture.componentInstance.flush();
+      expect(emitted).toEqual(['Typed just now.']);
+      await vi.advanceTimersByTimeAsync(REFLECTION_DEBOUNCE_MS);
+      fixture.destroy();
+      expect(emitted).toEqual(['Typed just now.']);
+    });
+
+    it('emits nothing with no pending edit', () => {
+      const fixture = setUp('Saved already.');
+      const emitted: string[] = [];
+      fixture.componentInstance.valueChange.subscribe((text) => emitted.push(text));
+      fixture.componentInstance.flush();
+      expect(emitted).toEqual([]);
+    });
+  });
+
   describe('promptId', () => {
     it('adds the caller-supplied prompt id alongside its own status id in aria-describedby', () => {
       const fixture = setUp('', null, true);
