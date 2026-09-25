@@ -1,0 +1,49 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-block-end: 0.75rem;
+}
+
+.banner-region {
+  inline-size: 100%;
+}
+
+.banner-region:empty {
+  display: none;
+}
+
+.day-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-medium, 12px);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.day-banner mat-icon {
+  flex: none;
+}
+
+.day-summary {
+  inline-size: 100%;
+}
+
+.day-summary__title {
+  margin: 0 0 0.25rem;
+  font: var(--mat-sys-title-small);
+}
+
+.day-summary__text {
+  margin: 0;
+}
+
+.start-day-button,
+.end-day-button,
+.new-day-button {
+  min-block-size: 44px;
+}

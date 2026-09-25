@@ -1,0 +1,47 @@
+<div class="banner-region" aria-live="polite" aria-relevant="additions">
+  @if (hoursLeft() !== null) {
+    <p class="day-banner">
+      <mat-icon aria-hidden="true">hearing</mat-icon>
+      <span>{{ 'h1Language.day.runningText' | transloco: { hours: hoursLeft() } }}</span>
+    </p>
+  }
+</div>
+
+@switch (state().kind) {
+  @case ('none') {
+    <button mat-stroked-button type="button" class="start-day-button" (click)="dayStarted.emit()">
+      <mat-icon aria-hidden="true">play_arrow</mat-icon>
+      {{ 'h1Language.day.startButton' | transloco }}
+    </button>
+  }
+  @case ('running') {
+    <button mat-stroked-button type="button" class="end-day-button" (click)="onEnd()">
+      <mat-icon aria-hidden="true">stop</mat-icon>
+      {{ 'h1Language.day.endButton' | transloco }}
+    </button>
+  }
+  @case ('ended') {
+    @if (summary(); as summary) {
+      <mat-card class="day-summary" appearance="outlined">
+        <mat-card-content>
+          <h2 class="day-summary__title">{{ 'h1Language.day.endedTitle' | transloco }}</h2>
+          <p class="day-summary__text">
+            {{
+              'h1Language.day.summaryText'
+                | transloco
+                  : {
+                      reactive: summary.reactive,
+                      proactive: summary.proactive,
+                      rewritten: summary.rewritten,
+                    }
+            }}
+          </p>
+        </mat-card-content>
+      </mat-card>
+    }
+    <button mat-stroked-button type="button" class="new-day-button" (click)="dayStarted.emit()">
+      <mat-icon aria-hidden="true">replay</mat-icon>
+      {{ 'h1Language.day.newButton' | transloco }}
+    </button>
+  }
+}

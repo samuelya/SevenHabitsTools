@@ -1,0 +1,30 @@
+<mat-card class="language-week" appearance="outlined">
+  <mat-card-content>
+    <table class="week-table">
+      <caption>
+        {{
+          'h1Language.week.legend' | transloco
+        }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'h1Language.week.dayLabel' | transloco }}</th>
+          <th scope="col">{{ 'h1Language.kind.reactive' | transloco }}</th>
+          <th scope="col">{{ 'h1Language.kind.proactive' | transloco }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.date) {
+          <tr>
+            <th scope="row">{{ row.label }}</th>
+            <td>{{ row.reactive }}</td>
+            <td>{{ row.proactive }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (streak() > 0) {
+      <p class="streak">{{ 'h1Language.week.streak' | appPlural: streak() }}</p>
+    }
+  </mat-card-content>
+</mat-card>

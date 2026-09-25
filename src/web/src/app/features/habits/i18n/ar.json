@@ -144,6 +144,18 @@
         "other": "الخطوات المنجزة: {{count}} من {{total}}"
       }
     },
+    "h1-language": {
+      "title": "استمع إلى كلماتك",
+      "shortTitle": "كلماتك",
+      "phraseCount": {
+        "zero": "لا عبارات",
+        "one": "عبارة واحدة",
+        "two": "عبارتان",
+        "few": "{{count}} عبارات",
+        "many": "{{count}} عبارة",
+        "other": "{{count}} عبارة"
+      }
+    },
     "h1-circle": {
       "title": "افصل ما يمكنك تغييره",
       "shortTitle": "دائرة تأثيرك",

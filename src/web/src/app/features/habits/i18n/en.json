@@ -124,6 +124,14 @@
         "other": "{{count}} of {{total}} steps"
       }
     },
+    "h1-language": {
+      "title": "Listen to your own words",
+      "shortTitle": "Your words",
+      "phraseCount": {
+        "one": "1 phrase",
+        "other": "{{count}} phrases"
+      }
+    },
     "h1-circle": {
       "title": "Sort what you can change",
       "shortTitle": "Your influence",

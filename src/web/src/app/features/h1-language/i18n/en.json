@@ -1,0 +1,125 @@
+{
+  "prompt": {
+    "title": "Listen to your own words",
+    "chapterReference": "Habit 1: Be Proactive",
+    "text": "For one day, listen to what you say and think. Catch the phrases that hand your choices to someone else, and rewrite them.",
+    "glossText": "The book calls phrases that hand over the choice reactive language, and the alternative proactive.",
+    "whyItMatters": "Your words tell you what you believe about who's in charge. Change the words and you start to see the choice again. It's the smallest place to begin, and it works."
+  },
+  "day": {
+    "startButton": "Start listening",
+    "endButton": "End day",
+    "newButton": "New day",
+    "runningText": "Listening day running: {{hours}} h left. Add every phrase you catch.",
+    "endedTitle": "Your listening day",
+    "summaryText": "{{reactive}} gave the choice away, {{proactive}} owned it. {{rewritten}} rewritten."
+  },
+  "list": {
+    "addButton": "Add phrase",
+    "searchLabel": "Search phrases",
+    "empty": "No phrases yet. Start a listening day, then add the first thing you catch yourself saying.",
+    "noMatch": "No phrases match your search.",
+    "deleted": "Phrase deleted",
+    "undo": "Undo",
+    "example": "Example"
+  },
+  "editor": {
+    "newTitle": "New phrase",
+    "editTitle": "Edit phrase"
+  },
+  "form": {
+    "textLabel": "What you said",
+    "textPrompt": "What did you say or think, word for word?",
+    "textPlaceholder": "e.g. I have to stay late again, they never plan anything.",
+    "textRequired": "Write the phrase first.",
+    "kindLabel": "Which kind",
+    "reframeLabel": "Your rewrite",
+    "reframePrompt": "Say the same thing as a choice you're making.",
+    "reframePlaceholder": "e.g. I'll stay till six tonight, and tomorrow I'll ask for the plan earlier.",
+    "reframeRequired": "Rewrite it as a choice.",
+    "contextLabel": "Where",
+    "contextPrompt": "Where were you, or who were you talking to?",
+    "contextPlaceholder": "e.g. Team call, 5 pm",
+    "delete": "Delete phrase"
+  },
+  "kind": {
+    "reactive": "Giving away the choice",
+    "proactive": "Owning the choice"
+  },
+  "kindHint": {
+    "reactive": "Words like: I have to, they made me, if only, I can't.",
+    "proactive": "Words like: I choose, I will, I prefer, let's look at options."
+  },
+  "week": {
+    "legend": "Last 7 days",
+    "dayLabel": "Day",
+    "streak": {
+      "one": "1-day streak",
+      "other": "{{count}}-day streak"
+    }
+  },
+  "checklist": {
+    "day": "Start a listening day and finish it",
+    "phrase": "Catch one phrase that gives away the choice",
+    "rewrite": "Rewrite it as a choice"
+  },
+  "guide": {
+    "inShort": "You'll spend one ordinary day listening to yourself. Each time you hear yourself hand over the choice, you'll note it and rewrite it. A few seconds per phrase. At the end you'll see how your day sounded.",
+    "howTo": [
+      "Tap \"Start listening\" in the morning. A banner reminds you it's running.",
+      "Whenever you catch a phrase, tap \"Add phrase\" and write it as you said it.",
+      "Pick which kind it is. Read the examples under each option if you're unsure.",
+      "If it gave away the choice, rewrite it as something you decide.",
+      "At the end of the day, tap \"End day\" and read your summary.",
+      "Tap \"Mark done\" once you've rewritten one phrase. Come back for another day whenever you like."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "I have to stay late again, they never plan anything.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Which kind",
+            "value": "Giving away the choice"
+          },
+          {
+            "label": "Your rewrite",
+            "value": "\"I'll stay till six tonight, and tomorrow I'll ask for the plan earlier.\""
+          },
+          {
+            "label": "Where",
+            "value": "Team call, 5 pm"
+          }
+        ],
+        "sample": {
+          "text": "I have to stay late again, they never plan anything.",
+          "kind": "reactive",
+          "reframe": "I'll stay till six tonight, and tomorrow I'll ask for the plan earlier.",
+          "context": "Team call, 5 pm"
+        }
+      },
+      {
+        "kind": "card",
+        "title": "I'll take the early train so I'm not rushing.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Which kind",
+            "value": "Owning the choice"
+          },
+          {
+            "label": "Where",
+            "value": "Kitchen, 7 am"
+          }
+        ],
+        "sample": {
+          "text": "I'll take the early train so I'm not rushing.",
+          "kind": "proactive",
+          "context": "Kitchen, 7 am"
+        }
+      }
+    ],
+    "afterwards": "Pick one rewritten phrase and use it out loud this week. Run another listening day in a month and compare the two summaries. Fewer hand-overs is the goal, not zero."
+  }
+}
