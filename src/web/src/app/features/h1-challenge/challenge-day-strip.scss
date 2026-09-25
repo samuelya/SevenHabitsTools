@@ -1,0 +1,77 @@
+:host {
+  display: block;
+}
+
+.strip-legend {
+  margin-block: 0 0.5rem;
+  font-weight: 500;
+}
+
+// A grid that fits as many 44 px cells per row as the width allows: 6 rows of 5 at 360 px, fewer
+// rows on desktop. The wrap is visual only (the keyboard model is one row, #56).
+.strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 4px;
+}
+
+.cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  padding: 0;
+  border: 1px solid var(--mat-sys-outline-variant, #c4c7c5);
+  border-radius: 8px;
+  background: var(--mat-sys-surface, #fff);
+  color: var(--mat-sys-on-surface, #1b1b1f);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 3px solid var(--mat-sys-primary, #005cbb);
+    outline-offset: 2px;
+  }
+}
+
+.cell-icon {
+  font-size: 16px;
+  inline-size: 16px;
+  block-size: 16px;
+}
+
+.state-checkedIn {
+  border-color: var(--mat-sys-primary, #005cbb);
+  background: var(--mat-sys-primary, #005cbb);
+  color: var(--mat-sys-on-primary, #fff);
+}
+
+.state-skipped {
+  background: var(--mat-sys-surface-container-high, #e9e7eb);
+  color: var(--mat-sys-on-surface-variant, #44474e);
+}
+
+.state-missed {
+  border-style: dashed;
+  border-color: var(--mat-sys-error, #ba1a1a);
+  color: var(--mat-sys-error, #ba1a1a);
+}
+
+.state-future {
+  color: var(--mat-sys-on-surface-variant, #44474e);
+}
+
+.is-today {
+  border-width: 3px;
+  border-color: var(--mat-sys-primary, #005cbb);
+}
+
+.is-selected {
+  box-shadow:
+    0 0 0 2px var(--mat-sys-surface, #fff),
+    0 0 0 4px var(--mat-sys-tertiary, #6b5778);
+}

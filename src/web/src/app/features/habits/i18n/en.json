@@ -151,6 +151,21 @@
         "one": "1 rehearsal",
         "other": "{{count}} rehearsals"
       }
+    },
+    "h1-challenge": {
+      "title": "Take the 30-day test",
+      "shortTitle": "30-day test",
+      "dayStreak": {
+        "one": "Day {{day}}, 1-day streak",
+        "other": "Day {{day}}, {{count}}-day streak"
+      },
+      "dayNumber": {
+        "other": "Day {{count}}"
+      },
+      "completedCount": {
+        "one": "1 test completed",
+        "other": "{{count}} tests completed"
+      }
     }
   }
 }

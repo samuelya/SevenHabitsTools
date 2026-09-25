@@ -22,6 +22,8 @@ export interface DeleteConfirmDialogData {
   readonly title?: string;
   readonly body?: string;
   readonly confirmLabel?: string;
+  /** The safe option's label, for a confirm that isn't a delete ("Keep going", #56). */
+  readonly cancelLabel?: string;
 }
 
 /**

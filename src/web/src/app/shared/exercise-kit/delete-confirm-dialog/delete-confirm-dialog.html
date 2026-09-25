@@ -11,7 +11,7 @@
 
 <div matDialogActions class="delete-confirm-dialog__actions">
   <button #cancelButton mat-stroked-button type="button" matDialogClose>
-    {{ 'deleteConfirm.cancel' | transloco }}
+    {{ data.cancelLabel ?? ('deleteConfirm.cancel' | transloco) }}
   </button>
   <button
     mat-flat-button

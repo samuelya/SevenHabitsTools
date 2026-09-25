@@ -39,6 +39,10 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     loadChildren: () => import('./features/h1-circle/circle.routes'),
   },
   {
+    path: 'habits/h1/challenge',
+    loadChildren: () => import('./features/h1-challenge/challenge.routes'),
+  },
+  {
     path: 'habits/h1/commitments',
     loadChildren: () => import('./features/h1-commitments/commitments.routes'),
   },

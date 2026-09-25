@@ -1,0 +1,207 @@
+<app-exercise-page [title]="'h1Challenge.prompt.title' | transloco">
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h1Challenge.prompt.title' | transloco"
+    [prompt]="'h1Challenge.prompt.text' | transloco"
+    [gloss]="'h1Challenge.prompt.glossText' | transloco"
+    [chapterReference]="'h1Challenge.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h1Challenge.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+  />
+
+  @if (viewed(); as test) {
+    <!-- A past test, read-only. -->
+    <section class="test">
+      <button mat-button type="button" class="back-button" (click)="closeViewed()">
+        <mat-icon class="flip-in-rtl" aria-hidden="true">arrow_back</mat-icon>
+        {{ 'exerciseKit.detail.close' | transloco }}
+      </button>
+      <h2 class="viewed-heading" tabindex="-1">
+        {{ 'h1Challenge.status.' + test.status | transloco }} ·
+        {{ test.startDate | appDate }}
+      </h2>
+      @if (test.focus) {
+        <p class="focus-line">{{ 'h1Challenge.start.focusLabel' | transloco }}: {{ test.focus }}</p>
+      }
+      <app-challenge-day-strip
+        [cells]="cells()"
+        [anchorDate]="anchor()"
+        [selectedDate]="selectedDate()"
+        (daySelected)="onDaySelected($event)"
+      />
+      @if (selectedCell(); as cell) {
+        <app-challenge-day-detail [cell]="cell" [checkin]="selectedCheckin()" />
+      }
+      @if (test.midNote) {
+        <h3 class="note-heading">{{ 'h1Challenge.mid.noteLabel' | transloco }}</h3>
+        <p class="note-text">{{ test.midNote }}</p>
+      }
+      @if (test.finalNote) {
+        <h3 class="note-heading">{{ 'h1Challenge.final.noteLabel' | transloco }}</h3>
+        <p class="note-text">{{ test.finalNote }}</p>
+      }
+    </section>
+  } @else if (active(); as test) {
+    <section class="test">
+      <h2 class="day-title" tabindex="-1">
+        {{ 'h1Challenge.day.title' | transloco: { day: day() } }}
+      </h2>
+      @if (test.focus) {
+        <p class="focus-line">{{ 'h1Challenge.start.focusLabel' | transloco }}: {{ test.focus }}</p>
+      }
+      <app-challenge-day-strip
+        [cells]="cells()"
+        [anchorDate]="anchor()"
+        [selectedDate]="selectedDate()"
+        (daySelected)="onDaySelected($event)"
+      />
+
+      @if (showCheckinForm()) {
+        <app-challenge-checkin-form
+          [date]="today()"
+          [checkin]="selectedCheckin()"
+          (saved)="onCheckinSaved($event)"
+        />
+      } @else if (selectedCell(); as cell) {
+        <app-challenge-day-detail
+          [cell]="cell"
+          [checkin]="selectedCheckin()"
+          [canSkip]="selectedCanSkip()"
+          (skipped)="onSkipped(cell.date, $event)"
+        />
+      }
+
+      <section class="promises" aria-labelledby="challenge-promises-heading">
+        <h3 id="challenge-promises-heading" class="section-heading">
+          {{ 'h1Challenge.promises.legend' | transloco }}
+        </h3>
+        @if (promisesDue().length) {
+          <ul class="promise-list">
+            @for (promise of promisesDue(); track promise.id) {
+              <li>
+                {{ promise.text }} ·
+                <span class="promise-status">{{
+                  'h1Commitments.status.' + promise.status | transloco
+                }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="none-due">{{ 'h1Challenge.promises.noneDueText' | transloco }}</p>
+        }
+        @if (promisesRoute) {
+          <a mat-stroked-button class="see-promises" [routerLink]="['/', promisesRoute]">
+            {{ 'h1Challenge.promises.seeButton' | transloco }}
+          </a>
+        }
+      </section>
+
+      @if (showMid()) {
+        <section class="note" aria-labelledby="challenge-mid-heading">
+          <h3 id="challenge-mid-heading" class="section-heading">
+            {{ 'h1Challenge.mid.legend' | transloco }}
+          </h3>
+          <p class="field-prompt" id="challenge-mid-prompt">
+            {{ 'h1Challenge.mid.notePrompt' | transloco }}
+          </p>
+          <app-reflection-editor
+            #midEditor
+            [value]="test.midNote ?? ''"
+            [label]="'h1Challenge.mid.noteLabel' | transloco"
+            [placeholder]="'h1Challenge.mid.notePlaceholder' | transloco"
+            [promptId]="'challenge-mid-prompt'"
+            [sessionStatus]="true"
+            (valueChange)="onNoteChanged('midNote', $event, midEditor)"
+          />
+        </section>
+      }
+
+      @if (showFinal()) {
+        <section class="note" aria-labelledby="challenge-final-heading">
+          <h3 id="challenge-final-heading" class="section-heading">
+            {{ 'h1Challenge.final.legend' | transloco }}
+          </h3>
+          <p class="field-prompt" id="challenge-final-prompt">
+            {{ 'h1Challenge.final.notePrompt' | transloco }}
+          </p>
+          <app-reflection-editor
+            #finalEditor
+            [value]="test.finalNote ?? ''"
+            [label]="'h1Challenge.final.noteLabel' | transloco"
+            [placeholder]="'h1Challenge.final.notePlaceholder' | transloco"
+            [promptId]="'challenge-final-prompt'"
+            [sessionStatus]="true"
+            (valueChange)="onNoteChanged('finalNote', $event, finalEditor)"
+          />
+          <!-- Finishing needs the final note: the button stays focusable and points at the
+               question above it while it is off. -->
+          <button
+            mat-flat-button
+            type="button"
+            class="finish-button"
+            disabledInteractive
+            aria-describedby="challenge-final-prompt"
+            [disabled]="!finalWritten()"
+            (click)="onFinish()"
+          >
+            {{ 'h1Challenge.final.finishButton' | transloco }}
+          </button>
+        </section>
+      }
+
+      <button mat-stroked-button type="button" class="stop-button" (click)="onStop()">
+        {{ 'h1Challenge.stop.stopButton' | transloco }}
+      </button>
+    </section>
+  } @else {
+    <app-challenge-start-form [today]="today()" (started)="onStart($event)" />
+  }
+
+  @if (!viewed() && pastRows().length) {
+    <section class="past" aria-labelledby="challenge-past-heading">
+      <h3 id="challenge-past-heading" class="section-heading">
+        {{ 'h1Challenge.past.legend' | transloco }}
+      </h3>
+      <ul class="past-list">
+        @for (row of pastRows(); track row.id) {
+          <li>
+            <a
+              class="past-row"
+              [routerLink]="['/', route, row.id]"
+              [attr.data-challenge-id]="row.id"
+            >
+              <span class="past-title">
+                {{ row.start | appDate }} · {{ 'h1Challenge.status.' + row.status | transloco }}
+              </span>
+              @if (row.checkedIn > 0) {
+                <span class="past-line">{{
+                  'h1Challenge.summary.checkedIn' | appPlural: row.checkedIn
+                }}</span>
+              }
+              @if (row.promises; as promises) {
+                <span class="past-line">{{
+                  'h1Challenge.summary.promisesText'
+                    | transloco: { kept: promises.kept, count: promises.count }
+                }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-challenge-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

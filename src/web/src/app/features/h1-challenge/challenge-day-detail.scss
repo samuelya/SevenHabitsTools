@@ -1,0 +1,50 @@
+.day-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.day-heading {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.state,
+.field-prompt {
+  margin: 0;
+}
+
+.answers {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.answer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.5rem;
+
+  dt {
+    font-weight: 500;
+  }
+
+  dd {
+    margin: 0;
+  }
+}
+
+.text {
+  white-space: pre-wrap;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.skip-button {
+  align-self: flex-start;
+  min-block-size: 44px;
+}
