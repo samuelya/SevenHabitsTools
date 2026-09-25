@@ -1,0 +1,22 @@
+<mat-card class="commitments-summary" appearance="outlined">
+  <mat-card-content>
+    <h2 class="title">{{ 'h1Commitments.summary.title' | transloco }}</h2>
+    @if (summary().last30; as last30) {
+      <p class="rate">
+        {{
+          'h1Commitments.summary.last30Text'
+            | transloco
+              : { kept: last30.kept, count: last30.kept + last30.broken, rate: last30.rate }
+        }}
+      </p>
+    }
+    @let allTime = summary().allTime;
+    <p class="rate">
+      {{
+        'h1Commitments.summary.allTimeText'
+          | transloco
+            : { kept: allTime.kept, count: allTime.kept + allTime.broken, rate: allTime.rate }
+      }}
+    </p>
+  </mat-card-content>
+</mat-card>

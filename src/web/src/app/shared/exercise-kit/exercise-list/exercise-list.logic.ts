@@ -18,6 +18,9 @@ export interface ExerciseListItem {
   /** Visually highlights the row (issue #52's overdue teach-it commitments) — generic across any
    * future exercise with a row that needs the user's attention, not specific to what makes it so. */
   readonly warning?: boolean;
+  /** Screen-reader text read before the title of a `warning` row (issue #57: "Overdue"), since the
+   * warning icon itself is decorative. Already translated; ignored without `warning`. */
+  readonly warningLabel?: string;
   /** Opts this one row out of `ExerciseList`'s own `deletable` input (issue #203) — for a list
    * whose rows aren't one-to-one with what a delete removes, e.g. `paradigms-teach`'s fixed
    * chapter rows, only deletable once the user has actually filled one in. Ignored when the list's

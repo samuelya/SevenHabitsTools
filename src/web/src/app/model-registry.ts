@@ -11,4 +11,7 @@ import './features/paradigms-pc-balance/pc-balance.model';
 import './features/paradigms-maturity/maturity.model';
 import './features/paradigms-teach/teach.model';
 import './features/paradigms-perception/perception.model';
+import './features/h1-commitments/commitments.model';
 import './shared/exercise-kit/exercise-kit.model';
+// Shared entities (`shared.*`): registered here, eagerly, not by the features that use them.
+import './shared/commitments/commitments.model';

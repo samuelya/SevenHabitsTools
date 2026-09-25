@@ -1,0 +1,15 @@
+.commitments-summary mat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.commitments-summary .title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.commitments-summary .rate {
+  margin: 0;
+}

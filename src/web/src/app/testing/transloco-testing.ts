@@ -25,6 +25,8 @@ import teachEn from '../features/paradigms-teach/i18n/en.json';
 import teachAr from '../features/paradigms-teach/i18n/ar.json';
 import perceptionEn from '../features/paradigms-perception/i18n/en.json';
 import perceptionAr from '../features/paradigms-perception/i18n/ar.json';
+import commitmentsEn from '../features/h1-commitments/i18n/en.json';
+import commitmentsAr from '../features/h1-commitments/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
@@ -52,6 +54,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'paradigms-teach/ar': teachAr,
   'paradigms-perception/en': perceptionEn,
   'paradigms-perception/ar': perceptionAr,
+  'h1-commitments/en': commitmentsEn,
+  'h1-commitments/ar': commitmentsAr,
   'exercise-kit/en': exerciseKitEn,
   'exercise-kit/ar': exerciseKitAr,
 };

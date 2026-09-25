@@ -1,0 +1,141 @@
+{
+  "prompt": {
+    "title": "Make small promises and keep them",
+    "chapterReference": "Habit 1: Be Proactive",
+    "text": "Pick one small thing you'll do, and by when. Then come back and say whether you did it. Small promises, kept, add up.",
+    "glossText": "The book calls a promise you make and keep a commitment. Keeping them builds what it calls integrity.",
+    "whyItMatters": "Each time you keep your word, you trust yourself a bit more. That trust is what lets you take on bigger things later. Start with promises you're sure you can keep."
+  },
+  "list": {
+    "addButton": "Add promise",
+    "searchLabel": "Search promises",
+    "empty": "No promises yet. Start with one you can keep by tomorrow.",
+    "emptyFilter": "No promises here. Pick another filter.",
+    "noMatch": "No promises match your search.",
+    "deleted": "Promise deleted",
+    "undo": "Undo",
+    "example": "Example",
+    "overdue": "Overdue",
+    "sourceText": "From: {{exercise}}"
+  },
+  "editor": {
+    "newTitle": "New promise",
+    "editTitle": "Edit promise"
+  },
+  "form": {
+    "textLabel": "The promise",
+    "textPrompt": "What's one small thing you'll do, for sure?",
+    "textPlaceholder": "e.g. Call Mum on Sunday afternoon.",
+    "textRequired": "Write the promise first.",
+    "toWhomLabel": "Who it's to",
+    "personNameLabel": "Their name",
+    "personNamePrompt": "Who did you promise?",
+    "personNamePlaceholder": "e.g. Dina",
+    "dueDateLabel": "By when",
+    "dueDatePrompt": "When will it be done? Soon is better.",
+    "statusLabel": "Status",
+    "keptButton": "Kept",
+    "brokenButton": "Broken",
+    "withdrawButton": "Withdraw",
+    "reopenButton": "Reopen",
+    "resolvedOnLabel": "On",
+    "repairNoteLabel": "What got in the way",
+    "repairNotePrompt": "What got in the way, and how will you make it right?",
+    "repairNotePlaceholder": "e.g. I underestimated it. I sent a draft on Monday and agreed a new date.",
+    "delete": "Delete promise"
+  },
+  "toWhom": {
+    "self": "Myself",
+    "other": "Someone"
+  },
+  "status": {
+    "open": "Open",
+    "kept": "Kept",
+    "broken": "Broken",
+    "withdrawn": "Withdrawn"
+  },
+  "filter": {
+    "label": "Show promises",
+    "all": "All",
+    "open": "Open",
+    "dueToday": "Due today",
+    "overdue": "Overdue",
+    "kept": "Kept",
+    "broken": "Broken",
+    "sourceLabel": "From"
+  },
+  "summary": {
+    "title": "How you're doing",
+    "last30Text": "Last 30 days: kept {{kept}} of {{count}} ({{rate}}%)",
+    "allTimeText": "All time: kept {{kept}} of {{count}} ({{rate}}%)"
+  },
+  "checklist": {
+    "promise": "Write one small promise",
+    "dueDate": "Give it a due date",
+    "kept": "Keep it, then mark it Kept"
+  },
+  "guide": {
+    "inShort": "You'll write down small promises and say whether you kept them. Two minutes to add one, a few seconds to tick it off. Over time you'll see how often your word holds.",
+    "howTo": [
+      "Tap \"Add promise\" and write one small thing you'll do.",
+      "Say who it's to, and pick a date. Tomorrow beats next month.",
+      "When the day comes, tap Kept or Broken.",
+      "If it's Broken, write what got in the way and how you'll fix it.",
+      "Add a new promise as soon as one is done. Tap \"Mark done\" once you've kept one."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Call Mum on Sunday afternoon.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Who it's to",
+            "value": "Myself"
+          },
+          {
+            "label": "By when",
+            "value": "Sunday"
+          },
+          {
+            "label": "Status",
+            "value": "Kept"
+          }
+        ],
+        "sample": {
+          "text": "Call Mum on Sunday afternoon.",
+          "toWhom": "self"
+        }
+      },
+      {
+        "kind": "card",
+        "title": "Send the report to Dina by Friday.",
+        "done": false,
+        "fields": [
+          {
+            "label": "Who it's to",
+            "value": "Someone (Dina)"
+          },
+          {
+            "label": "By when",
+            "value": "Friday"
+          },
+          {
+            "label": "Status",
+            "value": "Broken"
+          },
+          {
+            "label": "What got in the way",
+            "value": "\"I underestimated it. I sent a draft on Monday and agreed a new date.\""
+          }
+        ],
+        "sample": {
+          "text": "Send the report to Dina by Friday.",
+          "toWhom": "other",
+          "personName": "Dina"
+        }
+      }
+    ],
+    "afterwards": "Keep a promise every day of the 30-day test. When one breaks, fix it the same day and make the next one smaller. Your kept rate should climb; if it doesn't, shrink the promises, not the effort."
+  }
+}

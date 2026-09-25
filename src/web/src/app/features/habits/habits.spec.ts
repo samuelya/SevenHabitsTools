@@ -40,7 +40,7 @@ const H2_ROLES: ExerciseRegistryEntry = {
 };
 
 describe('Habits feature', () => {
-  it('shows Paradigms available, Habit 1 next up and the rest collapsed under one row (#219)', async () => {
+  it('shows Paradigms and Habit 1 available, Habit 2 next up and the rest collapsed under one row (#219, #57)', async () => {
     configureApp({ handset: false });
     const fixture = await renderShellAt('/habits');
     const host = fixture.nativeElement as HTMLElement;
@@ -50,15 +50,17 @@ describe('Habits feature', () => {
     expect(items.map((item) => item.getAttribute('href'))).toEqual([
       '/habits/paradigms',
       '/habits/h1',
+      '/habits/h2',
     ]);
     expect(items[0].querySelector('mat-progress-spinner')).toBeTruthy();
-    expect(items[1].querySelector('.habit-coming-soon-chip')?.textContent?.trim()).toBe(
+    expect(items[1].querySelector('mat-progress-spinner')).toBeTruthy();
+    expect(items[2].querySelector('.habit-coming-soon-chip')?.textContent?.trim()).toBe(
       transloco.translate('habits.hub.comingSoon'),
     );
 
     const toggle = host.querySelector('app-habits-page .habit-later-toggle') as HTMLButtonElement;
     expect(toggle.querySelector('.habit-title')?.textContent?.trim()).toBe(
-      'Habits 2–7 and Interdependence: coming soon',
+      'Habits 3–7 and Interdependence: coming soon',
     );
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(toggle.getAttribute('aria-controls')).toBe('habits-later');
