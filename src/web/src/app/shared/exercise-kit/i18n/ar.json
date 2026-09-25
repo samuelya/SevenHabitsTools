@@ -1,20 +1,20 @@
 {
   "promptCard": {
     "about": "حول هذا التمرين",
-    "whyItMatters": "لماذا يهم هذا",
+    "whyItMatters": "ليه ده مهم",
     "readMore": "اقرأ المزيد",
     "from": "من فصل: {{chapter}}"
   },
   "guide": {
-    "title": "إزاي تعمل التمرين ده",
+    "title": "كيفية أداء هذا التمرين",
     "inShort": "باختصار",
     "howTo": "تعمله إزاي",
     "example": "مثال",
-    "exampleDone": "خلص",
+    "exampleDone": "تم",
     "afterwards": "وبعدين",
-    "close": "قفل",
+    "close": "إغلاق",
     "loadError": "مقدرناش نفتح الدليل. اتأكد من اتصالك وجرب تاني.",
-    "tryExample": "جرّب هذا المثال"
+    "tryExample": "جرّب المثال ده"
   },
   "stepper": {
     "back": "السابق",
@@ -48,11 +48,11 @@
     "notSavedYet": "لم يتم الحفظ بعد"
   },
   "doneToggle": {
-    "markDone": "وضع علامة تم",
+    "markDone": "تحديد كمكتمل",
     "reopen": "إعادة فتح",
     "completedAt": "اكتمل في {{time}}",
-    "toMarkDone": "عشان تعلّمه تم:",
+    "toMarkDone": "قبل ما تدوس «تحديد كمكتمل»:",
     "itemDone": "تم: ",
-    "itemToDo": "لسه: "
+    "itemToDo": "لم يتم: "
   }
 }

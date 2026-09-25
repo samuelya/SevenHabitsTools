@@ -36,7 +36,7 @@ const TEXT: Record<
   ar: {
     checklistItem: 'قيّم كل المجالات في تقييم واحد',
     hubTitle: 'مسار النضج',
-    markDone: 'وضع علامة تم',
+    markDone: 'تحديد كمكتمل',
     reopen: 'إعادة فتح',
     cancel: 'إلغاء',
     summary: 'في الغالب اعتماد على النفس',
