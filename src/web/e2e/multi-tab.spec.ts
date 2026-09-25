@@ -48,7 +48,7 @@ async function waitForHeartbeatClaimed(page: Page): Promise<void> {
 /** #143's save-error snackbar text and "Export now" button label, in both languages. */
 const STRANDED_EDITS_TEXT = {
   en: { message: 'Another tab took over', exportNow: 'Export now' },
-  ar: { message: 'تولّت علامة تبويب أخرى الكتابة', exportNow: 'تصدير الآن' },
+  ar: { message: 'فيه تبويب تاني استلم الحفظ', exportNow: 'تصدير الآن' },
 } as const;
 
 /** Counts full page loads of `page` from now on (a reload fires `load` once). */
