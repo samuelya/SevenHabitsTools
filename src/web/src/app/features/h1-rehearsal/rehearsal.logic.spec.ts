@@ -7,6 +7,7 @@ import {
   doneChecklist,
   editRehearsal,
   followUpOpen,
+  followUpOutcome,
   followUpValid,
   hubStatus,
   isComplete,
@@ -281,6 +282,22 @@ describe('promiseSync', () => {
     });
   });
 
+  it('resolves a new promise at once when the follow-up already recorded an outcome', () => {
+    const late = rehearsal({ promise: 'Answer calmly.', expectedOn: '2026-02-05' });
+    expect(
+      promiseSync({ ...late, followUp: { happened: true, result: 'chosen', kept: 'kept' } }, null),
+    ).toMatchObject({ kind: 'add', resolveAs: 'kept' });
+    expect(
+      promiseSync(
+        { ...late, followUp: { happened: true, result: 'reacted', kept: 'broken' } },
+        null,
+      ),
+    ).toMatchObject({ kind: 'add', resolveAs: 'broken' });
+    expect(promiseSync({ ...late, followUp: { happened: false } }, null)).not.toHaveProperty(
+      'resolveAs',
+    );
+  });
+
   it('never syncs a sample', () => {
     expect(promiseSync(complete({ sample: true }), null)).toBeNull();
   });
@@ -374,5 +391,14 @@ describe('removeRehearsal and restoreRehearsal', () => {
     expect(removed.deletedAt).toBe(NOW.toISOString());
     const [restored] = restoreRehearsal([removed], 'r1', NOW);
     expect(restored.deletedAt).toBeUndefined();
+  });
+});
+
+describe('followUpOutcome', () => {
+  it('is Kept or Broken only once the moment happened', () => {
+    expect(followUpOutcome(undefined)).toBeUndefined();
+    expect(followUpOutcome({ happened: false, kept: 'kept' })).toBeUndefined();
+    expect(followUpOutcome({ happened: true, result: 'partly' })).toBeUndefined();
+    expect(followUpOutcome({ happened: true, result: 'chosen', kept: 'kept' })).toBe('kept');
   });
 });

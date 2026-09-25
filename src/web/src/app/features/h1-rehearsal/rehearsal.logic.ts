@@ -266,7 +266,12 @@ export function editRehearsal(
 
 /** What the page must ask `CommitmentsService` for after an edit (issue #55's #57 contract). */
 export type PromiseSync =
-  | { readonly kind: 'add'; readonly commitment: NewCommitment }
+  | {
+      readonly kind: 'add';
+      readonly commitment: NewCommitment;
+      /** The follow-up already recorded Kept or Broken: resolve the new promise at once. */
+      readonly resolveAs?: FollowUpKept;
+    }
   | { readonly kind: 'update'; readonly id: string; readonly edit: CommitmentEdit };
 
 /**
@@ -274,7 +279,8 @@ export type PromiseSync =
  * live promise `commitmentId` names, `null` without one or once it was deleted (which frees the
  * rehearsal to make another, as #53 does).
  *
- * - No live promise: `add` once the promise line and a valid date are both set.
+ * - No live promise: `add` once the promise line and a valid date are both set, with `resolveAs`
+ *   when the follow-up already recorded an outcome (the promise line typed after the follow-up).
  * - An open promise: `update` with only the text and due date that differ. An emptied promise line
  *   never pushes empty text; a cleared date clears the due date.
  * - A resolved promise: nothing (#57 only edits an open one).
@@ -291,17 +297,20 @@ export function promiseSync(
   const text = rehearsal.promise?.trim() ?? '';
   const dueDate = validDate(rehearsal.expectedOn);
   if (commitment === null) {
-    return text !== '' && dueDate !== undefined
-      ? {
-          kind: 'add',
-          commitment: {
-            text,
-            dueDate,
-            toWhom: 'self',
-            source: { exerciseId: REHEARSAL_MODEL_KEY, recordId: rehearsal.id },
-          },
-        }
-      : null;
+    if (text === '' || dueDate === undefined) {
+      return null;
+    }
+    const resolveAs = followUpOutcome(rehearsal.followUp);
+    return {
+      kind: 'add',
+      commitment: {
+        text,
+        dueDate,
+        toWhom: 'self',
+        source: { exerciseId: REHEARSAL_MODEL_KEY, recordId: rehearsal.id },
+      },
+      ...(resolveAs ? { resolveAs } : {}),
+    };
   }
   if (commitment.status !== 'open') {
     return null;
@@ -314,6 +323,11 @@ export function promiseSync(
     edit.dueDate = dueDate ?? '';
   }
   return Object.keys(edit).length > 0 ? { kind: 'update', id: commitment.id, edit } : null;
+}
+
+/** What a follow-up says became of the promise: Kept or Broken once it happened, else nothing. */
+export function followUpOutcome(followUp: RehearsalFollowUp | undefined): FollowUpKept | undefined {
+  return followUp?.happened ? followUp.kept : undefined;
 }
 
 /** The "Your promise" answer a result pre-selects (issue #55): Kept for As I planned, Broken for

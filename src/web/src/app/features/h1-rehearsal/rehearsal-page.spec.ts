@@ -277,6 +277,32 @@ describe('RehearsalPage', () => {
     expect(rehearsals()[0].id).toBe(id);
   });
 
+  it('does not show Afterwards on an unsaved draft, even with a past date', async () => {
+    const harness = await setUp();
+    await openDraft(harness);
+    await emit(harness, { expectedOn: '2026-02-20' });
+    expect(rehearsals()).toEqual([]);
+    expect(host(harness).querySelector('app-rehearsal-follow-up')).toBeNull();
+
+    await emit(harness, { trigger: 'S' });
+    expect(host(harness).querySelector('app-rehearsal-follow-up')).not.toBeNull();
+  });
+
+  it('resolves a promise made after the follow-up with the recorded outcome', async () => {
+    const harness = await setUp();
+    await addRehearsal(harness, { expectedOn: '2026-02-25' });
+    const followUp = harness.routeDebugElement!.query(By.css('app-rehearsal-follow-up'));
+    followUp.componentInstance.saved.emit({ happened: true, result: 'chosen', kept: 'kept' });
+    harness.detectChanges();
+    await harness.fixture.whenStable();
+    expect(promises()).toEqual([]);
+
+    await emit(harness, { promise: 'Answer calmly, then ask.' });
+    expect(promises()).toHaveLength(1);
+    expect(promises()[0]).toMatchObject({ status: 'kept', dueDate: '2026-02-25' });
+    expect(rehearsals()[0].commitmentId).toBe(promises()[0].id);
+  });
+
   it('"Try this example" adds a sample with no date and no promise, and opens it', async () => {
     const harness = await setUp();
     const card = harness.routeDebugElement!.query(By.directive(ExercisePromptCard));

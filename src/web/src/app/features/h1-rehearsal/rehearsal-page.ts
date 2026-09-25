@@ -34,6 +34,7 @@ import {
   doneChecklist,
   editRehearsal,
   followUpOpen,
+  followUpOutcome,
   isComplete,
   isDraftWorthSaving,
   isStarted,
@@ -146,9 +147,10 @@ export class RehearsalPage {
     now: () => this.clock.now(),
   });
   protected readonly isNewRehearsal = computed(() => !this.draft.selected()?.trigger.trim());
+  /** Afterwards needs a stored record: on an unsaved draft its Save would have nothing to edit. */
   protected readonly followUpOpen = computed(() => {
     const rehearsal = this.draft.selected();
-    return rehearsal !== null && followUpOpen(rehearsal, this.today());
+    return rehearsal !== null && !this.draft.unsaved() && followUpOpen(rehearsal, this.today());
   });
 
   /** The selected rehearsal's live promise (`CommitmentsService.byId`, the #57 contract), `null`
@@ -226,7 +228,8 @@ export class RehearsalPage {
   }
 
   /** Issue #55's #57 contract: `add` once the promise line and the date are both set, `update`
-   * while the promise is open. A new promise's id is stored on the rehearsal. */
+   * while the promise is open. A new promise's id is stored on the rehearsal, and it is resolved
+   * at once when the follow-up was saved before it existed. */
   private syncPromise(id: string): void {
     const rehearsal = this.store.value().find((r) => r.id === id && isLive(r));
     if (!rehearsal) {
@@ -240,6 +243,9 @@ export class RehearsalPage {
       const commitmentId = this.commitments.add(sync.commitment);
       if (commitmentId !== null) {
         this.store.update((rehearsals) => editRehearsal(rehearsals, id, { commitmentId }));
+        if (sync.resolveAs) {
+          this.commitments.setStatus(commitmentId, sync.resolveAs);
+        }
       }
     } else if (sync?.kind === 'update') {
       this.commitments.update(sync.id, sync.edit);
@@ -253,8 +259,9 @@ export class RehearsalPage {
       return;
     }
     const commitmentId = this.store.value().find((r) => r.id === id)?.commitmentId;
-    if (commitmentId && followUp.happened && followUp.kept) {
-      this.commitments.setStatus(commitmentId, followUp.kept);
+    const outcome = followUpOutcome(followUp);
+    if (commitmentId && outcome) {
+      this.commitments.setStatus(commitmentId, outcome);
     }
   }
 
