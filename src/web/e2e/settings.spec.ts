@@ -12,7 +12,7 @@ import { expect, test } from './fixtures';
  * (`mobile-ar`/`desktop-ar`, per `playwright.config.ts`). */
 const FRIENDLY_USAGE_PATTERN: Record<'en' | 'ar', RegExp> = {
   en: /using (less than 1 KB|about)/,
-  ar: /(أقل من 1 كيلوبايت|نحو)/,
+  ar: /(أقل من كيلوبايت واحد|حوالي)/,
 };
 
 function localeFor(projectName: string): 'en' | 'ar' {

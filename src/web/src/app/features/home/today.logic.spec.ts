@@ -1,6 +1,6 @@
 import { HABITS, HabitId } from '../../core/habits/habits';
 import { ExerciseRegistryEntry } from '../../shared/exercise-kit/exercise-registry';
-import { todayContinueTarget } from './today.logic';
+import { localizedCountParams, todayContinueTarget } from './today.logic';
 
 function entry(exerciseId: string, habit: HabitId, order?: number): ExerciseRegistryEntry {
   return {
@@ -41,5 +41,21 @@ describe('todayContinueTarget (#220)', () => {
 
   it('is undefined with no registered exercises', () => {
     expect(todayContinueTarget(HABITS, [], () => false)).toBeUndefined();
+  });
+});
+
+describe('localizedCountParams', () => {
+  it('formats the count and every param with Western digits', () => {
+    expect(localizedCountParams(2, { total: 3 }, 'ar-u-nu-latn')).toEqual({
+      count: '2',
+      total: '3',
+    });
+  });
+
+  it('formats the count and every param with Eastern Arabic-Indic digits', () => {
+    expect(localizedCountParams(2, { total: 13 }, 'ar-u-nu-arab')).toEqual({
+      count: '٢',
+      total: '١٣',
+    });
   });
 });
