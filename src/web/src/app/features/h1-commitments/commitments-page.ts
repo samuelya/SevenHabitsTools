@@ -61,12 +61,15 @@ import { H1_COMMITMENTS_ID, H1_COMMITMENTS_ROUTE } from './commitments.model';
 const DEFAULT_FIELDS: CommitmentFields = { text: '', toWhom: 'self', status: 'open' };
 
 /** Short-title keys of every registered exercise, relative to the `habits` scope: a promise's
- * source may be any of them. Registrations are fixed at module load. */
-const SOURCE_EXERCISES = getRegisteredExercises().map((entry) => ({
-  id: entry.exerciseId,
-  route: entry.route,
-  key: entry.shortTitleKey.replace(/^habits\./, ''),
-}));
+ * source may be any of them. Read per page, not at module load, so it never depends on which
+ * model files were imported before this one. */
+function sourceExercises(): { id: string; route: string; key: string }[] {
+  return getRegisteredExercises().map((entry) => ({
+    id: entry.exerciseId,
+    route: entry.route,
+    key: entry.shortTitleKey.replace(/^habits\./, ''),
+  }));
+}
 
 /**
  * Your promises (issue #57), the reference exercise for Habit 1: a list exercise copied from
@@ -103,6 +106,8 @@ export class CommitmentsPage {
     initialValue: this.transloco.getActiveLang(),
   });
 
+  private readonly sourceExercises = sourceExercises();
+
   protected readonly progress = inject(ExerciseProgress);
   protected readonly guideContent = exerciseGuideSignal(H1_COMMITMENTS_ID);
 
@@ -127,13 +132,13 @@ export class CommitmentsPage {
     H1_COMMITMENTS_ID,
   );
   private readonly sourceTitleList = translateSignal(
-    SOURCE_EXERCISES.map((exercise) => exercise.key),
+    this.sourceExercises.map((exercise) => exercise.key),
     undefined,
     'habits',
   );
   protected readonly sourceTitles = computed(() =>
     labelsByKey(
-      SOURCE_EXERCISES.map((exercise) => exercise.id),
+      this.sourceExercises.map((exercise) => exercise.id),
       this.sourceTitleList(),
     ),
   );
@@ -186,7 +191,7 @@ export class CommitmentsPage {
     if (!selected?.source) {
       return { line: '', route: null };
     }
-    const exercise = SOURCE_EXERCISES.find((entry) => entry.id === selected.source?.exerciseId);
+    const exercise = this.sourceExercises.find((entry) => entry.id === selected.source?.exerciseId);
     return { line: sourceLabel(selected, this.labels()), route: exercise?.route ?? null };
   });
 

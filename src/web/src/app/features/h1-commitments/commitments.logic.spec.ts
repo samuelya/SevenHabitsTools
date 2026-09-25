@@ -199,7 +199,13 @@ describe('toListItem', () => {
     const item = toListItem(promise({ source: { exerciseId: 'h9-future' } }), LABELS, TODAY);
     expect(item.chips).toBeUndefined();
     expect(statusLabelsFrom([''])).toEqual({ open: '', kept: '', broken: '', withdrawn: '' });
-    expect(sourceLine('From: {{exercise}}', 'Your influence')).toBe('From: Your influence');
+    expect(sourceLine(`From: ${SOURCE_TOKEN}`, 'Your influence')).toBe('From: Your influence');
+  });
+
+  // Transloco re-scans an interpolated value for `{{…}}`, so a braced token never terminates
+  // (the CI hang at f0ab823).
+  it('uses a source token Transloco does not interpolate again', () => {
+    expect(SOURCE_TOKEN).not.toMatch(/\{\{|\}\}/);
   });
 });
 

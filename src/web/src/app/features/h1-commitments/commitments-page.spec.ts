@@ -101,6 +101,15 @@ function markDoneButton(harness: RouterTestingHarness): HTMLButtonElement {
   return host(harness).querySelector('app-done-toggle button') as HTMLButtonElement;
 }
 
+/** jsdom has no `scrollIntoView`; `ExercisePage` calls it on the selected row in the split
+ * layout. */
+beforeEach(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+afterEach(() => {
+  delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+});
+
 describe('CommitmentsPage', () => {
   it('renders the long title, the prompt and the gloss', async () => {
     const { harness } = await setUp();

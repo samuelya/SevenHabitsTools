@@ -151,8 +151,9 @@ export function summarize(list: readonly Commitment[], today: string): Commitmen
 }
 
 /** The token `sourceLine()` replaces: the page translates `list.sourceText` with this as its
- * `exercise` param, so one translation serves every source. */
-export const SOURCE_TOKEN = '{{exercise}}';
+ * `exercise` param, so one translation serves every source. No `{{…}}`: Transloco re-scans the
+ * interpolated value, so a braced token loops forever. */
+export const SOURCE_TOKEN = '@@exercise@@';
 
 /** "From: Your influence": `template` (`list.sourceText`, token kept) with the source's title. */
 export function sourceLine(template: string, title: string): string {
