@@ -175,6 +175,18 @@
         "many": "تم الوفاء بـ{{kept}} من {{count}}",
         "other": "تم الوفاء بـ{{kept}} من {{count}}"
       }
+    },
+    "h1-rehearsal": {
+      "title": "تدرّب على لحظتك الصعبة القادمة",
+      "shortTitle": "تدرّب عليها",
+      "rehearsalCount": {
+        "zero": "لا تدريبات",
+        "one": "تدريب واحد",
+        "two": "تدريبان",
+        "few": "{{count}} تدريبات",
+        "many": "{{count}} تدريبًا",
+        "other": "{{count}} تدريب"
+      }
     }
   }
 }

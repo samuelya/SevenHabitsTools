@@ -1,0 +1,67 @@
+.rehearsal-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.part {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.part-heading {
+  padding: 0;
+  margin-block-end: 0.5rem;
+  font: var(--mat-sys-title-medium);
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.field-prompt {
+  margin: 0;
+}
+
+.field-hint {
+  margin: -0.75rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.field-error {
+  color: var(--mat-sys-error, darkred);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 0;
+}
+
+.date-field {
+  max-inline-size: 16rem;
+}
+
+.promise {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.promise:empty {
+  display: none;
+}
+
+.promise-status {
+  margin: 0;
+}
+
+.see-promise-link {
+  min-block-size: 44px;
+}
+
+.delete-button {
+  align-self: flex-start;
+}

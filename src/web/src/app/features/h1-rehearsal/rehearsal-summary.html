@@ -1,0 +1,9 @@
+<mat-card class="rehearsal-summary" appearance="outlined">
+  <mat-card-content>
+    <p class="count">
+      {{
+        'h1Rehearsal.summary.success' | appPlural: summary().count : { chosen: summary().chosen }
+      }}
+    </p>
+  </mat-card-content>
+</mat-card>

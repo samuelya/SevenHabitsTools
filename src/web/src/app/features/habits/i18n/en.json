@@ -143,6 +143,14 @@
         "one": "{{kept}} of 1 kept",
         "other": "{{kept}} of {{count}} kept"
       }
+    },
+    "h1-rehearsal": {
+      "title": "Rehearse your next hard moment",
+      "shortTitle": "Rehearse it",
+      "rehearsalCount": {
+        "one": "1 rehearsal",
+        "other": "{{count}} rehearsals"
+      }
     }
   }
 }

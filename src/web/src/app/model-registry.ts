@@ -13,6 +13,7 @@ import './features/paradigms-teach/teach.model';
 import './features/paradigms-perception/perception.model';
 import './features/h1-commitments/commitments.model';
 import './features/h1-circle/circle.model';
+import './features/h1-rehearsal/rehearsal.model';
 import './shared/exercise-kit/exercise-kit.model';
 // Shared entities (`shared.*`): registered here, eagerly, not by the features that use them.
 import './shared/commitments/commitments.model';

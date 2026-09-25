@@ -1,0 +1,172 @@
+<form class="rehearsal-item-form">
+  <!-- Part 1: the moment and when it's likely. -->
+  <fieldset class="part">
+    <legend class="part-heading">{{ 'h1Rehearsal.part1.legend' | transloco }}</legend>
+    <p class="field-prompt" id="trigger-prompt">
+      {{ 'h1Rehearsal.form.triggerPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.form.triggerLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        #triggerField
+        appEditorInitialFocus
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        required
+        [placeholder]="'h1Rehearsal.form.triggerPlaceholder' | transloco"
+        [value]="rehearsal().trigger"
+        [attr.aria-describedby]="
+          isTouched('trigger') && blank(rehearsal().trigger)
+            ? 'trigger-prompt trigger-error'
+            : 'trigger-prompt'
+        "
+        (input)="onTextInput('trigger', $event)"
+        (blur)="touch('trigger')"
+      ></textarea>
+    </mat-form-field>
+    <!-- Not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+    @if (isTouched('trigger') && blank(rehearsal().trigger)) {
+      <p id="trigger-error" class="field-error" role="alert">
+        {{ 'h1Rehearsal.form.triggerRequired' | transloco }}
+      </p>
+    }
+
+    <p class="field-prompt" id="expected-on-prompt">
+      {{ 'h1Rehearsal.form.expectedOnPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field date-field">
+      <mat-label>{{ 'h1Rehearsal.form.expectedOnLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        #dateInput
+        autocomplete="off"
+        aria-describedby="expected-on-prompt"
+        [matDatepicker]="datePicker"
+        [value]="expectedOn()"
+        (dateChange)="onDateChange($event, dateInput)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="datePicker" />
+      <mat-datepicker #datePicker />
+    </mat-form-field>
+  </fieldset>
+
+  <!-- Part 2: what usually happens and what it costs. -->
+  <fieldset class="part">
+    <legend class="part-heading">{{ 'h1Rehearsal.part2.legend' | transloco }}</legend>
+    <p class="field-prompt" id="usual-prompt">
+      {{ 'h1Rehearsal.form.usualReactionPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.form.usualReactionLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        aria-describedby="usual-prompt"
+        [placeholder]="'h1Rehearsal.form.usualReactionPlaceholder' | transloco"
+        [value]="rehearsal().usualReaction ?? ''"
+        (input)="onTextInput('usualReaction', $event)"
+      ></textarea>
+    </mat-form-field>
+
+    <p class="field-prompt" id="cost-prompt">{{ 'h1Rehearsal.form.costPrompt' | transloco }}</p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.form.costLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        aria-describedby="cost-prompt"
+        [placeholder]="'h1Rehearsal.form.costPlaceholder' | transloco"
+        [value]="rehearsal().cost ?? ''"
+        (input)="onTextInput('cost', $event)"
+      ></textarea>
+    </mat-form-field>
+  </fieldset>
+
+  <!-- Part 3: the new response, as a short scene. -->
+  <fieldset class="part">
+    <legend class="part-heading">{{ 'h1Rehearsal.part3.legend' | transloco }}</legend>
+    <p class="field-prompt" id="scene-prompt">
+      {{ 'h1Rehearsal.form.chosenResponsePrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.form.chosenResponseLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="3"
+        cdkAutosizeMaxRows="10"
+        required
+        [placeholder]="'h1Rehearsal.form.chosenResponsePlaceholder' | transloco"
+        [value]="rehearsal().chosenResponse ?? ''"
+        [attr.aria-describedby]="
+          sceneMissing() ? 'scene-prompt scene-hint scene-error' : 'scene-prompt scene-hint'
+        "
+        (input)="onTextInput('chosenResponse', $event)"
+        (blur)="touch('chosenResponse')"
+      ></textarea>
+    </mat-form-field>
+    <p class="field-hint" id="scene-hint">
+      {{ 'h1Rehearsal.form.chosenResponseHint' | transloco }}
+    </p>
+    @if (sceneMissing()) {
+      <p id="scene-error" class="field-error" role="alert">
+        {{ 'h1Rehearsal.form.chosenResponseRequired' | transloco }}
+      </p>
+    }
+  </fieldset>
+
+  <!-- Part 4: the promise, tracked in Your promises. -->
+  <fieldset class="part">
+    <legend class="part-heading">{{ 'h1Rehearsal.part4.legend' | transloco }}</legend>
+    <p class="field-prompt" id="promise-prompt">
+      {{ 'h1Rehearsal.form.promisePrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.form.promiseLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        class="promise-input"
+        type="text"
+        autocomplete="off"
+        aria-describedby="promise-prompt promise-hint"
+        [placeholder]="'h1Rehearsal.form.promisePlaceholder' | transloco"
+        [value]="rehearsal().promise ?? ''"
+        (input)="onTextInput('promise', $event)"
+      />
+    </mat-form-field>
+    <p class="field-hint" id="promise-hint">{{ 'h1Rehearsal.form.promiseHint' | transloco }}</p>
+
+    <div class="promise" aria-live="polite">
+      @if (promise(); as promise) {
+        <p class="promise-status">
+          {{
+            'h1Rehearsal.form.promiseStatusText'
+              | transloco: { status: ('h1Rehearsal.promiseStatus.' + promise.status | transloco) }
+          }}
+        </p>
+        <a mat-button class="see-promise-link" [routerLink]="promise.link">
+          {{ 'h1Rehearsal.form.seePromiseButton' | transloco }}
+        </a>
+      }
+    </div>
+  </fieldset>
+
+  @if (followUpOpen()) {
+    <app-rehearsal-follow-up
+      [recordId]="rehearsal().id"
+      [followUp]="rehearsal().followUp"
+      (saved)="followUpSaved.emit($event)"
+    />
+  }
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h1Rehearsal.form.delete' | transloco }}
+  </button>
+</form>
