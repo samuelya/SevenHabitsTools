@@ -124,8 +124,9 @@ test.describe('Your promises (h1-commitments)', () => {
     }).toPass();
 
     await form.locator('button', { hasText: text.keptButton }).click();
-    await expect(page.locator('app-commitments-summary')).toContainText('100');
+    // The summary sits in the footer, which a handset hides while the full-screen editor is open.
     await closeEditor(page, isMobile);
+    await expect(page.locator('app-commitments-summary')).toContainText('100');
 
     const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
     await expect(markDoneButton).toBeEnabled();
