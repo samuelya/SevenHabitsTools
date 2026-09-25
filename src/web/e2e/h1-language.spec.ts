@@ -148,6 +148,14 @@ test.describe('h1 your words', () => {
     await page.goto('/habits/h1/language');
     await page.locator('.start-day-button').click();
     await expect(page.locator('.day-banner')).toBeVisible();
+    // The banner makes the page taller than a 1280x800 viewport, so at `scrollTop: 0` the
+    // scaffold's sticky footer (#184) paints over "Add phrase" and axe reads the footer's disabled
+    // "Mark done" fill as the label's background. Scrolled to the end, the footer sits after the
+    // content and covers nothing.
+    await page.locator('.page').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    const addBox = await page.locator('.add-button').boundingBox();
+    const footerBox = await page.locator('app-exercise-page .footer-slot').boundingBox();
+    expect(addBox!.y + addBox!.height).toBeLessThanOrEqual(footerBox!.y);
     const results = await new AxeBuilder({ page }).analyze();
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
