@@ -17,6 +17,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 1 : 0,
+  // The CI runner has 4 vCPUs; Playwright's default (half the cores) left 2 idle and the e2e step at
+  // ~6 of the job's ~8 minutes (#207 review 4).
+  workers: process.env['CI'] ? 4 : undefined,
   reporter: process.env['CI']
     ? [['html', { outputFolder: 'playwright-report', open: 'never' }], ['list']]
     : [['html', { outputFolder: 'playwright-report', open: 'on-failure' }], ['list']],

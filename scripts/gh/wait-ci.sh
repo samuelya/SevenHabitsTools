@@ -77,8 +77,9 @@ while :; do
     echo "$bad"
     run_id=$(grep -m1 -oE 'actions/runs/[0-9]+' <<<"$bad" | cut -d/ -f3 || true)
     if [[ -n "$run_id" ]] && grep -q $'^fail\t' <<<"$bad"; then
-      echo "--- last 40 lines of the failed job log (run $run_id) ---"
-      gh run view "$run_id" -R "$repo" --log-failed 2>/dev/null | tail -40 || true
+      echo "--- failures (scripts/gh/ci-failures.sh $pr --run $run_id; add --post to hand them to the next round) ---"
+      "$(dirname "$0")/ci-failures.sh" "$pr" --run "$run_id" 2>/dev/null \
+        || gh run view "$run_id" -R "$repo" --log-failed 2>/dev/null | tail -40 || true
     fi
     exit 1
   fi

@@ -253,4 +253,8 @@ echo "average PR CI run: ${ci} min"
 if (( count > 0 )); then
   echo "/code-review on merged PRs: $reviewed_prs of $count reviewed, $(calc "f'{$review_input/1e6:.1f}M'") input tokens ($(calc "f'{$review_input/max($reviewed_prs,1)/1e6:.1f}M'") per reviewed PR); by level: ${review_levels:-none}; no PR in the call: ${review_orphans}"
 fi
+# Defects the pipeline missed: filed after merge with the found-after-merge label (CLAUDE.md).
+escaped=$(gh issue list -R "$OWNER/$REPO" --state all --label found-after-merge --limit 100 --search "created:>=$since" \
+  --json number,body --jq '"\(length) (" + ([.[] | "#\(.number)" + ((.body | capture("Escaped from #(?<p>[0-9]+)") | " from PR #\(.p)") // "")] | join(", ")) + ")"' 2>/dev/null || echo "n/a")
+echo "defects found after merge: $escaped"
 echo "coder runs on merged PRs' issues: $coder_runs (transcripts) vs $round_comments round comments — every run should post one (scripts/gh/round.sh)"
