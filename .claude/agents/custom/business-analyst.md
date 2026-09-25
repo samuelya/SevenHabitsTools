@@ -47,6 +47,7 @@ As the user, I want <...> so that <...>.
 
 ## Implementation notes
 <decisions the coder would otherwise have to ask about: thresholds, defaults, exercise type, reference feature to copy>
+<for copy or content work (strings, guides, examples, About texts): the files to touch and the exact final text per file, in `en` and `ar`, so the coder applies it rather than writes it. #231, with the content posted by the BA, took 53 turns and 3.9M tokens; comparable first runs took 85–102 turns and 10–15M>
 
 ## Dependencies
 - #<n> <title>
