@@ -1,0 +1,98 @@
+<form class="language-item-form">
+  <p class="field-prompt" id="text-prompt">{{ 'h1Language.form.textPrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Language.form.textLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #textField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="2"
+      cdkAutosizeMaxRows="8"
+      required
+      [placeholder]="'h1Language.form.textPlaceholder' | transloco"
+      [value]="phrase().text"
+      [attr.aria-describedby]="
+        isTouched('text') && blank(phrase().text) ? 'text-prompt text-error' : 'text-prompt'
+      "
+      (input)="onTextInput('text', $event)"
+      (blur)="touch('text')"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+  @if (isTouched('text') && blank(phrase().text)) {
+    <p id="text-error" class="field-error" role="alert">
+      {{ 'h1Language.form.textRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="option-group">
+    <legend id="kind-legend">{{ 'h1Language.form.kindLabel' | transloco }}</legend>
+    <mat-radio-group
+      class="kind-options"
+      aria-labelledby="kind-legend"
+      [value]="phrase().kind"
+      (change)="onKindChange($event.value)"
+    >
+      @for (kind of kinds; track kind) {
+        <div class="kind-option">
+          <mat-radio-button [value]="kind" [attr.aria-describedby]="'kind-hint-' + kind">
+            {{ 'h1Language.kind.' + kind | transloco }}
+          </mat-radio-button>
+          <p class="kind-hint" [id]="'kind-hint-' + kind">
+            {{ 'h1Language.kindHint.' + kind | transloco }}
+          </p>
+        </div>
+      }
+    </mat-radio-group>
+  </fieldset>
+
+  @if (reactive()) {
+    <p class="field-prompt" id="reframe-prompt">
+      {{ 'h1Language.form.reframePrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Language.form.reframeLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        required
+        [placeholder]="'h1Language.form.reframePlaceholder' | transloco"
+        [value]="phrase().reframe ?? ''"
+        [attr.aria-describedby]="
+          isTouched('reframe') && blank(phrase().reframe)
+            ? 'reframe-prompt reframe-error'
+            : 'reframe-prompt'
+        "
+        (input)="onTextInput('reframe', $event)"
+        (blur)="touch('reframe')"
+      ></textarea>
+    </mat-form-field>
+    @if (isTouched('reframe') && blank(phrase().reframe)) {
+      <p id="reframe-error" class="field-error" role="alert">
+        {{ 'h1Language.form.reframeRequired' | transloco }}
+      </p>
+    }
+  }
+
+  <p class="field-prompt" id="context-prompt">{{ 'h1Language.form.contextPrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Language.form.contextLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      aria-describedby="context-prompt"
+      [placeholder]="'h1Language.form.contextPlaceholder' | transloco"
+      [value]="phrase().context ?? ''"
+      (input)="onTextInput('context', $event)"
+    />
+  </mat-form-field>
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h1Language.form.delete' | transloco }}
+  </button>
+</form>

@@ -1,0 +1,68 @@
+<app-exercise-page
+  [title]="'h1Language.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (isNewPhrase() ? 'h1Language.editor.newTitle' : 'h1Language.editor.editTitle') | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h1Language.prompt.title' | transloco"
+    [prompt]="'h1Language.prompt.text' | transloco"
+    [gloss]="'h1Language.prompt.glossText' | transloco"
+    [chapterReference]="'h1Language.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h1Language.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <app-language-day
+    [state]="day()"
+    [summary]="daySummary()"
+    (dayStarted)="onDayStarted()"
+    (dayEnded)="onDayEnded($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAddPhrase()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h1Language.list.addButton' | transloco }}
+  </button>
+
+  <app-exercise-list
+    [items]="items()"
+    [selectedId]="itemId()"
+    [initialSort]="'none'"
+    [searchLabel]="'h1Language.list.searchLabel' | transloco"
+    [emptyMessage]="'h1Language.list.empty' | transloco"
+    [noMatchMessage]="'h1Language.list.noMatch' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (deleteRequested)="onItemDeleted($event)"
+  />
+
+  <div editor>
+    @if (draft.selected(); as phrase) {
+      <app-language-item-form
+        [phrase]="phrase"
+        (changed)="onItemChanged(phrase.id, $event)"
+        (deleted)="onItemDeleted(phrase.id)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (week(); as rows) {
+      <app-language-week [rows]="rows" [streak]="streak()" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

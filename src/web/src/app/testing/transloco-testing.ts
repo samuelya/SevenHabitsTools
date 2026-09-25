@@ -33,6 +33,8 @@ import rehearsalEn from '../features/h1-rehearsal/i18n/en.json';
 import rehearsalAr from '../features/h1-rehearsal/i18n/ar.json';
 import challengeEn from '../features/h1-challenge/i18n/en.json';
 import challengeAr from '../features/h1-challenge/i18n/ar.json';
+import languageEn from '../features/h1-language/i18n/en.json';
+import languageAr from '../features/h1-language/i18n/ar.json';
 import exerciseKitEn from '../shared/exercise-kit/i18n/en.json';
 import exerciseKitAr from '../shared/exercise-kit/i18n/ar.json';
 
@@ -68,6 +70,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'h1-rehearsal/ar': rehearsalAr,
   'h1-challenge/en': challengeEn,
   'h1-challenge/ar': challengeAr,
+  'h1-language/en': languageEn,
+  'h1-language/ar': languageAr,
   'exercise-kit/en': exerciseKitEn,
   'exercise-kit/ar': exerciseKitAr,
 };

@@ -24,6 +24,7 @@ const SCOPES = {
   h1Circle: 'src/app/features/h1-circle/i18n',
   h1Rehearsal: 'src/app/features/h1-rehearsal/i18n',
   h1Challenge: 'src/app/features/h1-challenge/i18n',
+  h1Language: 'src/app/features/h1-language/i18n',
 } as const;
 
 export type Scope = keyof typeof SCOPES;
