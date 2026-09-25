@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { DayState, DaySummary } from './language.logic';
 
 /**
@@ -19,7 +20,7 @@ import { DayState, DaySummary } from './language.logic';
  */
 @Component({
   selector: 'app-language-day',
-  imports: [MatButtonModule, MatCardModule, MatIconModule, TranslocoPipe],
+  imports: [AppPluralPipe, MatButtonModule, MatCardModule, MatIconModule, TranslocoPipe],
   templateUrl: './language-day.html',
   styleUrl: './language-day.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
