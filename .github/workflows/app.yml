@@ -150,7 +150,10 @@ jobs:
       - run: npm -v
       - run: npm ci
       - run: npm run lint --if-present
+      # Step timeouts bound a hang at about 2x the normal time (unit ~170 s, e2e ~525 s): #282's unit
+      # step hung 30 min on a Transloco interpolation loop. ci-failures.sh names the timed-out step.
       - run: npm test --if-present
+        timeout-minutes: 6
       - run: npm run build
 
       # Playwright smoke suite (issue #29): served from the production build, no Docker.
@@ -158,6 +161,7 @@ jobs:
 
       - name: E2E smoke suite
         run: npm run e2e
+        timeout-minutes: 18
 
       - name: Upload Playwright report and traces
         if: failure()
