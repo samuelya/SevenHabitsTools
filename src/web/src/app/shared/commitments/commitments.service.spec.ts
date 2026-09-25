@@ -74,6 +74,29 @@ describe('CommitmentsService', () => {
     expect(service.byId(id)()).not.toBeNull();
   });
 
+  // Review finding 8 (PR #282): a draft stored through insert() keeps no blank or undefined key.
+  it('stores an inserted record without undefined or cleared optional keys', () => {
+    const service = setUp();
+    service.insert({
+      id: 'd1',
+      createdAt: '2026-03-10T09:00:00.000Z',
+      updatedAt: '2026-03-10T09:00:00.000Z',
+      text: 'Call Mum.',
+      toWhom: 'self',
+      status: 'open',
+      dueDate: '',
+      personName: 'Dina',
+      resolvedOn: undefined,
+    });
+    const doc = TestBed.inject(DocumentStore).document() as unknown as {
+      shared: { commitments: Record<string, unknown>[] };
+    };
+    const [stored] = doc.shared.commitments;
+    expect(Object.keys(stored).sort()).toEqual(
+      ['createdAt', 'id', 'status', 'text', 'toWhom', 'updatedAt'].sort(),
+    );
+  });
+
   it('reports a refused write in a read-only tab', () => {
     const service = setUp(false);
     expect(service.add({ text: 'Call Mum.', toWhom: 'self' })).toBeNull();

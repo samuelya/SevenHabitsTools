@@ -37,7 +37,7 @@ function promise(overrides: Partial<Commitment> = {}): Commitment {
 const LABELS: CommitmentLabels = {
   status: { open: 'Open', kept: 'Kept', broken: 'Broken', withdrawn: 'Withdrawn' },
   example: 'Example',
-  overdue: 'Overdue',
+  overdue: 'Overdue:',
   sourceTemplate: `From: ${SOURCE_TOKEN}`,
   sourceTitles: { 'h1-circle': 'Your influence' },
   formatDate: (date) => `<${date}>`,
@@ -91,6 +91,23 @@ describe('done gate', () => {
     const list = [promise({ dueDate: TODAY, status: 'broken' })];
     expect(isComplete(list)).toBe(false);
     expect(doneChecklist(list, labels).some((item) => !item.met)).toBe(true);
+  });
+
+  // Review finding 2 (PR #282).
+  it('is not opened by a Kept promise with blank text, and agrees with the checklist', () => {
+    const blankKept = promise({ text: '  ', status: 'kept' });
+    expect(isComplete([blankKept])).toBe(false);
+    expect(doneChecklist([blankKept], labels).map((item) => item.met)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+    // With a real Kept promise too, the checklist describes that one: promise and kept both met,
+    // even though another promise has more rows met.
+    const list = [promise({ id: 'a', dueDate: TODAY }), promise({ id: 'b', status: 'kept' })];
+    expect(isComplete(list)).toBe(true);
+    const [write, , keep] = doneChecklist(list, labels).map((item) => item.met);
+    expect(write && keep).toBe(true);
   });
 
   it('waits for the labels to load', () => {
@@ -178,9 +195,22 @@ describe('toListItem', () => {
     });
   });
 
+  // Review finding 1 (PR #282): a bad stored date reaches the list as no date, not a throw.
+  it('shows no date for a due date that is not a real calendar date', () => {
+    const throwingLabels: CommitmentLabels = {
+      ...LABELS,
+      formatDate: () => {
+        throw new RangeError('Invalid time value');
+      },
+    };
+    expect(toListItem(promise({ dueDate: '2026-13-01' }), throwingLabels, TODAY).subtitle).toBe(
+      'Open',
+    );
+  });
+
   it('marks an overdue row as a warning with a hidden label, and a kept one done', () => {
     const overdue = toListItem(promise({ dueDate: '2026-03-01' }), LABELS, TODAY);
-    expect(overdue).toMatchObject({ warning: true, warningLabel: 'Overdue' });
+    expect(overdue).toMatchObject({ warning: true, warningLabel: 'Overdue:' });
     expect(toListItem(promise({ status: 'kept' }), LABELS, TODAY).done).toBe(true);
   });
 

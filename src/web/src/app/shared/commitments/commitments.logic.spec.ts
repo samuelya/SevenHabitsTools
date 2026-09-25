@@ -11,6 +11,7 @@ import {
   resolveCommitment,
   resolvedBetween,
   restoreCommitment,
+  tidyCommitment,
 } from './commitments.logic';
 import { Commitment } from './commitments.model';
 
@@ -182,6 +183,50 @@ describe('edits', () => {
     expect('resolvedOn' in reopened).toBe(false);
   });
 
+  // Review finding 3 (PR #282).
+  it('drops the repair note when resolving Kept or Withdrawn, and on Reopen', () => {
+    const [kept] = resolveCommitment(
+      [promise({ repairNote: 'Old note.' })],
+      'c1',
+      'kept',
+      TODAY,
+      NOW,
+    );
+    expect('repairNote' in kept).toBe(false);
+    const [withdrawn] = resolveCommitment(
+      [promise({ repairNote: 'Old note.' })],
+      'c1',
+      'withdrawn',
+      TODAY,
+      NOW,
+    );
+    expect('repairNote' in withdrawn).toBe(false);
+    const [reopened] = reopenCommitment(
+      [promise({ status: 'broken', resolvedOn: TODAY, repairNote: 'Too big.' })],
+      'c1',
+      NOW,
+    );
+    expect('repairNote' in reopened).toBe(false);
+  });
+
+  it('leaves a promise that is not open alone on resolve, so resolvedOn never moves', () => {
+    const kept = promise({ status: 'kept', resolvedOn: '2026-03-01' });
+    expect(resolveCommitment([kept], 'c1', 'broken', TODAY, NOW)).toEqual([kept]);
+    expect(resolveCommitment([kept], 'c1', 'kept', TODAY, NOW)).toEqual([kept]);
+  });
+
+  // Review finding 4 (PR #282).
+  it('removes the person name when the promise becomes one to oneself', () => {
+    const [edited] = editCommitment(
+      [promise({ toWhom: 'other', personName: 'Dina' })],
+      'c1',
+      { toWhom: 'self' },
+      NOW,
+    );
+    expect(edited.toWhom).toBe('self');
+    expect('personName' in edited).toBe(false);
+  });
+
   it('never touches a deleted or another promise', () => {
     const deleted = promise({ deletedAt: '2026-03-02T00:00:00.000Z' });
     const other = promise({ id: 'c2' });
@@ -193,5 +238,28 @@ describe('edits', () => {
     expect(removed.deletedAt).toBe(NOW.toISOString());
     const [restored] = restoreCommitment([removed], 'c1', NOW);
     expect('deletedAt' in restored).toBe(false);
+  });
+});
+
+// Review finding 8 (PR #282): the one normaliser every write goes through.
+describe('tidyCommitment', () => {
+  it('removes undefined keys and cleared optional text, keeping an empty promise text', () => {
+    const tidy = tidyCommitment({
+      ...promise({ text: '', toWhom: 'other' }),
+      dueDate: '',
+      personName: '',
+      repairNote: '',
+      resolvedOn: undefined,
+      sample: undefined,
+    });
+    expect(tidy).toEqual(promise({ text: '', toWhom: 'other' }));
+    expect(Object.values(tidy)).not.toContain(undefined);
+  });
+
+  it('drops a person name on a promise to oneself and keeps it for someone else', () => {
+    expect('personName' in tidyCommitment(promise({ personName: 'Dina' }))).toBe(false);
+    expect(tidyCommitment(promise({ toWhom: 'other', personName: 'Dina' })).personName).toBe(
+      'Dina',
+    );
   });
 });

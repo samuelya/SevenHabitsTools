@@ -74,6 +74,15 @@ describe('commitments model (shared.commitments)', () => {
     expect(registration().validate?.({})).toBe(false);
   });
 
+  // Review finding 1 (PR #282): a stored date must be a real `YYYY-MM-DD`.
+  it('rejects a due or resolved date that is not a real calendar date', () => {
+    expect(registration().validate?.([{ ...FULL, dueDate: '2026-13-01' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL, dueDate: '2026-02-30' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL, dueDate: 'soon' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL, resolvedOn: '2026-1-10' }])).toBe(false);
+    expect(registration().validate?.([{ ...FULL, resolvedOn: '' }])).toBe(false);
+  });
+
   it('passes validateDocument() with the slice present (export/import guarantee)', () => {
     const issues = validateDocument({ shared: { commitments: [FULL] } });
     expect(issues.filter((issue) => issue.path === COMMITMENTS_PATH)).toEqual([]);

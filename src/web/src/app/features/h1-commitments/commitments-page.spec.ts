@@ -25,6 +25,8 @@ import commitmentsRoutes from './commitments.routes';
 const LIST_URL = `/${H1_COMMITMENTS_ROUTE}`;
 /** Local 10:00 on 2026-03-10: "today" is 2026-03-10 in any timezone. */
 const NOW = new Date(2026, 2, 10, 10, 0, 0);
+/** What `CLOCK` returns; a test moves it to cross midnight. */
+let clockNow = NOW;
 
 function testRoutes(): Routes {
   return [{ path: H1_COMMITMENTS_ROUTE, children: commitmentsRoutes }];
@@ -47,7 +49,7 @@ async function setUp(seed: Commitment[] = [], url = LIST_URL): Promise<Setup> {
     providers: [
       provideTranslocoTesting(),
       provideRouter(testRoutes(), withComponentInputBinding()),
-      { provide: CLOCK, useValue: { now: () => NOW } },
+      { provide: CLOCK, useValue: { now: () => clockNow } },
       { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
       {
         provide: DeleteWithUndo,
@@ -108,6 +110,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+  clockNow = NOW;
+  vi.useRealTimers();
 });
 
 describe('CommitmentsPage', () => {
@@ -245,6 +249,28 @@ describe('CommitmentsPage', () => {
     expect(service.all()).toEqual([]);
     deletes[0].onUndo();
     expect(service.all()).toHaveLength(1);
+  });
+
+  // Review finding 1 (PR #282): an invalid date that got past validation renders as none.
+  it('renders the list when a stored due date is not a real date', async () => {
+    const { harness } = await setUp([promise({ dueDate: '2026-13-01' })]);
+    await settle(harness);
+    expect(rows(harness)).toEqual(['Call Mum on Sunday afternoon.']);
+    expect(host(harness).querySelector('.exercise-list__item')?.textContent).toContain('Open');
+  });
+
+  // Review finding 5 (PR #282): the page's "today" follows the clock past midnight.
+  it('moves a promise due today to overdue once the local date changes', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true });
+    clockNow = new Date(2026, 2, 10, 23, 59, 0);
+    const { harness } = await setUp([promise({ dueDate: '2026-03-10' })]);
+    await settle(harness);
+    expect(host(harness).querySelector('.exercise-list__item--warning')).toBeNull();
+
+    clockNow = new Date(2026, 2, 11, 0, 0, 1);
+    vi.advanceTimersByTime(61_000);
+    harness.detectChanges();
+    expect(host(harness).querySelector('.exercise-list__item--warning')).not.toBeNull();
   });
 
   it('follows a language switch', async () => {
