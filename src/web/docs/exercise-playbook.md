@@ -216,8 +216,30 @@ earlier "create the record on the Add button" convention; details in `exercise-l
 - Styling: logical CSS only (`margin-inline-start`, `inset-inline`). Mobile first at 360 px;
   touch targets ≥ 44 px. Sliders and ratings need a visible numeric value and an accessible label.
 - Cross-feature data: never import another feature's folder. Shared entities (`shared.roles`,
-  `shared.relationships`) are read through their own `core/` or `shared/` owner once it exists.
-  Until then the integration is a follow-up issue, not a speculative hook.
+  `shared.relationships`) are read through their own `core/` or `shared/` owner once it exists
+  (`shared.commitments` through `shared/commitments/`, #57). Until then the integration is a
+  follow-up issue, not a speculative hook. The same goes for strings: an exercise keeps its own
+  i18n keys (e.g. `promiseStatus.*`) and never provides another feature's Transloco scope (#56).
+
+**Pitfalls that each cost a Habit 1 PR a fix round (#53–#56):**
+
+- **The draft path skips your edit cleanup.** `recordDraft.edit()` → `editDraft()` merges fields
+  as they come, so an emptied date (`''`) reaches storage, fails `validate()` and the next load
+  reports the whole document corrupt. Clean fields with the same function the saved-record edit
+  uses *before* `draft.edit()` (`concernEdit()` in `circle.logic.ts`), and unit-test the draft
+  path for every date field (#53).
+- **Local UI state keyed to the store object resets on every save.** Every write replaces the
+  value object, so a `computed`/`effect` that resets a selection "when the record changes" fires
+  on each autosave. Key resets to the id (and to today's date where it matters), not the object (#56).
+- **A reused child keeps its own field text.** Angular reuses a component when its input changes,
+  so a local `reason`/draft field survives a switch to another day or item; clear it on the input
+  change (#56).
+- **Flush a debounced editor before removing it.** An action that ends or hides the section
+  (Finish, Stop) calls `ReflectionEditor.flush()` first, or the last second of typing is lost (#56).
+- **Derived records get the state the user already recorded.** A record created *after* an
+  outcome was stored (a promise typed after the follow-up said Kept) takes that outcome at
+  creation, and a form section that saves on its own (Afterwards) only shows once the draft is a
+  record (#55).
 
 ## 7. Tests (what each exercise ships)
 
@@ -229,6 +251,12 @@ earlier "create the record on the Add button" convention; details in `exercise-l
 | `e2e/<exerciseId>.spec.ts` | one happy path from the hub: open the exercise, fill it, reload, data still there, hub shows done. Plus an axe scan. The Playwright projects already run it at 360/1280 in `en`/`ar`; don't loop over them yourself                                                                                                                                                                                                                           |
 
 - Seed data in e2e with `seedDocument()` from `e2e/fixtures.ts`, not by clicking through setup.
+- An axe `color-contrast` failure over a light grey background (#dfdee2) at 1280x800 is usually a
+  control sitting under the page's sticky footer, not a styling bug: axe reads the footer's
+  disabled "Mark done" as the background. Scroll `.page` to the end and assert the control clears
+  the footer before scanning (`e2e/h1-language.spec.ts`); the page-level fix is #288.
+- In a unit spec, select form inputs by type (`input[type="text"]`): a `mat-radio-button` renders
+  a hidden `<input>` that `querySelector('input')` matches first (#54).
 - When a hub gets its first exercise, `e2e/habits.spec.ts`'s empty-state test must point to a hub
   that still has none.
 - The tester still spends its round on what CI can't check (RTL look, keyboard, screen reader,
