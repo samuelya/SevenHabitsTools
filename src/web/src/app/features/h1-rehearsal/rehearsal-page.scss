@@ -1,0 +1,36 @@
+:host {
+  // A flex column, not a block: `ExercisePage` fills a routed page's host with `flex: 1 1 auto`,
+  // which is the only way its footer can reach the bottom edge of a short page. A percentage
+  // `min-block-size` cannot do it — it resolves against the parent's `height` property, `auto`
+  // here, so it silently computes to `auto` (issue #193). `min-block-size: 100%` still earns its
+  // keep on *this* host, whose parent is the shell's `.page`: that one is a flex item with a
+  // definite used height, so the percentage does resolve against it.
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.add-button {
+  margin-block-end: 0.5rem;
+  min-block-size: 44px;
+  // `align-self`, not `inline-size`, would be inert: the button's parent is the scaffold's
+  // `.content-slot`, a plain block (issue #195).
+  align-self: flex-start;
+}
+
+// Full width below the handset breakpoint (`HANDSET_QUERY`, `core/layout/breakpoints.ts`); a
+// left-aligned button at that width reads like it belongs to the row above it, not its own
+// primary action (issue #187's acceptance criteria).
+@media (max-width: 599.98px) {
+  .add-button {
+    inline-size: 100%;
+  }
+}
+
+.summary-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  inline-size: 100%;
+}

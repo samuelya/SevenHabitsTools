@@ -1,0 +1,183 @@
+{
+  "prompt": {
+    "title": "Rehearse your next hard moment",
+    "chapterReference": "Habit 1: Be Proactive",
+    "text": "Think of a moment coming up where you usually snap, freeze or give in. Decide now how you'll respond, picture it, and promise yourself.",
+    "glossText": "The book says there's a gap between what happens to you (the stimulus) and what you do (your response). This exercise uses it.",
+    "whyItMatters": "In the moment, the old reaction is faster than any good intention. Rehearsing gives your chosen response a head start. Picturing it once makes it easier to reach for when it counts."
+  },
+  "list": {
+    "addButton": "Add rehearsal",
+    "searchLabel": "Search rehearsals",
+    "empty": "Nothing rehearsed yet. Think of a moment this week that usually gets the worst of you.",
+    "noMatch": "No rehearsals match your search.",
+    "deleted": "Rehearsal deleted",
+    "undo": "Undo",
+    "example": "Example"
+  },
+  "editor": {
+    "newTitle": "New rehearsal",
+    "editTitle": "Edit rehearsal"
+  },
+  "part1": {
+    "legend": "The moment"
+  },
+  "part2": {
+    "legend": "What usually happens"
+  },
+  "part3": {
+    "legend": "What you'll do instead"
+  },
+  "part4": {
+    "legend": "Your promise"
+  },
+  "form": {
+    "triggerLabel": "The moment",
+    "triggerPrompt": "What's coming up that usually gets a bad reaction from you?",
+    "triggerPlaceholder": "e.g. Sunday lunch, when Dad brings up my job again.",
+    "triggerRequired": "Name the moment first.",
+    "expectedOnLabel": "When",
+    "expectedOnPrompt": "When is it likely to happen?",
+    "usualReactionLabel": "What you usually do",
+    "usualReactionPrompt": "How do you normally react, honestly?",
+    "usualReactionPlaceholder": "e.g. I get short with him and leave the table early.",
+    "costLabel": "What it costs",
+    "costPrompt": "What does that reaction cost you, and them?",
+    "costPlaceholder": "e.g. The whole afternoon feels ruined, and Mum ends up upset.",
+    "chosenResponseLabel": "Your new response",
+    "chosenResponsePrompt": "Picture the moment. What do you say and do? Write it as a short scene.",
+    "chosenResponsePlaceholder": "e.g. I take a breath and say: \"I know you worry. Ask me one question about it and I'll answer properly.\" Then I ask about his week.",
+    "chosenResponseHint": "Two or three sentences. Say what you'll do, not what you'll avoid.",
+    "chosenResponseRequired": "Write a little more: what you'll say and do.",
+    "promiseLabel": "Your promise",
+    "promisePrompt": "In one line, what do you promise yourself for that moment?",
+    "promisePlaceholder": "e.g. On Sunday I'll answer Dad calmly and ask him one question back.",
+    "promiseHint": "Saving this adds it to Your promises, due on the date above.",
+    "promiseStatusText": "Promise: {{status}}",
+    "seePromiseButton": "See promise",
+    "delete": "Delete rehearsal"
+  },
+  "promiseStatus": {
+    "open": "Open",
+    "kept": "Kept",
+    "broken": "Broken",
+    "withdrawn": "Withdrawn"
+  },
+  "followUp": {
+    "legend": "Afterwards",
+    "happenedLabel": "Did it happen?",
+    "resultLabel": "How you responded",
+    "keptLabel": "Your promise",
+    "keptPrompt": "Did you keep the promise? This updates it in Your promises.",
+    "keptRequired": "Pick Kept or Broken.",
+    "learnedLabel": "What you learned",
+    "learnedPrompt": "What did you notice in the gap before you responded?",
+    "learnedPlaceholder": "e.g. The breath helped. Having a question ready did more.",
+    "saveButton": "Save"
+  },
+  "happened": {
+    "yes": "Yes",
+    "no": "Not yet"
+  },
+  "result": {
+    "chosen": "As I planned",
+    "partly": "Partly",
+    "reacted": "The old way"
+  },
+  "kept": {
+    "kept": "Kept",
+    "broken": "Broken"
+  },
+  "status": {
+    "planned": "Planned",
+    "due": "Ready to follow up",
+    "followedUp": "Followed up"
+  },
+  "checklist": {
+    "trigger": "Name a moment that's coming up",
+    "usual": "Write what you usually do and what it costs",
+    "scene": "Write your new response as a short scene",
+    "promise": "Promise yourself in one line, with a date"
+  },
+  "summary": {
+    "success": {
+      "one": "{{chosen}} of 1 went as planned",
+      "other": "{{chosen}} of {{count}} went as planned"
+    }
+  },
+  "guide": {
+    "inShort": "You'll pick one moment that's coming up, write what you usually do and what you'd rather do, then promise yourself. About ten minutes. After the moment passes, you'll come back and say how it went.",
+    "howTo": [
+      "Tap \"Add rehearsal\" and name the moment and when it's likely to happen.",
+      "Write honestly how you usually react, and what that costs you and others.",
+      "Write the response you'd rather give as a short scene: what you say, what you do.",
+      "Write a one-line promise to yourself. Saving it adds it to Your promises.",
+      "Once the date has passed, open the rehearsal and fill in Afterwards.",
+      "Tap \"Mark done\" once one rehearsal has all four parts."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Sunday lunch, when Dad brings up my job again.",
+        "done": true,
+        "fields": [
+          {
+            "label": "When",
+            "value": "Sunday"
+          },
+          {
+            "label": "What you usually do",
+            "value": "\"I get short with him and leave the table early.\""
+          },
+          {
+            "label": "What it costs",
+            "value": "\"The whole afternoon feels ruined, and Mum ends up upset.\""
+          },
+          {
+            "label": "Your new response",
+            "value": "\"I take a breath and say: “I know you worry. Ask me one question about it and I'll answer properly.” Then I ask about his week.\""
+          },
+          {
+            "label": "Your promise",
+            "value": "\"On Sunday I'll answer Dad calmly and ask him one question back.\""
+          }
+        ],
+        "sample": {
+          "trigger": "Sunday lunch, when Dad brings up my job again.",
+          "usualReaction": "I get short with him and leave the table early.",
+          "cost": "The whole afternoon feels ruined, and Mum ends up upset.",
+          "chosenResponse": "I take a breath and say: \"I know you worry. Ask me one question about it and I'll answer properly.\" Then I ask about his week.",
+          "promise": "On Sunday I'll answer Dad calmly and ask him one question back."
+        }
+      },
+      {
+        "kind": "card",
+        "title": "Sunday lunch, when Dad brings up my job again.",
+        "done": true,
+        "fields": [
+          {
+            "label": "Status",
+            "value": "Followed up"
+          },
+          {
+            "label": "Did it happen?",
+            "value": "Yes"
+          },
+          {
+            "label": "How you responded",
+            "value": "Partly"
+          },
+          {
+            "label": "Your promise",
+            "value": "Kept"
+          },
+          {
+            "label": "What you learned",
+            "value": "\"The breath helped. Having a question ready did more.\""
+          }
+        ]
+      }
+    ],
+    "afterwards": "Before the moment, read your scene once more. Afterwards, come back within a day and fill in what happened, even if it went the old way. Then rehearse the next one."
+  }
+}

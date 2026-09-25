@@ -1,0 +1,64 @@
+<app-exercise-page
+  [title]="'h1Rehearsal.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (isNewRehearsal() ? 'h1Rehearsal.editor.newTitle' : 'h1Rehearsal.editor.editTitle') | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h1Rehearsal.prompt.title' | transloco"
+    [prompt]="'h1Rehearsal.prompt.text' | transloco"
+    [gloss]="'h1Rehearsal.prompt.glossText' | transloco"
+    [chapterReference]="'h1Rehearsal.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h1Rehearsal.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAddRehearsal()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h1Rehearsal.list.addButton' | transloco }}
+  </button>
+  <!-- Ordered by date, soonest first (issue #55): the list keeps the page's order. -->
+  <app-exercise-list
+    initialSort="none"
+    [items]="items()"
+    [selectedId]="itemId()"
+    [searchLabel]="'h1Rehearsal.list.searchLabel' | transloco"
+    [emptyMessage]="'h1Rehearsal.list.empty' | transloco"
+    [noMatchMessage]="'h1Rehearsal.list.noMatch' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (deleteRequested)="onItemDeleted($event)"
+  />
+
+  <div editor>
+    @if (draft.selected(); as rehearsal) {
+      <app-rehearsal-item-form
+        [rehearsal]="rehearsal"
+        [promise]="promise()"
+        [followUpOpen]="followUpOpen()"
+        (changed)="onItemChanged(rehearsal.id, $event)"
+        (followUpSaved)="onFollowUpSaved(rehearsal.id, $event)"
+        (deleted)="onItemDeleted(rehearsal.id)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-rehearsal-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

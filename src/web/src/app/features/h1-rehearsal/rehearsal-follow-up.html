@@ -1,0 +1,94 @@
+<fieldset class="follow-up">
+  <legend class="part-heading">{{ 'h1Rehearsal.followUp.legend' | transloco }}</legend>
+
+  <div class="option-group">
+    <span class="option-label" id="happened-label">
+      {{ 'h1Rehearsal.followUp.happenedLabel' | transloco }}
+    </span>
+    <mat-radio-group
+      class="options"
+      aria-labelledby="happened-label"
+      [value]="draft().happened"
+      (change)="onHappenedChange($event.value)"
+    >
+      <mat-radio-button [value]="true">{{
+        'h1Rehearsal.happened.yes' | transloco
+      }}</mat-radio-button>
+      <mat-radio-button [value]="false">{{
+        'h1Rehearsal.happened.no' | transloco
+      }}</mat-radio-button>
+    </mat-radio-group>
+  </div>
+
+  @if (draft().happened) {
+    <div class="option-group">
+      <span class="option-label" id="result-label">
+        {{ 'h1Rehearsal.followUp.resultLabel' | transloco }}
+      </span>
+      <mat-radio-group
+        class="options"
+        aria-labelledby="result-label"
+        [value]="draft().result"
+        (change)="onResultChange($event.value)"
+      >
+        @for (result of results; track result) {
+          <mat-radio-button [value]="result">
+            {{ 'h1Rehearsal.result.' + result | transloco }}
+          </mat-radio-button>
+        }
+      </mat-radio-group>
+    </div>
+
+    <div class="option-group">
+      <span class="option-label" id="kept-label">
+        {{ 'h1Rehearsal.followUp.keptLabel' | transloco }}
+      </span>
+      <p class="field-prompt" id="kept-prompt">
+        {{ 'h1Rehearsal.followUp.keptPrompt' | transloco }}
+      </p>
+      <mat-radio-group
+        class="options"
+        aria-labelledby="kept-label"
+        required
+        [attr.aria-describedby]="showKeptError() ? 'kept-prompt kept-error' : 'kept-prompt'"
+        [value]="draft().kept"
+        (change)="onKeptChange($event.value)"
+      >
+        @for (kept of keptOptions; track kept) {
+          <mat-radio-button [value]="kept">{{
+            'h1Rehearsal.kept.' + kept | transloco
+          }}</mat-radio-button>
+        }
+      </mat-radio-group>
+      <!-- Not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+      @if (showKeptError()) {
+        <p id="kept-error" class="field-error" role="alert">
+          {{ 'h1Rehearsal.followUp.keptRequired' | transloco }}
+        </p>
+      }
+    </div>
+
+    <p class="field-prompt" id="learned-prompt">
+      {{ 'h1Rehearsal.followUp.learnedPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Rehearsal.followUp.learnedLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        aria-describedby="learned-prompt"
+        [placeholder]="'h1Rehearsal.followUp.learnedPlaceholder' | transloco"
+        [value]="draft().learned ?? ''"
+        (input)="onLearnedInput($event)"
+      ></textarea>
+    </mat-form-field>
+  }
+
+  @if (draft().happened !== undefined) {
+    <button mat-flat-button type="button" class="save-button" (click)="save()">
+      {{ 'h1Rehearsal.followUp.saveButton' | transloco }}
+    </button>
+  }
+</fieldset>
