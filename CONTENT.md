@@ -80,22 +80,22 @@ Apply the rules in this order and stop at the first one that matches:
 
 ### Glossary
 
-Use these words every time. The **English** column is the word the app uses. **فصحى** is for chrome (rows 1 and 3 of the boundary rules). **عامية** is for prose. When a book term appears in prose, it stays فصحى in «».
+Use these words every time. The owner confirmed every entry on 2026-09-25 (#229). The **English** column is the word the app uses. **فصحى** is for chrome (rows 1 and 3 of the boundary rules). **عامية** is for prose. When a book term appears in prose, it stays فصحى in «».
 
 | Term | English in the app | فصحى (chrome, book term) | عامية (prose) | Notes |
 |---|---|---|---|---|
 | paradigm | "how you see it", "lens"; book term *paradigm* once | إطار ذهني | العدسة اللي بتبص منها; «إطار ذهني» once | Book term, always فصحى |
-| script | "the pattern you learned at home"; book term *script* once | النص (book term), **owner to confirm** | العادة اللي أخدتها من بيتك | |
-| asset | "something that gives you value" | مورد, **owner to confirm** | حاجة ليها قيمة عندك, **owner to confirm** | The issue has "مورد?" |
-| over-used | Over-used | مُستخدَم أكثر من اللازم, **owner to confirm** | بتستخدمها زيادة عن اللزوم | Option label, so فصحى |
+| script | "the pattern you learned at home"; book term *script* once | النص (book term) | العادة اللي أخدتها من بيتك | |
+| asset | "something that gives you value" | مورد | حاجة ليها قيمة عندك | The issue has "مورد?" |
+| over-used | Over-used | مُستخدَم أكثر من اللازم | بتستخدمها زيادة عن اللزوم | Option label, so فصحى |
 | balanced | Balanced | متوازن | متوازنة | |
-| under-used | Under-used | مُستخدَم أقل من اللازم, **owner to confirm** | مش بتستخدمها كفاية | Option label, so فصحى |
+| under-used | Under-used | مُستخدَم أقل من اللازم | مش بتستخدمها كفاية | Option label, so فصحى |
 | quick fix | Quick fix; book term *technique* once | حل سريع; book term «أسلوب» | حل سريع | Merged slice, `step2` |
 | real change | Real change; book term *character* once | تغيير حقيقي; book term «شخصية» | تغيير حقيقي | Merged slice, `step2` |
 | done (state) | Done | تم | تم | `doneToggle.itemDone` |
-| mark done (button) | Mark done | تحديد كمكتمل, **owner to confirm** (now: وضع علامة تم) | دوس «<button text>» | Prose copies the button text exactly |
-| reopen (button) | Reopen | إعادة فتح, **owner to confirm** | افتحه تاني | Issue: "decide". Button is فصحى by rule 2 |
-| continue | Continue | متابعة, **owner to confirm** | كمّل | Issue: "decide". Button متابعة; prose كمّل, as in `guide.afterwards` |
+| mark done (button) | Mark done | تحديد كمكتمل | دوس «<button text>» | Prose copies the button text exactly |
+| reopen (button) | Reopen | إعادة فتح | افتحه تاني | Issue: "decide". Button is فصحى by rule 2 |
+| continue | Continue | متابعة | كمّل | Issue: "decide". Button متابعة; prose كمّل, as in `guide.afterwards` |
 
 ### Worked examples (from the merged Paradigms slice)
 
