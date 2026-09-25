@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
@@ -108,6 +109,20 @@ describe('Today (home, #220)', () => {
     expect(card?.getAttribute('href')).toBe('/habits/h2/roles');
     // Not started: no progress line.
     expect(card?.querySelector('.continue-card__detail')).toBeNull();
+  });
+
+  it('renders the Continue detail and progress counts in Eastern Arabic-Indic digits (#229 F-F2)', async () => {
+    const fixture = await renderShellAt('/');
+    const host = fixture.nativeElement as HTMLElement;
+
+    TestBed.inject(DocumentStore).update('settings', (settings) => ({
+      ...(settings as object),
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    expect(text(host.querySelector('app-continue-card .continue-card__detail'))).toMatch(/٢.*٣/);
+    expect(text(host.querySelector('.today-progress .habit-progress-count'))).toMatch(/٠.*٢/);
   });
 
   it('keeps the paragraph hidden after a reopen, since a completion record still exists', async () => {

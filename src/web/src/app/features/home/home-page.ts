@@ -20,6 +20,9 @@ import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { habitListLayout } from '../../core/habits/habit-list.logic';
 import { HABITS, HabitId } from '../../core/habits/habits';
+import { LanguageStore } from '../../core/i18n/language-store';
+import { AppNumberPipe } from '../../core/i18n/locale.pipe';
+import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { CLOCK } from '../../core/time/clock';
 import { exerciseStatusSignal } from '../../shared/exercise-kit/exercise-hub-status';
@@ -34,7 +37,7 @@ import { exerciseStartedSignal } from '../../shared/exercise-kit/exercise-starte
 import { ExportReminderBanner } from '../../shared/ui/export-reminder-banner/export-reminder-banner';
 import { HabitProgress } from '../../shared/ui/habit-progress/habit-progress';
 import { ContinueCard } from './continue-card';
-import { todayContinueTarget } from './today.logic';
+import { localizedCountParams, todayContinueTarget } from './today.logic';
 
 /** What the Continue card says under its habit: nothing until the exercise is started, then its own
  * in-progress text ("2 of 3 steps"), or a generic "In progress" when it registers none. */
@@ -54,6 +57,7 @@ type ContinueStatus = ExerciseHubStatus | 'started' | null;
     ContinueCard,
     TranslocoPipe,
     AppPluralPipe,
+    AppNumberPipe,
   ],
   templateUrl: './home-page.html',
   styleUrl: './home-page.scss',
@@ -68,6 +72,7 @@ export class HomePage {
   private readonly clock = inject(CLOCK);
   private readonly progress = inject(ExerciseProgress);
   private readonly injector = inject(Injector);
+  private readonly languageStore = inject(LanguageStore);
 
   // `now` is read once per computation, not on a timer: a banner that becomes due while the user
   // is already on this page can wait for the next edit, dismissal or navigation back here to
@@ -97,6 +102,16 @@ export class HomePage {
   protected readonly continueStatus = computed<ContinueStatus>(() => {
     const target = this.continueTarget();
     return target ? this.statusFor(target.exercise)() : null;
+  });
+
+  /** The Continue card's status params with the user's numerals ("٢ من ٣"). */
+  protected readonly continueDetailParams = computed(() => {
+    const status = this.continueStatus();
+    if (status === null || status === 'started') {
+      return {};
+    }
+    const locale = intlLocaleFor(this.languageStore.language(), this.languageStore.numerals());
+    return localizedCountParams(status.count, status.params ?? {}, locale);
   });
 
   /** The habits list's own split (#219): available habits, then the next one; never all nine.
