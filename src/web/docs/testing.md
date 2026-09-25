@@ -103,3 +103,13 @@ Add `e2e/<feature>.spec.ts` importing `test`/`expect` from `./fixtures` instead 
 `@playwright/test` directly, so the feature gets `seedDocument`/`setLanguage`/`goOffline` for
 free. It runs against all four projects automatically — no changes to `playwright.config.ts`
 should be needed. Add an `AxeBuilder` scan (see `smoke.spec.ts`) for any newly visited page.
+
+Two traps that cost #218 three red-CI rounds:
+
+- **Wait before you measure.** `locator.count()`, `textContent()` and `evaluate()` don't wait,
+  so on a lazy route they can run before the page and its translations have rendered. Wait on
+  `expect(locator.first()).toBeVisible()` (or `not.toBeEmpty()`) first.
+- **CI fonts are wider than macOS.** CI runs Playwright on Linux, where text renders a few
+  percent wider than on a Mac: a title that measured 244 px locally was 251 px in CI. A local pass
+  on a width or above-the-fold check proves little without margin, so design for at least 10%
+  and put the measured numbers in the round comment.
