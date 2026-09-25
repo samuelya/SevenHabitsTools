@@ -124,6 +124,14 @@
         "other": "{{count}} of {{total}} steps"
       }
     },
+    "h1-circle": {
+      "title": "Sort what you can change",
+      "shortTitle": "Your influence",
+      "concernCount": {
+        "one": "1 concern",
+        "other": "{{count}} concerns"
+      }
+    },
     "h1-commitments": {
       "title": "Make small promises and keep them",
       "shortTitle": "Your promises",

@@ -1,0 +1,191 @@
+<form class="circle-item-form">
+  <p class="field-prompt" id="title-prompt">{{ 'h1Circle.form.titlePrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Circle.form.titleLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #titleField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="2"
+      cdkAutosizeMaxRows="8"
+      required
+      [placeholder]="'h1Circle.form.titlePlaceholder' | transloco"
+      [value]="concern().title"
+      [attr.aria-describedby]="
+        isTouched('title') && blank(concern().title) ? 'title-prompt title-error' : 'title-prompt'
+      "
+      (input)="onTextInput('title', $event)"
+      (blur)="touch('title')"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+  @if (isTouched('title') && blank(concern().title)) {
+    <p id="title-error" class="field-error" role="alert">
+      {{ 'h1Circle.form.titleRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="option-group">
+    <legend id="control-legend">{{ 'h1Circle.form.controlLabel' | transloco }}</legend>
+    <mat-radio-group
+      class="control-options"
+      aria-labelledby="control-legend"
+      [value]="concern().control"
+      (change)="onControlChange($event.value)"
+    >
+      @for (control of controls; track control) {
+        <div class="control-option">
+          <mat-radio-button [value]="control" [attr.aria-describedby]="'control-hint-' + control">
+            {{ 'h1Circle.control.' + control | transloco }}
+          </mat-radio-button>
+          <p class="control-hint" [id]="'control-hint-' + control">
+            {{ 'h1Circle.controlHint.' + control | transloco }}
+          </p>
+        </div>
+      }
+    </mat-radio-group>
+  </fieldset>
+
+  <p class="field-prompt" id="have-prompt">{{ 'h1Circle.form.havePrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Circle.form.haveLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      aria-describedby="have-prompt"
+      [placeholder]="'h1Circle.form.havePlaceholder' | transloco"
+      [value]="concern().have ?? ''"
+      (input)="onTextInput('have', $event)"
+    />
+  </mat-form-field>
+
+  <p class="field-prompt" id="be-prompt">{{ 'h1Circle.form.bePrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h1Circle.form.beLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      aria-describedby="be-prompt"
+      [placeholder]="'h1Circle.form.bePlaceholder' | transloco"
+      [value]="concern().be ?? ''"
+      (input)="onTextInput('be', $event)"
+    />
+  </mat-form-field>
+
+  @if (branchA()) {
+    <p class="field-prompt" id="first-step-prompt">
+      {{ 'h1Circle.form.firstStepPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Circle.form.firstStepLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        required
+        [placeholder]="'h1Circle.form.firstStepPlaceholder' | transloco"
+        [value]="concern().firstStep ?? ''"
+        [attr.aria-describedby]="
+          isTouched('firstStep') && blank(concern().firstStep)
+            ? 'first-step-prompt first-step-error'
+            : 'first-step-prompt'
+        "
+        (input)="onTextInput('firstStep', $event)"
+        (blur)="touch('firstStep')"
+      ></textarea>
+    </mat-form-field>
+    @if (isTouched('firstStep') && blank(concern().firstStep)) {
+      <p id="first-step-error" class="field-error" role="alert">
+        {{ 'h1Circle.form.firstStepRequired' | transloco }}
+      </p>
+    }
+
+    <mat-form-field appearance="outline" class="field date-field">
+      <mat-label>{{ 'h1Circle.form.dueDateLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        #dueInput
+        autocomplete="off"
+        [matDatepicker]="duePicker"
+        [value]="dueDate()"
+        (dateChange)="onDueDateChange($event, dueInput)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="duePicker" />
+      <mat-datepicker #duePicker />
+    </mat-form-field>
+
+    <div class="promise" aria-live="polite">
+      @if (showMakePromise()) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="make-promise-button"
+          (click)="promiseRequested.emit()"
+        >
+          <mat-icon aria-hidden="true">handshake</mat-icon>
+          {{ 'h1Circle.form.makePromiseButton' | transloco }}
+        </button>
+      } @else if (promise(); as promise) {
+        <p class="promise-status">
+          {{
+            'h1Circle.form.promiseStatusText'
+              | transloco: { status: ('h1Circle.promiseStatus.' + promise.status | transloco) }
+          }}
+        </p>
+        <a mat-button class="see-promise-link" [routerLink]="promise.link">
+          {{ 'h1Circle.form.seePromiseButton' | transloco }}
+        </a>
+      }
+    </div>
+  } @else {
+    <p class="field-prompt" id="let-go-prompt">{{ 'h1Circle.form.letGoPrompt' | transloco }}</p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h1Circle.form.letGoLabel' | transloco }}</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        cdkAutosizeMinRows="2"
+        cdkAutosizeMaxRows="8"
+        required
+        [placeholder]="'h1Circle.form.letGoPlaceholder' | transloco"
+        [value]="concern().letGoNote ?? ''"
+        [attr.aria-describedby]="
+          isTouched('letGoNote') && blank(concern().letGoNote)
+            ? 'let-go-prompt let-go-error'
+            : 'let-go-prompt'
+        "
+        (input)="onTextInput('letGoNote', $event)"
+        (blur)="touch('letGoNote')"
+      ></textarea>
+    </mat-form-field>
+    @if (isTouched('letGoNote') && blank(concern().letGoNote)) {
+      <p id="let-go-error" class="field-error" role="alert">
+        {{ 'h1Circle.form.letGoRequired' | transloco }}
+      </p>
+    }
+  }
+
+  <fieldset class="option-group">
+    <legend>{{ 'h1Circle.form.statusLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="concern().status"
+      [attr.aria-label]="'h1Circle.form.statusLabel' | transloco"
+      (change)="onStatusChange($event.value)"
+    >
+      @for (status of statuses(); track status) {
+        <mat-button-toggle [value]="status">{{
+          'h1Circle.status.' + status | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h1Circle.form.delete' | transloco }}
+  </button>
+</form>

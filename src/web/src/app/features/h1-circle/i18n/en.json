@@ -1,0 +1,163 @@
+{
+  "prompt": {
+    "title": "Sort what you can change",
+    "chapterReference": "Habit 1: Be Proactive",
+    "text": "Write down what's bothering you. For each one, decide how much of it is up to you, then find the first step you can take yourself.",
+    "glossText": "The book calls what you can affect your Circle of Influence, and everything you worry about your Circle of Concern.",
+    "whyItMatters": "Worry spends energy on things you can't touch. Sorting your concerns shows where your effort pays off. Every step you take there makes that area a little bigger."
+  },
+  "list": {
+    "addButton": "Add concern",
+    "searchLabel": "Search concerns",
+    "empty": "Nothing here yet. Add the first thing that's been on your mind.",
+    "noMatch": "No concerns match your search.",
+    "deleted": "Concern deleted",
+    "undo": "Undo",
+    "example": "Example"
+  },
+  "group": {
+    "influenceLegend": "Things you can affect",
+    "concernLegend": "Things you can't control"
+  },
+  "editor": {
+    "newTitle": "New concern",
+    "editTitle": "Edit concern"
+  },
+  "form": {
+    "titleLabel": "The concern",
+    "titlePrompt": "What's bothering you right now?",
+    "titlePlaceholder": "e.g. My manager keeps changing the deadline.",
+    "titleRequired": "Write the concern first.",
+    "controlLabel": "How much is up to you",
+    "haveLabel": "What you wish you had",
+    "havePrompt": "Finish this: things would be fine if only I had…",
+    "havePlaceholder": "e.g. a manager who plans ahead.",
+    "beLabel": "What you could be",
+    "bePrompt": "Now finish this: I could be more…",
+    "bePlaceholder": "e.g. clear about what a change costs, in writing, each time.",
+    "firstStepLabel": "First step",
+    "firstStepPrompt": "What's the first small thing you can do, this week?",
+    "firstStepPlaceholder": "e.g. Ask for a 10-minute chat about how deadlines get set.",
+    "firstStepRequired": "Write a first step you can take yourself.",
+    "dueDateLabel": "By when",
+    "letGoLabel": "Letting it go",
+    "letGoPrompt": "It's not yours to fix. What will you do with the energy instead?",
+    "letGoPlaceholder": "e.g. Leave ten minutes earlier and use the wait to read.",
+    "letGoRequired": "Write one line about letting it go.",
+    "statusLabel": "Status",
+    "makePromiseButton": "Make it a promise",
+    "promiseStatusText": "Promise: {{status}}",
+    "seePromiseButton": "See promise",
+    "delete": "Delete concern"
+  },
+  "control": {
+    "direct": "Up to me",
+    "indirect": "Up to others too",
+    "none": "Out of anyone's hands"
+  },
+  "controlHint": {
+    "direct": "It's about what you do. Change your habit or your approach.",
+    "indirect": "It depends on someone else. Work on how you ask, listen and set an example.",
+    "none": "Nobody can change it: the past, the weather, how others are. Choose how you'll live with it."
+  },
+  "status": {
+    "open": "Open",
+    "stepTaken": "Step taken",
+    "sorted": "Sorted",
+    "letGo": "Let go"
+  },
+  "promiseStatus": {
+    "open": "Open",
+    "kept": "Kept",
+    "broken": "Broken",
+    "withdrawn": "Withdrawn"
+  },
+  "checklist": {
+    "concern": "Add something that's on your mind",
+    "control": "Say how much of it is up to you",
+    "step": "Write a first step, or a line on letting it go",
+    "taken": "Take the step and mark it, or mark it Let go"
+  },
+  "summary": {
+    "withStep": {
+      "one": "1 of {{total}} has a first step",
+      "other": "{{count}} of {{total}} have a first step"
+    }
+  },
+  "guide": {
+    "inShort": "You'll list what's bothering you and sort each item: up to you, up to others too, or out of anyone's hands. For the first two, you'll pick a first step. For the third, you'll decide to let it go. About ten minutes.",
+    "howTo": [
+      "Tap \"Add concern\" and write what's on your mind, in one line.",
+      "Pick how much of it is up to you. Read the short note under each option.",
+      "Optional: write what you wish you had, then what you could be instead.",
+      "If it's up to you or others: write the first small step, and a date.",
+      "If nobody can change it: write one line on how you'll let it go.",
+      "Tap \"Make it a promise\" to track the step in Your promises. Mark the step taken when you've done it."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "My manager keeps changing the deadline.",
+        "done": true,
+        "fields": [
+          {
+            "label": "How much is up to you",
+            "value": "Up to others too"
+          },
+          {
+            "label": "What you wish you had",
+            "value": "\"a manager who plans ahead.\""
+          },
+          {
+            "label": "What you could be",
+            "value": "\"clear about what a change costs, in writing, each time.\""
+          },
+          {
+            "label": "First step",
+            "value": "\"Ask for a 10-minute chat about how deadlines get set.\""
+          },
+          {
+            "label": "By when",
+            "value": "Thursday"
+          },
+          {
+            "label": "Status",
+            "value": "Step taken"
+          }
+        ],
+        "sample": {
+          "title": "My manager keeps changing the deadline.",
+          "control": "indirect",
+          "have": "a manager who plans ahead.",
+          "be": "clear about what a change costs, in writing, each time.",
+          "firstStep": "Ask for a 10-minute chat about how deadlines get set."
+        }
+      },
+      {
+        "kind": "card",
+        "title": "The bus is always late in winter.",
+        "done": true,
+        "fields": [
+          {
+            "label": "How much is up to you",
+            "value": "Out of anyone's hands"
+          },
+          {
+            "label": "Letting it go",
+            "value": "\"Leave ten minutes earlier and use the wait to read.\""
+          },
+          {
+            "label": "Status",
+            "value": "Let go"
+          }
+        ],
+        "sample": {
+          "title": "The bus is always late in winter.",
+          "control": "none",
+          "letGoNote": "Leave ten minutes earlier and use the wait to read."
+        }
+      }
+    ],
+    "afterwards": "Take the first step this week, then come back and mark it. Notice how you feel about the concern afterwards. When a new worry shows up, sort it here before you spend an evening on it."
+  }
+}

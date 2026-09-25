@@ -31,6 +31,10 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     loadChildren: () => import('./features/paradigms-perception/perception.routes'),
   },
   {
+    path: 'habits/h1/circle',
+    loadChildren: () => import('./features/h1-circle/circle.routes'),
+  },
+  {
     path: 'habits/h1/commitments',
     loadChildren: () => import('./features/h1-commitments/commitments.routes'),
   },

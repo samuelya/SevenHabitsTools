@@ -144,6 +144,18 @@
         "other": "الخطوات المنجزة: {{count}} من {{total}}"
       }
     },
+    "h1-circle": {
+      "title": "افصل ما يمكنك تغييره",
+      "shortTitle": "دائرة تأثيرك",
+      "concernCount": {
+        "zero": "لا شواغل",
+        "one": "شاغل واحد",
+        "two": "شاغلان",
+        "few": "{{count}} شواغل",
+        "many": "{{count}} شاغلًا",
+        "other": "{{count}} شاغل"
+      }
+    },
     "h1-commitments": {
       "title": "اصنع وعودًا صغيرة والتزم بها",
       "shortTitle": "وعودك",

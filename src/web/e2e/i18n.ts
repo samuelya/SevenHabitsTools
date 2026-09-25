@@ -21,6 +21,7 @@ const SCOPES = {
   paradigmsTeach: 'src/app/features/paradigms-teach/i18n',
   paradigmsPerception: 'src/app/features/paradigms-perception/i18n',
   h1Commitments: 'src/app/features/h1-commitments/i18n',
+  h1Circle: 'src/app/features/h1-circle/i18n',
 } as const;
 
 export type Scope = keyof typeof SCOPES;
