@@ -1,0 +1,7 @@
+<mat-card class="circle-summary" appearance="outlined">
+  <mat-card-content>
+    <p class="count">
+      {{ 'h1Circle.summary.withStep' | appPlural: summary().withStep : { total: summary().total } }}
+    </p>
+  </mat-card-content>
+</mat-card>

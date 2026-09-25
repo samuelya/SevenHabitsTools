@@ -1,0 +1,99 @@
+<app-exercise-page
+  [title]="'h1Circle.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (isNewConcern() ? 'h1Circle.editor.newTitle' : 'h1Circle.editor.editTitle') | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h1Circle.prompt.title' | transloco"
+    [prompt]="'h1Circle.prompt.text' | transloco"
+    [gloss]="'h1Circle.prompt.glossText' | transloco"
+    [chapterReference]="'h1Circle.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h1Circle.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAddConcern()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h1Circle.list.addButton' | transloco }}
+  </button>
+
+  <!-- Two lists, one per group (lead decision on #53); a group with no items shows nothing, and
+       with no concerns at all a single list shows the empty state. -->
+  @if (concerns().length === 0) {
+    <app-exercise-list
+      [items]="[]"
+      [searchable]="false"
+      [searchLabel]="'h1Circle.list.searchLabel' | transloco"
+      [emptyMessage]="'h1Circle.list.empty' | transloco"
+    />
+  } @else {
+    @if (affectItems().length > 0) {
+      <section class="group" aria-labelledby="group-affect">
+        <h2 id="group-affect" class="group-heading">
+          {{ 'h1Circle.group.influenceLegend' | transloco }}
+        </h2>
+        <app-exercise-list
+          [items]="affectItems()"
+          [selectedId]="itemId()"
+          [searchable]="false"
+          [searchLabel]="'h1Circle.list.searchLabel' | transloco"
+          [emptyMessage]="'h1Circle.list.empty' | transloco"
+          [noMatchMessage]="'h1Circle.list.noMatch' | transloco"
+          [deletable]="true"
+          (itemSelected)="select($event)"
+          (deleteRequested)="onItemDeleted($event)"
+        />
+      </section>
+    }
+    @if (cannotControlItems().length > 0) {
+      <section class="group" aria-labelledby="group-cannot-control">
+        <h2 id="group-cannot-control" class="group-heading">
+          {{ 'h1Circle.group.concernLegend' | transloco }}
+        </h2>
+        <app-exercise-list
+          [items]="cannotControlItems()"
+          [selectedId]="itemId()"
+          [searchable]="false"
+          [searchLabel]="'h1Circle.list.searchLabel' | transloco"
+          [emptyMessage]="'h1Circle.list.empty' | transloco"
+          [noMatchMessage]="'h1Circle.list.noMatch' | transloco"
+          [deletable]="true"
+          (itemSelected)="select($event)"
+          (deleteRequested)="onItemDeleted($event)"
+        />
+      </section>
+    }
+  }
+
+  <div editor>
+    @if (draft.selected(); as concern) {
+      <app-circle-item-form
+        [concern]="concern"
+        [promise]="promise()"
+        (changed)="onItemChanged(concern.id, $event)"
+        (deleted)="onItemDeleted(concern.id)"
+        (promiseRequested)="onPromiseRequested(concern)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-circle-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>
