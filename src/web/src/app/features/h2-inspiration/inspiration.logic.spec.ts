@@ -189,7 +189,7 @@ describe('rows', () => {
     });
   });
 
-  it('shows the line, kind and source, the done check and the favourite star', () => {
+  it('shows the line, its source, the kind chip, the done check and the favourite star', () => {
     const row = toListItem(
       item('a', {
         text: 'Two\nlines',
@@ -203,7 +203,8 @@ describe('rows', () => {
     expect(row).toEqual({
       id: 'a',
       title: 'Two lines',
-      subtitle: 'Mine · Car',
+      subtitle: 'Car',
+      chips: [{ label: 'Mine' }],
       done: true,
       toggle: {
         pressed: true,
@@ -217,9 +218,9 @@ describe('rows', () => {
 
   it('marks a sample with an Example chip and never as done', () => {
     const row = toListItem(item('s', { sample: true, tags: ['x'] }), LABELS);
-    expect(row.chips).toEqual([{ label: 'Example' }]);
+    expect(row.chips).toEqual([{ label: 'Example' }, { label: 'Heard' }]);
     expect(row.done).toBe(false);
-    expect(row.subtitle).toBe('Heard');
+    expect(row.subtitle).toBeUndefined();
     expect(row.toggle?.pressed).toBe(false);
     expect(row.toggle?.hint).toBe('Favourite');
   });

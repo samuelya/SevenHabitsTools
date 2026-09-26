@@ -259,11 +259,11 @@ describe('InspirationPage', () => {
     expect(stored()[0].deletedAt).toBeUndefined();
   });
 
-  it('follows a language switch in the row subtitle', async () => {
+  it("follows a language switch in the row's kind chip", async () => {
     const { harness } = await setUp([item('a', { kind: 'idea' })]);
     await settle(harness);
     const subtitle = () =>
-      host(harness).querySelector('.exercise-list__item [matListItemLine]')?.textContent?.trim();
+      host(harness).querySelector('.exercise-list__item .exercise-list__chip')?.textContent?.trim();
     expect(subtitle()).toBe('An idea to try');
     TestBed.inject(TranslocoService).setActiveLang('ar');
     await settle(harness);

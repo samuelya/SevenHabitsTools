@@ -251,18 +251,18 @@ export function labelsFrom(
   };
 }
 
-/** A row: the line as title (the list clamps it at two lines), kind and source as subtitle, an
- * "Example" chip on a sample, and the favourite star at the inline end. */
+/** A row: the line as title, its source as subtitle, and the kind as a chip (after "Example" on a
+ * sample), since a row with chips lets the title wrap to two lines (issue #225); the favourite star
+ * sits at the inline end. */
 export function toListItem(item: Inspiration, labels: InspirationLabels): ExerciseListItem {
-  const subtitle = [labels.kind[item.kind], item.source?.trim() ?? '']
-    .filter((part) => part !== '')
-    .join(' · ');
+  const subtitle = item.source?.trim() ?? '';
+  const kind = { label: labels.kind[item.kind] };
   const pressed = item.favourite === true;
   return {
     id: item.id,
     title: item.text.trim().replace(/\s+/g, ' '),
     ...(subtitle ? { subtitle } : {}),
-    ...(item.sample ? { chips: [{ label: labels.example }] } : {}),
+    chips: item.sample ? [{ label: labels.example }, kind] : [kind],
     done: !item.sample && isItemComplete(item),
     toggle: {
       pressed,
