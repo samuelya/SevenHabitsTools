@@ -27,7 +27,9 @@
           [value]="kind() ?? all"
           (change)="onKindChange($event)"
         >
-          <mat-chip-option [value]="all">{{ 'h2Mission.panel.filterAll' | transloco }}</mat-chip-option>
+          <mat-chip-option [value]="all">{{
+            'h2Mission.panel.filterAll' | transloco
+          }}</mat-chip-option>
           @for (kind of kinds(); track kind) {
             <mat-chip-option [value]="kind">{{
               'h2Mission.panel.kind.' + kind | transloco

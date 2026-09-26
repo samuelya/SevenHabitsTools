@@ -35,6 +35,8 @@ import centresEn from '../features/h2-centres/i18n/en.json';
 import centresAr from '../features/h2-centres/i18n/ar.json';
 import inspirationEn from '../features/h2-inspiration/i18n/en.json';
 import inspirationAr from '../features/h2-inspiration/i18n/ar.json';
+import missionEn from '../features/h2-mission/i18n/en.json';
+import missionAr from '../features/h2-mission/i18n/ar.json';
 import circleEn from '../features/h1-circle/i18n/en.json';
 import circleAr from '../features/h1-circle/i18n/ar.json';
 import rehearsalEn from '../features/h1-rehearsal/i18n/en.json';
@@ -80,6 +82,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'h2-centres/ar': centresAr,
   'h2-inspiration/en': inspirationEn,
   'h2-inspiration/ar': inspirationAr,
+  'h2-mission/en': missionEn,
+  'h2-mission/ar': missionAr,
   'h1-circle/en': circleEn,
   'h1-circle/ar': circleAr,
   'h1-rehearsal/en': rehearsalEn,

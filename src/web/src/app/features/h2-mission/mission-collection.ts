@@ -15,12 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { MissionInputItem } from '../../shared/mission-inputs/mission-inputs';
-import {
-  CollectionKind,
-  collectionKinds,
-  collectionTags,
-  filterCollection,
-} from './mission.logic';
+import { CollectionKind, collectionKinds, collectionTags, filterCollection } from './mission.logic';
 
 /** The "All" chip's value: a chip listbox needs a value, the filter stores `null`. */
 const ALL = '';

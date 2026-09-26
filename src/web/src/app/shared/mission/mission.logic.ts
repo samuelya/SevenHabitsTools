@@ -101,7 +101,9 @@ export function editMission(
   now: Date,
 ): Mission | null {
   if (mission === null) {
-    return isDraftWorthSaving(fields) ? newRecord({ ...blankMissionFields(), ...fields }, now) : null;
+    return isDraftWorthSaving(fields)
+      ? newRecord({ ...blankMissionFields(), ...fields }, now)
+      : null;
   }
   const changed = (Object.keys(fields) as (keyof MissionFields)[]).some(
     (key) => !Object.is(fields[key], mission[key]),
@@ -170,12 +172,7 @@ export function canSaveVersion(mission: Mission | null): boolean {
 }
 
 /** `mission` with the draft appended as a new version; the same reference when it can't be. */
-export function withVersion(
-  mission: Mission,
-  id: string,
-  now: Date,
-  note?: string,
-): Mission {
+export function withVersion(mission: Mission, id: string, now: Date, note?: string): Mission {
   if (!canSaveVersion(mission)) {
     return mission;
   }
@@ -262,4 +259,3 @@ export function hubStatus(mission: Mission | null): ExerciseHubStatus | null {
   const words = wordCount(mission?.draft ?? '');
   return words > 0 ? { key: 'habits.exercises.h2-mission.draftWords', count: words } : null;
 }
-

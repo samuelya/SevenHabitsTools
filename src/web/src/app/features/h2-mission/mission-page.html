@@ -129,8 +129,12 @@
               [value]="record()?.checklist?.[key]"
               (change)="onCheck(key, $event.value)"
             >
-              <mat-button-toggle [value]="true">{{ 'h2Mission.review.yes' | transloco }}</mat-button-toggle>
-              <mat-button-toggle [value]="false">{{ 'h2Mission.review.no' | transloco }}</mat-button-toggle>
+              <mat-button-toggle [value]="true">{{
+                'h2Mission.review.yes' | transloco
+              }}</mat-button-toggle>
+              <mat-button-toggle [value]="false">{{
+                'h2Mission.review.no' | transloco
+              }}</mat-button-toggle>
             </mat-button-toggle-group>
           </div>
         }

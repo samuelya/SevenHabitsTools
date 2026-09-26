@@ -258,4 +258,46 @@ describe('ReflectionEditor', () => {
     vi.advanceTimersByTime(REFLECTION_DEBOUNCE_MS);
     expect(emitted).toEqual(['a', 'ab']);
   });
+
+  describe('announce() and scrollToEnd() (issue #61)', () => {
+    function status(fixture: { nativeElement: HTMLElement }): string {
+      return (fixture.nativeElement.querySelector('.status') as HTMLElement).textContent!.trim();
+    }
+
+    it('shows a caller message in the live status line until the next keystroke', () => {
+      const fixture = setUp('Draft', null, true);
+      fixture.componentInstance.announce('Added to the end of your draft.');
+      fixture.detectChanges();
+      expect(status(fixture)).toBe('Added to the end of your draft.');
+      expect(fixture.nativeElement.querySelector('.status').getAttribute('aria-live')).toBe(
+        'polite',
+      );
+
+      typeInto(fixture, 'Draft!');
+      fixture.detectChanges();
+      expect(status(fixture)).toBe('Saving…');
+    });
+
+    it('re-announces the same message by clearing it for one render', () => {
+      const fixture = setUp('Draft', null, true);
+      const editor = fixture.componentInstance;
+      editor.announce('Added.');
+      fixture.detectChanges();
+      editor.announce('Added.');
+      fixture.detectChanges();
+      expect(status(fixture)).toBe('Added.');
+    });
+
+    it('scrolls the field to its end after the next render', () => {
+      const fixture = setUp('Draft', null, true);
+      const field = textarea(fixture);
+      // jsdom does no layout: give the field a height and a plain, writable scroll position.
+      Object.defineProperty(field, 'scrollHeight', { configurable: true, value: 900 });
+      Object.defineProperty(field, 'scrollTop', { configurable: true, writable: true, value: 0 });
+      fixture.componentInstance.scrollToEnd();
+      fixture.detectChanges();
+      TestBed.tick();
+      expect(field.scrollTop).toBe(900);
+    });
+  });
 });
