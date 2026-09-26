@@ -8,6 +8,7 @@ import { of } from 'rxjs';
 import type { Mock } from 'vitest';
 import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
+import { AppSnackbar } from '../../core/layout/app-snackbar';
 import { CLOCK } from '../../core/time/clock';
 // Every model and mission input, as the app registers them (the feeders are other features).
 import '../../model-registry';
@@ -22,6 +23,8 @@ const rec = (id: string, fields: object) => ({ id, createdAt: T, updatedAt: T, .
 
 type CopyMock = Mock<(text: string) => boolean>;
 
+const snackbarOpen = vi.fn(async () => undefined);
+
 interface Seed {
   readonly values?: readonly string[];
   readonly inspirations?: readonly object[];
@@ -33,6 +36,7 @@ async function setUp(
 ): Promise<{ fixture: ComponentFixture<MissionPage>; host: HTMLElement; copy: CopyMock }> {
   const state: BreakpointState = { matches: handset, breakpoints: {} };
   const copy: CopyMock = vi.fn<(text: string) => boolean>(() => true);
+  snackbarOpen.mockClear();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -42,6 +46,8 @@ async function setUp(
       { provide: CLOCK, useValue: { now: () => new Date('2026-09-26T09:00:00.000Z') } },
       { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
       { provide: Clipboard, useValue: { copy } },
+      // Stubbed: the real one lazy-loads MatSnackBar, which lands after this test's injector is gone.
+      { provide: AppSnackbar, useValue: { open: snackbarOpen } },
       {
         provide: BreakpointObserver,
         useValue: { observe: () => of(state), isMatched: () => handset },
@@ -206,6 +212,7 @@ describe('MissionPage', () => {
 
     buttonsWithText(host, 'Copy statement')[0].click();
     expect(copy).toHaveBeenCalledWith('I keep my word.');
+    expect(snackbarOpen).toHaveBeenCalledWith('Copied.', '', { duration: 3000 });
   });
 
   it('stores the review answers', async () => {
