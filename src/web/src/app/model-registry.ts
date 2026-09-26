@@ -16,6 +16,8 @@ import './features/h1-circle/circle.model';
 import './features/h1-rehearsal/rehearsal.model';
 import './features/h1-challenge/challenge.model';
 import './features/h1-language/language.model';
+import './features/h2-roles/roles.model';
 import './shared/exercise-kit/exercise-kit.model';
 // Shared entities (`shared.*`): registered here, eagerly, not by the features that use them.
 import './shared/commitments/commitments.model';
+import './shared/roles/roles.model';

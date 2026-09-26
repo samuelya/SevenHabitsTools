@@ -212,6 +212,20 @@ describe('ExerciseList', () => {
     expect(second.classList).not.toContain('exercise-list__item--chips');
   });
 
+  it('paints a decorative swatch and shows a row icon with its hidden label (issue #59)', () => {
+    const fixture = setUp([
+      { id: 'a', title: 'Dad', swatch: 'rgb(21, 101, 192)' },
+      { id: 'b', title: 'Sharpen the Saw', icon: 'lock', iconLabel: 'Built-in' },
+    ]);
+    const [first, second] = itemButtons(fixture);
+    const swatch = first.querySelector<HTMLElement>('.exercise-list__swatch');
+    expect(swatch?.getAttribute('aria-hidden')).toBe('true');
+    expect(swatch?.style.backgroundColor).toBe('rgb(21, 101, 192)');
+    expect(second.querySelector('.exercise-list__swatch')).toBeNull();
+    expect(second.querySelector('mat-icon')?.textContent?.trim()).toBe('lock');
+    expect(second.querySelector('.visually-hidden')?.textContent).toContain('Built-in');
+  });
+
   it('renders no bin button when deletable is left at its default (issue #203)', () => {
     const fixture = setUp();
 

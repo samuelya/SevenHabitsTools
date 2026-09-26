@@ -50,7 +50,8 @@
     "devKit": "Exercise UI kit",
     "h1-rehearsal": "Rehearse it",
     "h1-challenge": "30-day test",
-    "h1-language": "Your words"
+    "h1-language": "Your words",
+    "h2-roles": "Your roles"
   },
   "language": {
     "label": "Language",

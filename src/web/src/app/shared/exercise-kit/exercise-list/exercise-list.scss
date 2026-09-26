@@ -169,3 +169,13 @@
   border-color: var(--mat-sys-error, darkred);
   color: var(--mat-sys-error, darkred);
 }
+
+// A role's colour (issue #59): decorative, the row's text carries the meaning.
+.exercise-list__swatch {
+  display: inline-block;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  margin-inline-end: 0.5rem;
+  border-radius: 50%;
+  vertical-align: baseline;
+}

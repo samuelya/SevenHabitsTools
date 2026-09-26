@@ -21,26 +21,26 @@ import {
 import { configureApp, renderShellAt } from '../../testing/app-test-setup';
 import { ComingSoonExercise, HABIT_HUB_COMING_SOON } from './habit-hub-coming-soon';
 
-const H2_MISSION: ExerciseRegistryEntry = {
-  exerciseId: 'h2-mission',
+const H2_TEST_A: ExerciseRegistryEntry = {
+  exerciseId: 'h2-test-a',
   habit: 'h2',
   titleKey: 'habits.paradigms.title',
   shortTitleKey: 'titles.about',
   icon: 'flag',
-  route: 'habits/h2/mission',
+  route: 'habits/h2/test-a',
 };
 
-const H2_ROLES: ExerciseRegistryEntry = {
-  exerciseId: 'h2-roles',
+const H2_TEST_B: ExerciseRegistryEntry = {
+  exerciseId: 'h2-test-b',
   habit: 'h2',
   titleKey: 'titles.plan',
   shortTitleKey: 'titles.plan',
   icon: 'flag',
-  route: 'habits/h2/roles',
+  route: 'habits/h2/test-b',
 };
 
 describe('Habits feature', () => {
-  it('shows Paradigms and Habit 1 available, Habit 2 next up and the rest collapsed under one row (#219, #57)', async () => {
+  it('shows Paradigms, Habit 1 and Habit 2 available, Habit 3 next up and the rest collapsed under one row (#219, #57, #59)', async () => {
     configureApp({ handset: false });
     const fixture = await renderShellAt('/habits');
     const host = fixture.nativeElement as HTMLElement;
@@ -51,16 +51,18 @@ describe('Habits feature', () => {
       '/habits/paradigms',
       '/habits/h1',
       '/habits/h2',
+      '/habits/h3',
     ]);
     expect(items[0].querySelector('mat-progress-spinner')).toBeTruthy();
     expect(items[1].querySelector('mat-progress-spinner')).toBeTruthy();
-    expect(items[2].querySelector('.habit-coming-soon-chip')?.textContent?.trim()).toBe(
+    expect(items[2].querySelector('mat-progress-spinner')).toBeTruthy();
+    expect(items[3].querySelector('.habit-coming-soon-chip')?.textContent?.trim()).toBe(
       transloco.translate('habits.hub.comingSoon'),
     );
 
     const toggle = host.querySelector('app-habits-page .habit-later-toggle') as HTMLButtonElement;
     expect(toggle.querySelector('.habit-title')?.textContent?.trim()).toBe(
-      'Habits 3–7 and Interdependence: coming soon',
+      'Habits 4–7 and Interdependence: coming soon',
     );
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(toggle.getAttribute('aria-controls')).toBe('habits-later');
@@ -102,11 +104,11 @@ describe('Habits feature', () => {
     );
   });
 
-  // 'paradigms' (#51's `paradigms-transition`) and 'h1' (#57's `h1-commitments`) now have real
-  // registered exercises, so they no longer show the empty state — same reason
-  // `e2e/habits.spec.ts` picks a hub with none.
+  // 'paradigms' (#51's `paradigms-transition`), 'h1' (#57's `h1-commitments`) and 'h2' (#59's
+  // `h2-roles`) now have real registered exercises, so they no longer show the empty state — same
+  // reason `e2e/habits.spec.ts` picks a hub with none.
   it.each(
-    HABITS.filter((habit) => habit.id !== 'paradigms' && habit.id !== 'h1').map(
+    HABITS.filter((habit) => !['paradigms', 'h1', 'h2'].includes(habit.id)).map(
       (habit) => [habit.id, habit.titleKey] as const,
     ),
   )(
@@ -148,8 +150,8 @@ describe('Habits feature', () => {
     beforeEach(() => {
       snapshot = snapshotExerciseRegistryForTesting();
       resetExerciseRegistryForTesting();
-      registerExercise(H2_MISSION);
-      registerExercise(H2_ROLES);
+      registerExercise(H2_TEST_A);
+      registerExercise(H2_TEST_B);
     });
 
     afterEach(() => resetExerciseRegistryForTesting(snapshot));
@@ -162,10 +164,10 @@ describe('Habits feature', () => {
 
       const links = [...host.querySelectorAll('app-habit-hub-page mat-nav-list a')];
       expect(links).toHaveLength(2);
-      expect(links[0].getAttribute('href')).toBe('/habits/h2/mission');
+      expect(links[0].getAttribute('href')).toBe('/habits/h2/test-a');
       // Chrome shows the short title only; the long one belongs to the exercise page (#218).
-      expect(links[0].textContent).toContain(transloco.translate(H2_MISSION.shortTitleKey));
-      expect(links[0].textContent).not.toContain(transloco.translate(H2_MISSION.titleKey));
+      expect(links[0].textContent).toContain(transloco.translate(H2_TEST_A.shortTitleKey));
+      expect(links[0].textContent).not.toContain(transloco.translate(H2_TEST_A.titleKey));
       expect(links[0].querySelector('.hub-number')?.textContent?.trim()).toBe('1');
       // No summary line (#219); the status column is part of the link's accessible name.
       expect(links[0].querySelector('.hub-not-started')?.textContent?.trim()).toBe(
@@ -173,10 +175,10 @@ describe('Habits feature', () => {
       );
 
       const continueLink = host.querySelector('app-habit-hub-page .hub-continue');
-      expect(continueLink?.getAttribute('href')).toBe('/habits/h2/mission');
+      expect(continueLink?.getAttribute('href')).toBe('/habits/h2/test-a');
       expect(continueLink?.textContent?.trim()).toContain(
         transloco.translate('habits.hub.continueButton', {
-          title: transloco.translate(H2_MISSION.shortTitleKey),
+          title: transloco.translate(H2_TEST_A.shortTitleKey),
         }),
       );
     });
@@ -190,14 +192,14 @@ describe('Habits feature', () => {
       });
       const fixture = await renderShellAt('/habits/h2');
 
-      TestBed.inject(ExerciseProgress).markDone('h2-mission');
+      TestBed.inject(ExerciseProgress).markDone('h2-test-a');
       fixture.detectChanges();
       const host = fixture.nativeElement as HTMLElement;
 
       const links = [...host.querySelectorAll('app-habit-hub-page mat-nav-list a')];
       expect(links[0].querySelector('.hub-status')).toBeTruthy();
       expect(host.querySelector('app-habit-hub-page .hub-continue')?.getAttribute('href')).toBe(
-        '/habits/h2/roles',
+        '/habits/h2/test-b',
       );
     });
 
@@ -211,8 +213,8 @@ describe('Habits feature', () => {
       const fixture = await renderShellAt('/habits/h2');
 
       const progress = TestBed.inject(ExerciseProgress);
-      progress.markDone('h2-mission');
-      progress.markDone('h2-roles');
+      progress.markDone('h2-test-a');
+      progress.markDone('h2-test-b');
       fixture.detectChanges();
       const host = fixture.nativeElement as HTMLElement;
 
@@ -228,7 +230,7 @@ describe('Habits feature', () => {
       });
       const fixture = await renderShellAt('/habits');
 
-      TestBed.inject(ExerciseProgress).markDone('h2-mission');
+      TestBed.inject(ExerciseProgress).markDone('h2-test-a');
       fixture.detectChanges();
       const host = fixture.nativeElement as HTMLElement;
 

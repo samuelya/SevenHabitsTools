@@ -54,5 +54,8 @@
     "toMarkDone": "To mark done:",
     "itemDone": "Done: ",
     "itemToDo": "To do: "
+  },
+  "roles": {
+    "renewal": "Sharpen the Saw"
   }
 }

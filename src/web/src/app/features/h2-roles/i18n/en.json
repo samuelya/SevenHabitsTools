@@ -1,0 +1,111 @@
+{
+  "prompt": {
+    "title": "Name the roles you play",
+    "chapterReference": "Habit 2: Begin with the End in Mind",
+    "text": "List the parts you play in life: at home, at work, with friends, for yourself. Rate how each one is going, and say whether you like the picture.",
+    "glossText": "The book asks you to look at your life as a set of roles, so that no single one crowds out the rest.",
+    "whyItMatters": "It's easy to pour everything into one role and forget the others until something breaks. Seeing them side by side shows what's getting your time and what isn't. Your mission and your weekly plan both start from this list."
+  },
+  "list": {
+    "addButton": "Add role",
+    "searchLabel": "Search roles",
+    "empty": "No roles yet. Start with the one you'd hate to get wrong.",
+    "noMatch": "No roles match your search.",
+    "deleted": "Role deleted",
+    "undo": "Undo",
+    "example": "Example",
+    "builtIn": "Built-in",
+    "tooManyHint": "More than seven roles gets hard to hold in your head. Could two of these be one?",
+    "ratingText": "{{value}} of {{max}}"
+  },
+  "group": {
+    "activeLegend": "Your roles",
+    "archivedLegend": "Archived"
+  },
+  "editor": {
+    "newTitle": "New role",
+    "editTitle": "Edit role"
+  },
+  "form": {
+    "nameLabel": "The role",
+    "namePrompt": "What part do you play? One or two words.",
+    "namePlaceholder": "e.g. Dad",
+    "nameRequired": "Name the role first.",
+    "descriptionLabel": "What it's about",
+    "descriptionPrompt": "One line on what this role means to you.",
+    "descriptionPlaceholder": "e.g. Being around, not just providing.",
+    "colorLabel": "Colour",
+    "satisfactionLabel": "How it's going",
+    "satisfactionPrompt": "Right now, how happy are you with how you're doing in this role? 1 is not at all, 5 is very.",
+    "satisfactionValueText": "{{value}} of {{max}}",
+    "noteLabel": "The picture",
+    "notePrompt": "Is this the picture you want? If not, what's missing?",
+    "notePlaceholder": "e.g. Not yet. I'm there for homework, not for fun.",
+    "moveUpButton": "Move up",
+    "moveDownButton": "Move down",
+    "archiveButton": "Archive",
+    "unarchiveButton": "Unarchive",
+    "builtInHint": "This role comes with the app. You can describe and rate it, but not rename or remove it.",
+    "delete": "Delete role"
+  },
+  "color": {
+    "none": "None",
+    "red": "Red",
+    "orange": "Orange",
+    "yellow": "Yellow",
+    "green": "Green",
+    "teal": "Teal",
+    "blue": "Blue",
+    "purple": "Purple",
+    "grey": "Grey"
+  },
+  "summary": {
+    "title": "Your picture",
+    "countText": {
+      "one": "1 role, {{rated}} rated",
+      "other": "{{count}} roles, {{rated}} rated"
+    },
+    "averageText": "Average {{avg}} of {{max}}"
+  },
+  "checklist": {
+    "role": "Add a role",
+    "rated": "Say how it's going (1–5)",
+    "note": "Write whether this is the picture you want"
+  },
+  "guide": {
+    "inShort": "You'll list the roles you play and rate how each is going. Ten minutes. The list feeds your mission statement and, later, your weekly plan. Sharpen the Saw, looking after yourself, is added for you.",
+    "howTo": [
+      "Tap \"Add role\" and name one part you play: Dad, Team lead, Friend, Neighbour.",
+      "Add a line on what the role means to you. A colour helps you spot it later.",
+      "Rate how it's going, 1 to 5. Be honest; nobody else sees it.",
+      "Write whether this is the picture you want, and what's missing if not.",
+      "Repeat until the list feels like your life. Seven or fewer is easier to live by.",
+      "Tap \"Mark done\" once three roles are rated and one has a note."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Dad",
+        "done": true,
+        "fields": [
+          { "label": "What it's about", "value": "Being around, not just providing." },
+          { "label": "How it's going", "value": "3 of 5" },
+          { "label": "The picture", "value": "Not yet. I'm there for homework, not for fun." }
+        ],
+        "sample": { "name": "Dad", "description": "Being around, not just providing." }
+      },
+      {
+        "kind": "card",
+        "title": "Friend",
+        "done": true,
+        "fields": [
+          { "label": "What it's about", "value": "The one who calls first." },
+          { "label": "How it's going", "value": "4 of 5" },
+          { "label": "The picture", "value": "Mostly. I've lost touch with two people I miss." }
+        ],
+        "sample": { "name": "Friend", "description": "The one who calls first." }
+      }
+    ],
+    "afterwards": "Look at the lowest rating. That's where your week probably needs a goal. Come back after your mission statement and re-rate; the numbers move once the roles get real attention."
+  }
+}

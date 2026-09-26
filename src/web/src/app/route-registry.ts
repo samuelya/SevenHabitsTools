@@ -50,6 +50,10 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     path: 'habits/h1/commitments',
     loadChildren: () => import('./features/h1-commitments/commitments.routes'),
   },
+  {
+    path: 'habits/h2/roles',
+    loadChildren: () => import('./features/h2-roles/roles.routes'),
+  },
   { path: 'plan', loadChildren: () => import('./features/plan/plan.routes') },
   { path: 'journal', loadChildren: () => import('./features/journal/journal.routes') },
   { path: 'settings', loadChildren: () => import('./features/settings/settings.routes') },

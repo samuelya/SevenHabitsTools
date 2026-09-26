@@ -1,0 +1,44 @@
+:host {
+  // A flex column, not a block: see `commitments-page.scss` (issue #193).
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.add-button {
+  margin-block-end: 0.5rem;
+  min-block-size: 44px;
+  align-self: flex-start;
+}
+
+// Full width below the handset breakpoint (`HANDSET_QUERY`), as on every list exercise (#187).
+@media (max-width: 599.98px) {
+  .add-button {
+    inline-size: 100%;
+  }
+}
+
+.group-legend {
+  margin-block: 0.5rem 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.archived-toggle {
+  min-block-size: 44px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.too-many-hint {
+  margin-block: 0.5rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.summary-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  inline-size: 100%;
+}

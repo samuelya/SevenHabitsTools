@@ -1,0 +1,169 @@
+<form class="roles-item-form">
+  @if (builtIn()) {
+    <p class="built-in-name">
+      <mat-icon aria-hidden="true">lock</mat-icon>
+      <strong>{{ builtInLabel() }}</strong>
+    </p>
+    <p class="field-prompt">{{ 'h2Roles.form.builtInHint' | transloco }}</p>
+  } @else {
+    <p class="field-prompt" id="name-prompt">{{ 'h2Roles.form.namePrompt' | transloco }}</p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h2Roles.form.nameLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        #firstField
+        appEditorInitialFocus
+        type="text"
+        autocomplete="off"
+        required
+        [placeholder]="'h2Roles.form.namePlaceholder' | transloco"
+        [value]="role().name ?? ''"
+        [attr.aria-describedby]="nameMissing() ? 'name-prompt name-error' : 'name-prompt'"
+        (input)="onNameInput($event)"
+        (blur)="touchName()"
+      />
+    </mat-form-field>
+    <!-- Not `<mat-error>`: no `NgControl` here (playbook §6). -->
+    @if (nameMissing()) {
+      <p id="name-error" class="field-error" role="alert">
+        {{ 'h2Roles.form.nameRequired' | transloco }}
+      </p>
+    }
+  }
+
+  <p class="field-prompt" id="description-prompt">
+    {{ 'h2Roles.form.descriptionPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Roles.form.descriptionLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      #descriptionField
+      type="text"
+      autocomplete="off"
+      aria-describedby="description-prompt"
+      [placeholder]="'h2Roles.form.descriptionPlaceholder' | transloco"
+      [value]="role().description ?? ''"
+      (input)="onDescriptionInput($event)"
+    />
+  </mat-form-field>
+
+  <fieldset class="option-group">
+    <legend>{{ 'h2Roles.form.colorLabel' | transloco }}</legend>
+    <mat-chip-listbox
+      [attr.aria-label]="'h2Roles.form.colorLabel' | transloco"
+      [value]="role().color ?? noColor"
+      (change)="onColorChange($event)"
+    >
+      <mat-chip-option [value]="noColor">{{ 'h2Roles.color.none' | transloco }}</mat-chip-option>
+      @for (color of colors; track color) {
+        <mat-chip-option [value]="color">
+          <span class="swatch" aria-hidden="true" [style.background-color]="swatches[color]"></span>
+          {{ 'h2Roles.color.' + color | transloco }}
+        </mat-chip-option>
+      }
+    </mat-chip-listbox>
+  </fieldset>
+
+  <fieldset class="option-group">
+    <legend id="rating-legend">{{ 'h2Roles.form.satisfactionLabel' | transloco }}</legend>
+    <p class="field-prompt" id="rating-prompt">
+      {{ 'h2Roles.form.satisfactionPrompt' | transloco }}
+    </p>
+    <mat-radio-group
+      class="rating"
+      aria-describedby="rating-prompt"
+      [attr.aria-label]="
+        rating() === null
+          ? ('h2Roles.form.satisfactionLabel' | transloco)
+          : ('h2Roles.form.satisfactionLabel' | transloco) +
+            ': ' +
+            ('h2Roles.form.satisfactionValueText'
+              | transloco: { value: (rating() | appNumber), max: (ratingMax | appNumber) })
+      "
+      [value]="rating()"
+      (change)="onRatingChange($event)"
+    >
+      @for (value of ratings; track value) {
+        <mat-radio-button [value]="value">{{ value | appNumber }}</mat-radio-button>
+      }
+    </mat-radio-group>
+    @if (rating(); as value) {
+      <p class="rating-value" aria-hidden="true">
+        {{
+          'h2Roles.form.satisfactionValueText'
+            | transloco: { value: (value | appNumber), max: (ratingMax | appNumber) }
+        }}
+      </p>
+    }
+  </fieldset>
+
+  <p class="field-prompt" id="note-prompt">{{ 'h2Roles.form.notePrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Roles.form.noteLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="2"
+      cdkAutosizeMaxRows="8"
+      aria-describedby="note-prompt"
+      [placeholder]="'h2Roles.form.notePlaceholder' | transloco"
+      [value]="role().note ?? ''"
+      (input)="onNoteInput($event)"
+    ></textarea>
+  </mat-form-field>
+
+  <div class="actions">
+    <button
+      mat-stroked-button
+      type="button"
+      class="move-up"
+      [disabled]="!saved() || !canMoveUp()"
+      (click)="moved.emit('up')"
+    >
+      <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+      {{ 'h2Roles.form.moveUpButton' | transloco }}
+    </button>
+    <button
+      mat-stroked-button
+      type="button"
+      class="move-down"
+      [disabled]="!saved() || !canMoveDown()"
+      (click)="moved.emit('down')"
+    >
+      <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+      {{ 'h2Roles.form.moveDownButton' | transloco }}
+    </button>
+    @if (!builtIn()) {
+      @if (role().archived) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="unarchive"
+          (click)="archivedChange.emit(false)"
+        >
+          <mat-icon aria-hidden="true">unarchive</mat-icon>
+          {{ 'h2Roles.form.unarchiveButton' | transloco }}
+        </button>
+      } @else {
+        <button
+          mat-stroked-button
+          type="button"
+          class="archive"
+          [disabled]="!saved()"
+          (click)="archivedChange.emit(true)"
+        >
+          <mat-icon aria-hidden="true">archive</mat-icon>
+          {{ 'h2Roles.form.archiveButton' | transloco }}
+        </button>
+      }
+    }
+  </div>
+
+  @if (!builtIn()) {
+    <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+      <mat-icon aria-hidden="true">delete</mat-icon>
+      {{ 'h2Roles.form.delete' | transloco }}
+    </button>
+  }
+</form>

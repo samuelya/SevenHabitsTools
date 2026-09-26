@@ -26,7 +26,7 @@ function textFor(locale: Locale) {
   const habits = (key: string, params?: Record<string, number>) => t(locale, 'habits', key, params);
   return {
     comingSoon: habits('hub.comingSoon'),
-    later: habits('list.laterRange', { from: 3, to: 7 }),
+    later: habits('list.laterRange', { from: 4, to: 7 }),
     notStarted: habits('hub.notStarted'),
     onePattern: habits('exercises.paradigms-transition.patternCount.one'),
     aboutHabit: habits('hub.aboutHabit'),
@@ -60,18 +60,19 @@ async function expectNotTruncated(locator: Locator): Promise<void> {
 }
 
 test.describe('habits list and hub', () => {
-  test('the habits list: Paradigms and Habit 1 available, Habit 2 next up, the rest collapsed', async ({
+  test('the habits list: Paradigms, Habit 1 and Habit 2 available, Habit 3 next up, the rest collapsed', async ({
     page,
   }, testInfo) => {
     const text = TEXT[localeFor(testInfo.project.name)];
     await page.goto('/habits');
 
     const links = page.locator('app-habits-page a');
-    await expect(links).toHaveCount(3);
+    await expect(links).toHaveCount(4);
     await expect(links.nth(0)).toHaveAttribute('href', '/habits/paradigms');
     await expect(links.nth(1)).toHaveAttribute('href', '/habits/h1');
     await expect(links.nth(2)).toHaveAttribute('href', '/habits/h2');
-    await expect(links.nth(2).locator('.habit-coming-soon-chip')).toHaveText(text.comingSoon);
+    await expect(links.nth(3)).toHaveAttribute('href', '/habits/h3');
+    await expect(links.nth(3).locator('.habit-coming-soon-chip')).toHaveText(text.comingSoon);
 
     const toggle = page.locator('app-habits-page .habit-later-toggle');
     await expect(toggle.locator('.habit-title')).toHaveText(text.later);
@@ -183,7 +184,7 @@ test.describe('habits list and hub', () => {
     page,
   }, testInfo) => {
     const text = TEXT[localeFor(testInfo.project.name)];
-    await page.goto('/habits/h2');
+    await page.goto('/habits/h3');
 
     const hub = page.locator('app-habit-hub-page');
     await expect(hub.locator('h1')).toBeVisible();

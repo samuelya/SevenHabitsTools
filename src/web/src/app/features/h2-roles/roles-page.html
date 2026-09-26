@@ -1,0 +1,110 @@
+<app-exercise-page
+  [title]="'h2Roles.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (draft.unsaved() ? 'h2Roles.editor.newTitle' : 'h2Roles.editor.editTitle') | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h2Roles.prompt.title' | transloco"
+    [prompt]="'h2Roles.prompt.text' | transloco"
+    [gloss]="'h2Roles.prompt.glossText' | transloco"
+    [chapterReference]="'h2Roles.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h2Roles.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAdd()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h2Roles.list.addButton' | transloco }}
+  </button>
+
+  @if (archivedItems().length) {
+    <h2 class="group-legend">{{ 'h2Roles.group.activeLegend' | transloco }}</h2>
+  }
+  <app-exercise-list
+    [items]="activeItems()"
+    [selectedId]="itemId()"
+    initialSort="none"
+    [searchLabel]="'h2Roles.list.searchLabel' | transloco"
+    [emptyMessage]="'h2Roles.list.empty' | transloco"
+    [noMatchMessage]="'h2Roles.list.noMatch' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (deleteRequested)="onItemDeleted($event)"
+  />
+
+  @if (tooMany()) {
+    <p class="too-many-hint">{{ 'h2Roles.list.tooManyHint' | transloco }}</p>
+  }
+
+  @if (archivedItems().length) {
+    <section class="archived-group" aria-labelledby="archived-toggle">
+      <h2 class="group-legend">
+        <button
+          mat-button
+          type="button"
+          id="archived-toggle"
+          class="archived-toggle"
+          aria-controls="archived-list"
+          [attr.aria-expanded]="archivedExpanded()"
+          (click)="toggleArchived()"
+        >
+          <mat-icon aria-hidden="true">{{
+            archivedExpanded() ? 'expand_less' : 'expand_more'
+          }}</mat-icon>
+          {{ 'h2Roles.group.archivedLegend' | transloco }}
+        </button>
+      </h2>
+      <div id="archived-list" [hidden]="!archivedExpanded()">
+        @if (archivedExpanded()) {
+          <app-exercise-list
+            [items]="archivedItems()"
+            [selectedId]="itemId()"
+            initialSort="none"
+            [searchable]="false"
+            [searchLabel]="'h2Roles.list.searchLabel' | transloco"
+            [emptyMessage]="'h2Roles.list.empty' | transloco"
+            [deletable]="true"
+            (itemSelected)="select($event)"
+            (deleteRequested)="onItemDeleted($event)"
+          />
+        }
+      </div>
+    </section>
+  }
+
+  <div editor>
+    @if (draft.selected(); as role) {
+      <app-roles-item-form
+        [role]="role"
+        [builtInLabel]="selectedLabel()"
+        [saved]="!draft.unsaved()"
+        [canMoveUp]="canMoveUp()"
+        [canMoveDown]="canMoveDown()"
+        (changed)="onItemChanged(role.id, $event)"
+        (moved)="onMoved(role.id, $event)"
+        (archivedChange)="onArchivedChange(role.id, $event)"
+        (deleted)="onItemDeleted(role.id)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-roles-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>
