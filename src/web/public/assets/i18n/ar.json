@@ -50,7 +50,8 @@
     "devKit": "مجموعة أدوات التمارين",
     "h1-rehearsal": "تدرّب عليها",
     "h1-challenge": "اختبار 30 يومًا",
-    "h1-language": "كلماتك"
+    "h1-language": "كلماتك",
+    "h2-roles": "أدوارك"
   },
   "language": {
     "label": "اللغة",

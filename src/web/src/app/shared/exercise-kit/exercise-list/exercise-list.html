@@ -72,6 +72,8 @@
               >
             } @else if (item.done) {
               <mat-icon matListItemIcon aria-hidden="true">check_circle</mat-icon>
+            } @else if (item.icon) {
+              <mat-icon matListItemIcon aria-hidden="true">{{ item.icon }}</mat-icon>
             } @else {
               <span matListItemIcon aria-hidden="true"></span>
             }
@@ -79,8 +81,18 @@
               @if (item.warning && item.warningLabel) {
                 <span class="visually-hidden">{{ item.warningLabel }} </span>
               }
-              {{ item.title.trim() || untitled }}</span
-            >
+              @if (item.swatch) {
+                <span
+                  class="exercise-list__swatch"
+                  aria-hidden="true"
+                  [style.background-color]="item.swatch"
+                ></span>
+              }
+              {{ item.title.trim() || untitled }}
+              @if (item.icon && item.iconLabel && !item.warning && !item.done) {
+                <span class="visually-hidden"> ({{ item.iconLabel }})</span>
+              }
+            </span>
             @if (item.subtitle; as subtitle) {
               <span matListItemLine>{{ subtitle }}</span>
             }

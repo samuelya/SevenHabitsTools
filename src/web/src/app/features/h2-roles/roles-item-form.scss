@@ -1,0 +1,83 @@
+.roles-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.field-prompt {
+  margin: 0;
+}
+
+.field-error {
+  color: var(--mat-sys-error, darkred);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 0;
+}
+
+.built-in-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.option-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.option-group legend {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  padding: 0;
+}
+
+.swatch {
+  display: inline-block;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  margin-inline-end: 0.375rem;
+  border-radius: 50%;
+}
+
+// Five radios fit one row at 360 px; each keeps a 44 px touch target.
+.rating {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.rating mat-radio-button {
+  min-block-size: 44px;
+  min-inline-size: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rating-value {
+  margin: 0;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button,
+.delete-button {
+  min-block-size: 44px;
+}
+
+.delete-button {
+  align-self: flex-start;
+}

@@ -27,6 +27,8 @@ import perceptionEn from '../features/paradigms-perception/i18n/en.json';
 import perceptionAr from '../features/paradigms-perception/i18n/ar.json';
 import commitmentsEn from '../features/h1-commitments/i18n/en.json';
 import commitmentsAr from '../features/h1-commitments/i18n/ar.json';
+import rolesEn from '../features/h2-roles/i18n/en.json';
+import rolesAr from '../features/h2-roles/i18n/ar.json';
 import circleEn from '../features/h1-circle/i18n/en.json';
 import circleAr from '../features/h1-circle/i18n/ar.json';
 import rehearsalEn from '../features/h1-rehearsal/i18n/en.json';
@@ -64,6 +66,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'paradigms-perception/ar': perceptionAr,
   'h1-commitments/en': commitmentsEn,
   'h1-commitments/ar': commitmentsAr,
+  'h2-roles/en': rolesEn,
+  'h2-roles/ar': rolesAr,
   'h1-circle/en': circleEn,
   'h1-circle/ar': circleAr,
   'h1-rehearsal/en': rehearsalEn,

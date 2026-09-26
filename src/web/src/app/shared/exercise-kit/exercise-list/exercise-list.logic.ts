@@ -28,6 +28,14 @@ export interface ExerciseListItem {
    * own `deletable` is `false`; defaults to `true` otherwise, so every existing caller (which never
    * sets this) keeps every row deletable. */
   readonly deletable?: boolean;
+  /** A CSS colour painted as a small dot before the title (issue #59's role colours). Decorative
+   * only: whatever the colour means must also be in the text. */
+  readonly swatch?: string;
+  /** A Material icon name for the row's icon slot when it is neither `done` nor `warning` (issue
+   * #59: a lock on a built-in role). */
+  readonly icon?: string;
+  /** Screen-reader text for `icon` (the icon itself is decorative), read after the title. */
+  readonly iconLabel?: string;
 }
 
 /** `'none'` (issue #52): the caller's own `items()` order, untouched — for a fixed, meaningfully
