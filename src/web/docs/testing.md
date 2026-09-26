@@ -113,3 +113,12 @@ Two traps that cost #218 three red-CI rounds:
   percent wider than on a Mac: a title that measured 244 px locally was 251 px in CI. A local pass
   on a width or above-the-fold check proves little without margin, so design for at least 10%
   and put the measured numbers in the round comment.
+
+Two more that cost #58 and #63 a red-CI round each (Habit 2):
+
+- **Assert a chip's label, not its row.** A `mat-chip-row`'s text includes the remove icon's
+  ligature (`cancel`), so `toHaveText(['craft'])` on the row fails. Assert the label element
+  inside the chip, as `e2e/h2-long-view.spec.ts` does.
+- **Wait for each stepper step.** Under zoneless change detection a `fill()` right after
+  Next can land in the previous step's field. Wait for the new step's field to be visible
+  before filling it.
