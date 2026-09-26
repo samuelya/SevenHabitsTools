@@ -182,6 +182,14 @@
         "one": "1 role",
         "other": "{{count}} roles"
       }
+    },
+    "h2-long-view": {
+      "title": "Look back from the end",
+      "shortTitle": "Your long view",
+      "scenarioCount": {
+        "one": "{{count}} of 4 long views",
+        "other": "{{count}} of 4 long views"
+      }
     }
   }
 }

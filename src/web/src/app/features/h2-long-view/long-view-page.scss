@@ -1,0 +1,37 @@
+:host {
+  // `ExercisePage` fills a routed page's host with `flex: 1 1 auto`, the only way its footer can
+  // reach the bottom edge of a short page (see `transition-page.scss`'s own comment, issue #193).
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.add-button {
+  margin-block-end: 0.5rem;
+  min-block-size: 44px;
+  align-self: flex-start;
+}
+
+@media (max-width: 599.98px) {
+  .add-button {
+    inline-size: 100%;
+  }
+}
+
+.summary-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  inline-size: 100%;
+}
+
+.read-back {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-prompt {
+  margin: 0;
+}

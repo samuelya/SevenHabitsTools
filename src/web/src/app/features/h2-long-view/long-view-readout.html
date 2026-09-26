@@ -1,0 +1,42 @@
+<div class="long-view-readout">
+  <div class="actions">
+    <button mat-flat-button type="button" (click)="editRequested.emit()">
+      <mat-icon aria-hidden="true">edit</mat-icon>
+      {{ 'h2LongView.editor.editButton' | transloco }}
+    </button>
+    <button mat-stroked-button type="button" (click)="redoRequested.emit()">
+      <mat-icon aria-hidden="true">replay</mat-icon>
+      {{ 'h2LongView.list.redoButton' | transloco }}
+    </button>
+  </div>
+
+  @for (answer of answers(); track answer.promptKey) {
+    <section class="answer">
+      <h3 class="answer-title">
+        @if (answer.slot) {
+          {{ answer.speaker || ('h2LongView.speaker.' + answer.slot | transloco) }}
+        } @else {
+          {{ 'h2LongView.' + answer.promptKey + '.label' | transloco }}
+        }
+      </h3>
+      <p class="answer-prompt">{{ 'h2LongView.' + answer.promptKey + '.prompt' | transloco }}</p>
+      @if (answer.text.trim()) {
+        <p class="answer-text">{{ answer.text }}</p>
+      }
+      @if (answer.values.length) {
+        <mat-chip-set [attr.aria-label]="'h2LongView.valuesLabel' | transloco">
+          @for (value of answer.values; track value) {
+            <mat-chip>{{ value }}</mat-chip>
+          }
+        </mat-chip-set>
+      }
+    </section>
+  }
+
+  @if (view().reflection?.trim()) {
+    <section class="answer">
+      <h3 class="answer-title">{{ 'h2LongView.readBack.reflectionLabel' | transloco }}</h3>
+      <p class="answer-text">{{ view().reflection }}</p>
+    </section>
+  }
+</div>

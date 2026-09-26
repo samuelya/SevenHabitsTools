@@ -1,0 +1,179 @@
+{
+  "prompt": {
+    "title": "Look back from the end",
+    "text": "Picture a moment far ahead: the end of your life, a last year, a big anniversary, your final day at work. Write what you'd want to be true then. The values you hear go into your mission.",
+    "glossText": "This is the habit's own idea: begin with the end in mind. Know where you want to arrive before you set off.",
+    "whyItMatters": "Day to day, the loud things win. Looking back from the far end quiets them and shows what you'd actually regret missing. Ten minutes here can change what you plan for years.",
+    "chapterReference": "Habit 2: Begin with the End in Mind"
+  },
+  "list": {
+    "newButton": "New long view",
+    "empty": "Nothing here yet. Start with your funeral; it's the one that changes most.",
+    "redoButton": "Redo",
+    "valueCountText": { "one": "1 value", "other": "{{count}} values" },
+    "deleted": "Long view deleted",
+    "undo": "Undo"
+  },
+  "picker": { "legend": "Which long view?" },
+  "scenario": {
+    "funeral": {
+      "title": "Your funeral",
+      "text": "Three years from now. Four people speak about you: family, a friend, someone from work, someone from your community."
+    },
+    "oneYear": {
+      "title": "One year left",
+      "text": "You've just learned you have one healthy year. Nothing else changes."
+    },
+    "anniversary": {
+      "title": "A milestone anniversary",
+      "text": "A big anniversary of a relationship that matters: a marriage, a friendship, a partnership. Friends are raising a glass."
+    },
+    "lastDay": {
+      "title": "Your last day at work",
+      "text": "You're leaving for good. People gather to say what your work meant."
+    }
+  },
+  "speakerLabel": "Who's speaking",
+  "speakerPrompt": "Name them if you like.",
+  "speaker": { "family": "Family", "friend": "A friend", "work": "Work", "community": "Community" },
+  "funeral": {
+    "family": {
+      "stepTitle": "Family",
+      "label": "What they say",
+      "prompt": "Someone from your family stands up. What do you want them to say about who you were to them?",
+      "placeholder": "e.g. He was home for dinner. He listened, even when he was tired."
+    },
+    "friend": {
+      "stepTitle": "A friend",
+      "label": "What they say",
+      "prompt": "A friend speaks next. What kind of friend do you want to have been?",
+      "placeholder": "e.g. The one you could call at 2 a.m. and he'd come."
+    },
+    "work": {
+      "stepTitle": "Work",
+      "label": "What they say",
+      "prompt": "Someone from work. What do you want them to remember about working with you?",
+      "placeholder": "e.g. She made the juniors better and gave them the credit."
+    },
+    "community": {
+      "stepTitle": "Community",
+      "label": "What they say",
+      "prompt": "Someone from your neighbourhood, place of worship or club. What did you give there?",
+      "placeholder": "e.g. He showed up. Every clean-up, every funeral, every fundraiser."
+    }
+  },
+  "oneYear": {
+    "who": {
+      "stepTitle": "Who",
+      "label": "Who would you spend it with",
+      "prompt": "Who would you spend the year with, and how?",
+      "placeholder": "e.g. My kids and my mother. Long meals, no phones."
+    },
+    "stop": {
+      "stepTitle": "Stop",
+      "label": "Stop doing",
+      "prompt": "What would you stop doing straight away?",
+      "placeholder": "e.g. Saying yes to meetings I don't need to be in."
+    },
+    "finish": {
+      "stepTitle": "Start or finish",
+      "label": "Start or finish",
+      "prompt": "What would you start, or finish, while you still can?",
+      "placeholder": "e.g. Write down the family stories before they're gone."
+    }
+  },
+  "anniversary": {
+    "which": {
+      "stepTitle": "Whose",
+      "label": "Whose anniversary",
+      "prompt": "Whose anniversary is it, and how many years?",
+      "placeholder": "e.g. Our 25th. Married at 27."
+    },
+    "built": {
+      "stepTitle": "Built",
+      "label": "What you built",
+      "prompt": "What do you hope the two of you will have built by then?",
+      "placeholder": "e.g. A home people want to come back to. Still laughing at the same jokes."
+    },
+    "said": {
+      "stepTitle": "Said",
+      "label": "What they say",
+      "prompt": "What would the people there say about how you treat each other?",
+      "placeholder": "e.g. They still ask each other first."
+    }
+  },
+  "lastDay": {
+    "contributed": {
+      "stepTitle": "Contribution",
+      "label": "What you contributed",
+      "prompt": "What do you want to have contributed, in your work and beyond it?",
+      "placeholder": "e.g. Two products people still use. A team that runs without me."
+    },
+    "next": {
+      "stepTitle": "Next",
+      "label": "What you'll do next",
+      "prompt": "What will you do with your time once you've left?",
+      "placeholder": "e.g. Teach two mornings a week. Fix the boat."
+    }
+  },
+  "valuesLabel": "Values you hear",
+  "valuesPrompt": "What does this tell you you value? One or two words each.",
+  "valuesPlaceholder": "e.g. presence",
+  "removeValueAria": "Remove {{value}}",
+  "readBack": {
+    "stepTitle": "Reading it back",
+    "reflectionLabel": "What stands out",
+    "reflectionPrompt": "Read your answers once more. What surprises you, or keeps coming up?",
+    "reflectionPlaceholder": "e.g. Nobody mentioned my title. Everyone mentioned time."
+  },
+  "summary": {
+    "valuesTitle": "Values you heard",
+    "valueCountText": "{{value}} · {{count}}",
+    "scenariosText": "{{count}} of 4 long views"
+  },
+  "editor": { "editButton": "Edit" },
+  "checklist": {
+    "scenario": "Pick a long view",
+    "answers": "Answer every prompt",
+    "value": "Write down at least one value you heard"
+  },
+  "guide": {
+    "inShort": "You'll pick a far-off moment and write what you'd want to be true then, in a few lines per prompt. After each answer you'll name the value behind it. Ten to fifteen minutes per long view; start with the funeral.",
+    "howTo": [
+      "Tap \"New long view\" and pick a scene. The funeral first, if you can.",
+      "Read the prompt slowly. Write what you'd want to hear, not what you expect.",
+      "Under each answer, add one or two words for the value behind it.",
+      "On the last step, read it all back and note what stands out.",
+      "Come back another day for the next scene. The values pile up in the summary.",
+      "Tap \"Mark done\" after one complete long view. Do the others when you're ready for your mission."
+    ],
+    "examples": [
+      {
+        "kind": "fields",
+        "title": "Your funeral: a friend speaks",
+        "fields": [
+          { "label": "Who's speaking", "value": "Sam" },
+          { "label": "What they say", "value": "The one you could call at 2 a.m. and he'd come." },
+          { "label": "Values you hear", "value": "loyalty, presence" }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "One year left",
+        "fields": [
+          {
+            "label": "Who would you spend it with",
+            "value": "My kids and my mother. Long meals, no phones."
+          },
+          { "label": "Stop doing", "value": "Saying yes to meetings I don't need to be in." },
+          {
+            "label": "Start or finish",
+            "value": "Write down the family stories before they're gone."
+          },
+          { "label": "Values you hear", "value": "family, time, memory" }
+        ]
+      }
+    ],
+    "afterwards": "Take the summary's values into Your mission; they're the first step there. If a value showed up in three views, it belongs in the first line. Redo a long view in a year and compare."
+  }
+}

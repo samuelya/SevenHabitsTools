@@ -1,0 +1,24 @@
+<mat-card class="long-view-summary" appearance="outlined">
+  <mat-card-content>
+    <h2 class="title">{{ 'h2LongView.summary.valuesTitle' | transloco }}</h2>
+    @if (values().length) {
+      <mat-chip-set [attr.aria-label]="'h2LongView.summary.valuesTitle' | transloco">
+        @for (heard of values(); track heard.value) {
+          <mat-chip>
+            @if (heard.count > 1) {
+              {{
+                'h2LongView.summary.valueCountText'
+                  | transloco: { value: heard.value, count: (heard.count | appNumber) }
+              }}
+            } @else {
+              {{ heard.value }}
+            }
+          </mat-chip>
+        }
+      </mat-chip-set>
+    }
+    <p class="scenarios">
+      {{ 'h2LongView.summary.scenariosText' | transloco: { count: (completed() | appNumber) } }}
+    </p>
+  </mat-card-content>
+</mat-card>

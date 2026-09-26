@@ -1,0 +1,66 @@
+@let stem = idStem();
+<div class="long-view-prompt">
+  <p class="field-prompt" [id]="stem + '-prompt'">
+    {{ 'h2LongView.' + promptKey() + '.prompt' | transloco }}
+  </p>
+
+  @if (slot(); as slot) {
+    <p class="field-prompt" [id]="stem + '-speaker-prompt'">
+      {{ 'h2LongView.speakerPrompt' | transloco }}
+    </p>
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h2LongView.speakerLabel' | transloco }}</mat-label>
+      <input
+        matInput
+        type="text"
+        [value]="answer().speaker ?? ('h2LongView.speaker.' + slot | transloco)"
+        [attr.aria-describedby]="stem + '-speaker-prompt'"
+        (input)="onSpeaker($event)"
+      />
+    </mat-form-field>
+  }
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2LongView.' + promptKey() + '.label' | transloco }}</mat-label>
+    <textarea
+      matInput
+      class="answer-text"
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="12"
+      [placeholder]="'h2LongView.' + promptKey() + '.placeholder' | transloco"
+      [value]="answer().text"
+      [attr.aria-describedby]="stem + '-prompt'"
+      (input)="onText($event)"
+    ></textarea>
+  </mat-form-field>
+
+  <p class="field-prompt" [id]="stem + '-values-prompt'">
+    {{ 'h2LongView.valuesPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2LongView.valuesLabel' | transloco }}</mat-label>
+    <mat-chip-grid #valueGrid [attr.aria-label]="'h2LongView.valuesLabel' | transloco">
+      @for (value of answer().values; track value) {
+        <mat-chip-row (removed)="onValueRemoved(value)">
+          {{ value }}
+          <button
+            matChipRemove
+            type="button"
+            [attr.aria-label]="'h2LongView.removeValueAria' | transloco: { value: value }"
+          >
+            <mat-icon aria-hidden="true">cancel</mat-icon>
+          </button>
+        </mat-chip-row>
+      }
+      <input
+        [placeholder]="'h2LongView.valuesPlaceholder' | transloco"
+        [matChipInputFor]="valueGrid"
+        [matChipInputSeparatorKeyCodes]="separatorKeys"
+        [matChipInputAddOnBlur]="true"
+        [attr.aria-describedby]="stem + '-values-prompt'"
+        (matChipInputTokenEnd)="onValueAdded($event)"
+      />
+    </mat-chip-grid>
+  </mat-form-field>
+</div>

@@ -1,0 +1,36 @@
+<fieldset class="scenario-picker">
+  <legend class="legend">{{ 'h2LongView.picker.legend' | transloco }}</legend>
+  <div class="cards">
+    @for (scenario of scenarios; track scenario; let first = $first) {
+      <!-- Two branches only because `appEditorInitialFocus` (focus-mode entry lands on the first
+           card) is a static attribute directive. -->
+      @if (first) {
+        <button
+          type="button"
+          class="scenario-card"
+          appEditorInitialFocus
+          [attr.aria-describedby]="'long-view-scenario-' + scenario"
+          (click)="picked.emit(scenario)"
+        >
+          <ng-container *ngTemplateOutlet="cardBody; context: { $implicit: scenario }" />
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="scenario-card"
+          [attr.aria-describedby]="'long-view-scenario-' + scenario"
+          (click)="picked.emit(scenario)"
+        >
+          <ng-container *ngTemplateOutlet="cardBody; context: { $implicit: scenario }" />
+        </button>
+      }
+    }
+  </div>
+</fieldset>
+
+<ng-template #cardBody let-scenario>
+  <span class="title">{{ 'h2LongView.scenario.' + scenario + '.title' | transloco }}</span>
+  <span class="text" [id]="'long-view-scenario-' + scenario">{{
+    'h2LongView.scenario.' + scenario + '.text' | transloco
+  }}</span>
+</ng-template>

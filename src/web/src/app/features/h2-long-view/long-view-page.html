@@ -1,0 +1,106 @@
+<app-exercise-page
+  [title]="'h2LongView.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="mode() === 'pick' ? ('h2LongView.list.newButton' | transloco) : editorTitle()"
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeEditor()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h2LongView.prompt.title' | transloco"
+    [prompt]="'h2LongView.prompt.text' | transloco"
+    [gloss]="'h2LongView.prompt.glossText' | transloco"
+    [chapterReference]="'h2LongView.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h2LongView.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onNew()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h2LongView.list.newButton' | transloco }}
+  </button>
+
+  <app-assessment-history-list
+    [items]="historyItems()"
+    [selectedId]="itemId()"
+    [emptyMessage]="'h2LongView.list.empty' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (deleteRequested)="onDeleted($event)"
+  />
+
+  <div editor>
+    @switch (mode()) {
+      @case ('pick') {
+        <app-long-view-scenario-picker (picked)="onPicked($event)" />
+      }
+      @case ('read') {
+        @if (draft.selected(); as view) {
+          <app-long-view-readout
+            [view]="view"
+            (editRequested)="onEdit()"
+            (redoRequested)="onRedo()"
+          />
+        }
+      }
+      @case ('edit') {
+        @if (draft.selected(); as view) {
+          <app-guided-stepper
+            [steps]="steps()"
+            [selectedIndex]="stepIndex()"
+            (selectedIndexChange)="stepIndex.set($event)"
+          >
+            @for (answer of answers(); track answer.promptKey) {
+              <ng-template [appGuidedStep]="answer.promptKey">
+                <app-long-view-prompt
+                  [answer]="answer"
+                  (textChange)="onTextChanged(answer.promptKey, $event)"
+                  (speakerChange)="onSpeakerChanged(answer.promptKey, $event)"
+                  (valuesChange)="onValuesChanged(answer.promptKey, $event)"
+                />
+              </ng-template>
+            }
+            <ng-template appGuidedStep="readBack">
+              <div class="read-back">
+                @if (selectedValues().length) {
+                  <mat-chip-set [attr.aria-label]="'h2LongView.valuesLabel' | transloco">
+                    @for (value of selectedValues(); track value) {
+                      <mat-chip>{{ value }}</mat-chip>
+                    }
+                  </mat-chip-set>
+                }
+                <p class="field-prompt" id="long-view-reflection-prompt">
+                  {{ 'h2LongView.readBack.reflectionPrompt' | transloco }}
+                </p>
+                <app-reflection-editor
+                  #reflectionEditor
+                  [value]="view.reflection ?? ''"
+                  [label]="'h2LongView.readBack.reflectionLabel' | transloco"
+                  [placeholder]="'h2LongView.readBack.reflectionPlaceholder' | transloco"
+                  [promptId]="'long-view-reflection-prompt'"
+                  [sessionStatus]="true"
+                  [immediate]="draft.unsaved()"
+                  (valueChange)="onReflectionChanged(view.id, $event, reflectionEditor)"
+                />
+              </div>
+            </ng-template>
+          </app-guided-stepper>
+        }
+      }
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-long-view-summary [values]="summary.values" [completed]="summary.completed" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>
