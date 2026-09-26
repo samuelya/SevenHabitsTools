@@ -226,6 +226,37 @@ describe('ExerciseList', () => {
     expect(second.querySelector('.visually-hidden')?.textContent).toContain('Built-in');
   });
 
+  it('renders a row toggle with its pressed state and emits toggleRequested (issue #63)', () => {
+    const toggle = { icon: 'star_border', pressedIcon: 'star', label: 'Favourite' };
+    const fixture = setUp([
+      { id: 'a', title: 'One', toggle: { ...toggle, pressed: true, hint: 'Remove favourite' } },
+      { id: 'b', title: 'Two', toggle: { ...toggle, pressed: false } },
+      { id: 'c', title: 'Three' },
+    ]);
+    const toggles = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.exercise-list__toggle',
+      ),
+    ];
+    expect(toggles).toHaveLength(2);
+    expect(toggles.map((button) => button.getAttribute('aria-pressed'))).toEqual(['true', 'false']);
+    expect(toggles.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Favourite',
+      'Favourite',
+    ]);
+    expect(toggles.map((button) => button.textContent?.trim())).toEqual(['star', 'star_border']);
+    expect(toggles[0].getAttribute('title')).toBe('Remove favourite');
+    expect(toggles[1].hasAttribute('title')).toBe(false);
+
+    const emitted: string[] = [];
+    fixture.componentInstance.toggleRequested.subscribe((id: string) => emitted.push(id));
+    const selected: string[] = [];
+    fixture.componentInstance.itemSelected.subscribe((id: string) => selected.push(id));
+    toggles[1].click();
+    expect(emitted).toEqual(['b']);
+    expect(selected).toEqual([]);
+  });
+
   it('renders no bin button when deletable is left at its default (issue #203)', () => {
     const fixture = setUp();
 

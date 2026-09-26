@@ -1,0 +1,44 @@
+<div class="inspiration-filters">
+  <div class="row">
+    <mat-chip-listbox
+      [attr.aria-label]="'h2Inspiration.filter.kindLabel' | transloco"
+      [value]="kind() ?? all"
+      (change)="onKindChange($event)"
+    >
+      <mat-chip-option [value]="all">{{ 'h2Inspiration.filter.all' | transloco }}</mat-chip-option>
+      @for (kind of kinds; track kind) {
+        <mat-chip-option [value]="kind">{{
+          'h2Inspiration.kind.' + kind | transloco
+        }}</mat-chip-option>
+      }
+    </mat-chip-listbox>
+    <button
+      mat-stroked-button
+      type="button"
+      class="favourites-toggle"
+      [class.favourites-toggle--on]="favouritesOnly()"
+      [attr.aria-pressed]="favouritesOnly() ? 'true' : 'false'"
+      (click)="favouritesOnlyChange.emit(!favouritesOnly())"
+    >
+      <mat-icon aria-hidden="true">{{ favouritesOnly() ? 'star' : 'star_border' }}</mat-icon>
+      {{ 'h2Inspiration.filter.favourites' | transloco }}
+    </button>
+  </div>
+  @if (tags().length) {
+    <div class="row">
+      <span class="tag-label" id="inspiration-tag-filter-label">{{
+        'h2Inspiration.filter.tagLabel' | transloco
+      }}</span>
+      <mat-chip-listbox
+        class="tag-filter"
+        aria-labelledby="inspiration-tag-filter-label"
+        [value]="tag()"
+        (change)="onTagChange($event)"
+      >
+        @for (tag of tags(); track tag) {
+          <mat-chip-option [value]="tag">{{ tag }}</mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+  }
+</div>

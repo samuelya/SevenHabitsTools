@@ -200,6 +200,14 @@
       "statusTied": {
         "other": "Centre: {{centre}} (tied)"
       }
+    },
+    "h2-inspiration": {
+      "title": "Collect what inspires you",
+      "shortTitle": "Your collection",
+      "collectedCount": {
+        "one": "1 collected",
+        "other": "{{count}} collected"
+      }
     }
   }
 }

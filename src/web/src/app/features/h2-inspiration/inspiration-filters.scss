@@ -1,0 +1,26 @@
+.inspiration-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-block-end: 0.5rem;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.favourites-toggle {
+  min-block-size: 44px;
+}
+
+.favourites-toggle--on mat-icon {
+  color: var(--mat-sys-primary, #1565c0);
+}
+
+.tag-label {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}

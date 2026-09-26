@@ -36,6 +36,20 @@ export interface ExerciseListItem {
   readonly icon?: string;
   /** Screen-reader text for `icon` (the icon itself is decorative), read after the title. */
   readonly iconLabel?: string;
+  /** An on/off button at the row's inline end (issue #63's favourite star), clicked through
+   * `ExerciseList`'s `toggleRequested`. */
+  readonly toggle?: ExerciseListToggle;
+}
+
+/** A row's on/off button: `pressed` drives `aria-pressed` and which icon shows. `label` is its
+ * accessible name, the same in both states (the pressed state is announced separately); `hint` is
+ * the tooltip for the current state, if any. All already translated. */
+export interface ExerciseListToggle {
+  readonly pressed: boolean;
+  readonly icon: string;
+  readonly pressedIcon: string;
+  readonly label: string;
+  readonly hint?: string;
 }
 
 /** `'none'` (issue #52): the caller's own `items()` order, untouched — for a fixed, meaningfully
