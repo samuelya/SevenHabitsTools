@@ -72,11 +72,11 @@ def role(agent):
     if p.lstrip().startswith("Review target"): return "code-review"
     return "unnamed-agent"
 # A coder or tester run's agent id carries the issue(s) or the PR it works: afe-212, afe-212-r4,
-# acoder-49-50, afe-265-fix (PR #265), atest-259b. An unnamed coder's task names its issues in the
+# acoder-49-50, afe-265-fix (PR #265), atest-259b, atester-53. An unnamed coder's task names its issues in the
 # first sentence. Issues and PRs share one number space, so section 2 looks a number up both as a
 # linked issue and as the PR itself. Counting runs this way gives the review a number the round
 # comments can be checked against: 4 coder runs against 0 round comments is the gap (#207).
-RUN_ID = re.compile(r"^a(?:frontend-coder|backend-coder|coder|fe|fc|be|bc|test|qa)((?:-\d+)+)(?:[a-z]?-|[a-z]?$)")
+RUN_ID = re.compile(r"^a(?:frontend-coder|backend-coder|coder|fe|fc|be|bc|tester|test|qa)((?:-\d+)+)(?:[a-z]?-|[a-z]?$)")
 def numbers_of(agent, rl):
     if rl not in ("frontend-coder", "backend-coder", "coder", "tester"): return []
     m3 = RUN_ID.match(agent or "")
@@ -190,7 +190,7 @@ json=$(gql -f q="repo:$OWNER/$REPO is:pr is:merged merged:>=$since" -f query='
     number title createdAt mergedAt comments { totalCount } files { totalCount }
     closingIssuesReferences(first: 5) { nodes { number labels(first: 20) { nodes { name } }
       comments(last: 60) { nodes { body } } } } } } } }')
-bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$since" --json body --jq '[.[].body | scan("PR #([0-9]+)")[]] ' 2>/dev/null || echo '[]')
+bugs=$(gh issue list -R "$OWNER/$REPO" --state all --label type:bug --limit 200 --search "created:>=$since" --json body --jq '[.[].body | [scan("Found while testing PR #([0-9]+)")[]] | unique[]] ' 2>/dev/null || echo '[]')
 jq -r --argjson bugs "$bugs" --argjson runs "$issue_runs" --argjson info "$run_info" --argjson reviews "$review_runs" '
   .data.search.nodes[] | select(.number != null)
   | .number as $n
