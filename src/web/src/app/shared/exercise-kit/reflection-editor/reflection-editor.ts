@@ -1,12 +1,17 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
   OnDestroy,
+  afterNextRender,
   computed,
+  inject,
   input,
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -50,6 +55,8 @@ export const REFLECTION_DEBOUNCE_MS = 1000;
 })
 export class ReflectionEditor implements OnDestroy {
   private static nextInstanceId = 0;
+  private readonly injector = inject(Injector);
+  private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>('textarea');
 
   readonly value = input.required<string>();
   readonly label = input.required<string>();
@@ -79,6 +86,9 @@ export class ReflectionEditor implements OnDestroy {
    * `'saved'` once the caller confirms the write landed (`reportSaveOutcome`). Only rendered when
    * `sessionStatus()` is `true`. */
   protected readonly status = signal<'saving' | 'saved' | null>(null);
+  /** A caller's message in the status line (`announce()`), until the next keystroke. Only rendered
+   * when `sessionStatus()` is `true`. */
+  protected readonly notice = signal<string | null>(null);
   /** Own instance id, the same pattern `DoneToggle` uses (issue #215): two editors on one page
    * would otherwise share one `id`, and every textarea's `aria-describedby` would resolve to the
    * first editor's caption. */
@@ -107,8 +117,35 @@ export class ReflectionEditor implements OnDestroy {
     }
   }
 
+  /** Shows `message` in the polite live status line, so a change the caller made to `value()` from
+   * elsewhere on the page (issue #61: "Use this" appends to the draft) is announced. The same
+   * message twice in a row is cleared for one render first, or the live region wouldn't change. */
+  announce(message: string): void {
+    if (this.notice() !== message) {
+      this.notice.set(message);
+      return;
+    }
+    this.notice.set(null);
+    afterNextRender({ write: () => this.notice.set(message) }, { injector: this.injector });
+  }
+
+  /** Scrolls the field's own content to its end once `value()`'s latest change has rendered, so
+   * text the caller appended is in view inside the field (it scrolls internally past 6 rows). */
+  scrollToEnd(): void {
+    afterNextRender(
+      {
+        write: () => {
+          const element = this.textarea().nativeElement;
+          element.scrollTop = element.scrollHeight;
+        },
+      },
+      { injector: this.injector },
+    );
+  }
+
   protected onInput(event: Event): void {
     const text = (event.target as HTMLTextAreaElement).value;
+    this.notice.set(null);
     this.draft.set(text);
     if (this.immediate()) {
       this.valueChange.emit(text);

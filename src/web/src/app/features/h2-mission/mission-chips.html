@@ -1,0 +1,56 @@
+<div class="mission-chips">
+  <p class="field-prompt" [id]="ns() + '-prompt'">
+    {{ 'h2Mission.' + ns() + '.prompt' | transloco }}
+  </p>
+
+  @if (suggestions().length) {
+    <p class="hint" [id]="ns() + '-suggestions'">
+      {{ 'h2Mission.' + ns() + '.suggestionsLabel' | transloco }}
+    </p>
+    <div class="suggestions" role="group" [attr.aria-labelledby]="ns() + '-suggestions'">
+      @for (row of suggestions(); track row.text) {
+        <button
+          mat-stroked-button
+          type="button"
+          class="suggestion"
+          [class.suggestion--on]="row.pressed"
+          [attr.aria-pressed]="row.pressed ? 'true' : 'false'"
+          (click)="toggled.emit(row.text)"
+        >
+          @if (row.pressed) {
+            <mat-icon aria-hidden="true">check</mat-icon>
+          }
+          {{ row.text }}
+        </button>
+      }
+    </div>
+  } @else {
+    <p class="empty">{{ 'h2Mission.' + ns() + '.emptyText' | transloco }}</p>
+  }
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Mission.' + ns() + '.ownLabel' | transloco }}</mat-label>
+    <mat-chip-grid #ownGrid [attr.aria-label]="'h2Mission.' + ns() + '.ownLabel' | transloco">
+      @for (line of own(); track line.index) {
+        <mat-chip-row (removed)="removed.emit(line.index)">
+          <span class="chip-label">{{ line.text }}</span>
+          <button
+            matChipRemove
+            type="button"
+            [attr.aria-label]="('h2Mission.step4.removeButton' | transloco) + ': ' + line.text"
+          >
+            <mat-icon aria-hidden="true">cancel</mat-icon>
+          </button>
+        </mat-chip-row>
+      }
+      <input
+        [placeholder]="'h2Mission.' + ns() + '.ownPlaceholder' | transloco"
+        [matChipInputFor]="ownGrid"
+        [matChipInputSeparatorKeyCodes]="separatorKeys"
+        [matChipInputAddOnBlur]="true"
+        [attr.aria-describedby]="ns() + '-prompt'"
+        (matChipInputTokenEnd)="onAdd($event)"
+      />
+    </mat-chip-grid>
+  </mat-form-field>
+</div>

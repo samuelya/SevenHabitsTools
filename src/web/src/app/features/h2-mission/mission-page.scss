@@ -1,0 +1,101 @@
+:host {
+  // A flex column: `ExercisePage` fills a routed page's host with `flex: 1 1 auto` (issue #193).
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-block: 0.5rem;
+}
+
+.field-prompt,
+.empty,
+.word-count,
+.saved,
+.review-question {
+  margin: 0;
+}
+
+.word-count {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.link-button {
+  align-self: flex-start;
+  min-block-size: 44px;
+}
+
+.role-line {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.role-name,
+.preview-title {
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+// Step 5: editor and collection side by side on desktop (editor ≤ 640px, panel 280px), the panel
+// under the editor on a handset.
+.draft-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  .draft-grid {
+    grid-template-columns: minmax(0, 640px) 280px;
+    align-items: start;
+  }
+}
+
+.draft-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.review-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.review-toggle {
+  // 44 px touch target (issue #194).
+  --mat-button-toggle-height: 44px;
+  align-self: flex-start;
+}
+
+.preview {
+  margin: 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid var(--mat-sys-outline-variant);
+  white-space: pre-line;
+}
+
+.review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.review-actions button {
+  min-block-size: 44px;
+}
+
+.footer-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  inline-size: 100%;
+}

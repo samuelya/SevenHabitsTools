@@ -1,0 +1,48 @@
+<div class="mission-lines">
+  <h3 class="lines-title" [id]="kind() + '-lines-title'">
+    {{ 'h2Mission.step4.' + kind() + 'Label' | transloco }}
+  </h3>
+  <p class="field-prompt" [id]="kind() + '-lines-prompt'">
+    {{ 'h2Mission.step4.' + kind() + 'Prompt' | transloco }}
+  </p>
+
+  @if (lines().length) {
+    <ul class="lines" [attr.aria-labelledby]="kind() + '-lines-title'">
+      @for (line of lines(); track $index) {
+        <li class="line">
+          <span class="line-text">{{ line }}</span>
+          <button
+            mat-icon-button
+            type="button"
+            [attr.aria-label]="('h2Mission.step4.removeButton' | transloco) + ': ' + line"
+            (click)="removed.emit($index)"
+          >
+            <mat-icon aria-hidden="true">close</mat-icon>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="add-row">
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>{{ 'h2Mission.step4.' + kind() + 'Label' | transloco }}</mat-label>
+      <input
+        matInput
+        [placeholder]="'h2Mission.step4.' + kind() + 'Placeholder' | transloco"
+        [value]="text()"
+        [attr.aria-describedby]="kind() + '-lines-prompt ' + kind() + '-lines-hint'"
+        (input)="onInput($event)"
+        (keydown.enter)="add()"
+      />
+    </mat-form-field>
+    <button mat-stroked-button type="button" class="add-button" (click)="add()">
+      {{ 'h2Mission.step4.addButton' | transloco }}
+    </button>
+  </div>
+  <p class="max-hint" [id]="kind() + '-lines-hint'" aria-live="polite">
+    @if (full()) {
+      {{ 'h2Mission.step4.maxHint' | transloco }}
+    }
+  </p>
+</div>

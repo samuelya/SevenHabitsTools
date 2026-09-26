@@ -335,6 +335,7 @@ export function forMission(list: readonly Inspiration[]): readonly MissionInputI
   return ordered.map((item) => ({
     id: item.id,
     text: item.text.trim(),
+    kind: item.kind,
     ...(hasText(item.source) ? { detail: item.source!.trim() } : {}),
     tags: itemTags(item),
     favourite: item.favourite === true,

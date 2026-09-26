@@ -1,0 +1,80 @@
+<section class="collection" aria-labelledby="mission-collection-heading">
+  <h3 class="collection-heading" id="mission-collection-heading">
+    <button
+      mat-button
+      type="button"
+      class="collection-toggle"
+      aria-controls="mission-collection-body"
+      [attr.aria-expanded]="expanded() ? 'true' : 'false'"
+      (click)="toggle()"
+    >
+      <mat-icon aria-hidden="true">{{ expanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      {{ 'h2Mission.panel.title' | transloco }}
+    </button>
+  </h3>
+
+  <div class="collection-body" id="mission-collection-body" [hidden]="!expanded()">
+    @if (items().length === 0) {
+      <p class="empty">{{ 'h2Mission.panel.emptyText' | transloco }}</p>
+      <a mat-stroked-button [routerLink]="collectionLink()">
+        {{ 'h2Mission.panel.collectionButton' | transloco }}
+      </a>
+    } @else {
+      @if (kinds().length > 1) {
+        <mat-chip-listbox
+          class="filter"
+          [attr.aria-label]="'h2Mission.panel.kindLabel' | transloco"
+          [value]="kind() ?? all"
+          (change)="onKindChange($event)"
+        >
+          <mat-chip-option [value]="all">{{ 'h2Mission.panel.filterAll' | transloco }}</mat-chip-option>
+          @for (kind of kinds(); track kind) {
+            <mat-chip-option [value]="kind">{{
+              'h2Mission.panel.kind.' + kind | transloco
+            }}</mat-chip-option>
+          }
+        </mat-chip-listbox>
+      }
+      @if (tags().length) {
+        <div class="tag-row">
+          <span class="tag-label" id="mission-collection-tag-label">{{
+            'h2Mission.panel.tagLabel' | transloco
+          }}</span>
+          <mat-chip-listbox
+            class="filter"
+            aria-labelledby="mission-collection-tag-label"
+            [value]="tag()"
+            (change)="onTagChange($event)"
+          >
+            @for (tag of tags(); track tag) {
+              <mat-chip-option [value]="tag">{{ tag }}</mat-chip-option>
+            }
+          </mat-chip-listbox>
+        </div>
+      }
+      <ul class="items">
+        @for (item of filtered(); track item.id) {
+          <li #row class="item">
+            <p class="item-text" [id]="'mission-collection-item-' + item.id">{{ item.text }}</p>
+            @if (item.detail) {
+              <p class="item-detail">{{ item.detail }}</p>
+            }
+            <div class="item-actions">
+              <button
+                mat-stroked-button
+                type="button"
+                [attr.aria-describedby]="'mission-collection-item-' + item.id"
+                (click)="use(item, row)"
+              >
+                {{ 'h2Mission.panel.useButton' | transloco }}
+              </button>
+              @if (usedId() === item.id) {
+                <span class="used">{{ 'h2Mission.panel.usedText' | transloco }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+</section>

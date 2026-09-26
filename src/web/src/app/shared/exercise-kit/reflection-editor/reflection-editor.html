@@ -2,6 +2,7 @@
   <mat-form-field appearance="outline" class="field">
     <mat-label>{{ label() }}</mat-label>
     <textarea
+      #textarea
       matInput
       rows="6"
       [placeholder]="placeholder() ?? ''"
@@ -16,7 +17,9 @@
          it — creating the `<p>` at the same moment "Saving…" first appears misses that first
          announcement. -->
     <p [id]="statusId" class="status" aria-live="polite">
-      @if (status(); as status) {
+      @if (notice(); as notice) {
+        {{ notice }}
+      } @else if (status(); as status) {
         {{
           (status === 'saving' ? 'exerciseKit.editor.saving' : 'exerciseKit.editor.saved')
             | transloco

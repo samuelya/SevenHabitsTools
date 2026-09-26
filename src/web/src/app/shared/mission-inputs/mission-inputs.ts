@@ -17,6 +17,8 @@ export interface MissionInputItem {
    * words, so the builder can tell them apart; `text` is still what it shows and copies. */
   readonly key?: string;
   readonly detail?: string;
+  /** The source's own category key (an inspiration's `saying`/`thought`/`idea`), for filtering. */
+  readonly kind?: string;
   readonly tags?: readonly string[];
   readonly favourite?: boolean;
 }

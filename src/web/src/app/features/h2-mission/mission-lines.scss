@@ -1,0 +1,53 @@
+.mission-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lines-title {
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+.field-prompt,
+.max-hint {
+  margin: 0;
+}
+
+.max-hint {
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 44px;
+}
+
+.line-text {
+  flex: 1 1 auto;
+  overflow-wrap: anywhere;
+}
+
+.add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.field {
+  flex: 1 1 12rem;
+}
+
+.add-button {
+  min-block-size: 44px;
+}
