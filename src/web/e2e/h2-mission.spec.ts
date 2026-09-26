@@ -145,10 +145,9 @@ test.describe('Your mission (h2-mission)', () => {
 
     // Step 3: one line for the seeded role.
     await toStep(page, text.next, '.role-line textarea');
-    await expect(activeStep(page).locator('.role-name')).toContainText('Parent');
-    await activeStep(page)
-      .locator('.role-line textarea')
-      .fill('The one who asks a second question.');
+    // Only the seeded role's section: the built-in renewal role may be listed as well.
+    const parentLine = activeStep(page).locator('.role-line', { hasText: 'Parent' });
+    await parentLine.locator('textarea').fill('The one who asks a second question.');
 
     // Step 4: a "to be" line.
     await toStep(page, text.next, 'app-mission-lines input');

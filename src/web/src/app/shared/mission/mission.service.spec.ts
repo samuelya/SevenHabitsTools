@@ -31,7 +31,8 @@ describe('MissionService', () => {
     expect(service.setCheck('roles', false)).toBe(true);
     expect(service.setRoleLine('r1', '')).toBe(true);
     expect(store.document()).toBe(before);
-    expect(store.select(MISSION_PATH)()).toBeUndefined();
+    // The empty document's own slot (the model's `defaults()`), untouched: same document above.
+    expect(store.select(MISSION_PATH)()).toBeNull();
     expect(service.record()).toBeNull();
   });
 

@@ -28,6 +28,7 @@
     <mat-form-field appearance="outline" class="field">
       <mat-label>{{ 'h2Mission.step4.' + kind() + 'Label' | transloco }}</mat-label>
       <input
+        #field
         matInput
         [placeholder]="'h2Mission.step4.' + kind() + 'Placeholder' | transloco"
         [value]="text()"

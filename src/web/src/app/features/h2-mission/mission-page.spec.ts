@@ -115,7 +115,9 @@ describe('MissionPage', () => {
 
     TestBed.inject(RolesService).add({ name: 'Parent' });
     fixture.detectChanges();
-    expect(host.querySelector('.role-name')?.textContent).toContain('Parent');
+    // The roles store adds the built-in renewal role with the first one the user names.
+    const names = [...host.querySelectorAll('.role-name')].map((name) => name.textContent?.trim());
+    expect(names).toContain('Parent');
     expect(host.textContent).toContain('In this role I want to be');
   });
 
@@ -199,7 +201,7 @@ describe('MissionPage', () => {
     ).toEqual(['I keep my word.']);
     expect(host.textContent).toContain('Version 1 saved.');
     expect(save().disabled).toBe(true);
-    const markDone = buttonsWithText(host, 'Mark done')[0];
+    const markDone = host.querySelector('app-done-toggle button') as HTMLButtonElement;
     expect(markDone.getAttribute('aria-disabled')).not.toBe('true');
 
     buttonsWithText(host, 'Copy statement')[0].click();

@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +35,7 @@ export class MissionLines {
   readonly removed = output<number>();
 
   protected readonly text = signal('');
+  private readonly field = viewChild.required<ElementRef<HTMLInputElement>>('field');
   protected readonly full = computed(() => this.lines().length >= this.max());
 
   protected onInput(event: Event): void {
@@ -38,6 +48,8 @@ export class MissionLines {
       settle: (outcome) => {
         if (clearsInput(outcome)) {
           this.text.set('');
+          // `[value]` last rendered '' too, so the binding alone would leave the typed text.
+          this.field().nativeElement.value = '';
         }
       },
     });
