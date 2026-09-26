@@ -1,5 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { By } from '@angular/platform-browser';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import '../../features/settings/settings.model';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
@@ -99,6 +101,40 @@ describe('InspirationItemForm', () => {
     typeTag(fixture, ' Work ');
     expect(emitted).toEqual([{ tags: ['time', 'work'] }]);
     expect(tagInput(fixture).value).toBe('');
+  });
+
+  it('commits typed tag text on a blur with the suggestions open, once they close', () => {
+    const fixture = setUp(item(), ['family', 'work']);
+    const emitted = edits(fixture);
+    const input = tagInput(fixture);
+    input.focus();
+    input.value = 'wor';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const trigger = fixture.debugElement
+      .query(By.directive(MatAutocompleteTrigger))
+      .injector.get(MatAutocompleteTrigger);
+    trigger.openPanel();
+    fixture.detectChanges();
+    expect(trigger.panelOpen).toBe(true);
+
+    input.blur();
+    fixture.detectChanges();
+    expect(emitted).toEqual([]);
+    trigger.closePanel();
+    fixture.detectChanges();
+    expect(emitted).toEqual([{ tags: ['wor'] }]);
+    expect(input.value).toBe('');
+  });
+
+  it('commits typed tag text when the editor closes with no blur', () => {
+    const fixture = setUp(item({ tags: ['time'] }));
+    const emitted = edits(fixture);
+    const input = tagInput(fixture);
+    input.value = 'Work';
+    input.dispatchEvent(new Event('input'));
+    fixture.destroy();
+    expect(emitted).toEqual([{ tags: ['time', 'work'] }]);
   });
 
   it('refuses a duplicate tag, keeping what was typed and saying why', () => {

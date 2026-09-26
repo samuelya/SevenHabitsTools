@@ -2,10 +2,10 @@
   <mat-card-content>
     <h2 class="title">{{ 'h2Inspiration.summary.title' | transloco }}</h2>
     <p class="count">
-      {{
-        'h2Inspiration.summary.countText'
-          | appPlural: summary().count : { favourites: (summary().favourites | appNumber) }
-      }}
+      {{ 'h2Inspiration.summary.countText' | appPlural: summary().count }}
+    </p>
+    <p class="favourites">
+      {{ 'h2Inspiration.summary.favouritesText' | appPlural: summary().favourites }}
     </p>
   </mat-card-content>
 </mat-card>

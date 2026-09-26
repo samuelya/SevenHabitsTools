@@ -1,6 +1,6 @@
 import {
   CHECKLIST_KEYS,
-  NO_FILTER,
+  InspirationFilter,
   addTag,
   allTags,
   checklistLabelsFrom,
@@ -15,10 +15,10 @@ import {
   isComplete,
   isDraftWorthSaving,
   isDuplicateTag,
-  isFiltering,
   isItemComplete,
   isStarted,
   itemTags,
+  keptTagFilter,
   labelsFrom,
   liveSampleOf,
   normaliseTag,
@@ -48,7 +48,7 @@ function item(id: string, fields: Partial<Inspiration> = {}): Inspiration {
 }
 
 const LABELS = labelsFrom(['Heard', 'Mine', 'To try'], 'Example', 'Favourite', 'Remove favourite');
-const CHECK_LABELS = checklistLabelsFrom(['Line', 'Source', 'Tag', 'Three']);
+const CHECK_LABELS = checklistLabelsFrom(['Three', 'Tag']);
 
 describe('tags', () => {
   it('normalises one rule: trimmed, whitespace collapsed, lowercased', () => {
@@ -103,6 +103,17 @@ describe('counting, hub and gate', () => {
     });
   });
 
+  it('counts only items with a non-blank line: gate, hub status, summary and mission input', () => {
+    const lineless = item('x', { text: '  ', source: 'Uncle', tags: ['time'], favourite: true });
+    expect(isStarted([lineless])).toBe(false);
+    expect(hubStatus([lineless])).toBeNull();
+    expect(summarize([lineless])).toBeNull();
+    expect(forMission([lineless])).toEqual([]);
+    expect(isComplete([lineless, item('a', { tags: ['time'] }), item('b')])).toBe(false);
+    expect(hubStatus([lineless, item('a')])?.count).toBe(1);
+    expect(summarize([lineless, item('a')])).toEqual({ count: 1, favourites: 0 });
+  });
+
   it('calls an item complete with its line and a tag', () => {
     expect(isItemComplete(item('a', { tags: ['time'] }))).toBe(true);
     expect(isItemComplete(item('a', { text: '  ', tags: ['time'] }))).toBe(false);
@@ -116,30 +127,41 @@ describe('counting, hub and gate', () => {
     expect(isDraftWorthSaving({ text: '', source: 'Uncle' })).toBe(true);
   });
 
-  it('enables Mark done with three counted items and one with a line, source and tag', () => {
-    const full = item('a', { source: 'Uncle', tags: ['time'] });
-    expect(isComplete([full, item('b')])).toBe(false);
-    expect(isComplete([full, item('b'), item('c', { sample: true })])).toBe(false);
-    expect(isComplete([full, item('b'), item('c')])).toBe(true);
-    expect(isComplete([item('a', { tags: ['time'] }), item('b'), item('c')])).toBe(false);
+  it('enables Mark done with three items that have a line, at least one of them tagged', () => {
+    const tagged = item('a', { tags: ['time'] });
+    expect(isComplete([tagged, item('b')])).toBe(false);
+    expect(isComplete([tagged, item('b'), item('c', { sample: true })])).toBe(false);
+    expect(isComplete([tagged, item('b'), item('c')])).toBe(true);
+    expect(isComplete([item('a'), item('b'), item('c')])).toBe(false);
     expect(isComplete([])).toBe(false);
   });
 
-  it('describes the item closest to passing, reducing the same map as the gate', () => {
-    const list = [item('a', { tags: ['time'] }), item('b', { source: 'Uncle' })];
-    expect(doneChecklist(list, CHECK_LABELS)).toEqual([
-      { label: 'Line', met: true },
-      { label: 'Source', met: false },
-      { label: 'Tag', met: true },
+  it('needs no source: three tagged items without one are complete', () => {
+    const list = [
+      item('a', { tags: ['time'] }),
+      item('b', { tags: ['work'] }),
+      item('c', { tags: ['family'] }),
+    ];
+    expect(list.every((entry) => entry.source === undefined)).toBe(true);
+    expect(isComplete(list)).toBe(true);
+  });
+
+  it('lists "three" and "tag", reducing the same map as the gate', () => {
+    expect(doneChecklist([item('a', { tags: ['time'] }), item('b')], CHECK_LABELS)).toEqual([
       { label: 'Three', met: false },
+      { label: 'Tag', met: true },
+    ]);
+    expect(doneChecklist([item('a'), item('b'), item('c')], CHECK_LABELS)).toEqual([
+      { label: 'Three', met: true },
+      { label: 'Tag', met: false },
     ]);
     expect(doneChecklist([], CHECK_LABELS).every((row) => !row.met)).toBe(true);
-    const done = [item('a', { source: 'Uncle', tags: ['time'] }), item('b'), item('c')];
+    const done = [item('a', { tags: ['time'] }), item('b'), item('c')];
     expect(doneChecklist(done, CHECK_LABELS).every((row) => row.met)).toBe(isComplete(done));
   });
 
   it('gates the checklist on loaded labels', () => {
-    expect(CHECKLIST_KEYS).toEqual(['line', 'source', 'tag', 'three']);
+    expect(CHECKLIST_KEYS).toEqual(['three', 'tag']);
     expect(checklistLoaded(checklistLabelsFrom(['']))).toBe(false);
     expect(checklistLoaded(CHECK_LABELS)).toBe(true);
   });
@@ -159,23 +181,27 @@ describe('filters', () => {
     item('b', { kind: 'thought', text: 'Ask a second question', tags: ['Family'] }),
     item('c', { kind: 'idea', deletedAt: T0 }),
   ];
-  const ids = (filter: Partial<typeof NO_FILTER>) =>
-    filtered(list, { ...NO_FILTER, ...filter }).map((entry) => entry.id);
+  const ids = (filter: Partial<InspirationFilter>) =>
+    filtered(list, { kind: null, tag: null, favouritesOnly: false, ...filter }).map(
+      (entry) => entry.id,
+    );
 
   it('lets every live item through with no filter', () => {
     expect(ids({})).toEqual(['a', 'b']);
-    expect(isFiltering(NO_FILTER)).toBe(false);
   });
 
-  it('filters by kind, tag (normalised), favourites and a query on text and source', () => {
+  it('filters by kind, tag (normalised) and favourites', () => {
     expect(ids({ kind: 'thought' })).toEqual(['b']);
     expect(ids({ kind: 'idea' })).toEqual([]);
     expect(ids({ tag: 'family' })).toEqual(['b']);
     expect(ids({ favouritesOnly: true })).toEqual(['a']);
-    expect(ids({ query: 'UNCLE' })).toEqual(['a']);
-    expect(ids({ query: 'second' })).toEqual(['b']);
     expect(ids({ kind: 'saying', favouritesOnly: true, tag: 'time' })).toEqual(['a']);
-    expect(isFiltering({ ...NO_FILTER, query: ' x ' })).toBe(true);
+  });
+
+  it('keeps the tag filter while the tag is in use and clears it once it is not', () => {
+    expect(keptTagFilter(['family', 'time'], 'time')).toBe('time');
+    expect(keptTagFilter(['family'], 'time')).toBeNull();
+    expect(keptTagFilter(['family'], null)).toBeNull();
   });
 });
 

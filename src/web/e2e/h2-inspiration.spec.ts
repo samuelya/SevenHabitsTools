@@ -5,7 +5,7 @@ import { t, type Locale } from './i18n';
 
 /**
  * Your collection (issue #63). Happy path from the hub: add three items, one with a source and a
- * tag typed into the chip grid, star one from its row, filter by kind and by tag, check the hub's
+ * tag typed into the chip grid, one with a tag left typed when the editor closes, star one from its row, filter by kind and by tag, check the hub's
  * status text, mark the exercise done and reload.
  */
 
@@ -47,12 +47,14 @@ async function closeEditor(page: Page, isMobile: boolean): Promise<void> {
   await expect(page.locator('app-inspiration-item-form')).not.toBeVisible();
 }
 
-/** Adds an item with `line`, and optionally a kind, a source and a tag, then closes the editor. */
+/** Adds an item with `line`, and optionally a kind, a source and a tag, then closes the editor.
+ * `typedTag` is left in the tag field unsubmitted: closing the editor must still add it (Back on
+ * mobile closes it with no blur). */
 async function addItem(
   page: Page,
   isMobile: boolean,
   line: string,
-  options: { kind?: string; source?: string; tag?: string } = {},
+  options: { kind?: string; source?: string; tag?: string; typedTag?: string } = {},
 ): Promise<void> {
   await page.locator('.add-button').click();
   await expect(page).toHaveURL(/\/habits\/h2\/inspiration\/new$/);
@@ -71,8 +73,14 @@ async function addItem(
     const tagInput = form.locator('.tag-input');
     await tagInput.fill(options.tag);
     await tagInput.press('Enter');
-    await expect(form.locator('mat-chip-row')).toHaveText([options.tag]);
+    // The chip's label, not the row: the row's text also holds the remove icon's ligature.
+    await expect(form.locator('mat-chip-row .mdc-evolution-chip__text-label')).toHaveText([
+      options.tag,
+    ]);
     await expect(tagInput).toHaveValue('');
+  }
+  if (options.typedTag) {
+    await form.locator('.tag-input').fill(options.typedTag);
   }
   await closeEditor(page, isMobile);
 }
@@ -92,7 +100,7 @@ test.describe('Your collection (h2-inspiration)', () => {
 
     await addItem(page, isMobile, 'Say the second thing.', { source: 'My uncle', tag: 'family' });
     await addItem(page, isMobile, 'Leave before you are tired.', { kind: text.thought });
-    await addItem(page, isMobile, 'Walk to work once a week.');
+    await addItem(page, isMobile, 'Walk to work once a week.', { typedTag: 'walk' });
     const rows = page.locator('.exercise-list__item');
     await expect(rows).toHaveCount(3);
     await expect(page.locator('app-inspiration-summary')).toBeVisible();
@@ -112,7 +120,7 @@ test.describe('Your collection (h2-inspiration)', () => {
     await kindFilter.getByRole('option', { name: text.thought }).click();
     await expect(rows).toHaveCount(3);
     const tagFilter = page.locator('.tag-filter');
-    await expect(tagFilter.getByRole('option')).toHaveText(['family']);
+    await expect(tagFilter.getByRole('option')).toHaveText(['family', 'walk']);
     await tagFilter.getByRole('option', { name: 'family' }).click();
     await expect(rows).toHaveCount(1);
     await tagFilter.getByRole('option', { name: 'family' }).click();

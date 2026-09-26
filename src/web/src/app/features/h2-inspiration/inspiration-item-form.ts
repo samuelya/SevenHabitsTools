@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  OnDestroy,
   Signal,
   computed,
   effect,
@@ -47,8 +48,10 @@ import {
  * emits each edit and the page stores it (autosave, no Save step).
  *
  * Tags are added on Enter, comma or blur, or by picking a suggestion. A refused tag (already on
- * the item) keeps its text in the field and says why. A blur while the suggestions are open adds
- * nothing: it is the click on a suggestion, which adds that one.
+ * the item) keeps its text in the field and says why. Typed text is never dropped: a blur with the
+ * suggestions open waits for the panel to close (the blur may be the click on a suggestion, which a
+ * `mat-option` takes without focus), and closing the editor with no blur at all (Back, Escape)
+ * commits it as the form is destroyed.
  */
 @Component({
   selector: 'app-inspiration-item-form',
@@ -68,7 +71,7 @@ import {
   styleUrl: './inspiration-item-form.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class InspirationItemForm {
+export class InspirationItemForm implements OnDestroy {
   readonly item = input.required<Inspiration>();
   /** Every tag in use across the collection (`allTags()`), for the suggestions. */
   readonly usedTags = input<readonly string[]>([]);
@@ -164,10 +167,22 @@ export class InspirationItemForm {
     if (this.tagTrigger()?.panelOpen) {
       return;
     }
-    const value = this.tagInput()?.nativeElement.value ?? '';
-    if (value.trim() !== '') {
-      this.addTyped(value);
+    this.commitTyped();
+  }
+
+  /** The suggestions closed. A picked one has already been added and refocused the field; after a
+   * click elsewhere the field has lost focus and still holds the typed text. */
+  protected onSuggestionsClosed(): void {
+    const input = this.tagInput()?.nativeElement;
+    if (input && input.ownerDocument.activeElement !== input) {
+      this.commitTyped();
     }
+  }
+
+  /** The editor closed with no blur first (Back, Escape). Component `ngOnDestroy` runs before the
+   * view's cleanups, so the output still reaches the page. */
+  ngOnDestroy(): void {
+    this.commitTyped();
   }
 
   protected onTagRemoved(tag: string): void {
@@ -175,6 +190,13 @@ export class InspirationItemForm {
     const next = removeTag(tags, tag);
     if (next !== tags) {
       this.changed.emit({ tags: next });
+    }
+  }
+
+  private commitTyped(): void {
+    const value = this.tagInput()?.nativeElement.value ?? '';
+    if (value.trim() !== '') {
+      this.addTyped(value);
     }
   }
 

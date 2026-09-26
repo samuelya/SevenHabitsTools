@@ -4,7 +4,6 @@ import {
   ChecklistMet,
   checklistItems,
   checklistLabels,
-  closestMet,
   labelsLoaded,
 } from '../../shared/exercise-kit/done-checklist.logic';
 import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
@@ -89,13 +88,14 @@ export function tagSuggestions(
 
 // ---- Counting, hub and gate ----
 
-/** Live items that count (samples don't; issue #232). */
+/** Live items that count: the user's own (samples don't; issue #232) with a line. The one rule for
+ * the gate, the hub status, the summary and the mission input. */
 export function countedItems(list: readonly Inspiration[]): Inspiration[] {
-  return list.filter(isCounted);
+  return list.filter((item) => isCounted(item) && hasText(item.text));
 }
 
 export function isStarted(list: readonly Inspiration[]): boolean {
-  return list.some(isCounted);
+  return countedItems(list).length > 0;
 }
 
 /** "7 collected"; `null` with none. */
@@ -118,28 +118,17 @@ export function isDraftWorthSaving(draft: Pick<InspirationFields, 'text' | 'sour
 /** How many counted items "Mark done" needs (issue #63). */
 export const ITEMS_TO_FINISH = 3;
 
-/** The gate items: the three the issue names, described on the item closest to them
- * (`closestMet()`), plus the count. */
-export const CHECKLIST_KEYS = ['line', 'source', 'tag', 'three'] as const;
+/** The gate (issue #63's enable rule): three counted items, at least one of them tagged. A source
+ * stays optional. */
+export const CHECKLIST_KEYS = ['three', 'tag'] as const;
 export type InspirationChecklistKey = (typeof CHECKLIST_KEYS)[number];
-
-type ItemKey = Exclude<InspirationChecklistKey, 'three'>;
-const ITEM_KEYS: readonly ItemKey[] = ['line', 'source', 'tag'];
-
-function itemMet(item: Inspiration): ChecklistMet<ItemKey> {
-  return {
-    line: hasText(item.text),
-    source: hasText(item.source),
-    tag: itemTags(item).length > 0,
-  };
-}
 
 /** One map for the button and its checklist, so the two never disagree. */
 function checklistMet(list: readonly Inspiration[]): ChecklistMet<InspirationChecklistKey> {
   const counted = countedItems(list);
   return {
-    ...closestMet(counted, ITEM_KEYS, itemMet),
     three: counted.length >= ITEMS_TO_FINISH,
+    tag: counted.some((item) => itemTags(item).length > 0),
   };
 }
 
@@ -186,41 +175,24 @@ export interface InspirationFilter {
   /** `null`: any tag. Compared normalised. */
   readonly tag: string | null;
   readonly favouritesOnly: boolean;
-  /** Matched against the text and the source, case-insensitively. */
-  readonly query: string;
 }
-
-export const NO_FILTER: InspirationFilter = {
-  kind: null,
-  tag: null,
-  favouritesOnly: false,
-  query: '',
-};
 
 /** The live items `filter` lets through, in list order. */
 export function filtered(list: readonly Inspiration[], filter: InspirationFilter): Inspiration[] {
   const tag = filter.tag === null ? null : normaliseTag(filter.tag);
-  const query = filter.query.trim().toLowerCase();
   return list.filter(
     (item) =>
       isLive(item) &&
       (filter.kind === null || item.kind === filter.kind) &&
       (!filter.favouritesOnly || item.favourite === true) &&
-      (tag === null || itemTags(item).includes(tag)) &&
-      (query === '' ||
-        item.text.toLowerCase().includes(query) ||
-        (item.source ?? '').toLowerCase().includes(query)),
+      (tag === null || itemTags(item).includes(tag)),
   );
 }
 
-/** Whether any filter narrows the list (the list then says "Nothing matches", not "Nothing yet"). */
-export function isFiltering(filter: InspirationFilter): boolean {
-  return (
-    filter.kind !== null ||
-    filter.tag !== null ||
-    filter.favouritesOnly ||
-    filter.query.trim() !== ''
-  );
+/** The selected tag filter once `tags` (the tags in use) changes: kept while a live item carries it,
+ * cleared (not only hidden) once none does, so re-adding the tag later doesn't re-filter. */
+export function keptTagFilter(tags: readonly string[], selected: string | null): string | null {
+  return selected !== null && tags.includes(selected) ? selected : null;
 }
 
 // ---- Rows ----
@@ -355,7 +327,7 @@ export function restoreInspiration(
 /** What Your mission offers from the collection (issue #61's contract): counted items with a line,
  * favourites first, list order otherwise. Samples are left out: they aren't the user's words. */
 export function forMission(list: readonly Inspiration[]): readonly MissionInputItem[] {
-  const withText = countedItems(list).filter((item) => hasText(item.text));
+  const withText = countedItems(list);
   const ordered = [
     ...withText.filter((item) => item.favourite),
     ...withText.filter((item) => !item.favourite),

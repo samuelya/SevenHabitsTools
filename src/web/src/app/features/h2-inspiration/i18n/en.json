@@ -51,15 +51,17 @@
   "summary": {
     "title": "Your collection",
     "countText": {
-      "one": "1 in your collection, {{favourites}} favourites",
-      "other": "{{count}} in your collection, {{favourites}} favourites"
+      "one": "1 in your collection",
+      "other": "{{count}} in your collection"
+    },
+    "favouritesText": {
+      "one": "1 favourite",
+      "other": "{{count}} favourites"
     }
   },
   "checklist": {
-    "line": "Add one line that moves you",
-    "source": "Say where it came from",
-    "tag": "Give it a tag",
-    "three": "Keep three in your collection"
+    "three": "Keep three in your collection",
+    "tag": "Tag one"
   },
   "guide": {
     "inShort": "You'll save lines, thoughts and ideas as they come to you, with a tag or two. Thirty seconds each. When you write your mission, they'll be waiting beside the draft.",
@@ -97,10 +99,7 @@
           "text": "Nobody on their deathbed wished they'd answered more email.",
           "kind": "saying",
           "source": "My uncle, at his retirement dinner.",
-          "tags": [
-            "time",
-            "work"
-          ],
+          "tags": ["time", "work"],
           "favourite": true
         }
       },
@@ -126,9 +125,7 @@
           "text": "Be the parent who asks a second question.",
           "kind": "thought",
           "source": "Driving home after parents' evening.",
-          "tags": [
-            "family"
-          ]
+          "tags": ["family"]
         }
       }
     ],

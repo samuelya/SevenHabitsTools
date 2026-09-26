@@ -208,17 +208,57 @@ describe('InspirationPage', () => {
     expect(rows(harness)).toEqual(['My thought']);
   });
 
-  it('gates Mark done on three items and one with a line, source and tag, with a summary', async () => {
+  it('clears the tag filter once its tag is gone, and re-adding the tag does not re-filter', async () => {
     const { harness } = await setUp(
-      [item('a', { source: 'Uncle', favourite: true }), item('b'), item('c')],
+      [item('a', { text: 'Tagged', tags: ['time'] }), item('b', { text: 'Plain' })],
+      `${LIST_URL}/a`,
+    );
+    await settle(harness);
+    filters(harness).tagChange.emit('time');
+    await settle(harness);
+    expect(rows(harness)).toEqual(['Tagged']);
+
+    form(harness).changed.emit({ tags: [] });
+    await settle(harness);
+    expect(rows(harness)).toEqual(['Tagged', 'Plain']);
+    form(harness).changed.emit({ tags: ['time'] });
+    await settle(harness);
+    expect(rows(harness)).toEqual(['Tagged', 'Plain']);
+    expect(filters(harness).tag()).toBeNull();
+  });
+
+  it('clears the filters when a new item is added, so it is never hidden by them', async () => {
+    const { harness, stored } = await setUp([
+      item('a', { text: 'Mine', kind: 'thought', tags: ['time'], favourite: true }),
+    ]);
+    await settle(harness);
+    filters(harness).kindChange.emit('thought');
+    filters(harness).favouritesOnlyChange.emit(true);
+    filters(harness).tagChange.emit('time');
+    await settle(harness);
+    (host(harness).querySelector('.add-button') as HTMLButtonElement).click();
+    await settle(harness);
+    form(harness).changed.emit({ text: 'New line' });
+    await settle(harness);
+    expect(stored()).toHaveLength(2);
+    expect(rows(harness)).toEqual(['Mine', 'New line']);
+    expect(filters(harness).kind()).toBeNull();
+    expect(filters(harness).favouritesOnly()).toBe(false);
+    expect(filters(harness).tag()).toBeNull();
+  });
+
+  it('gates Mark done on three items with a line, one of them tagged, with a summary', async () => {
+    const { harness } = await setUp(
+      [item('a', { favourite: true }), item('b'), item('c')],
       `${LIST_URL}/a`,
     );
     await settle(harness);
     expect(markDoneButton(harness).getAttribute('aria-disabled')).toBe('true');
-    expect(host(harness).textContent).toContain('Give it a tag');
-    expect(host(harness).querySelector('app-inspiration-summary')?.textContent).toContain(
-      '3 in your collection, 1 favourites',
-    );
+    expect(host(harness).textContent).toContain('Tag one');
+    const summary = host(harness).querySelector('app-inspiration-summary')?.textContent ?? '';
+    expect(summary).toContain('3 in your collection');
+    expect(summary).toContain('1 favourite');
+    expect(summary).not.toContain('1 favourites');
 
     form(harness).changed.emit({ tags: ['time'] });
     await settle(harness);

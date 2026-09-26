@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
@@ -33,6 +41,7 @@ import {
   isComplete,
   isDraftWorthSaving,
   isStarted,
+  keptTagFilter,
   labelsFrom,
   liveSampleOf,
   normaliseTag,
@@ -124,18 +133,16 @@ export class InspirationPage {
 
   protected readonly kindFilter = signal<InspirationKind | null>(null);
   protected readonly favouritesOnly = signal(false);
-  private readonly selectedTag = signal<string | null>(null);
-  /** The tag filter, dropped once no live item carries that tag any more (the chip is gone). */
-  protected readonly tagFilter = computed(() => {
-    const tag = this.selectedTag();
-    return tag !== null && this.tags().includes(tag) ? tag : null;
+  /** The tag filter, cleared once no live item carries that tag any more (the chip is gone), so
+   * re-adding the tag later doesn't re-filter. */
+  protected readonly tagFilter = linkedSignal<readonly string[], string | null>({
+    source: this.tags,
+    computation: (tags, previous) => keptTagFilter(tags, previous?.value ?? null),
   });
   private readonly filter = computed<InspirationFilter>(() => ({
     kind: this.kindFilter(),
     tag: this.tagFilter(),
     favouritesOnly: this.favouritesOnly(),
-    // The kit's own search box searches the rows (text, kind and source).
-    query: '',
   }));
   protected readonly items = computed(() =>
     filtered(this.store.value(), this.filter()).map((item) => toListItem(item, this.labels())),
@@ -146,7 +153,7 @@ export class InspirationPage {
     records: this.live,
     create: () => newRecord(DEFAULT_FIELDS, this.clock.now()),
     isWorthSaving: isDraftWorthSaving,
-    save: (record) => this.store.update((list) => [...list, record]),
+    save: (record) => this.add(record),
     update: (id, fields) => this.store.update((list) => editInspiration(list, id, fields)),
     navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
     now: () => this.clock.now(),
@@ -185,7 +192,18 @@ export class InspirationPage {
   }
 
   protected onTagFilterChange(tag: string | null): void {
-    this.selectedTag.set(tag === null ? null : normaliseTag(tag));
+    this.tagFilter.set(tag === null ? null : normaliseTag(tag));
+  }
+
+  /** Stores a new item and clears the filters, so the item just added is never hidden by them. */
+  private add(record: Inspiration): boolean {
+    const saved = this.store.update((list) => [...list, record]);
+    if (saved) {
+      this.kindFilter.set(null);
+      this.favouritesOnly.set(false);
+      this.tagFilter.set(null);
+    }
+    return saved;
   }
 
   /** "Try this example" (issue #232): a real item flagged `sample`. An untouched one already tried
@@ -202,7 +220,7 @@ export class InspirationPage {
       return;
     }
     const record: Inspiration = { ...newRecord(fields, this.clock.now()), sample: true };
-    if (this.store.update((list) => [...list, record])) {
+    if (this.add(record)) {
       this.goTo([record.id], options);
     }
   }
