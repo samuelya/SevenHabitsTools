@@ -220,10 +220,10 @@ describe('InspirationPage', () => {
 
     form(harness).changed.emit({ tags: [] });
     await settle(harness);
-    expect(rows(harness)).toEqual(['Tagged', 'Plain']);
+    expect(rows(harness)).toEqual(['Plain', 'Tagged']);
     form(harness).changed.emit({ tags: ['time'] });
     await settle(harness);
-    expect(rows(harness)).toEqual(['Tagged', 'Plain']);
+    expect(rows(harness)).toEqual(['Plain', 'Tagged']);
     expect(filters(harness).tag()).toBeNull();
   });
 
