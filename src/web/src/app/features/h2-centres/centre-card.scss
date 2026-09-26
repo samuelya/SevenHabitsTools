@@ -22,21 +22,24 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.rating-group {
-  flex-wrap: wrap;
-}
-
 .rating-group mat-button-toggle {
   min-block-size: 44px;
 }
 
-// Handset: the group wraps under the description and shares the full width, 44 px targets.
+// Handset: the group wraps under the description as a 2 x 2 grid (four in a row would squeeze
+// "Quite a lot" into ~70 px), 44 px targets.
 @media (max-width: 599.98px) {
   .rating-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     inline-size: 100%;
   }
 
-  .rating-group mat-button-toggle {
-    flex: 1 1 0;
+  .rating-group mat-button-toggle:nth-child(3) {
+    border-inline-start: none;
+  }
+
+  .rating-group mat-button-toggle:nth-child(n + 3) {
+    border-block-start: 1px solid var(--mat-button-toggle-divider-color, var(--mat-sys-outline));
   }
 }
