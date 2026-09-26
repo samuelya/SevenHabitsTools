@@ -36,7 +36,7 @@ import { GuidedStepper } from '../../shared/exercise-kit/guided-stepper/guided-s
 import { GuidedStepContent } from '../../shared/exercise-kit/guided-stepper/guided-step-content';
 import { recordDraft } from '../../shared/exercise-kit/record-draft';
 import { CentreCard } from './centre-card';
-import { CentresFactors, FactorChange } from './centres-factors';
+import { CentresFactors, FactorChange, TiedCentre } from './centres-factors';
 import { CentresPrinciples } from './centres-principles';
 import { CentresResult } from './centres-result';
 import {
@@ -54,10 +54,15 @@ import {
   labelsByKey,
   liveCentreAssessments,
   newAssessmentFields,
+  factorsFor,
+  chosenCentre,
+  ratedValue,
   removeAssessment,
   restoreAssessment,
-  topCentre,
+  topCentres,
+  validPrinciples,
   withFactor,
+  withFactorsCentre,
   withRating,
 } from './centres.logic';
 import {
@@ -199,17 +204,44 @@ export class CentresPage {
     return STEP_KEYS.map((key, index) => ({ key, label: labels[index] ?? '' }));
   });
 
-  /** The selected assessment's top centre title, `null` when every rating is 0. */
-  protected readonly topCentreLabel = computed(() => {
+  /** The centre the selected assessment's factors are about (`chosenCentre()`). */
+  protected readonly chosen = computed(() => {
     const assessment = this.draft.selected();
-    const centre = assessment === null ? null : topCentre(assessment);
+    return assessment === null ? null : chosenCentre(assessment);
+  });
+  protected readonly chosenLabel = computed(() => {
+    const centre = this.chosen();
     return centre === null ? null : this.centreLabels()[centre];
+  });
+  /** Every centre sharing the top rating, translated. */
+  protected readonly tied = computed<readonly TiedCentre[]>(() => {
+    const assessment = this.draft.selected();
+    const labels = this.centreLabels();
+    return assessment === null
+      ? []
+      : topCentres(assessment).map((centre) => ({ centre, label: labels[centre] }));
+  });
+  /** "Work and Money": re-read whenever the labels re-emit (scope loaded or language switched). */
+  protected readonly tiedList = computed(() => {
+    const labels = this.tied().map((entry) => entry.label);
+    return labels.length > 1
+      ? new Intl.ListFormat(this.transloco.getActiveLang(), { type: 'conjunction' }).format(labels)
+      : '';
+  });
+  /** The factors written about the chosen centre, none when written about another. */
+  protected readonly chosenFactors = computed(() => {
+    const assessment = this.draft.selected();
+    return assessment === null ? undefined : factorsFor(assessment, this.chosen());
+  });
+  protected readonly principles = computed(() => {
+    const assessment = this.draft.selected();
+    return assessment === null ? [] : validPrinciples(assessment);
   });
 
   /** "New assessment" until stored, then "Centre: Work" (the history row's own title). */
   protected readonly editorTitle = computed(() => {
     const assessment = this.draft.selected();
-    const centre = assessment === null || this.draft.unsaved() ? null : topCentre(assessment);
+    const centre = assessment === null || this.draft.unsaved() ? null : chosenCentre(assessment);
     return centre === null ? null : this.topCentreLabels()[centre];
   });
 
@@ -264,7 +296,7 @@ export class CentresPage {
   }
 
   protected storedRating(assessment: CentreAssessment, centre: CentreKey): CentreRating | null {
-    return assessment.ratings[centre] ?? null;
+    return ratedValue(assessment, centre);
   }
 
   protected onRated(centre: CentreKey, rating: CentreRating): void {
@@ -277,7 +309,15 @@ export class CentresPage {
   protected onFactorChanged(change: FactorChange): void {
     const assessment = this.draft.selected();
     if (assessment !== null) {
-      this.edit({ factors: withFactor(assessment, change.factor, change.text) });
+      this.edit(withFactor(assessment, change.factor, change.text));
+    }
+  }
+
+  protected onFactorsCentreChanged(centre: CentreKey): void {
+    const assessment = this.draft.selected();
+    const fields = assessment === null ? null : withFactorsCentre(assessment, centre);
+    if (fields !== null) {
+      this.edit(fields);
     }
   }
 
@@ -285,10 +325,11 @@ export class CentresPage {
     this.edit({ principles });
   }
 
-  /** The result view; an untouched draft has none, so Save just closes it (nothing stored). */
+  /** The result view; an untouched draft has none, so Save discards it (nothing stored, and
+   * `replaceUrl` keeps Back from reopening it). */
   protected onSave(): void {
     if (this.draft.unsaved()) {
-      this.closeEditor();
+      this.draft.discard();
       return;
     }
     this.editing.set(false);

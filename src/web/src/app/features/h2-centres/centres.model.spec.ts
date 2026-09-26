@@ -3,6 +3,7 @@ import { featureStore } from '../../core/data/feature-store';
 import { getRegisteredModels, validateDocument } from '../../core/data/registry';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { signal } from '@angular/core';
+import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { getRegisteredExercises } from '../../shared/exercise-kit/exercise-registry';
 import { getMissionInputs } from '../../shared/mission-inputs/mission-inputs';
 import {
@@ -31,6 +32,7 @@ const FULL: CentreAssessment = {
   date: '2026-09-01',
   ratings: { work: 3, money: 2, friends: 1, family: 0 },
   factors: { security: 'a', guidance: 'b', wisdom: 'c', power: 'd' },
+  factorsCentre: 'work',
   principles: [{ key: 'integrity' }, { name: 'keeping my word' }],
 };
 
@@ -57,7 +59,7 @@ describe('h2-centres model', () => {
     });
   });
 
-  it("registers the latest assessment's principles as a mission input (issue #61 contract)", () => {
+  it("registers the newest complete assessment's principles as a mission input, labelled (issue #61 contract)", async () => {
     const inputs = getMissionInputs('principles').filter(
       (entry) => entry.sourceExerciseId === CENTRES_MODEL_KEY,
     );
@@ -65,14 +67,20 @@ describe('h2-centres model', () => {
 
     TestBed.configureTestingModule({
       providers: [
+        provideTranslocoTesting(),
         { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
       ],
     });
-    TestBed.runInInjectionContext(() => {
+    const items = TestBed.runInInjectionContext(() => {
       featureStore<CentreAssessment[]>(CENTRES_MODEL_KEY).update(() => [FULL]);
-      const items = inputs[0].read();
-      expect(items().map((item) => item.text)).toEqual(['integrity', 'keeping my word']);
+      return inputs[0].read();
     });
+    await vi.waitFor(() =>
+      expect(items()).toEqual([
+        { id: 'integrity', text: 'Integrity', key: 'integrity' },
+        { id: 'name:keeping my word', text: 'keeping my word' },
+      ]),
+    );
   });
 
   it('validates an empty array, a fully filled assessment and one without factors', () => {
@@ -81,14 +89,17 @@ describe('h2-centres model', () => {
     const withoutFactors: Record<string, unknown> = { ...FULL };
     delete withoutFactors['factors'];
     expect(registration().validate?.([withoutFactors])).toBe(true);
-    // The 0–3 range is logic, not structure.
-    expect(registration().validate?.([{ ...FULL, ratings: { work: 7 } }])).toBe(true);
   });
 
-  it('rejects an unknown centre, a non-number rating, an unknown principle or factor', () => {
+  it('rejects an unknown centre, a rating outside 0–3, an unknown principle, factor or factors centre', () => {
     const reject = (value: unknown) => expect(registration().validate?.([value])).toBe(false);
     reject({ ...FULL, ratings: { career: 2 } });
     reject({ ...FULL, ratings: { work: '3' } });
+    // Integers 0–3 only.
+    reject({ ...FULL, ratings: { work: 7 } });
+    reject({ ...FULL, ratings: { work: -1 } });
+    reject({ ...FULL, ratings: { work: 1.5 } });
+    reject({ ...FULL, factorsCentre: 'career' });
     reject({ ...FULL, principles: [{ key: 'wealth' }] });
     reject({ ...FULL, principles: [{ name: 3 }] });
     reject({ ...FULL, principles: 'integrity' });

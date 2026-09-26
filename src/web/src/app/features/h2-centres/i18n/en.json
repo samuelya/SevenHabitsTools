@@ -69,7 +69,9 @@
   "step2": {
     "stepTitle": "Your top centre",
     "prompt": "Right now it's {{centre}}. Four quick questions about how that shows up.",
-    "noneText": "You rated everything \"Not me\". Go back and pick at least one that's a little true, or skip ahead."
+    "noneText": "You rated everything \"Not me\". Go back and pick at least one that's a little true, or skip ahead.",
+    "tieText": "{{centres}} are tied at the top.",
+    "tieLabel": "Which one are these answers about?"
   },
   "factor": {
     "securityLabel": "Security",
@@ -101,7 +103,8 @@
     "principlesTitle": "Principles you chose",
     "deltaTitle": "Since last time",
     "deltaText": "{{centre}} {{from}} → {{to}}",
-    "noDeltaText": "Same ratings as last time."
+    "noDeltaText": "Same ratings as last time.",
+    "tieText": "{{centres}} are tied at the top. Your answers are about {{centre}}."
   },
   "editor": {
     "saveButton": "Save",

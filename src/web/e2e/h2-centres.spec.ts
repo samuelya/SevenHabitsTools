@@ -19,7 +19,7 @@ function textFor(locale: Locale) {
   const work = own('centre.work.title');
   return {
     hubTitle: t(locale, 'habits', 'exercises.h2-centres.shortTitle'),
-    hubStatus: t(locale, 'habits', 'exercises.h2-centres.topCentre.work.other'),
+    hubStatus: t(locale, 'habits', 'exercises.h2-centres.status.other', { centre: work }),
     next: t(locale, 'exerciseKit', 'stepper.next'),
     integrity: t(locale, 'exerciseKit', 'principle.integrity'),
     save: own('editor.saveButton'),
@@ -135,7 +135,11 @@ test.describe('Your centre (h2-centres)', () => {
     }
 
     await toStep(page, text.next, 'app-centres-principles mat-chip-option');
-    await activeStep(page).locator('mat-chip-option', { hasText: text.integrity }).click();
+    const integrity = activeStep(page).locator('mat-chip-option', { hasText: text.integrity });
+    await integrity.click();
+    // A render after the click: the step's `principles` input holds Integrity before Enter adds
+    // the typed one (a keystroke right after the click can beat change detection under load).
+    await expect(integrity.locator('[aria-selected="true"]')).toHaveCount(1);
     const customInput = activeStep(page).locator('.mat-mdc-chip-input');
     await customInput.fill('keeping my word');
     await customInput.press('Enter');
@@ -159,6 +163,17 @@ test.describe('Your centre (h2-centres)', () => {
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(text.topRow);
 
+    // The hub's own status, before Mark done: a done exercise shows its completion date instead.
+    // Longer than the 500 ms save debounce, since `goto` reloads the app.
+    await page.waitForTimeout(1000);
+    await page.goto('/habits/h2');
+    await expect(
+      page
+        .locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle })
+        .locator('.hub-exercise-status'),
+    ).toContainText(text.hubStatus);
+    await page.goto(ROUTE);
+
     const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
     await expect(markDoneButton).toBeEnabled();
     await markDoneButton.click();
@@ -179,12 +194,5 @@ test.describe('Your centre (h2-centres)', () => {
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
-
-    await page.goto('/habits/h2');
-    await expect(
-      page
-        .locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle })
-        .locator('.hub-status'),
-    ).toContainText(text.hubStatus);
   });
 });

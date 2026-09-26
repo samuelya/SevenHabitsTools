@@ -5,26 +5,32 @@ import {
   addPrincipleName,
   canMarkDone,
   checklistLabelsFrom,
+  chosenCentre,
   checklistLoaded,
   deltas,
   doneChecklist,
   editAssessment,
+  factorsFor,
   historyItems,
   hubStatus,
   isComplete,
   isDraftWorthSaving,
   isStarted,
+  isTied,
   labelsByKey,
-  latestPrinciples,
   newAssessmentFields,
+  principleInputs,
   principleLabels,
   ranked,
+  ratedValue,
   ratingOf,
   removeAssessment,
   removePrinciple,
   restoreAssessment,
-  topCentre,
+  topCentres,
+  validPrinciples,
   withFactor,
+  withFactorsCentre,
   withRating,
 } from './centres.logic';
 import { CentreAssessment, CentrePrinciple } from './centres.model';
@@ -45,6 +51,7 @@ const FACTORS = { security: 'a', guidance: 'b', wisdom: 'c', power: 'd' };
 const COMPLETE = assessment({
   ratings: { work: 3, money: 2 },
   factors: FACTORS,
+  factorsCentre: 'work',
   principles: [{ key: 'integrity' }],
 });
 const LABELS = labelsByKey(
@@ -53,10 +60,15 @@ const LABELS = labelsByKey(
 );
 
 describe('centres logic (issue #60)', () => {
-  it('reads an unrated centre as 0 and clamps an imported out-of-range rating', () => {
+  it('reads an unrated centre, or any value but an integer 0–3, as unrated (0)', () => {
     expect(ratingOf(assessment(), 'work')).toBe(0);
-    expect(ratingOf(assessment({ ratings: { work: 7 as never } }), 'work')).toBe(3);
-    expect(ratingOf(assessment({ ratings: { work: -1 as never } }), 'work')).toBe(0);
+    expect(ratedValue(assessment(), 'work')).toBeNull();
+    expect(ratedValue(assessment({ ratings: { work: 0 } }), 'work')).toBe(0);
+    for (const bad of [7, -1, 1.5, '2', NaN]) {
+      const a = assessment({ ratings: { work: bad as never } });
+      expect(ratedValue(a, 'work')).toBeNull();
+      expect(ratingOf(a, 'work')).toBe(0);
+    }
   });
 
   it('ranks by rating, ties in card order', () => {
@@ -67,16 +79,55 @@ describe('centres logic (issue #60)', () => {
     expect(order).toHaveLength(CENTRE_KEYS.length);
   });
 
-  it('names the top centre, the first in card order on a tie, and none when all are 0', () => {
-    expect(topCentre(assessment({ ratings: { money: 2, partner: 2 } }))).toBe('partner');
-    expect(topCentre(assessment({ ratings: { work: 0 } }))).toBeNull();
-    expect(topCentre(assessment())).toBeNull();
+  it('lists every centre tied at the top, in card order, and none when all are 0', () => {
+    const tie = assessment({ ratings: { money: 2, partner: 2, work: 1 } });
+    expect(topCentres(tie)).toEqual(['partner', 'money']);
+    expect(isTied(tie)).toBe(true);
+    expect(isTied(assessment({ ratings: { work: 3, money: 2 } }))).toBe(false);
+    expect(topCentres(assessment({ ratings: { work: 0 } }))).toEqual([]);
+    expect(topCentres(assessment())).toEqual([]);
   });
 
-  it('merges a rating and a factor without touching the others', () => {
-    const a = assessment({ ratings: { work: 1 }, factors: { power: 'x' } });
-    expect(withRating(a, 'money', 2)).toEqual({ work: 1, money: 2 });
-    expect(withFactor(a, 'security', 'y')).toEqual({ power: 'x', security: 'y' });
+  it('chooses the picked centre while it is still top, else the first top one', () => {
+    const tie = assessment({ ratings: { money: 2, partner: 2 } });
+    expect(chosenCentre(tie)).toBe('partner');
+    expect(chosenCentre({ ...tie, factorsCentre: 'money' })).toBe('money');
+    expect(chosenCentre({ ...tie, factorsCentre: 'work' })).toBe('partner');
+    expect(chosenCentre(assessment())).toBeNull();
+  });
+
+  it('merges a rating without touching the others', () => {
+    expect(withRating(assessment({ ratings: { work: 1 } }), 'money', 2)).toEqual({
+      work: 1,
+      money: 2,
+    });
+  });
+
+  it('writes a factor about the chosen centre, replacing answers about another one', () => {
+    const a = assessment({ ratings: { work: 2 }, factors: { power: 'x' }, factorsCentre: 'work' });
+    expect(withFactor(a, 'security', 'y')).toEqual({
+      factors: { power: 'x', security: 'y' },
+      factorsCentre: 'work',
+    });
+    // Money is top now: the Work answers aren't carried over to it.
+    const moved: CentreAssessment = { ...a, ratings: { work: 2, money: 3 } };
+    expect(withFactor(moved, 'security', 'y')).toEqual({
+      factors: { security: 'y' },
+      factorsCentre: 'money',
+    });
+    expect(factorsFor(moved, 'money')).toEqual({});
+    expect(factorsFor(moved, 'work')).toEqual({ power: 'x' });
+  });
+
+  it('picks another tied centre and clears answers about the previous one', () => {
+    const tie = assessment({
+      ratings: { money: 2, partner: 2 },
+      factors: { power: 'x' },
+      factorsCentre: 'partner',
+    });
+    expect(withFactorsCentre(tie, 'money')).toEqual({ factors: {}, factorsCentre: 'money' });
+    expect(withFactorsCentre(tie, 'partner')).toBeNull();
+    expect(withFactorsCentre(tie, 'work')).toBeNull();
   });
 
   it('adds a suggested key up to five and refuses the sixth', () => {
@@ -114,16 +165,23 @@ describe('centres logic (issue #60)', () => {
     expect(removePrinciple(list, { name: 'x' })).toEqual([{ key: 'honesty' }]);
   });
 
-  it('labels principles: keys translated, names as typed, malformed ones skipped', () => {
+  it('drops malformed and duplicate principles, so the limit and chips never count them', () => {
     const a = assessment({
       principles: [
         { key: 'service' },
         { name: 'keeping my word' },
         {},
+        { name: '  ' },
         { key: 'honesty', name: 'x' },
+        { key: 'service' },
+        { name: 'Keeping My Word ' },
       ],
     });
+    expect(validPrinciples(a)).toEqual([{ key: 'service' }, { name: 'keeping my word' }]);
     expect(principleLabels(a, LABELS)).toEqual(['Service', 'keeping my word']);
+    const fiveValid = [...validPrinciples(a), { key: 'growth' }, { key: 'dignity' }, { name: 'y' }];
+    expect(addPrincipleKey(fiveValid as CentrePrinciple[], 'courage')).toBeNull();
+    expect(addPrincipleKey(validPrinciples(a), 'courage')).toHaveLength(3);
   });
 
   it('a draft is worth saving on a rating (even 0), typed factor text or a principle', () => {
@@ -132,6 +190,7 @@ describe('centres logic (issue #60)', () => {
     expect(isDraftWorthSaving(assessment({ ratings: { work: 0 } }))).toBe(true);
     expect(isDraftWorthSaving(assessment({ factors: { power: 'x' } }))).toBe(true);
     expect(isDraftWorthSaving(assessment({ principles: [{ key: 'growth' }] }))).toBe(true);
+    expect(isDraftWorthSaving(assessment({ principles: [{}] }))).toBe(false);
   });
 
   it('is complete with a rating above 0, all four factors and a principle', () => {
@@ -139,6 +198,15 @@ describe('centres logic (issue #60)', () => {
     expect(isComplete({ ...COMPLETE, ratings: { work: 0 } })).toBe(false);
     expect(isComplete({ ...COMPLETE, factors: { ...FACTORS, wisdom: ' ' } })).toBe(false);
     expect(isComplete({ ...COMPLETE, principles: [] })).toBe(false);
+    expect(isComplete({ ...COMPLETE, principles: [{}] })).toBe(false);
+  });
+
+  it('meets the factors item only while their centre is among the top-rated', () => {
+    expect(isComplete({ ...COMPLETE, factorsCentre: undefined })).toBe(false);
+    // Money overtook Work after the answers were written.
+    expect(isComplete({ ...COMPLETE, ratings: { work: 2, money: 3 } })).toBe(false);
+    // A tie keeps Work among the top-rated.
+    expect(isComplete({ ...COMPLETE, ratings: { work: 3, money: 3 } })).toBe(true);
   });
 
   it('enables Mark done on one complete live assessment only', () => {
@@ -172,31 +240,52 @@ describe('centres logic (issue #60)', () => {
     expect(deltas(previous, previous)).toEqual([]);
   });
 
-  it("offers the latest live assessment's principles as mission inputs", () => {
-    const older = assessment({ date: '2026-08-01', principles: [{ key: 'growth' }] }, 'old');
-    const latest = assessment(
-      { date: '2026-09-01', principles: [{ key: 'integrity' }, { name: ' Keeping my word ' }] },
-      'new',
-    );
-    expect(latestPrinciples([older, latest])).toEqual([
-      { id: 'integrity', text: 'integrity' },
+  it('offers principles from the newest complete assessment, labelled, with the key apart', () => {
+    const older: CentreAssessment = {
+      ...COMPLETE,
+      id: 'old',
+      date: '2026-08-01',
+      principles: [{ key: 'growth' }],
+    };
+    const latest: CentreAssessment = {
+      ...COMPLETE,
+      id: 'new',
+      date: '2026-09-01',
+      principles: [{ key: 'integrity' }, { name: ' Keeping my word ' }],
+    };
+    expect(principleInputs([older, latest], LABELS)).toEqual([
+      { id: 'integrity', text: 'Integrity', key: 'integrity' },
       { id: 'name:keeping my word', text: 'Keeping my word' },
     ]);
-    expect(latestPrinciples([older, { ...latest, deletedAt: NOW.toISOString() }])).toEqual([
-      { id: 'growth', text: 'growth' },
+    expect(principleInputs([older, { ...latest, deletedAt: NOW.toISOString() }], LABELS)).toEqual([
+      { id: 'growth', text: 'Growth', key: 'growth' },
     ]);
-    expect(latestPrinciples([])).toEqual([]);
+    // A newer, just-started assessment doesn't replace a complete one.
+    const draft = assessment(
+      { date: '2026-09-20', ratings: { money: 1 }, principles: [{ name: 'x' }] },
+      'draft',
+    );
+    expect(principleInputs([older, draft], LABELS).map((item) => item.id)).toEqual(['growth']);
+    // Without a complete one, the newest with a principle.
+    expect(principleInputs([draft], LABELS)).toEqual([{ id: 'name:x', text: 'x' }]);
+    // A suggestion waits for its label.
+    expect(principleInputs([older], labelsByKey(PRINCIPLE_KEYS, ['']))).toEqual([]);
+    expect(principleInputs([], LABELS)).toEqual([]);
   });
 
-  it("gives the hub the latest assessment's top centre, null without one", () => {
+  it("gives the hub the newest complete assessment's chosen centre, as a key param", () => {
+    const status = (centre: string, tied = false) => ({
+      key: tied ? 'habits.exercises.h2-centres.statusTied' : 'habits.exercises.h2-centres.status',
+      count: 1,
+      keyParams: { centre: { scope: 'h2-centres', key: `centre.${centre}.title` } },
+    });
     expect(hubStatus([])).toBeNull();
     expect(hubStatus([assessment({ ratings: { work: 0 } })])).toBeNull();
-    const older = assessment({ date: '2026-08-01', ratings: { money: 3 } }, 'old');
-    const latest = assessment({ date: '2026-09-01', ratings: { work: 2 } }, 'new');
-    expect(hubStatus([latest, older])).toEqual({
-      key: 'habits.exercises.h2-centres.topCentre.work',
-      count: 1,
-    });
+    const draft = assessment({ date: '2026-09-20', ratings: { money: 3 } }, 'draft');
+    expect(hubStatus([COMPLETE, draft])).toEqual(status('work'));
+    expect(hubStatus([draft])).toEqual(status('money'));
+    const tie: CentreAssessment = { ...COMPLETE, ratings: { money: 3, work: 3 } };
+    expect(hubStatus([tie])).toEqual(status('work', true));
   });
 
   it('builds history rows with the top centre label and the principle count', () => {

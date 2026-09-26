@@ -78,6 +78,7 @@ function assessment(
 const COMPLETE_FIELDS: Partial<CentreAssessment> = {
   ratings: { work: 3, money: 2 },
   factors: { security: 'a', guidance: 'b', wisdom: 'c', power: 'd' },
+  factorsCentre: 'work',
   principles: [{ key: 'integrity' }, { name: 'keeping my word' }],
 };
 
@@ -153,6 +154,80 @@ describe('CentresPage (issue #60)', () => {
     fields[0].dispatchEvent(new Event('input'));
     await harness.fixture.whenStable();
     expect(stored()[0].factors).toEqual({ security: 'Sure of myself.' });
+    expect(stored()[0].factorsCentre).toBe('money');
+  });
+
+  it('never shows answers written about another centre under the new top one', async () => {
+    const harness = await setUp();
+    seed(assessment('c1', { ...COMPLETE_FIELDS, ratings: { work: 2, money: 3 } }));
+    await harness.navigateByUrl(`${LIST_URL}/c1`);
+
+    // The result keeps them under Work, the centre they were written about.
+    const result = host(harness).querySelector('app-centres-result') as HTMLElement;
+    expect(result.textContent).toContain('Your top centre: Work');
+
+    await click(harness, result.querySelector('.actions button'));
+    const factors = host(harness).querySelector('app-centres-factors') as HTMLElement;
+    expect(factors.textContent).toContain("Right now it's Money.");
+    const values = [...factors.querySelectorAll('textarea')].map((field) => field.value);
+    expect(values).toEqual(['', '', '', '']);
+  });
+
+  it('lets the user pick which tied centre the factors are about, and names it', async () => {
+    const harness = await setUp();
+    seed(assessment('c1', { ratings: { money: 2, partner: 2 } }));
+    await harness.navigateByUrl(`${LIST_URL}/c1`);
+    await click(harness, host(harness).querySelector('app-centres-result .actions button'));
+
+    const factors = host(harness).querySelector('app-centres-factors') as HTMLElement;
+    expect(factors.textContent).toContain('Partner and Money are tied at the top.');
+    const radios = factors.querySelectorAll<HTMLInputElement>('mat-radio-button input');
+    expect(radios).toHaveLength(2);
+    expect(radios[0].checked).toBe(true);
+
+    await click(harness, radios[1]);
+    expect(stored()[0].factorsCentre).toBe('money');
+    expect(factors.textContent).toContain("Right now it's Money.");
+
+    await click(harness, host(harness).querySelector('.save-button'));
+    expect(host(harness).querySelector('app-centres-result')?.textContent).toContain(
+      'Partner and Money are tied at the top. Your answers are about Money.',
+    );
+  });
+
+  it('shows an invalid stored rating as unrated in the editor', async () => {
+    const harness = await setUp();
+    seed(assessment('c1', { ratings: { work: 2.5 as never, money: 1 } }));
+    await harness.navigateByUrl(`${LIST_URL}/c1`);
+    await click(harness, host(harness).querySelector('app-centres-result .actions button'));
+
+    const work = host(harness).querySelectorAll('app-centre-card')[3];
+    expect(work.querySelectorAll('.mat-button-toggle-checked')).toHaveLength(0);
+  });
+
+  it('drops malformed and duplicate principles from the chips and the limit', async () => {
+    const harness = await setUp();
+    seed(
+      assessment('c1', {
+        ratings: { work: 1 },
+        principles: [{}, { name: ' ' }, { key: 'service' }, { key: 'service' }, { name: 'x' }],
+      }),
+    );
+    await harness.navigateByUrl(`${LIST_URL}/c1`);
+    const chips = [...host(harness).querySelectorAll('app-centres-result mat-chip')].map((chip) =>
+      chip.textContent?.trim(),
+    );
+    expect(chips).toEqual(['Service', 'x']);
+
+    await click(harness, host(harness).querySelector('app-centres-result .actions button'));
+    expect(host(harness).querySelectorAll('app-centres-principles mat-chip-row')).toHaveLength(1);
+    const options = host(harness).querySelectorAll('app-centres-principles mat-chip-option');
+    await click(harness, options[0].querySelector('.mdc-evolution-chip__action--primary'));
+    expect(stored()[0].principles).toEqual([
+      { key: 'service' },
+      { name: 'x' },
+      { key: 'fairness' },
+    ]);
   });
 
   it('Save shows the ranked result; Edit goes back to the stepper', async () => {
@@ -181,11 +256,13 @@ describe('CentresPage (issue #60)', () => {
     expect(result()).not.toBeNull();
   });
 
-  it('Save on an untouched draft closes it and stores nothing', async () => {
+  it('Save on an untouched draft discards it (replacing the URL) and stores nothing', async () => {
     const harness = await setUp();
     await openNew(harness);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     await click(harness, host(harness).querySelector('.save-button'));
     expect(TestBed.inject(Router).url).toBe(LIST_URL);
+    expect(navigate).toHaveBeenCalledWith([LIST_URL], { replaceUrl: true });
     expect(stored()).toHaveLength(0);
   });
 

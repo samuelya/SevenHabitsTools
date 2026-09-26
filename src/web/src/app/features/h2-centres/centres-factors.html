@@ -1,6 +1,22 @@
 <div class="centres-factors">
-  @if (centreLabel(); as centre) {
-    <p class="step-prompt">{{ 'h2Centres.step2.prompt' | transloco: { centre: centre } }}</p>
+  @if (centreLabel(); as label) {
+    <p class="step-prompt">{{ 'h2Centres.step2.prompt' | transloco: { centre: label } }}</p>
+    @if (tied().length > 1) {
+      <p class="field-prompt" id="centres-tie-text">
+        {{ 'h2Centres.step2.tieText' | transloco: { centres: tiedList() } }}
+      </p>
+      <mat-radio-group
+        class="tie-choice"
+        [attr.aria-label]="'h2Centres.step2.tieLabel' | transloco"
+        aria-describedby="centres-tie-text"
+        [value]="centre()"
+        (change)="onCentreChange($event)"
+      >
+        @for (entry of tied(); track entry.centre) {
+          <mat-radio-button [value]="entry.centre">{{ entry.label }}</mat-radio-button>
+        }
+      </mat-radio-group>
+    }
     @for (factor of factorKeys; track factor) {
       @let promptId = 'centres-factor-' + factor + '-prompt';
       <p class="field-prompt" [id]="promptId">

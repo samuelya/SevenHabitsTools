@@ -29,8 +29,8 @@ import { exerciseStatusSignal } from '../../shared/exercise-kit/exercise-hub-sta
 import { HabitExerciseProgress } from '../../shared/exercise-kit/exercise-progress.logic';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
-  ExerciseHubStatus,
   ExerciseRegistryEntry,
+  HubStatusText,
   getRegisteredExercises,
 } from '../../shared/exercise-kit/exercise-registry';
 import { exerciseStartedSignal } from '../../shared/exercise-kit/exercise-started';
@@ -41,7 +41,7 @@ import { localizedCountParams, todayContinueTarget } from './today.logic';
 
 /** What the Continue card says under its habit: nothing until the exercise is started, then its own
  * in-progress text ("2 of 3 steps"), or a generic "In progress" when it registers none. */
-type ContinueStatus = ExerciseHubStatus | 'started' | null;
+type ContinueStatus = HubStatusText | 'started' | null;
 
 /** Home, shown as "Today" (issue #220): the export reminder, a first-run paragraph until the first
  * "Mark done", a Continue card to the next exercise, and progress for the available habits plus

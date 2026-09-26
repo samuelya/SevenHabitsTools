@@ -25,13 +25,20 @@
         </li>
       }
     </ul>
+    @if (tiedChoice(); as choice) {
+      <p class="factor-text tie-text">
+        {{
+          'h2Centres.result.tieText' | transloco: { centres: tiedList(), centre: labels[choice] }
+        }}
+      </p>
+    }
   </section>
 
-  @if (top(); as top) {
+  @if (factorsCentre(); as about) {
     @if (factors().length) {
       <section class="section">
         <h3 class="section-title">
-          {{ 'h2Centres.result.factorsTitle' | transloco: { centre: labels[top] } }}
+          {{ 'h2Centres.result.factorsTitle' | transloco: { centre: labels[about] } }}
         </h3>
         @for (entry of factors(); track entry.factor) {
           <h4 class="factor-label">

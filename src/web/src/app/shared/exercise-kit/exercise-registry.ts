@@ -11,6 +11,23 @@ export interface ExerciseHubStatus {
   /** Extra interpolation params for `key` beyond `count` (e.g. `{ total: 3 }` for "2 of 3
    * steps", issue #219). */
   readonly params?: Readonly<Record<string, number>>;
+  /** Params whose value is a translation the hub resolves before interpolating `key` (issue #60:
+   * "Centre: {{centre}}" with the centre's title from the exercise's own scope). */
+  readonly keyParams?: Readonly<Record<string, HubStatusKeyParam>>;
+}
+
+/** A translation in a feature `scope` (loaded on demand), e.g. `{ scope: 'h2-centres', key:
+ * 'centre.work.title' }`: the hub can't read another feature's strings any other way. */
+export interface HubStatusKeyParam {
+  readonly scope: string;
+  readonly key: string;
+}
+
+/** What the hub renders: an `ExerciseHubStatus` with its `keyParams` translated into `params`. */
+export interface HubStatusText {
+  readonly key: string;
+  readonly count: number;
+  readonly params?: Readonly<Record<string, number | string>>;
 }
 
 /**

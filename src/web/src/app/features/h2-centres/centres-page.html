@@ -39,6 +39,7 @@
             [previous]="previous()"
             [centreLabels]="centreLabels()"
             [principleKeyLabels]="principleLabels()"
+            [tiedList]="tiedList()"
             (editRequested)="onEdit()"
           />
         }
@@ -63,16 +64,20 @@
             <ng-template appGuidedStep="step2">
               <div class="step-body">
                 <app-centres-factors
-                  [centreLabel]="topCentreLabel()"
-                  [factors]="assessment.factors"
+                  [centreLabel]="chosenLabel()"
+                  [centre]="chosen()"
+                  [tied]="tied()"
+                  [tiedList]="tiedList()"
+                  [factors]="chosenFactors()"
                   (factorChange)="onFactorChanged($event)"
+                  (centreChange)="onFactorsCentreChanged($event)"
                 />
               </div>
             </ng-template>
             <ng-template appGuidedStep="step3">
               <div class="step-body">
                 <app-centres-principles
-                  [principles]="assessment.principles"
+                  [principles]="principles()"
                   [keyLabels]="principleLabels()"
                   (principlesChange)="onPrinciplesChanged($event)"
                 />

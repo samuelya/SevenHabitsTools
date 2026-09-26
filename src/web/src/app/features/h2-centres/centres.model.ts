@@ -1,3 +1,5 @@
+import { Signal, computed } from '@angular/core';
+import { translateSignal } from '@jsverse/transloco';
 import { BaseRecord } from '../../core/data/record';
 import {
   isArrayOf,
@@ -9,18 +11,18 @@ import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
 import { storeStatusFactory } from '../../shared/exercise-kit/exercise-hub-status';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
-import {
-  registerMissionInput,
-  storeInputFactory,
-} from '../../shared/mission-inputs/mission-inputs';
+import { storeSignalFactory } from '../../shared/exercise-kit/store-signal-factory';
+import { MissionInputItem, registerMissionInput } from '../../shared/mission-inputs/mission-inputs';
 import {
   CENTRE_KEYS,
   FACTOR_KEYS,
   PRINCIPLE_KEYS,
   RATINGS,
   hubStatus,
+  isRating,
   isStarted,
-  latestPrinciples,
+  labelsByKey,
+  principleInputs,
 } from './centres.logic';
 
 export type CentreKey = (typeof CENTRE_KEYS)[number];
@@ -39,10 +41,12 @@ export interface CentrePrinciple {
 /** One centres assessment (issue #60): a dated, repeatable assessment record. */
 export interface CentreAssessment extends BaseRecord {
   readonly date: string;
-  /** Absent = not rated yet (0 at render). The 0–3 range is logic, not `validate()`. */
+  /** Absent = not rated yet (0 at render). `validate()` accepts integers 0–3 only. */
   readonly ratings: Partial<Record<CentreKey, CentreRating>>;
-  /** About the top centre. */
+  /** About `factorsCentre`, not whichever centre is top now. */
   readonly factors?: CentreFactors;
+  /** The centre `factors` were written about: the top one, or the user's pick in a tie. */
+  readonly factorsCentre?: CentreKey;
   readonly principles: readonly CentrePrinciple[];
 }
 
@@ -67,7 +71,7 @@ function isRatings(value: unknown): boolean {
   return (
     isPlainObject(value) &&
     Object.entries(value).every(
-      ([key, rating]) => isCentreKey(key) && (rating === undefined || typeof rating === 'number'),
+      ([key, rating]) => isCentreKey(key) && (rating === undefined || isRating(rating)),
     )
   );
 }
@@ -100,11 +104,28 @@ function isCentreAssessment(value: unknown): value is CentreAssessment {
     typeof candidate['date'] === 'string' &&
     isRatings(candidate['ratings']) &&
     isFactors(candidate['factors']) &&
+    (candidate['factorsCentre'] === undefined || isCentreKey(candidate['factorsCentre'])) &&
     isPrincipleArray(candidate['principles'])
   );
 }
 
 const isCentreAssessmentArray = isArrayOf(isCentreAssessment);
+
+/** `MissionInputEntry.read` (issue #61): `principleInputs()` with the suggestions' labels in the
+ * current language, from the shared `exerciseKit.principle.*` keys. */
+function readPrinciples(): Signal<readonly MissionInputItem[]> {
+  const list = storeSignalFactory<CentreAssessment[], readonly CentreAssessment[]>(
+    CENTRES_MODEL_KEY,
+    (value) => value,
+    [],
+  )();
+  const labels = translateSignal(
+    PRINCIPLE_KEYS.map((key) => `principle.${key}`),
+    undefined,
+    'exercise-kit',
+  );
+  return computed(() => principleInputs(list(), labelsByKey(PRINCIPLE_KEYS, labels())));
+}
 
 /** Registers the model, the exercise and its mission input, a no-op if already done (Vitest runs
  * with `isolate: false`). */
@@ -132,7 +153,7 @@ export function registerCentresModel(): void {
   registerMissionInput({
     sourceExerciseId: CENTRES_MODEL_KEY,
     kind: 'principles',
-    read: storeInputFactory<CentreAssessment[]>(CENTRES_MODEL_KEY, latestPrinciples),
+    read: readPrinciples,
   });
 }
 

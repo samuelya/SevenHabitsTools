@@ -6,16 +6,17 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import {
   FACTOR_KEYS,
   MAX_RATING,
+  chosenCentre,
   deltas,
+  isTied,
   principleLabels,
   ranked,
-  topCentre,
 } from './centres.logic';
 import { CentreAssessment, CentreKey, PrincipleKey } from './centres.model';
 
 /**
- * A saved assessment, read-only (issue #60): the centres ranked as bars, the four factor answers
- * for the top centre, the chosen principles and, with a previous assessment, what changed since.
+ * A saved assessment, read-only (issue #60): the centres ranked as bars (and a tie at the top
+ * named), the four factor answers under the centre they were written about, the chosen principles and, with a previous assessment, what changed since.
  * Presentational: "Edit" is emitted and the page decides what it does.
  */
 @Component({
@@ -31,6 +32,8 @@ export class CentresResult {
   readonly previous = input<CentreAssessment | null>(null);
   readonly centreLabels = input.required<Readonly<Record<CentreKey, string>>>();
   readonly principleKeyLabels = input.required<Readonly<Record<PrincipleKey, string>>>();
+  /** The centres tied at the top as one phrase in the current language ("Work and Money"). */
+  readonly tiedList = input('');
   readonly editRequested = output<void>();
 
   protected readonly total = MAX_RATING;
@@ -40,7 +43,12 @@ export class CentresResult {
       percent: (entry.rating / MAX_RATING) * 100,
     })),
   );
-  protected readonly top = computed(() => topCentre(this.assessment()));
+  /** The centre a tie was settled on, `null` without a tie. */
+  protected readonly tiedChoice = computed(() =>
+    isTied(this.assessment()) ? chosenCentre(this.assessment()) : null,
+  );
+  /** The centre the answers were written about, even if it's no longer top. */
+  protected readonly factorsCentre = computed(() => this.assessment().factorsCentre ?? null);
   protected readonly factors = computed(() => {
     const factors = this.assessment().factors ?? {};
     return FACTOR_KEYS.map((factor) => ({ factor, text: factors[factor] ?? '' })).filter(

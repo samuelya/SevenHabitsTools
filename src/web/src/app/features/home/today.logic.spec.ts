@@ -45,6 +45,13 @@ describe('todayContinueTarget (#220)', () => {
 });
 
 describe('localizedCountParams', () => {
+  it('passes a translated text param through (issue #60)', () => {
+    expect(localizedCountParams(1, { centre: 'العمل' }, 'ar-u-nu-arab')).toEqual({
+      count: '١',
+      centre: 'العمل',
+    });
+  });
+
   it('formats the count and every param with Western digits', () => {
     expect(localizedCountParams(2, { total: 3 }, 'ar-u-nu-latn')).toEqual({
       count: '2',

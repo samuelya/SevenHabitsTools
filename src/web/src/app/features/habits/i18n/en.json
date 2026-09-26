@@ -194,37 +194,11 @@
     "h2-centres": {
       "title": "Find what your life revolves around",
       "shortTitle": "Your centre",
-      "topCentre": {
-        "partner": {
-          "other": "Centre: Partner"
-        },
-        "family": {
-          "other": "Centre: Family"
-        },
-        "money": {
-          "other": "Centre: Money"
-        },
-        "work": {
-          "other": "Centre: Work"
-        },
-        "possessions": {
-          "other": "Centre: Possessions"
-        },
-        "pleasure": {
-          "other": "Centre: Pleasure"
-        },
-        "friends": {
-          "other": "Centre: Friends"
-        },
-        "enemies": {
-          "other": "Centre: Enemies"
-        },
-        "religion": {
-          "other": "Centre: Religion"
-        },
-        "self": {
-          "other": "Centre: Yourself"
-        }
+      "status": {
+        "other": "Centre: {{centre}}"
+      },
+      "statusTied": {
+        "other": "Centre: {{centre}} (tied)"
       }
     }
   }
