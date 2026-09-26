@@ -18,7 +18,10 @@
       </mat-chip-set>
     }
     <p class="scenarios">
-      {{ 'h2LongView.summary.scenariosText' | transloco: { count: (completed() | appNumber) } }}
+      {{
+        'h2LongView.summary.scenariosText'
+          | transloco: { count: (completed() | appNumber), total: (total() | appNumber) }
+      }}
     </p>
   </mat-card-content>
 </mat-card>

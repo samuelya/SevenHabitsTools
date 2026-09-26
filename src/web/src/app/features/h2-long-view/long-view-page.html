@@ -93,7 +93,11 @@
 
   <div footer class="summary-section">
     @if (summary(); as summary) {
-      <app-long-view-summary [values]="summary.values" [completed]="summary.completed" />
+      <app-long-view-summary
+        [values]="summary.values"
+        [completed]="summary.completed"
+        [total]="summary.total"
+      />
     }
     <app-done-toggle
       [done]="done()"

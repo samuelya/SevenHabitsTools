@@ -120,6 +120,7 @@
   "valuesPrompt": "What does this tell you you value? One or two words each.",
   "valuesPlaceholder": "e.g. presence",
   "removeValueAria": "Remove {{value}}",
+  "valueDuplicate": "“{{value}}” is already here.",
   "readBack": {
     "stepTitle": "Reading it back",
     "reflectionLabel": "What stands out",
@@ -129,7 +130,7 @@
   "summary": {
     "valuesTitle": "Values you heard",
     "valueCountText": "{{value}} · {{count}}",
-    "scenariosText": "{{count}} of 4 long views"
+    "scenariosText": "{{count}} of {{total}} long views"
   },
   "editor": { "editButton": "Edit" },
   "checklist": {

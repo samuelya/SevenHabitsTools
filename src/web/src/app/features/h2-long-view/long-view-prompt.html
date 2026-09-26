@@ -13,9 +13,10 @@
       <input
         matInput
         type="text"
-        [value]="answer().speaker ?? ('h2LongView.speaker.' + slot | transloco)"
+        [value]="speaker() ?? blankSpeaker() ?? ('h2LongView.speaker.' + slot | transloco)"
         [attr.aria-describedby]="stem + '-speaker-prompt'"
         (input)="onSpeaker($event)"
+        (blur)="blankSpeaker.set(null)"
       />
     </mat-form-field>
   }
@@ -58,9 +59,15 @@
         [matChipInputFor]="valueGrid"
         [matChipInputSeparatorKeyCodes]="separatorKeys"
         [matChipInputAddOnBlur]="true"
-        [attr.aria-describedby]="stem + '-values-prompt'"
+        [attr.aria-describedby]="stem + '-values-prompt ' + stem + '-values-hint'"
         (matChipInputTokenEnd)="onValueAdded($event)"
+        (input)="onValueTyped()"
       />
     </mat-chip-grid>
+    <mat-hint class="duplicate-hint" aria-live="polite" [id]="stem + '-values-hint'">
+      @if (duplicate(); as duplicate) {
+        {{ 'h2LongView.valueDuplicate' | transloco: { value: duplicate } }}
+      }
+    </mat-hint>
   </mat-form-field>
 </div>

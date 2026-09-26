@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { PROMPTS, answerFor, speakerSlot } from './long-view.logic';
+import { scenarioAnswers, speakerName, speakerSlot } from './long-view.logic';
 import { LongView } from './long-view.model';
 
 /** A saved long view, read-only (issue #58): every answer with its values and the reflection,
@@ -21,10 +21,10 @@ export class LongViewReadout {
   readonly redoRequested = output<void>();
 
   protected readonly answers = computed(() => {
-    const view = this.view();
-    return PROMPTS[view.scenario].map((key) => ({
-      ...answerFor(view, key),
-      slot: speakerSlot(key),
+    return scenarioAnswers(this.view()).map((answer) => ({
+      ...answer,
+      speaker: speakerName(answer),
+      slot: speakerSlot(answer.promptKey),
     }));
   });
 }

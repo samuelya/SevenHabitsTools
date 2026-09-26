@@ -1,6 +1,5 @@
-import { Signal, computed, signal } from '@angular/core';
-import { featureStore } from '../../core/data/feature-store';
-import { getRegisteredModels } from '../../core/data/registry';
+import { Signal } from '@angular/core';
+import { storeSignalFactory } from '../exercise-kit/store-signal-factory';
 
 /**
  * The mission inputs registry (contract in issue #61, created by #58): what Your mission offers
@@ -46,20 +45,11 @@ export function getMissionInputs(kind: MissionInputKind): readonly MissionInputE
   return registrations.filter((entry) => entry.kind === kind);
 }
 
-/**
- * Builds a `MissionInputEntry.read` from a pure `pick(value)` over a model's `featureStore` slice
- * — `storeStatusFactory()`'s twin (`exercise-hub-status.ts`), resolved lazily and with the same
- * guard: a model the registry doesn't hold reads as no items instead of throwing.
- */
+/** Builds a `MissionInputEntry.read` from a pure `pick(value)` over a model's `featureStore`
+ * slice (`storeSignalFactory()`): a model the registry doesn't hold reads as no items. */
 export function storeInputFactory<T>(
   key: string,
   pick: (value: T) => readonly MissionInputItem[],
 ): () => Signal<readonly MissionInputItem[]> {
-  return () => {
-    if (!getRegisteredModels().some((model) => model.key === key)) {
-      return signal([]);
-    }
-    const store = featureStore<T>(key);
-    return computed(() => pick(store.value()));
-  };
+  return storeSignalFactory<T, readonly MissionInputItem[]>(key, pick, []);
 }

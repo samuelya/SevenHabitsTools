@@ -14,7 +14,7 @@
     <section class="answer">
       <h3 class="answer-title">
         @if (answer.slot) {
-          {{ answer.speaker || ('h2LongView.speaker.' + answer.slot | transloco) }}
+          {{ answer.speaker ?? ('h2LongView.speaker.' + answer.slot | transloco) }}
         } @else {
           {{ 'h2LongView.' + answer.promptKey + '.label' | transloco }}
         }

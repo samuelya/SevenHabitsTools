@@ -52,25 +52,52 @@ export function answerFor(view: LongView, promptKey: string): LongViewAnswer {
   );
 }
 
+/**
+ * The answers that count: one per prompt of the view's scenario, in prompt order. An answer whose
+ * `promptKey` isn't one of them (an imported record may hold one) is never shown, counted or kept,
+ * so dropping it on the next edit changes nothing the user sees.
+ */
+export function scenarioAnswers(view: LongView): readonly LongViewAnswer[] {
+  return PROMPTS[view.scenario].map((key) => answerFor(view, key));
+}
+
 /** `view`'s answers with `promptKey`'s replaced by `fields` merged in, in prompt order. */
 export function withAnswer(
   view: LongView,
   promptKey: string,
   fields: Partial<Omit<LongViewAnswer, 'promptKey'>>,
 ): readonly LongViewAnswer[] {
-  const answers = PROMPTS[view.scenario].map((key) => answerFor(view, key));
-  return answers.map((answer) =>
+  return scenarioAnswers(view).map((answer) =>
     answer.promptKey === promptKey ? { ...answer, ...fields } : answer,
   );
+}
+
+/** The speaker's name, `null` when absent, empty or whitespace: the editor and the readout then
+ * both show the slot label. */
+export function speakerName(answer: LongViewAnswer): string | null {
+  const speaker = answer.speaker ?? '';
+  return hasText(speaker) ? speaker : null;
+}
+
+/** The stored form of a typed speaker: an empty or whitespace name is stored as absent. */
+export function speakerFields(speaker: string): Pick<LongViewAnswer, 'speaker'> {
+  return { speaker: hasText(speaker) ? speaker : undefined };
 }
 
 /** Adds `value` (trimmed) to `values`, unless it is empty or already there (case-insensitive). */
 export function addValue(values: readonly string[], value: string): readonly string[] {
   const trimmed = value.trim();
-  if (trimmed === '' || values.some((existing) => sameValue(existing, trimmed))) {
+  if (trimmed === '' || isDuplicateValue(values, trimmed)) {
     return values;
   }
   return [...values, trimmed];
+}
+
+/** Whether `value` (trimmed, non-empty) is already in `values`, case-insensitively: an add that
+ * `addValue()` refuses, which must keep the typed text and say why. */
+export function isDuplicateValue(values: readonly string[], value: string): boolean {
+  const trimmed = value.trim();
+  return trimmed !== '' && values.some((existing) => sameValue(existing, trimmed));
 }
 
 export function removeValue(values: readonly string[], value: string): readonly string[] {
@@ -82,7 +109,7 @@ const sameValue = (a: string, b: string): boolean =>
 
 /** Every value chip of one long view, deduplicated case-insensitively, first spelling kept. */
 export function scenarioValues(view: LongView): readonly string[] {
-  return view.answers.reduce<readonly string[]>(
+  return scenarioAnswers(view).reduce<readonly string[]>(
     (values, answer) => answer.values.reduce(addValue, values),
     [],
   );
@@ -90,8 +117,8 @@ export function scenarioValues(view: LongView): readonly string[] {
 
 /** Draft before record (issue #217): typed answer text, a speaker edit or a chip. */
 export function isDraftWorthSaving(view: LongView): boolean {
-  return view.answers.some(
-    (answer) => hasText(answer.text) || answer.speaker !== undefined || answer.values.length > 0,
+  return scenarioAnswers(view).some(
+    (answer) => hasText(answer.text) || hasText(answer.speaker) || answer.values.length > 0,
   );
 }
 
@@ -102,8 +129,8 @@ export type LongViewChecklistKey = (typeof CHECKLIST_KEYS)[number];
 function checklistMet(view: LongView): ChecklistMet<LongViewChecklistKey> {
   return {
     scenario: true,
-    answers: PROMPTS[view.scenario].every((key) => hasText(answerFor(view, key).text)),
-    value: view.answers.some((answer) => answer.values.some((value) => hasText(value))),
+    answers: scenarioAnswers(view).every((answer) => hasText(answer.text)),
+    value: scenarioValues(view).length > 0,
   };
 }
 
@@ -184,7 +211,13 @@ export function completedScenarios(list: readonly LongView[]): readonly LongView
 /** The hub's status: "2 of 4 long views", `null` before one is complete. */
 export function hubStatus(list: readonly LongView[]): ExerciseHubStatus | null {
   const count = completedScenarios(list).length;
-  return count > 0 ? { key: 'habits.exercises.h2-long-view.scenarioCount', count } : null;
+  return count > 0
+    ? {
+        key: 'habits.exercises.h2-long-view.scenarioCount',
+        count,
+        params: { total: SCENARIO_TOTAL },
+      }
+    : null;
 }
 
 /** One history row: the scenario's (already translated) title, the date and the value count. */

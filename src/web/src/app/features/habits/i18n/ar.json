@@ -239,12 +239,12 @@
       "title": "انظر إلى الوراء من النهاية",
       "shortTitle": "نظرتك البعيدة",
       "scenarioCount": {
-        "zero": "{{count}} من 4 نظرات بعيدة",
-        "one": "{{count}} من 4 نظرات بعيدة",
-        "two": "{{count}} من 4 نظرات بعيدة",
-        "few": "{{count}} من 4 نظرات بعيدة",
-        "many": "{{count}} من 4 نظرات بعيدة",
-        "other": "{{count}} من 4 نظرات بعيدة"
+        "zero": "{{count}} من {{total}} نظرات بعيدة",
+        "one": "{{count}} من {{total}} نظرات بعيدة",
+        "two": "{{count}} من {{total}} نظرات بعيدة",
+        "few": "{{count}} من {{total}} نظرات بعيدة",
+        "many": "{{count}} من {{total}} نظرات بعيدة",
+        "other": "{{count}} من {{total}} نظرات بعيدة"
       }
     }
   }

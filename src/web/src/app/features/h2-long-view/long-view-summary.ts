@@ -19,4 +19,6 @@ export class LongViewSummary {
   readonly values = input.required<readonly ValueHeard[]>();
   /** Distinct scenarios with a complete long view. */
   readonly completed = input.required<number>();
+  /** How many long views there are (`SCENARIO_TOTAL`). */
+  readonly total = input.required<number>();
 }

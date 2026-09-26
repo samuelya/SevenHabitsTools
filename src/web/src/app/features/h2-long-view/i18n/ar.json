@@ -127,6 +127,7 @@
   "valuesPrompt": "ده بيقولك إنك بتقدّر إيه؟ كلمة أو اتنين لكل قيمة.",
   "valuesPlaceholder": "مثلاً: الحضور",
   "removeValueAria": "إزالة {{value}}",
+  "valueDuplicate": "«{{value}}» موجودة بالفعل.",
   "readBack": {
     "stepTitle": "القراءة من جديد",
     "reflectionLabel": "ما يبرز",
@@ -136,7 +137,7 @@
   "summary": {
     "valuesTitle": "القيم التي سمعتها",
     "valueCountText": "{{value}} · {{count}}",
-    "scenariosText": "{{count}} من 4 نظرات بعيدة"
+    "scenariosText": "{{count}} من {{total}} نظرات بعيدة"
   },
   "editor": { "editButton": "تعديل" },
   "checklist": {

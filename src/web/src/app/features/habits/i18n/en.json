@@ -187,8 +187,8 @@
       "title": "Look back from the end",
       "shortTitle": "Your long view",
       "scenarioCount": {
-        "one": "{{count}} of 4 long views",
-        "other": "{{count}} of 4 long views"
+        "one": "{{count}} of {{total}} long views",
+        "other": "{{count}} of {{total}} long views"
       }
     }
   }

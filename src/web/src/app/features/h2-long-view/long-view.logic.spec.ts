@@ -12,13 +12,17 @@ import {
   hubStatus,
   isComplete,
   isDraftWorthSaving,
+  isDuplicateValue,
   isStarted,
   labelsByKey,
   newLongViewFields,
   removeLongView,
   removeValue,
   restoreLongView,
+  SCENARIO_TOTAL,
   scenarioValues,
+  speakerFields,
+  speakerName,
   speakerSlot,
   valuesHeard,
   withAnswer,
@@ -81,15 +85,56 @@ describe('long view logic (issue #58)', () => {
     expect(answers[2].text).toBe('w');
   });
 
+  it('counts only the scenario’s own answers, so an edit never changes the counted values', () => {
+    const imported = view(
+      'lastDay',
+      (_a, i) => (i === 0 ? { text: 'x', values: ['craft'] } : {}),
+      {},
+    );
+    const withForeign: LongView = {
+      ...imported,
+      answers: [...imported.answers, { promptKey: 'funeral.family', text: 'y', values: ['stray'] }],
+    };
+    expect(scenarioValues(withForeign)).toEqual(['craft']);
+    expect(valuesHeard([withForeign])).toEqual([{ value: 'craft', count: 1 }]);
+
+    const edited: LongView = {
+      ...withForeign,
+      answers: withAnswer(withForeign, 'lastDay.next', { text: 'Teach.' }),
+    };
+    expect(scenarioValues(edited)).toEqual(scenarioValues(withForeign));
+    expect(valuesHeard([edited])).toEqual(valuesHeard([withForeign]));
+    expect(isComplete(edited)).toBe(true);
+  });
+
+  it('stores an empty or whitespace speaker as absent and reads it as the slot label', () => {
+    expect(speakerFields('Mum')).toEqual({ speaker: 'Mum' });
+    expect(speakerFields('')).toEqual({ speaker: undefined });
+    expect(speakerFields('  ')).toEqual({ speaker: undefined });
+    const answer: LongViewAnswer = { promptKey: 'funeral.family', text: '', values: [] };
+    expect(speakerName(answer)).toBeNull();
+    expect(speakerName({ ...answer, speaker: '  ' })).toBeNull();
+    expect(speakerName({ ...answer, speaker: 'Mum' })).toBe('Mum');
+  });
+
+  it('flags a case-insensitive duplicate, not an empty value', () => {
+    expect(isDuplicateValue(['Presence'], ' presence ')).toBe(true);
+    expect(isDuplicateValue(['Presence'], 'craft')).toBe(false);
+    expect(isDuplicateValue(['Presence'], '  ')).toBe(false);
+  });
+
   it('is worth saving on typed text, a speaker edit or a chip — not on the scenario alone', () => {
     expect(isDraftWorthSaving(view('funeral'))).toBe(false);
     expect(isDraftWorthSaving(view('funeral', () => ({ text: '   ' })))).toBe(false);
     expect(isDraftWorthSaving(view('funeral', (_a, i) => (i === 0 ? { text: 'x' } : {})))).toBe(
       true,
     );
-    expect(isDraftWorthSaving(view('funeral', (_a, i) => (i === 1 ? { speaker: '' } : {})))).toBe(
-      true,
+    expect(isDraftWorthSaving(view('funeral', (_a, i) => (i === 1 ? { speaker: ' ' } : {})))).toBe(
+      false,
     );
+    expect(
+      isDraftWorthSaving(view('funeral', (_a, i) => (i === 1 ? { speaker: 'Mum' } : {}))),
+    ).toBe(true);
     expect(isDraftWorthSaving(view('lastDay', (_a, i) => (i === 1 ? { values: ['x'] } : {})))).toBe(
       true,
     );
@@ -148,7 +193,9 @@ describe('long view logic (issue #58)', () => {
     expect(hubStatus(list)).toEqual({
       key: 'habits.exercises.h2-long-view.scenarioCount',
       count: 2,
+      params: { total: SCENARIO_TOTAL },
     });
+    expect(SCENARIO_TOTAL).toBe(4);
   });
 
   it('is started by any live record', () => {

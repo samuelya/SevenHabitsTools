@@ -20,7 +20,7 @@ function textFor(locale: Locale) {
     hubTitle: t(locale, 'habits', 'exercises.h2-long-view.shortTitle'),
     lastDay: own('scenario.lastDay.title'),
     next: t(locale, 'exerciseKit', 'stepper.next'),
-    scenarios: own('summary.scenariosText', { count: 1 }),
+    scenarios: own('summary.scenariosText', { count: 1, total: 4 }),
     markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
     reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
     checklistValue: own('checklist.value'),
@@ -31,6 +31,19 @@ function textFor(locale: Locale) {
 const TEXT = { en: textFor('en'), ar: textFor('ar') };
 
 const ROUTE = '/habits/h2/long-view';
+
+/** The current step only. Next moves the step on the next change detection, not during the click,
+ * so `toStep()` waits for the new step's prompt before anything is typed into it. */
+function activeStep(page: Page) {
+  return page.locator(
+    '.mat-horizontal-stepper-content-current, .mat-vertical-content-container-active',
+  );
+}
+
+async function toStep(page: Page, next: string, promptId: string): Promise<void> {
+  await activeStep(page).getByRole('button', { name: next }).click();
+  await expect(activeStep(page).locator(`#${promptId}`)).toBeVisible();
+}
 const SAVED_URL = /\/habits\/h2\/long-view\/(?!new$)[^/]+$/;
 
 /** `habits.h2.longViews` as IndexedDB holds it; `null` while the slice doesn't exist. */
@@ -95,19 +108,26 @@ test.describe('Your long view (h2-long-view)', () => {
     await page.locator('.add-button').click();
     await page.locator('.scenario-card', { hasText: text.lastDay }).click();
 
-    const answer = page.locator('app-long-view-prompt textarea:visible');
+    const answer = activeStep(page).locator('app-long-view-prompt textarea');
     await expect(answer).toBeFocused();
     await answer.fill('Two products people still use.');
     await expect(page).toHaveURL(SAVED_URL);
-    const chipInput = page.locator('app-long-view-prompt .mat-mdc-chip-input:visible');
+    const chipInput = activeStep(page).locator('.mat-mdc-chip-input');
     await chipInput.fill('craft');
     await chipInput.press('Enter');
-    await expect(page.locator('app-long-view-prompt mat-chip-row:visible')).toHaveText(['craft']);
-    await page.locator('app-guided-stepper button:visible', { hasText: text.next }).click();
+    // The chip's label, not the row: the row's text also holds the remove icon's ligature.
+    await expect(
+      activeStep(page).locator('mat-chip-row .mdc-evolution-chip__text-label'),
+    ).toHaveText(['craft']);
+    await toStep(page, text.next, 'long-view-lastDay-next-prompt');
 
-    await page.locator('app-long-view-prompt textarea:visible').fill('Teach two mornings a week.');
-    await page.locator('app-guided-stepper button:visible', { hasText: text.next }).click();
-    await page.locator('app-reflection-editor textarea:visible').fill('Everyone mentioned time.');
+    await activeStep(page)
+      .locator('app-long-view-prompt textarea')
+      .fill('Teach two mornings a week.');
+    await toStep(page, text.next, 'long-view-reflection-prompt');
+    await activeStep(page)
+      .locator('app-reflection-editor textarea')
+      .fill('Everyone mentioned time.');
     await closeEditor(page, isMobile);
 
     await expect(page.locator('.assessment-history-list__item')).toHaveCount(1);

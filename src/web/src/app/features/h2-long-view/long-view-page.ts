@@ -42,9 +42,8 @@ import { LongViewScenarioPicker } from './long-view-scenario-picker';
 import { LongViewSummary } from './long-view-summary';
 import {
   CHECKLIST_KEYS,
-  PROMPTS,
+  SCENARIO_TOTAL,
   STEP_KEYS,
-  answerFor,
   canMarkDone,
   checklistLabelsFrom,
   checklistLoaded,
@@ -59,7 +58,9 @@ import {
   newLongViewFields,
   removeLongView,
   restoreLongView,
+  scenarioAnswers,
   scenarioValues,
+  speakerFields,
   valuesHeard,
   withAnswer,
 } from './long-view.logic';
@@ -148,20 +149,24 @@ export class LongViewPage {
     historyItems(this.history(), this.scenarioLabels()),
   );
 
-  /** The scenario a Redo opens the next draft on; `null` opens the picker. */
-  private pendingScenario: LongViewScenario | null = null;
-  /** Whether the open unsaved draft's scenario has been chosen (reset by New, set by Redo). */
-  private readonly scenarioChosen = signal(false);
+  /** Set only for the duration of Redo's `draft.start()`: the scenario `create()` builds on. */
+  private redoScenario: LongViewScenario | null = null;
+  /** The draft whose scenario has been chosen, by a pick or a Redo. Keyed to the draft's id, so a
+   * draft `recordDraft()` creates any other way (New, or Back/Forward onto `.../new`) opens on the
+   * picker. */
+  private readonly chosenDraftId = signal<string | null>(null);
 
   protected readonly draft = recordDraft<LongView>({
     itemId: this.itemId,
     records: this.views,
     create: () => {
       const now = this.clock.now();
-      return newRecord(
-        newLongViewFields(this.pendingScenario ?? 'funeral', localDateString(now)),
+      const draft = newRecord(
+        newLongViewFields(this.redoScenario ?? 'funeral', localDateString(now)),
         now,
       );
+      this.chosenDraftId.set(this.redoScenario === null ? null : draft.id);
+      return draft;
     },
     isWorthSaving: (draft) => isDraftWorthSaving(draft),
     save: (record) => this.store.update((list) => [...list, record]),
@@ -181,7 +186,7 @@ export class LongViewPage {
       return null;
     }
     if (this.draft.unsaved()) {
-      return this.scenarioChosen() ? 'edit' : 'pick';
+      return this.chosenDraftId() === this.draft.selected()?.id ? 'edit' : 'pick';
     }
     return this.editing() ? 'edit' : 'read';
   });
@@ -194,7 +199,7 @@ export class LongViewPage {
   /** The selected long view's answers in prompt order, one per step. */
   protected readonly answers = computed<readonly LongViewAnswer[]>(() => {
     const view = this.draft.selected();
-    return view ? PROMPTS[view.scenario].map((key) => answerFor(view, key)) : [];
+    return view ? scenarioAnswers(view) : [];
   });
   protected readonly selectedValues = computed(() => {
     const view = this.draft.selected();
@@ -216,7 +221,11 @@ export class LongViewPage {
   protected readonly summary = computed(() => {
     const list = this.store.value();
     return this.views().length > 0
-      ? { values: valuesHeard(list), completed: completedScenarios(list).length }
+      ? {
+          values: valuesHeard(list),
+          completed: completedScenarios(list).length,
+          total: SCENARIO_TOTAL,
+        }
       : null;
   });
   protected readonly readyToMarkDone = computed(() => canMarkDone(this.store.value()));
@@ -259,8 +268,6 @@ export class LongViewPage {
 
   /** Opens the picker on an in-memory draft; nothing is stored yet (issue #217). */
   protected onNew(): void {
-    this.pendingScenario = null;
-    this.scenarioChosen.set(false);
     this.draft.start();
   }
 
@@ -271,7 +278,7 @@ export class LongViewPage {
       return;
     }
     this.draft.edit(view.id, newLongViewFields(scenario, view.date));
-    this.scenarioChosen.set(true);
+    this.chosenDraftId.set(view.id);
     this.focusRequested.set(true);
   }
 
@@ -281,10 +288,10 @@ export class LongViewPage {
     if (view === null) {
       return;
     }
-    this.pendingScenario = view.scenario;
-    this.scenarioChosen.set(true);
+    this.redoScenario = view.scenario;
     this.focusRequested.set(true);
     this.draft.start();
+    this.redoScenario = null;
   }
 
   protected onEdit(): void {
@@ -297,7 +304,7 @@ export class LongViewPage {
   }
 
   protected onSpeakerChanged(promptKey: string, speaker: string): void {
-    this.editAnswer(promptKey, { speaker });
+    this.editAnswer(promptKey, speakerFields(speaker));
   }
 
   protected onValuesChanged(promptKey: string, values: readonly string[]): void {

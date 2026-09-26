@@ -165,6 +165,35 @@ describe('LongViewPage (issue #58)', () => {
 
     await type(harness, speaker!, 'Mum');
     expect(stored()[0].answers[0].speaker).toBe('Mum');
+
+    await type(harness, speaker!, '  ');
+    expect(stored()[0].answers[0].speaker).toBeUndefined();
+    expect(speaker?.value).toBe('  ');
+    speaker!.dispatchEvent(new Event('blur'));
+    await harness.fixture.whenStable();
+    expect(speaker?.value).toBe('Family');
+  });
+
+  it('shows a cleared speaker as the slot label in the readout too', async () => {
+    const harness = await setUp();
+    const view = completeView('lv1', 'funeral', ['family']);
+    seed({
+      ...view,
+      answers: view.answers.map((answer, index) =>
+        index === 0 ? { ...answer, speaker: ' ' } : answer,
+      ),
+    });
+    await harness.navigateByUrl(`${LIST_URL}/lv1`);
+
+    const titles = [...host(harness).querySelectorAll('app-long-view-readout .answer-title')];
+    expect(titles[0].textContent?.trim()).toBe('Family');
+
+    (host(harness).querySelector('app-long-view-readout button') as HTMLButtonElement).click();
+    await harness.fixture.whenStable();
+    expect(
+      host(harness).querySelector<HTMLInputElement>('app-long-view-prompt input[type="text"]')
+        ?.value,
+    ).toBe('Family');
   });
 
   it('adds a trimmed value chip, once, and removes it', async () => {
@@ -182,6 +211,15 @@ describe('LongViewPage (issue #58)', () => {
     chipInput.dispatchEvent(new Event('blur'));
     await harness.fixture.whenStable();
     expect(stored()[0].answers[0].values).toEqual(['presence']);
+    expect(chipInput.value).toBe('Presence');
+    expect(host(harness).querySelector('.duplicate-hint')?.textContent).toContain(
+      '“Presence” is already here.',
+    );
+
+    chipInput.value = 'Presencex';
+    chipInput.dispatchEvent(new Event('input'));
+    await harness.fixture.whenStable();
+    expect(host(harness).querySelector('.duplicate-hint')?.textContent?.trim()).toBe('');
 
     (host(harness).querySelector('.mat-mdc-chip-remove') as HTMLElement).click();
     await harness.fixture.whenStable();
@@ -220,6 +258,22 @@ describe('LongViewPage (issue #58)', () => {
     expect(views).toHaveLength(2);
     expect(views[1].scenario).toBe('anniversary');
     expect(views[0].answers[0].text).toBe('Said something.');
+  });
+
+  it('opens the picker on a draft recreated by Back/Forward after a Redo', async () => {
+    const harness = await setUp();
+    seed(completeView('lv1', 'anniversary', ['trust']));
+    await harness.navigateByUrl(`${LIST_URL}/lv1`);
+    host(harness)
+      .querySelectorAll<HTMLButtonElement>('app-long-view-readout .actions button')[1]
+      .click();
+    await harness.fixture.whenStable();
+    expect(host(harness).querySelector('.scenario-card')).toBeNull();
+
+    await harness.navigateByUrl(LIST_URL);
+    await harness.navigateByUrl(`${LIST_URL}/new`);
+    expect(host(harness).querySelectorAll('.scenario-card')).toHaveLength(4);
+    expect(answerFields(harness)).toHaveLength(0);
   });
 
   it('lists long views newest first by scenario, date and value count', async () => {
