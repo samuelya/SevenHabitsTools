@@ -1,0 +1,11 @@
+<mat-card class="inspiration-summary" appearance="outlined">
+  <mat-card-content>
+    <h2 class="title">{{ 'h2Inspiration.summary.title' | transloco }}</h2>
+    <p class="count">
+      {{
+        'h2Inspiration.summary.countText'
+          | appPlural: summary().count : { favourites: (summary().favourites | appNumber) }
+      }}
+    </p>
+  </mat-card-content>
+</mat-card>

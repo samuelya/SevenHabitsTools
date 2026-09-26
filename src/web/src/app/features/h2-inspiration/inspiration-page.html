@@ -1,0 +1,78 @@
+<app-exercise-page
+  [title]="'h2Inspiration.prompt.title' | transloco"
+  [editing]="draft.selected() !== null"
+  [editorTitle]="
+    (draft.unsaved() ? 'h2Inspiration.editor.newTitle' : 'h2Inspiration.editor.editTitle')
+      | transloco
+  "
+  [editorStatus]="draft.status()"
+  (editorClosed)="closeDetail()"
+>
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h2Inspiration.prompt.title' | transloco"
+    [prompt]="'h2Inspiration.prompt.text' | transloco"
+    [chapterReference]="'h2Inspiration.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h2Inspiration.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+    (exampleTried)="onExampleTried($event)"
+  />
+
+  <button mat-flat-button type="button" class="add-button" (click)="onAdd()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h2Inspiration.list.addButton' | transloco }}
+  </button>
+
+  @if (live().length) {
+    <app-inspiration-filters
+      [kind]="kindFilter()"
+      [favouritesOnly]="favouritesOnly()"
+      [tag]="tagFilter()"
+      [tags]="tags()"
+      (kindChange)="kindFilter.set($event)"
+      (favouritesOnlyChange)="favouritesOnly.set($event)"
+      (tagChange)="onTagFilterChange($event)"
+    />
+  }
+
+  <!-- With items but none let through by the filters, the list's "empty" text is "Nothing
+       matches", not "Nothing collected yet". -->
+  <app-exercise-list
+    [items]="items()"
+    [selectedId]="itemId()"
+    [searchLabel]="'h2Inspiration.list.searchLabel' | transloco"
+    [emptyMessage]="
+      (live().length ? 'h2Inspiration.list.noMatch' : 'h2Inspiration.list.empty') | transloco
+    "
+    [noMatchMessage]="'h2Inspiration.list.noMatch' | transloco"
+    [deletable]="true"
+    (itemSelected)="select($event)"
+    (toggleRequested)="onFavouriteToggled($event)"
+    (deleteRequested)="onItemDeleted($event)"
+  />
+
+  <div editor>
+    @if (draft.selected(); as item) {
+      <app-inspiration-item-form
+        [item]="item"
+        [usedTags]="tags()"
+        (changed)="onItemChanged(item.id, $event)"
+        (deleted)="onItemDeleted(item.id)"
+      />
+    }
+  </div>
+
+  <div footer class="summary-section">
+    @if (summary(); as summary) {
+      <app-inspiration-summary [summary]="summary" />
+    }
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

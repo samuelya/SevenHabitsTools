@@ -1,0 +1,137 @@
+{
+  "prompt": {
+    "title": "Collect what inspires you",
+    "chapterReference": "Habit 2: Begin with the End in Mind",
+    "text": "Keep the lines, thoughts and ideas that move you: something a friend said, a sentence you keep returning to, a way of living you'd like to try. You'll draw on them when you write your mission.",
+    "whyItMatters": "A mission statement written cold sounds like a brochure. One built from lines you already love sounds like you. Collecting takes seconds; the payoff comes when you sit down to write."
+  },
+  "list": {
+    "addButton": "Add to collection",
+    "searchLabel": "Search your collection",
+    "empty": "Nothing collected yet. What's one line you keep coming back to?",
+    "noMatch": "Nothing matches your search or filters.",
+    "deleted": "Item deleted",
+    "undo": "Undo",
+    "example": "Example",
+    "favouriteButton": "Favourite",
+    "unfavouriteButton": "Remove favourite"
+  },
+  "filter": {
+    "kindLabel": "Show",
+    "all": "All",
+    "favourites": "Favourites",
+    "tagLabel": "Tag"
+  },
+  "editor": {
+    "newTitle": "New item",
+    "editTitle": "Edit item"
+  },
+  "form": {
+    "textLabel": "The line",
+    "textPrompt": "Write it the way you remember it.",
+    "textPlaceholder": "e.g. Nobody on their deathbed wished they'd answered more email.",
+    "textRequired": "Write the line first.",
+    "kindLabel": "What it is",
+    "sourceLabel": "Where it's from",
+    "sourcePrompt": "Who said it, or where were you?",
+    "sourcePlaceholder": "e.g. My uncle, at his retirement dinner.",
+    "tagsLabel": "Tags",
+    "tagsPrompt": "One or two words to find it later: work, family, courage.",
+    "tagsPlaceholder": "e.g. time",
+    "tagDuplicate": "\"{{tag}}\" is already a tag.",
+    "removeTagAria": "Remove tag {{tag}}",
+    "favouriteLabel": "Favourite",
+    "delete": "Delete item"
+  },
+  "kind": {
+    "saying": "Something I heard",
+    "thought": "My own thought",
+    "idea": "An idea to try"
+  },
+  "summary": {
+    "title": "Your collection",
+    "countText": {
+      "one": "1 in your collection, {{favourites}} favourites",
+      "other": "{{count}} in your collection, {{favourites}} favourites"
+    }
+  },
+  "checklist": {
+    "line": "Add one line that moves you",
+    "source": "Say where it came from",
+    "tag": "Give it a tag",
+    "three": "Keep three in your collection"
+  },
+  "guide": {
+    "inShort": "You'll save lines, thoughts and ideas as they come to you, with a tag or two. Thirty seconds each. When you write your mission, they'll be waiting beside the draft.",
+    "howTo": [
+      "Tap \"Add to collection\" and write the line as you remember it.",
+      "Say what it is: something you heard, your own thought, or an idea to try.",
+      "Add where it's from. It'll mean more later.",
+      "Give it a tag or two, and star the ones that hit hardest.",
+      "Add one whenever something lands. Tap \"Mark done\" once you have three."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Nobody on their deathbed wished they'd answered more email.",
+        "done": true,
+        "fields": [
+          {
+            "label": "What it is",
+            "value": "Something I heard"
+          },
+          {
+            "label": "Where it's from",
+            "value": "My uncle, at his retirement dinner."
+          },
+          {
+            "label": "Tags",
+            "value": "time, work"
+          },
+          {
+            "label": "Favourite",
+            "value": "Yes"
+          }
+        ],
+        "sample": {
+          "text": "Nobody on their deathbed wished they'd answered more email.",
+          "kind": "saying",
+          "source": "My uncle, at his retirement dinner.",
+          "tags": [
+            "time",
+            "work"
+          ],
+          "favourite": true
+        }
+      },
+      {
+        "kind": "card",
+        "title": "Be the parent who asks a second question.",
+        "done": true,
+        "fields": [
+          {
+            "label": "What it is",
+            "value": "My own thought"
+          },
+          {
+            "label": "Where it's from",
+            "value": "Driving home after parents' evening."
+          },
+          {
+            "label": "Tags",
+            "value": "family"
+          }
+        ],
+        "sample": {
+          "text": "Be the parent who asks a second question.",
+          "kind": "thought",
+          "source": "Driving home after parents' evening.",
+          "tags": [
+            "family"
+          ]
+        }
+      }
+    ],
+    "afterwards": "Read your favourites before each pass at your mission. Anything you've outgrown, delete; the collection should feel like you now, not you three years ago."
+  }
+}

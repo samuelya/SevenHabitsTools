@@ -33,6 +33,8 @@ import longViewEn from '../features/h2-long-view/i18n/en.json';
 import longViewAr from '../features/h2-long-view/i18n/ar.json';
 import centresEn from '../features/h2-centres/i18n/en.json';
 import centresAr from '../features/h2-centres/i18n/ar.json';
+import inspirationEn from '../features/h2-inspiration/i18n/en.json';
+import inspirationAr from '../features/h2-inspiration/i18n/ar.json';
 import circleEn from '../features/h1-circle/i18n/en.json';
 import circleAr from '../features/h1-circle/i18n/ar.json';
 import rehearsalEn from '../features/h1-rehearsal/i18n/en.json';
@@ -76,6 +78,8 @@ export const TEST_TRANSLATIONS: Readonly<Record<string, Translation>> = {
   'h2-long-view/ar': longViewAr,
   'h2-centres/en': centresEn,
   'h2-centres/ar': centresAr,
+  'h2-inspiration/en': inspirationEn,
+  'h2-inspiration/ar': inspirationAr,
   'h1-circle/en': circleEn,
   'h1-circle/ar': circleAr,
   'h1-rehearsal/en': rehearsalEn,

@@ -1,0 +1,122 @@
+<form class="inspiration-item-form">
+  <p class="field-prompt" id="inspiration-text-prompt">
+    {{ 'h2Inspiration.form.textPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Inspiration.form.textLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #textField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
+      required
+      [placeholder]="'h2Inspiration.form.textPlaceholder' | transloco"
+      [value]="item().text"
+      [attr.aria-describedby]="
+        textError() ? 'inspiration-text-prompt inspiration-text-error' : 'inspiration-text-prompt'
+      "
+      (input)="onTextInput($event)"
+      (blur)="onTextBlur()"
+    ></textarea>
+  </mat-form-field>
+  <!-- A plain alert, not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+  @if (textError()) {
+    <p id="inspiration-text-error" class="field-error" role="alert">
+      {{ 'h2Inspiration.form.textRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="option-group">
+    <legend>{{ 'h2Inspiration.form.kindLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      [value]="item().kind"
+      [attr.aria-label]="'h2Inspiration.form.kindLabel' | transloco"
+      (change)="onKindChange($event.value)"
+    >
+      @for (kind of kinds; track kind) {
+        <mat-button-toggle [value]="kind">{{
+          'h2Inspiration.kind.' + kind | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  <p class="field-prompt" id="inspiration-source-prompt">
+    {{ 'h2Inspiration.form.sourcePrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Inspiration.form.sourceLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      aria-describedby="inspiration-source-prompt"
+      [placeholder]="'h2Inspiration.form.sourcePlaceholder' | transloco"
+      [value]="item().source ?? ''"
+      (input)="onSourceInput($event)"
+    />
+  </mat-form-field>
+
+  <p class="field-prompt" id="inspiration-tags-prompt">
+    {{ 'h2Inspiration.form.tagsPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Inspiration.form.tagsLabel' | transloco }}</mat-label>
+    <mat-chip-grid #tagGrid [attr.aria-label]="'h2Inspiration.form.tagsLabel' | transloco">
+      @for (tag of tags(); track tag) {
+        <mat-chip-row (removed)="onTagRemoved(tag)">
+          {{ tag }}
+          <button
+            matChipRemove
+            type="button"
+            [attr.aria-label]="'h2Inspiration.form.removeTagAria' | transloco: { tag: tag }"
+          >
+            <mat-icon aria-hidden="true">cancel</mat-icon>
+          </button>
+        </mat-chip-row>
+      }
+      <input
+        #tagInput
+        class="tag-input"
+        autocomplete="off"
+        [placeholder]="'h2Inspiration.form.tagsPlaceholder' | transloco"
+        [matChipInputFor]="tagGrid"
+        [matChipInputSeparatorKeyCodes]="separatorKeys"
+        [matAutocomplete]="tagSuggestions"
+        aria-describedby="inspiration-tags-prompt inspiration-tags-hint"
+        (matChipInputTokenEnd)="onTagTokenEnd($event)"
+        (input)="onTagTyped($event)"
+        (blur)="onTagBlur()"
+      />
+    </mat-chip-grid>
+    <mat-autocomplete #tagSuggestions="matAutocomplete" (optionSelected)="onTagSelected($event)">
+      @for (suggestion of suggestions(); track suggestion) {
+        <mat-option [value]="suggestion">{{ suggestion }}</mat-option>
+      }
+    </mat-autocomplete>
+    <mat-hint class="duplicate-hint" id="inspiration-tags-hint" aria-live="polite">
+      @if (duplicate(); as duplicate) {
+        {{ 'h2Inspiration.form.tagDuplicate' | transloco: { tag: duplicate } }}
+      }
+    </mat-hint>
+  </mat-form-field>
+
+  <button
+    mat-stroked-button
+    type="button"
+    class="favourite-button"
+    [class.favourite-button--on]="item().favourite"
+    [attr.aria-pressed]="item().favourite ? 'true' : 'false'"
+    (click)="onFavouriteToggle()"
+  >
+    <mat-icon aria-hidden="true">{{ item().favourite ? 'star' : 'star_border' }}</mat-icon>
+    {{ 'h2Inspiration.form.favouriteLabel' | transloco }}
+  </button>
+
+  <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h2Inspiration.form.delete' | transloco }}
+  </button>
+</form>

@@ -70,6 +70,8 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
    * confirm → delete → undo (`DeleteWithUndo`, playbook's "Deleting entries"); this component only
    * ever asks. */
   readonly deleteRequested = output<string>();
+  /** A click on a row's `toggle` button (`ExerciseListItem.toggle`); the caller flips it. */
+  readonly toggleRequested = output<string>();
 
   protected readonly query = signal('');
   /** `null` until the user picks a sort explicitly; `sort()` falls back to `initialSort()` until

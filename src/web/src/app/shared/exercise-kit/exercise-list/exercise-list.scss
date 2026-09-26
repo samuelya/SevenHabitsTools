@@ -43,6 +43,7 @@
 // Always visible, not a reveal-on-swipe affordance (issue #203's design decision: swiping isn't
 // discoverable, so the same bin button that opens the confirm dialog is on the row at all times).
 // ≥ 44px in both dimensions for the touch target (architecture issue #1 §7).
+.exercise-list__toggle,
 .exercise-list__delete {
   flex: 0 0 auto;
   inline-size: 44px;
@@ -54,6 +55,12 @@
   background: transparent;
   color: var(--mat-sys-on-surface-variant, gray);
   cursor: pointer;
+}
+
+.exercise-list__toggle--pressed,
+.exercise-list__toggle:hover,
+.exercise-list__toggle:focus-visible {
+  color: var(--mat-sys-primary, #1565c0);
 }
 
 .exercise-list__delete:hover,

@@ -108,6 +108,21 @@
               </span>
             }
           </button>
+          @if (item.toggle; as toggle) {
+            <button
+              type="button"
+              class="exercise-list__toggle"
+              [class.exercise-list__toggle--pressed]="toggle.pressed"
+              [attr.aria-label]="toggle.label"
+              [attr.aria-pressed]="toggle.pressed ? 'true' : 'false'"
+              [attr.title]="toggle.hint ?? null"
+              (click)="toggleRequested.emit(item.id)"
+            >
+              <mat-icon aria-hidden="true">{{
+                toggle.pressed ? toggle.pressedIcon : toggle.icon
+              }}</mat-icon>
+            </button>
+          }
           @if (isRowDeletable(item)) {
             <button
               type="button"
