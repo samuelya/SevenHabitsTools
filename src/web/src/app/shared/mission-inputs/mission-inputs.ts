@@ -13,6 +13,9 @@ export type MissionInputKind = 'values' | 'principles' | 'inspiration';
 export interface MissionInputItem {
   readonly id: string;
   readonly text: string;
+  /** Set when the item is a source's suggestion (e.g. a principle key) rather than the user's own
+   * words, so the builder can tell them apart; `text` is still what it shows and copies. */
+  readonly key?: string;
   readonly detail?: string;
   readonly tags?: readonly string[];
   readonly favourite?: boolean;

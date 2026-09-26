@@ -1,0 +1,56 @@
+<div class="centres-principles">
+  <p class="field-prompt" id="centres-principles-prompt">
+    {{ 'h2Centres.step3.prompt' | transloco }}
+  </p>
+
+  <mat-chip-listbox
+    multiple
+    class="suggestions"
+    [attr.aria-label]="'h2Centres.step3.suggestionsLabel' | transloco"
+    aria-describedby="centres-principles-prompt centres-principles-hint"
+  >
+    @for (key of suggestions; track key) {
+      <mat-chip-option
+        [value]="key"
+        [selected]="isSelected(key)"
+        (selectionChange)="onSuggestionChange(key, $event)"
+      >
+        {{ 'exerciseKit.principle.' + key | transloco }}
+      </mat-chip-option>
+    }
+  </mat-chip-listbox>
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Centres.step3.customLabel' | transloco }}</mat-label>
+    <mat-chip-grid #customGrid [attr.aria-label]="'h2Centres.step3.customLabel' | transloco">
+      @for (principle of custom(); track principle.name) {
+        <mat-chip-row (removed)="onNameRemoved(principle)">
+          {{ principle.name }}
+          <button
+            matChipRemove
+            type="button"
+            [attr.aria-label]="
+              'h2Centres.step3.removeAria' | transloco: { principle: principle.name }
+            "
+          >
+            <mat-icon aria-hidden="true">cancel</mat-icon>
+          </button>
+        </mat-chip-row>
+      }
+      <input
+        [placeholder]="'h2Centres.step3.customPlaceholder' | transloco"
+        [matChipInputFor]="customGrid"
+        [matChipInputSeparatorKeyCodes]="separatorKeys"
+        [matChipInputAddOnBlur]="true"
+        aria-describedby="centres-principles-hint"
+        (matChipInputTokenEnd)="onNameAdded($event)"
+      />
+    </mat-chip-grid>
+  </mat-form-field>
+
+  <p class="max-hint" id="centres-principles-hint" aria-live="polite">
+    @if (refused()) {
+      {{ 'h2Centres.step3.maxHint' | transloco }}
+    }
+  </p>
+</div>

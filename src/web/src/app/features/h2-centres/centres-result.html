@@ -1,0 +1,83 @@
+@let labels = centreLabels();
+<div class="centres-result">
+  <div class="actions">
+    <button mat-flat-button type="button" (click)="editRequested.emit()">
+      <mat-icon aria-hidden="true">edit</mat-icon>
+      {{ 'h2Centres.editor.editButton' | transloco }}
+    </button>
+  </div>
+
+  <section class="section">
+    <h3 class="section-title result-heading" tabindex="-1">
+      {{ 'h2Centres.result.rankedTitle' | transloco }}
+    </h3>
+    <ul class="bars">
+      @for (bar of bars(); track bar.centre) {
+        @let ratingText =
+          'h2Centres.result.ratingText'
+            | transloco: { centre: labels[bar.centre], rating: bar.rating, total: total };
+        <li class="bar-row">
+          <span class="bar-label" aria-hidden="true">{{ labels[bar.centre] }}</span>
+          <div class="bar-track" role="img" [attr.aria-label]="ratingText">
+            <div class="bar-fill" [style.inline-size.%]="bar.percent"></div>
+          </div>
+          <span class="bar-value" aria-hidden="true">{{ bar.rating }}</span>
+        </li>
+      }
+    </ul>
+    @if (tiedChoice(); as choice) {
+      <p class="factor-text tie-text">
+        {{
+          'h2Centres.result.tieText' | transloco: { centres: tiedList(), centre: labels[choice] }
+        }}
+      </p>
+    }
+  </section>
+
+  @if (factorsCentre(); as about) {
+    @if (factors().length) {
+      <section class="section">
+        <h3 class="section-title">
+          {{ 'h2Centres.result.factorsTitle' | transloco: { centre: labels[about] } }}
+        </h3>
+        @for (entry of factors(); track entry.factor) {
+          <h4 class="factor-label">
+            {{ 'h2Centres.factor.' + entry.factor + 'Label' | transloco }}
+          </h4>
+          <p class="factor-text" dir="auto">{{ entry.text }}</p>
+        }
+      </section>
+    }
+  }
+
+  @if (principles().length) {
+    <section class="section">
+      <h3 class="section-title">{{ 'h2Centres.result.principlesTitle' | transloco }}</h3>
+      <mat-chip-set [attr.aria-label]="'h2Centres.result.principlesTitle' | transloco">
+        @for (principle of principles(); track $index) {
+          <mat-chip>{{ principle }}</mat-chip>
+        }
+      </mat-chip-set>
+    </section>
+  }
+
+  @if (changes(); as changes) {
+    <section class="section">
+      <h3 class="section-title">{{ 'h2Centres.result.deltaTitle' | transloco }}</h3>
+      @if (changes.length) {
+        <ul class="deltas">
+          @for (change of changes; track change.centre) {
+            <li>
+              {{
+                'h2Centres.result.deltaText'
+                  | transloco: { centre: labels[change.centre], from: change.from, to: change.to }
+              }}
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="factor-text">{{ 'h2Centres.result.noDeltaText' | transloco }}</p>
+      }
+    </section>
+  }
+</div>

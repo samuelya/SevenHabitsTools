@@ -62,6 +62,26 @@ describe('mission inputs registry (issue #61 contract)', () => {
     expect(items()).toEqual([{ id: 'c1', text: 'x' }]);
   });
 
+  it("carries an item's optional key apart from its text (issue #60)", () => {
+    setUp();
+    const items = TestBed.runInInjectionContext(
+      storeInputFactory(EXERCISE_COMPLETIONS_MODEL_KEY, (value: readonly ExerciseCompletion[]) =>
+        value.map((completion) => ({
+          id: completion.id,
+          text: `Label ${completion.exerciseId}`,
+          key: completion.exerciseId,
+        })),
+      ),
+    );
+    TestBed.runInInjectionContext(() =>
+      featureStore<ExerciseCompletion[]>(EXERCISE_COMPLETIONS_MODEL_KEY).update(() => [
+        { id: 'c1', createdAt: NOW, updatedAt: NOW, exerciseId: 'x', completedAt: NOW },
+      ]),
+    );
+
+    expect(items()).toEqual([{ id: 'c1', text: 'Label x', key: 'x' }]);
+  });
+
   it('storeInputFactory reads as no items when the model is not registered', () => {
     setUp();
     const items = TestBed.runInInjectionContext(

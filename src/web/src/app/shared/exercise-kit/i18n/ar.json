@@ -57,5 +57,19 @@
   },
   "roles": {
     "renewal": "اشحذ المنشار"
+  },
+  "principle": {
+    "fairness": "العدل",
+    "honesty": "الصدق",
+    "integrity": "النزاهة",
+    "dignity": "الكرامة",
+    "service": "الخدمة",
+    "excellence": "الإتقان",
+    "growth": "النمو",
+    "patience": "الصبر",
+    "courage": "الشجاعة",
+    "kindness": "الرحمة",
+    "responsibility": "المسؤولية",
+    "gratitude": "الشكر"
   }
 }

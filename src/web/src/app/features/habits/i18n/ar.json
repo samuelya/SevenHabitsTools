@@ -246,6 +246,16 @@
         "many": "{{count}} من {{total}} نظرات بعيدة",
         "other": "{{count}} من {{total}} نظرات بعيدة"
       }
+    },
+    "h2-centres": {
+      "title": "اكتشف ما تدور حوله حياتك",
+      "shortTitle": "مركزك",
+      "status": {
+        "other": "المركز: {{centre}}"
+      },
+      "statusTied": {
+        "other": "المركز: {{centre}} (بالتعادل)"
+      }
     }
   }
 }

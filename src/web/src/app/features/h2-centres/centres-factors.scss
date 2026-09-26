@@ -1,0 +1,26 @@
+.centres-factors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.step-prompt,
+.field-prompt,
+.none-text {
+  margin: 0;
+}
+
+.step-prompt {
+  margin-block-end: 0.75rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.tie-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 0.75rem;
+}

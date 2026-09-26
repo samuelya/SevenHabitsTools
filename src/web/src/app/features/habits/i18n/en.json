@@ -190,6 +190,16 @@
         "one": "{{count}} of {{total}} long views",
         "other": "{{count}} of {{total}} long views"
       }
+    },
+    "h2-centres": {
+      "title": "Find what your life revolves around",
+      "shortTitle": "Your centre",
+      "status": {
+        "other": "Centre: {{centre}}"
+      },
+      "statusTied": {
+        "other": "Centre: {{centre}} (tied)"
+      }
     }
   }
 }

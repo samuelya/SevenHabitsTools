@@ -1,9 +1,9 @@
-import { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
+import { HubStatusText } from '../../shared/exercise-kit/exercise-registry';
 
 /** What one row of the hub's status column says (issue #219). */
 export type HubRowStatus =
   | { readonly kind: 'done'; readonly completedAt: string | null }
-  | { readonly kind: 'progress'; readonly status: ExerciseHubStatus }
+  | { readonly kind: 'progress'; readonly status: HubStatusText }
   | { readonly kind: 'started' }
   | { readonly kind: 'notStarted' };
 
@@ -15,7 +15,7 @@ export function hubRowStatus(
   done: boolean,
   completedAt: string | null,
   started: boolean,
-  status: ExerciseHubStatus | null,
+  status: HubStatusText | null,
 ): HubRowStatus {
   if (done) {
     return { kind: 'done', completedAt };

@@ -52,7 +52,8 @@
     "h1-challenge": "30-day test",
     "h1-language": "Your words",
     "h2-roles": "Your roles",
-    "h2-long-view": "Your long view"
+    "h2-long-view": "Your long view",
+    "h2-centres": "Your centre"
   },
   "language": {
     "label": "Language",

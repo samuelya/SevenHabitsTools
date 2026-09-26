@@ -1,0 +1,45 @@
+.centre-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-block: 0.75rem;
+  border-block-end: 1px solid var(--mat-sys-outline-variant);
+}
+
+.centre-copy {
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.centre-title {
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+.centre-text {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.rating-group mat-button-toggle {
+  min-block-size: 44px;
+}
+
+// Handset: the group wraps under the description as a 2 x 2 grid (four in a row would squeeze
+// "Quite a lot" into ~70 px), 44 px targets.
+@media (max-width: 599.98px) {
+  .rating-group {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    inline-size: 100%;
+  }
+
+  .rating-group mat-button-toggle:nth-child(3) {
+    border-inline-start: none;
+  }
+
+  .rating-group mat-button-toggle:nth-child(n + 3) {
+    border-block-start: 1px solid var(--mat-button-toggle-divider-color, var(--mat-sys-outline));
+  }
+}
