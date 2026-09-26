@@ -1,0 +1,15 @@
+.long-view-summary mat-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.long-view-summary .title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.long-view-summary .scenarios {
+  margin: 0;
+}

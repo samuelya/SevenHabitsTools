@@ -73,6 +73,30 @@ describe('AssessmentHistoryList', () => {
     expect(buttons[2].querySelector('.assessment-history-list__summary')).toBeNull();
   });
 
+  it('titles a labelled row with its label and moves the date to the second line (issue #58)', () => {
+    fixture.componentInstance.items = [
+      {
+        id: 'a1',
+        date: '2026-09-18',
+        label: 'Your funeral',
+        summary: { key: OVER_USED, count: 2 },
+      },
+    ];
+    fixture.componentInstance.deletable = true;
+    fixture.detectChanges();
+
+    const row = fixture.nativeElement.querySelector(
+      '.assessment-history-list__item',
+    ) as HTMLElement;
+    expect(row.querySelector('[matListItemTitle]')?.textContent?.trim()).toBe('Your funeral');
+    const line = row.querySelector('.assessment-history-list__summary')?.textContent ?? '';
+    expect(line).toContain('2026');
+    expect(line).toContain('2 over-used');
+    const label = deleteButtons(fixture)[0].getAttribute('aria-label') ?? '';
+    expect(label).toContain('Your funeral');
+    expect(label).toContain('2026');
+  });
+
   it('picks the plural form of the summary in the active language', () => {
     fixture.componentInstance.items = [
       { id: 'a1', date: '2026-09-18', summary: { key: OVER_USED, count: 1 } },

@@ -1,0 +1,36 @@
+.long-view-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button {
+  min-block-size: 44px;
+}
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.answer-title {
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+.answer-prompt {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.answer-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
