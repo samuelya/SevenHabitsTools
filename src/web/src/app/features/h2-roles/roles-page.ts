@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  linkedSignal,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,6 +43,7 @@ import { RolesItemForm } from './roles-item-form';
 import { RolesSummary } from './roles-summary';
 import {
   CHECKLIST_KEYS,
+  MAX_TOKEN,
   RoleLabels,
   VALUE_TOKEN,
   checklistLabelsFrom,
@@ -106,7 +114,7 @@ export class RolesPage {
   private readonly builtInText = translateSignal('list.builtIn', undefined, H2_ROLES_ID);
   private readonly ratingTemplate = translateSignal(
     'list.ratingText',
-    { value: VALUE_TOKEN },
+    { value: VALUE_TOKEN, max: MAX_TOKEN },
     H2_ROLES_ID,
   );
   private readonly labels = computed<RoleLabels>(() => {
@@ -145,11 +153,17 @@ export class RolesPage {
   protected readonly canMoveUp = computed(() => this.canMoveSelected('up'));
   protected readonly canMoveDown = computed(() => this.canMoveSelected('down'));
 
-  /** The archived group's toggle; it is also open while an archived role is being edited. */
-  private readonly archivedToggled = signal(false);
-  protected readonly archivedExpanded = computed(
-    () => this.archivedToggled() || this.draft.selected()?.archived === true,
-  );
+  /** Whether the archived group is open. The toggle always flips it. Selecting (or archiving) an
+   * archived role opens it, and leaving that role opens it too, so closing the editor never hides
+   * the row focus returns to. The source is the id, not the record, so an edit doesn't reset it. */
+  protected readonly archivedExpanded = linkedSignal<string | null, boolean>({
+    source: () => {
+      const selected = this.draft.selected();
+      return selected?.archived === true ? selected.id : null;
+    },
+    computation: (archivedId, previous) =>
+      archivedId !== null || (previous?.source ?? null) !== null || (previous?.value ?? false),
+  });
 
   protected readonly summary = computed(() => summarize(this.list()));
   protected readonly readyToMarkDone = computed(() => isComplete(this.list()));
@@ -189,7 +203,7 @@ export class RolesPage {
   }
 
   protected toggleArchived(): void {
-    this.archivedToggled.set(!this.archivedExpanded());
+    this.archivedExpanded.update((open) => !open);
   }
 
   /** "Try this example" (issue #232): a real role flagged `sample`. An untouched one already tried

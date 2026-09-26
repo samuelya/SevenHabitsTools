@@ -89,7 +89,7 @@ describe('roles logic (shared.roles)', () => {
 
     const again = withBuiltIn(first.list, NOW);
     expect(again.id).toBe(first.id);
-    expect(again.list).toEqual(first.list);
+    expect(again.list).toBe(first.list);
   });
 
   it('inserts a first counted role after the new built-in, and a sample without one', () => {
@@ -119,7 +119,22 @@ describe('roles logic (shared.roles)', () => {
     const renamed = editRole(list, 'saw', { name: 'Gym', note: 'Run twice a week.' }, NOW);
     expect(findRole(renamed, 'saw')).toMatchObject({ key: 'renewal', note: 'Run twice a week.' });
     expect(findRole(renamed, 'saw')?.name).toBeUndefined();
-    expect(editRole(list, 'saw', { name: 'Gym' }, NOW)).toEqual(list);
+    expect(editRole(list, 'saw', { name: 'Gym' }, NOW)).toBe(list);
+  });
+
+  it('never stores an empty or whitespace name: the last valid one stays', () => {
+    const list = [role('a', { name: 'Dad' })];
+    expect(editRole(list, 'a', { name: '' }, NOW)).toBe(list);
+    expect(editRole(list, 'a', { name: '   ' }, NOW)).toBe(list);
+    const noted = editRole(list, 'a', { name: ' ', note: 'Home by six.' }, NOW);
+    expect(findRole(noted, 'a')).toMatchObject({ name: 'Dad', note: 'Home by six.' });
+  });
+
+  it('returns the same list for an edit that changes nothing, a sample included', () => {
+    const list = [role('a', { color: 'red', satisfaction: 3 }), role('s', { sample: true })];
+    expect(editRole(list, 'a', { color: 'red', satisfaction: 3 }, NOW)).toBe(list);
+    expect(editRole(list, 'a', {}, NOW)).toBe(list);
+    expect(editRole(list, 's', { color: null }, NOW)).toBe(list);
   });
 
   it('makes an edited sample the user own, bringing the built-in with it', () => {
@@ -130,8 +145,8 @@ describe('roles logic (shared.roles)', () => {
 
   it('ignores edits to a deleted or unknown role', () => {
     const list = [role('a', { deletedAt: T0 })];
-    expect(editRole(list, 'a', { name: 'b' }, NOW)).toEqual(list);
-    expect(editRole(list, 'zzz', { name: 'b' }, NOW)).toEqual(list);
+    expect(editRole(list, 'a', { name: 'b' }, NOW)).toBe(list);
+    expect(editRole(list, 'zzz', { name: 'b' }, NOW)).toBe(list);
   });
 
   it('archives and unarchives, never the built-in', () => {
@@ -140,7 +155,21 @@ describe('roles logic (shared.roles)', () => {
     expect(findRole(archived, 'a')?.archived).toBe(true);
     const back = setArchived(archived, 'a', false, NOW);
     expect('archived' in findRole(back, 'a')!).toBe(false);
-    expect(setArchived(list, 'saw', true, NOW)).toEqual(list);
+    expect(setArchived(list, 'saw', true, NOW)).toBe(list);
+    expect(setArchived(list, 'a', false, NOW)).toBe(list);
+    expect(setArchived(list, 'zzz', true, NOW)).toBe(list);
+  });
+
+  it('makes an archived or moved sample the user own, bringing the built-in with it', () => {
+    const list = [role('s', { sample: true, order: 0 }), role('t', { sample: true, order: 1 })];
+    const archived = setArchived(list, 's', true, NOW);
+    expect(findRole(archived, 's')?.sample).toBeUndefined();
+    expect(builtInRole(archived)).toBeDefined();
+
+    const moved = reorder(list, 't', 'up', NOW);
+    expect(findRole(moved, 't')?.sample).toBeUndefined();
+    expect(findRole(moved, 's')?.sample).toBe(true);
+    expect(activeRoles(moved).map((r) => r.key ?? r.id)).toEqual(['renewal', 't', 's']);
   });
 
   it('moves within its group only, renumbering duplicate orders', () => {
@@ -159,7 +188,7 @@ describe('roles logic (shared.roles)', () => {
     expect(activeRoles(moved).map((r) => r.id)).toEqual(['b', 'a', 'c']);
     const down = reorder(moved, 'b', 'down', NOW);
     expect(activeRoles(down).map((r) => r.id)).toEqual(['a', 'b', 'c']);
-    expect(reorder(list, 'a', 'up', NOW)).toEqual(list);
+    expect(reorder(list, 'a', 'up', NOW)).toBe(list);
   });
 
   it('soft-deletes and restores, never the built-in', () => {
@@ -168,7 +197,9 @@ describe('roles logic (shared.roles)', () => {
     expect(findRole(removed, 'a')).toBeNull();
     expect(removed.find((r) => r.id === 'a')?.deletedAt).toBe(NOW.toISOString());
     expect(findRole(restoreRole(removed, 'a', NOW), 'a')).not.toBeNull();
-    expect(findRole(removeRole(list, 'saw', NOW), 'saw')).not.toBeNull();
+    expect(removeRole(list, 'saw', NOW)).toBe(list);
+    expect(removeRole(list, 'zzz', NOW)).toBe(list);
+    expect(restoreRole(list, 'a', NOW)).toBe(list);
   });
 
   it('finds archived roles by id, not deleted ones', () => {

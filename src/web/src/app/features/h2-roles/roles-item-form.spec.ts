@@ -86,6 +86,20 @@ describe('RolesItemForm', () => {
     );
   });
 
+  it('keeps the required error while a saved name is cleared, even though the role keeps it', () => {
+    const fixture = setUp(role({ name: 'Dad' }));
+    const emitted = edits(fixture);
+    const name = el(fixture).querySelector<HTMLInputElement>('input[type="text"]')!;
+    name.value = '   ';
+    name.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    // The page's `editRole()` ignores the blank name, so `role` still says "Dad".
+    expect(emitted).toEqual([{ name: '   ' }]);
+    expect(el(fixture).querySelector('[role="alert"]')?.textContent).toContain(
+      'Name the role first.',
+    );
+  });
+
   it('rates with a labelled radio group showing the value', () => {
     const fixture = setUp(role({ satisfaction: 3 }));
     const group = el(fixture).querySelector('mat-radio-group')!;
@@ -117,6 +131,22 @@ describe('RolesItemForm', () => {
     (chips[0].querySelector('button') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(emitted).toEqual([{ color: null }]);
+  });
+
+  it('emits nothing when the selected colour is tapped again, None included, and keeps it selected', () => {
+    for (const [color, index] of [
+      [undefined, 0],
+      ['blue', 6],
+    ] as const) {
+      const fixture = setUp(role({ color }));
+      const emitted = edits(fixture);
+      const chip = el(fixture).querySelectorAll('mat-chip-option')[index];
+      (chip.querySelector('button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(emitted).toEqual([]);
+      expect(chip.querySelector('[role="option"]')?.getAttribute('aria-selected')).toBe('true');
+      TestBed.resetTestingModule();
+    }
   });
 
   it('shows the built-in by label, without name field, archive or delete', () => {

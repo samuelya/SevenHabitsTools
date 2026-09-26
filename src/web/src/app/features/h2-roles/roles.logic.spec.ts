@@ -1,6 +1,7 @@
 import { Role } from '../../shared/roles/roles.model';
 import {
   RoleLabels,
+  MAX_TOKEN,
   VALUE_TOKEN,
   checklistLabelsFrom,
   checklistLoaded,
@@ -28,7 +29,7 @@ const LABELS: RoleLabels = {
   builtIn: { renewal: 'Sharpen the Saw' },
   builtInText: 'Built-in',
   example: 'Example',
-  ratingTemplate: `${VALUE_TOKEN} of 5`,
+  ratingTemplate: `${VALUE_TOKEN} of ${MAX_TOKEN}`,
   formatNumber: (value) => String(value),
 };
 
@@ -49,9 +50,22 @@ describe('roles page logic (#59)', () => {
       role('d', { deletedAt: T0 }),
       role('saw', { name: undefined, key: 'renewal' }),
     ];
-    expect(countedRoles(list).map((r) => r.id)).toEqual(['a', 'saw']);
-    expect(hubStatus(list)).toEqual({ key: 'habits.exercises.h2-roles.roleCount', count: 2 });
+    expect(countedRoles(list).map((r) => r.id)).toEqual(['a']);
+    expect(hubStatus(list)).toEqual({ key: 'habits.exercises.h2-roles.roleCount', count: 1 });
     expect(hubStatus([role('c', { sample: true })])).toBeNull();
+  });
+
+  it('never counts the built-in: alone it is not started, has no count and no summary', () => {
+    const saw = role('saw', { name: undefined, key: 'renewal', satisfaction: 4, note: 'Gym.' });
+    const onlySaw = [saw, role('gone', { deletedAt: T0 })];
+    expect(isStarted(onlySaw)).toBe(false);
+    expect(hubStatus(onlySaw)).toBeNull();
+    expect(summarize(onlySaw)).toBeNull();
+    expect(doneChecklist(onlySaw, CHECKLIST).map((item) => item.met)).toEqual([
+      false,
+      false,
+      false,
+    ]);
   });
 
   it('opens the gate at three rated roles and one note, and the checklist agrees', () => {
@@ -112,6 +126,16 @@ describe('roles page logic (#59)', () => {
     expect(toListItem(role('s', { sample: true }), LABELS).chips).toEqual([{ label: 'Example' }]);
   });
 
+  it('writes both numbers of "3 of 5" in the active numerals', () => {
+    const arabic = new Intl.NumberFormat('ar-EG');
+    const labels: RoleLabels = {
+      ...LABELS,
+      ratingTemplate: `${VALUE_TOKEN} من ${MAX_TOKEN}`,
+      formatNumber: (value) => arabic.format(value),
+    };
+    expect(ratingLine({ satisfaction: 3 }, labels)).toBe('٣ من ٥');
+  });
+
   it('renders no rating before the template loads or when unrated', () => {
     expect(ratingLine({ satisfaction: 3 }, { ...LABELS, ratingTemplate: '' })).toBe('');
     expect(ratingLine({}, LABELS)).toBe('');
@@ -145,5 +169,8 @@ describe('roles page logic (#59)', () => {
     const list = [role('a', { name: 'Dad', sample: true }), role('b', { name: 'Friend' })];
     expect(liveSampleOf(list, { name: 'Dad' })?.id).toBe('a');
     expect(liveSampleOf(list, { name: 'Friend' })).toBeUndefined();
+    expect(
+      liveSampleOf([role('a', { name: 'Dad', sample: true, archived: true })], { name: 'Dad' }),
+    ).toBeUndefined();
   });
 });

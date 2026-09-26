@@ -10,7 +10,8 @@
     @if (summary().average; as average) {
       <p class="average">
         {{
-          'h2Roles.summary.averageText' | transloco: { avg: (average | appNumber: averageFormat) }
+          'h2Roles.summary.averageText'
+            | transloco: { avg: (average | appNumber: averageFormat), max: (ratingMax | appNumber) }
         }}
       </p>
     }

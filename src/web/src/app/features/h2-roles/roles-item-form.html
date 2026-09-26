@@ -78,7 +78,8 @@
           ? ('h2Roles.form.satisfactionLabel' | transloco)
           : ('h2Roles.form.satisfactionLabel' | transloco) +
             ': ' +
-            ('h2Roles.form.satisfactionValueText' | transloco: { value: (rating() | appNumber) })
+            ('h2Roles.form.satisfactionValueText'
+              | transloco: { value: (rating() | appNumber), max: (ratingMax | appNumber) })
       "
       [value]="rating()"
       (change)="onRatingChange($event)"
@@ -89,7 +90,10 @@
     </mat-radio-group>
     @if (rating(); as value) {
       <p class="rating-value" aria-hidden="true">
-        {{ 'h2Roles.form.satisfactionValueText' | transloco: { value: (value | appNumber) } }}
+        {{
+          'h2Roles.form.satisfactionValueText'
+            | transloco: { value: (value | appNumber), max: (ratingMax | appNumber) }
+        }}
       </p>
     }
   </fieldset>

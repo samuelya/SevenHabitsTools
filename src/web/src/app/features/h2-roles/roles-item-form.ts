@@ -19,7 +19,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatRadioChange, MatRadioModule } from '@angular/material/radio';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
-import { RoleDirection, RoleEdit, isBuiltIn, isRating } from '../../shared/roles/roles.logic';
+import {
+  RATING_MAX,
+  RoleDirection,
+  RoleEdit,
+  isBuiltIn,
+  isRating,
+} from '../../shared/roles/roles.logic';
 import { ROLE_COLORS, Role, RoleColor, RoleSatisfaction } from '../../shared/roles/roles.model';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import { ROLE_SWATCHES } from './roles.logic';
@@ -73,6 +79,7 @@ export class RolesItemForm {
   protected readonly swatches = ROLE_SWATCHES;
   protected readonly noColor = NO_COLOR;
   protected readonly ratings: readonly RoleSatisfaction[] = [1, 2, 3, 4, 5];
+  protected readonly ratingMax = RATING_MAX;
   protected readonly builtIn = computed(() => isBuiltIn(this.role()));
   protected readonly rating = computed(() => {
     const value = this.role().satisfaction;
@@ -82,12 +89,16 @@ export class RolesItemForm {
   private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
   private readonly descriptionField = viewChild<ElementRef<HTMLElement>>('descriptionField');
   private readonly touchedName = signal(false);
+  /** What is in the name field; `null` until typed in. It can be blank while the stored name keeps
+   * its last valid value (`editRole()` never stores a blank one). */
+  private readonly typedName = signal<string | null>(null);
 
   constructor() {
     onChange(
       computed(() => this.role().id),
       (_id, previous) => {
         this.touchedName.set(false);
+        this.typedName.set(null);
         if (previous !== undefined) {
           // Another role with the editor already open (see `TransitionItemForm` for why this is
           // a microtask rather than a direct call).
@@ -100,7 +111,8 @@ export class RolesItemForm {
   }
 
   protected readonly nameMissing = computed(
-    () => !this.builtIn() && this.touchedName() && !(this.role().name ?? '').trim(),
+    () =>
+      !this.builtIn() && this.touchedName() && !(this.typedName() ?? this.role().name ?? '').trim(),
   );
 
   protected touchName(): void {
@@ -108,17 +120,29 @@ export class RolesItemForm {
   }
 
   protected onNameInput(event: Event): void {
-    this.changed.emit({ name: (event.target as HTMLInputElement).value });
+    const name = (event.target as HTMLInputElement).value;
+    this.typedName.set(name);
+    if (name.trim() === '') {
+      this.touchedName.set(true);
+    }
+    this.changed.emit({ name });
   }
 
   protected onDescriptionInput(event: Event): void {
     this.changed.emit({ description: (event.target as HTMLInputElement).value });
   }
 
-  /** Deselecting the current chip, or picking "None", clears the colour. */
+  /** Picking "None" clears the colour. Tapping the selected chip (None included) deselects it in
+   * the listbox; that is a re-selection, not an edit: it emits nothing and the chip is selected
+   * again. */
   protected onColorChange(event: MatChipListboxChange): void {
-    const value = event.value as RoleColor | typeof NO_COLOR | undefined;
-    this.changed.emit({ color: value === undefined || value === NO_COLOR ? null : value });
+    const current = this.role().color ?? NO_COLOR;
+    const value = (event.value as RoleColor | typeof NO_COLOR | undefined) ?? current;
+    if (value === current) {
+      event.source.value = current;
+      return;
+    }
+    this.changed.emit({ color: value === NO_COLOR ? null : value });
   }
 
   protected onRatingChange(event: MatRadioChange): void {

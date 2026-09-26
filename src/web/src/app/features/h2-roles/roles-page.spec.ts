@@ -184,18 +184,28 @@ describe('RolesPage', () => {
     await settle(harness);
     (host(harness).querySelector('.archive') as HTMLButtonElement).click();
     await settle(harness);
-    expect(service.byId('dad')()?.archived).toBe(true);
+    expect(service.byId('dad')?.archived).toBe(true);
     const toggle = host(harness).querySelector('.archived-toggle') as HTMLButtonElement;
-    // Open while the archived role is being edited.
+    // Opened by archiving the role being edited; the toggle still collapses and reopens it.
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-
-    await TestBed.inject(Router).navigateByUrl(LIST_URL);
+    toggle.click();
     await settle(harness);
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(rows(harness)).toEqual(['Sharpen the Saw (Built-in)']);
     toggle.click();
     await settle(harness);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    toggle.click();
+    await settle(harness);
+
+    // Closing the editor keeps the group open, so the row focus returns to is still there.
+    await TestBed.inject(Router).navigateByUrl(LIST_URL);
+    await settle(harness);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(rows(harness)).toEqual(['Sharpen the Saw (Built-in)', 'dad']);
+    toggle.click();
+    await settle(harness);
+    expect(rows(harness)).toEqual(['Sharpen the Saw (Built-in)']);
 
     service.unarchive('dad');
     await settle(harness);
@@ -211,22 +221,30 @@ describe('RolesPage', () => {
     await settle(harness);
     expect(markDoneButton(harness).getAttribute('aria-disabled')).toBe('true');
     const summary = host(harness).querySelector('app-roles-summary')?.textContent ?? '';
-    expect(summary).toContain('3 roles, 2 rated');
+    // The built-in never counts (it comes with the app).
+    expect(summary).toContain('2 roles, 2 rated');
     expect(summary).toContain('Average 3.5 of 5');
     expect(host(harness).textContent).toContain("Say how it's going (1–5)");
   });
 
-  it('opens the gate once the third role is rated', async () => {
+  it('opens the gate once the third role the user added is rated, not the built-in', async () => {
     const { harness } = await setUp(
       [
         BUILT_IN,
         role('a', { order: 1, satisfaction: 3, note: 'Not yet.' }),
         role('b', { order: 2, satisfaction: 4 }),
+        role('c', { order: 3 }),
       ],
       `${LIST_URL}/saw`,
     );
     await settle(harness);
     form(harness).changed.emit({ satisfaction: 2 });
+    await settle(harness);
+    expect(markDoneButton(harness).getAttribute('aria-disabled')).toBe('true');
+
+    await TestBed.inject(Router).navigateByUrl(`${LIST_URL}/c`);
+    await settle(harness);
+    form(harness).changed.emit({ satisfaction: 5 });
     await settle(harness);
     expect(markDoneButton(harness).getAttribute('aria-disabled')).not.toBe('true');
   });
@@ -261,9 +279,9 @@ describe('RolesPage', () => {
     (host(harness).querySelector('.exercise-list__delete') as HTMLButtonElement).click();
     await settle(harness);
     deletes[0].onConfirm();
-    expect(service.byId('dad')()).toBeNull();
+    expect(service.byId('dad')).toBeNull();
     deletes[0].onUndo();
-    expect(service.byId('dad')()).not.toBeNull();
+    expect(service.byId('dad')).not.toBeNull();
   });
 
   it('follows a language switch, the built-in label included', async () => {

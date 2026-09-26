@@ -3,6 +3,7 @@ import { MatCardModule } from '@angular/material/card';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
+import { RATING_MAX } from '../../shared/roles/roles.logic';
 import { RolesSummary as RolesSummaryData } from './roles.logic';
 
 /** "Your picture" (issue #59): "4 roles, 3 rated" and, once one is rated, "Average 3.3 of 5".
@@ -17,6 +18,7 @@ import { RolesSummary as RolesSummaryData } from './roles.logic';
 })
 export class RolesSummary {
   readonly summary = input.required<RolesSummaryData>();
+  protected readonly ratingMax = RATING_MAX;
   protected readonly averageFormat: Intl.NumberFormatOptions = {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,

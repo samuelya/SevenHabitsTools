@@ -104,11 +104,11 @@ describe('Habits feature', () => {
     );
   });
 
-  // 'paradigms' (#51's `paradigms-transition`) and 'h1' (#57's `h1-commitments`) now have real
-  // registered exercises, so they no longer show the empty state — same reason
-  // `e2e/habits.spec.ts` picks a hub with none.
+  // 'paradigms' (#51's `paradigms-transition`), 'h1' (#57's `h1-commitments`) and 'h2' (#59's
+  // `h2-roles`) now have real registered exercises, so they no longer show the empty state — same
+  // reason `e2e/habits.spec.ts` picks a hub with none.
   it.each(
-    HABITS.filter((habit) => habit.id !== 'paradigms' && habit.id !== 'h1').map(
+    HABITS.filter((habit) => !['paradigms', 'h1', 'h2'].includes(habit.id)).map(
       (habit) => [habit.id, habit.titleKey] as const,
     ),
   )(

@@ -16,7 +16,7 @@
     "example": "مثال",
     "builtIn": "مدمج",
     "tooManyHint": "أكتر من سبع أدوار بيبقى صعب تشيلهم في دماغك. ينفع اتنين منهم يبقوا واحد؟",
-    "ratingText": "{{value}} من 5"
+    "ratingText": "{{value}} من {{max}}"
   },
   "group": {
     "activeLegend": "أدوارك",
@@ -37,7 +37,7 @@
     "colorLabel": "اللون",
     "satisfactionLabel": "كيف يسير",
     "satisfactionPrompt": "دلوقتي، إنت مبسوط قد إيه من أدائك في الدور ده؟ 1 يعني خالص، و5 يعني جدًا.",
-    "satisfactionValueText": "{{value}} من 5",
+    "satisfactionValueText": "{{value}} من {{max}}",
     "noteLabel": "الصورة",
     "notePrompt": "هي دي الصورة اللي عايزها؟ لو لأ، إيه الناقص؟",
     "notePlaceholder": "مثلاً: لسه لأ. أنا موجود وقت الواجب، مش وقت اللعب.",
@@ -69,7 +69,7 @@
       "many": "{{count}} دورًا، {{rated}} منها مقيَّمة",
       "other": "{{count}} دور، {{rated}} منها مقيَّمة"
     },
-    "averageText": "المتوسط {{avg}} من 5"
+    "averageText": "المتوسط {{avg}} من {{max}}"
   },
   "checklist": {
     "role": "ضيف دور",

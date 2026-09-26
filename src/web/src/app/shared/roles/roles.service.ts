@@ -6,8 +6,8 @@ import {
   RoleDirection,
   RoleEdit,
   activeRoles,
+  builtInRole,
   editRole,
-  findRole,
   insertRole,
   removeRole,
   reorder,
@@ -34,7 +34,7 @@ export interface NewRole {
 @Injectable({ providedIn: 'root' })
 export class RolesService {
   private readonly clock = inject(CLOCK);
-  private readonly store = featureStore<Role[]>(ROLES_MODEL_KEY);
+  private readonly store = featureStore<readonly Role[]>(ROLES_MODEL_KEY);
 
   /** Every live role, archived and samples included, by `order`. */
   readonly all: Signal<readonly Role[]> = computed(() => sortedRoles(this.store.value()));
@@ -42,14 +42,26 @@ export class RolesService {
   /** Live roles that aren't archived, by `order`. */
   readonly active: Signal<readonly Role[]> = computed(() => activeRoles(this.store.value()));
 
-  /** The live role `id`, archived included; `null` once deleted or if it never existed. */
-  byId(id: string): Signal<Role | null> {
-    return computed(() => findRole(this.store.value(), id));
+  /** Every live role by id, archived included: one map shared by every `byId()` read. */
+  private readonly liveById: Signal<ReadonlyMap<string, Role>> = computed(
+    () => new Map(this.all().map((role) => [role.id, role])),
+  );
+
+  /** The live role `id`, archived included; `null` once deleted or if it never existed. A signal
+   * read: inside a `computed` or template it tracks the roles, without a signal per call (#71 reads
+   * it per row). */
+  byId(id: string): Role | null {
+    return this.liveById().get(id) ?? null;
   }
 
   /** Creates the built-in Sharpen the Saw role if none is live; returns its id, or `null` if the
-   * store refused the write. Idempotent. */
+   * store refused the write. Idempotent: with one already live it returns that id without writing,
+   * so a read-only tab gets it too. */
   ensureBuiltIn(): string | null {
+    const existing = builtInRole(this.store.value());
+    if (existing) {
+      return existing.id;
+    }
     let id: string | null = null;
     const applied = this.store.update((list) => {
       const result = withBuiltIn(list, this.clock.now());

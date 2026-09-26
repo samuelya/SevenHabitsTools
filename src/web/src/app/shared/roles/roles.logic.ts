@@ -67,8 +67,11 @@ export function tooMany(list: readonly Role[]): boolean {
   return activeRoles(list).length > MAX_COMFORTABLE_ROLES;
 }
 
+/** The top of the "How it's going" scale; text shows it as `{{max}}`, in the active numerals. */
+export const RATING_MAX = 5;
+
 export function isRating(value: unknown): value is RoleSatisfaction {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 5;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= RATING_MAX;
 }
 
 /** The live built-in role with `key`, if any. */
@@ -80,11 +83,15 @@ export function builtInRole(
 }
 
 /** `list` with the live renewal role guaranteed, created at order 0 (every other live role moves
- * down one) when missing, and its id. Idempotent: an existing one is returned as is. */
-export function withBuiltIn(list: readonly Role[], now: Date): { list: Role[]; id: string } {
+ * down one) when missing, and its id. Idempotent: with one already there, `list` itself comes back,
+ * so the store sees a no-op. */
+export function withBuiltIn(
+  list: readonly Role[],
+  now: Date,
+): { list: readonly Role[]; id: string } {
   const existing = builtInRole(list);
   if (existing) {
-    return { list: [...list], id: existing.id };
+    return { list, id: existing.id };
   }
   const created: Role = newRecord({ key: RENEWAL_ROLE_KEY, order: 0 }, now);
   const shifted = list.map((role) =>
@@ -115,7 +122,7 @@ export function tidyRole(role: Role): Role {
 /** Appends `record` after every live role. A counted (non-sample) role brings the built-in with
  * it, so the first role the user adds also creates Sharpen the Saw (issue #59, decision Q4). */
 export function insertRole(list: readonly Role[], record: Role, now: Date): Role[] {
-  const base = record.sample ? [...list] : withBuiltIn(list, now).list;
+  const base = record.sample ? list : withBuiltIn(list, now).list;
   return [...base, tidyRole({ ...record, order: nextOrder(base) })];
 }
 
@@ -130,53 +137,78 @@ export interface RoleEdit {
 
 const EDIT_FIELDS = ['name', 'description', 'color', 'satisfaction', 'note'] as const;
 
-/** Applies `change` to the live role `id` and bumps `updatedAt`; `null` from `change` leaves the
- * list as is. Tombstoned or missing ids are left alone. */
-function changeOne(
-  list: readonly Role[],
-  id: string,
-  now: Date,
-  change: (role: Role) => Role | null,
-): Role[] {
-  return list.map((role) => {
-    if (role.id !== id || !isLive(role)) {
-      return role;
-    }
-    const changed = change(role);
-    return changed === null ? role : touch(tidyRole(changed), now);
-  });
+/** The live role `id`, or `undefined`. */
+function liveRole(list: readonly Role[], id: string): Role | undefined {
+  return list.find((role) => role.id === id && isLive(role));
 }
 
-/** Edits the role `id`. A built-in keeps its name (no rename). Any edit makes a sample the user's
- * own (issue #232), and so brings the built-in with it, as `insertRole()` does. */
-export function editRole(list: readonly Role[], id: string, edit: RoleEdit, now: Date): Role[] {
-  const target = list.find((role) => role.id === id && isLive(role));
+/** `list` ready for the user to act on `target`: a sample becomes the user's own on any edit, move
+ * or archive (issue #232), and so brings the built-in with it, as `insertRole()` does. */
+function adopting(list: readonly Role[], target: Role, now: Date): readonly Role[] {
+  return target.sample ? withBuiltIn(list, now).list : list;
+}
+
+/** Replaces the live role `id` with `changed`, tidied, without `sample` and with `updatedAt`
+ * bumped. */
+function replaceOne(list: readonly Role[], id: string, changed: Role, now: Date): Role[] {
+  return list.map((role) =>
+    role.id === id && isLive(role) ? touch(tidyRole(withoutSample(changed)), now) : role,
+  );
+}
+
+/** Whether `a` and `b` store the same fields (both already tidied). */
+function sameFields(a: Role, b: Role): boolean {
+  const aKeys = Object.keys(a);
+  const record = b as unknown as Record<string, unknown>;
+  return (
+    aKeys.length === Object.keys(b).length &&
+    aKeys.every((key) => (a as unknown as Record<string, unknown>)[key] === record[key])
+  );
+}
+
+/** Edits the role `id`. A built-in keeps its name (no rename), and a typed role never loses its
+ * name: an empty or whitespace name is ignored, so the last valid one stays. Any edit makes a
+ * sample the user's own. A refused or no-op edit returns `list` itself. */
+export function editRole(
+  list: readonly Role[],
+  id: string,
+  edit: RoleEdit,
+  now: Date,
+): readonly Role[] {
+  const target = liveRole(list, id);
   if (!target) {
-    return [...list];
+    return list;
   }
   const allowed: Record<string, unknown> = {};
   for (const key of EDIT_FIELDS) {
-    if (key in edit && !(key === 'name' && isBuiltIn(target))) {
-      allowed[key] = key === 'color' && edit.color === null ? undefined : edit[key];
+    if (!(key in edit)) {
+      continue;
     }
+    if (key === 'name' && (isBuiltIn(target) || (edit.name ?? '').trim() === '')) {
+      continue;
+    }
+    allowed[key] = key === 'color' && edit.color === null ? undefined : edit[key];
   }
-  if (Object.keys(allowed).length === 0) {
-    return [...list];
+  const changed = tidyRole({ ...target, ...allowed } as Role);
+  if (sameFields(changed, target)) {
+    return list;
   }
-  const base = target.sample ? withBuiltIn(list, now).list : list;
-  return changeOne(base, id, now, (role) => withoutSample({ ...role, ...allowed } as Role));
+  return replaceOne(adopting(list, target, now), id, changed, now);
 }
 
-/** Archives or unarchives the role `id`; refused (list unchanged) for a built-in. */
+/** Archives or unarchives the role `id`, making a sample the user's own; refused (`list` itself)
+ * for a built-in or when already in that state. */
 export function setArchived(
   list: readonly Role[],
   id: string,
   archived: boolean,
   now: Date,
-): Role[] {
-  return changeOne(list, id, now, (role) =>
-    isBuiltIn(role) || (role.archived ?? false) === archived ? null : { ...role, archived },
-  );
+): readonly Role[] {
+  const target = liveRole(list, id);
+  if (!target || isBuiltIn(target) || (target.archived ?? false) === archived) {
+    return list;
+  }
+  return replaceOne(adopting(list, target, now), id, { ...target, archived }, now);
 }
 
 /** The live role `id`'s neighbour in `direction` within its own group (active or archived), or
@@ -195,36 +227,48 @@ export function canMove(list: readonly Role[], id: string, direction: RoleDirect
   return neighbour(list, id, direction) !== undefined;
 }
 
-/** Swaps the role `id` with its neighbour in `direction`. Orders are first renumbered 0…n-1 in
- * sorted order, so duplicates from an import can't make the swap a no-op; only roles whose order
- * actually changes are touched. */
+/** Swaps the role `id` with its neighbour in `direction`, making a moved sample the user's own.
+ * Orders are first renumbered 0…n-1 in sorted order, so duplicates from an import can't make the
+ * swap a no-op; only roles whose order actually changes are touched. At the edge, `list` itself. */
 export function reorder(
   list: readonly Role[],
   id: string,
   direction: RoleDirection,
   now: Date,
-): Role[] {
-  const other = neighbour(list, id, direction);
-  if (!other) {
-    return [...list];
+): readonly Role[] {
+  const target = liveRole(list, id);
+  if (!target || !neighbour(list, id, direction)) {
+    return list;
   }
-  const orders = new Map(sortedRoles(list).map((role, index) => [role.id, index]));
+  const base = adopting(list, target, now);
+  const other = neighbour(base, id, direction)!;
+  const orders = new Map(sortedRoles(base).map((role, index) => [role.id, index]));
   const mine = orders.get(id)!;
   orders.set(id, orders.get(other.id)!);
   orders.set(other.id, mine);
-  return list.map((role) => {
+  return base.map((role) => {
+    if (role.id === id) {
+      return touch(withoutSample({ ...role, order: orders.get(id)! }), now);
+    }
     const order = orders.get(role.id);
     return order === undefined || order === role.order ? role : touch({ ...role, order }, now);
   });
 }
 
-/** Tombstones the role `id`; refused for a built-in. */
-export function removeRole(list: readonly Role[], id: string, now: Date): Role[] {
-  return list.map((role) => (role.id === id && !isBuiltIn(role) ? softDelete(role, now) : role));
+/** Tombstones the role `id`; refused (`list` itself) for a built-in or an unknown id. */
+export function removeRole(list: readonly Role[], id: string, now: Date): readonly Role[] {
+  const target = liveRole(list, id);
+  if (!target || isBuiltIn(target)) {
+    return list;
+  }
+  return list.map((role) => (role === target ? softDelete(role, now) : role));
 }
 
-/** Undoes `removeRole()`. */
-export function restoreRole(list: readonly Role[], id: string, now: Date): Role[] {
+/** Undoes `removeRole()`; `list` itself when `id` isn't tombstoned. */
+export function restoreRole(list: readonly Role[], id: string, now: Date): readonly Role[] {
+  if (!list.some((role) => role.id === id && !isLive(role))) {
+    return list;
+  }
   return list.map((role) =>
     role.id === id && !isLive(role)
       ? touch(tidyRole({ ...role, deletedAt: undefined }), now)

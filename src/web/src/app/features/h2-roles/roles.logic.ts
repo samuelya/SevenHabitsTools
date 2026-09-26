@@ -19,6 +19,7 @@ import {
   averageSatisfaction,
   isBuiltIn,
   isRating,
+  RATING_MAX,
   RoleEdit,
   roleLabel,
 } from '../../shared/roles/roles.logic';
@@ -27,15 +28,20 @@ import { Role, RoleColor, RoleFields } from '../../shared/roles/roles.model';
 /** The page's own rules for the Roles exercise (issue #59). The shared, cross-habit rules (order,
  * built-in, edits) are in `shared/roles/roles.logic.ts`. */
 
-/** Started once any counted role exists (issues #216, #232). */
-export function isStarted(list: readonly Role[]): boolean {
-  return list.some(isCounted);
+/** A role the user added: counted (live, not an untouched guide example; issues #216, #232) and
+ * not the built-in, which comes with the app and is created by other tools too (`ensureBuiltIn()`). */
+function isUserRole(role: Role): boolean {
+  return isCounted(role) && !isBuiltIn(role);
 }
 
-/** Live, unarchived roles that aren't untouched guide examples: what the hub, the summary and the
- * gate count. */
+/** Started once the user has added a role. */
+export function isStarted(list: readonly Role[]): boolean {
+  return list.some(isUserRole);
+}
+
+/** Live, unarchived roles the user added: what the hub, the summary and the gate count. */
 export function countedRoles(list: readonly Role[]): Role[] {
-  return activeRoles(list).filter(isCounted);
+  return activeRoles(list).filter(isUserRole);
 }
 
 /** The hub's status text: "5 roles", `null` with none. */
@@ -119,9 +125,11 @@ export const ROLE_SWATCHES: Readonly<Record<RoleColor, string>> = {
   grey: '#757575',
 };
 
-/** The token `ratingLine()` replaces: the page translates `list.ratingText` with it as `value`.
- * No `{{…}}`: Transloco re-scans the interpolated value, so a braced token loops forever. */
+/** The tokens `ratingLine()` replaces: the page translates `list.ratingText` with them as `value`
+ * and `max`. No `{{…}}`: Transloco re-scans the interpolated value, so a braced token loops
+ * forever. */
 export const VALUE_TOKEN = '@@value@@';
+export const MAX_TOKEN = '@@max@@';
 
 /** Already-translated text for a row, built by the page (playbook §6 "Reactive labels"). */
 export interface RoleLabels {
@@ -129,16 +137,19 @@ export interface RoleLabels {
   /** `list.builtIn`, the lock icon's hidden label. */
   readonly builtInText: string;
   readonly example: string;
-  /** `list.ratingText` with `VALUE_TOKEN` still in it. */
+  /** `list.ratingText` with `VALUE_TOKEN` and `MAX_TOKEN` still in it. */
   readonly ratingTemplate: string;
   /** Formats a number in the active numerals. */
   readonly formatNumber: (value: number) => string;
 }
 
-/** "3 of 5", or `''` when unrated or before the template has loaded. */
+/** "3 of 5", both numbers in the active numerals, or `''` when unrated or before the template has
+ * loaded. */
 export function ratingLine(role: Pick<Role, 'satisfaction'>, labels: RoleLabels): string {
   return isRating(role.satisfaction) && labels.ratingTemplate
-    ? labels.ratingTemplate.replace(VALUE_TOKEN, labels.formatNumber(role.satisfaction))
+    ? labels.ratingTemplate
+        .replace(VALUE_TOKEN, labels.formatNumber(role.satisfaction))
+        .replace(MAX_TOKEN, labels.formatNumber(RATING_MAX))
     : '';
 }
 
@@ -192,11 +203,14 @@ export function roleFromExample(value: unknown): RoleFields | null {
   return { name, order: 0, ...(description === undefined ? {} : { description }) };
 }
 
-/** The live, untouched sample with this example's name, if the user already tried it: trying it
- * again opens that one instead of adding a copy (issue #232). */
+/** The live, untouched, unarchived sample with this example's name, if the user already tried it:
+ * trying it again opens that one instead of adding a copy (issue #232). Archiving makes a sample
+ * the user's own (`setArchived()`), so an archived one is never reopened. */
 export function liveSampleOf(
   list: readonly Role[],
   fields: Pick<RoleFields, 'name'>,
 ): Role | undefined {
-  return list.find((role) => isLive(role) && role.sample && role.name === fields.name);
+  return list.find(
+    (role) => isLive(role) && role.sample && !role.archived && role.name === fields.name,
+  );
 }

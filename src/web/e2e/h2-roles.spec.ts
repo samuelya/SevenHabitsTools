@@ -5,8 +5,8 @@ import { t, type Locale } from './i18n';
 
 /**
  * Your roles (issue #59), the reference exercise for Habit 2. Happy path from the hub: add two
- * roles, rate them and the built-in Sharpen the Saw, write a picture note, mark the exercise done,
- * reload. Plus the shared slice's eager registration: `shared.roles` survives export -> wipe ->
+ * roles, rate them and the built-in Sharpen the Saw (which doesn't count toward the gate), add a
+ * third, write a picture note, mark the exercise done, reload. Plus the shared slice's eager registration: `shared.roles` survives export -> wipe ->
  * import with the Roles page never opened.
  */
 
@@ -25,7 +25,7 @@ function textFor(locale: Locale) {
     );
   return {
     hubTitle: t(locale, 'habits', 'exercises.h2-roles.shortTitle'),
-    twoRoles: roleCount(2),
+    oneRole: roleCount(1),
     renewal: t(locale, 'exerciseKit', 'roles.renewal'),
     builtIn: own('list.builtIn'),
     markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
@@ -141,17 +141,20 @@ test.describe('Your roles (h2-roles)', () => {
     await closeEditor(page, isMobile);
     await expect(page.locator('app-roles-summary')).toBeVisible();
 
+    // Only roles the user added count: the rated built-in doesn't make the third.
     const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
+    await expect(markDoneButton).toHaveAttribute('aria-disabled', 'true');
+    await addRole(page, isMobile, 'Coach', 5);
     await expect(markDoneButton).toBeEnabled();
     await markDoneButton.click();
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
 
     await page.waitForTimeout(1000);
     await page.reload();
-    await expect(page.locator('.exercise-list__item')).toHaveCount(3);
+    await expect(page.locator('.exercise-list__item')).toHaveCount(4);
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
     const stored = await storedRoles(page);
-    expect(stored?.map((role) => role['satisfaction']).sort()).toEqual([2, 3, 4]);
+    expect(stored?.map((role) => role['satisfaction']).sort()).toEqual([2, 3, 4, 5]);
 
     const results = await new AxeBuilder({ page }).analyze();
     expect(
@@ -216,7 +219,7 @@ test.describe('Your roles (h2-roles)', () => {
     }).toPass();
 
     await page.goto('/habits/h2');
-    await expect(page.locator('app-habit-hub-page .hub-exercise-status')).toHaveText(text.twoRoles);
+    await expect(page.locator('app-habit-hub-page .hub-exercise-status')).toHaveText(text.oneRole);
 
     await page.goto(ROUTE);
     const rows = page.locator('.exercise-list__item');

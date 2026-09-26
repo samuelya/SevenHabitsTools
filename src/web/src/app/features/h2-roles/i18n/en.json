@@ -16,7 +16,7 @@
     "example": "Example",
     "builtIn": "Built-in",
     "tooManyHint": "More than seven roles gets hard to hold in your head. Could two of these be one?",
-    "ratingText": "{{value}} of 5"
+    "ratingText": "{{value}} of {{max}}"
   },
   "group": {
     "activeLegend": "Your roles",
@@ -37,7 +37,7 @@
     "colorLabel": "Colour",
     "satisfactionLabel": "How it's going",
     "satisfactionPrompt": "Right now, how happy are you with how you're doing in this role? 1 is not at all, 5 is very.",
-    "satisfactionValueText": "{{value}} of 5",
+    "satisfactionValueText": "{{value}} of {{max}}",
     "noteLabel": "The picture",
     "notePrompt": "Is this the picture you want? If not, what's missing?",
     "notePlaceholder": "e.g. Not yet. I'm there for homework, not for fun.",
@@ -65,7 +65,7 @@
       "one": "1 role, {{rated}} rated",
       "other": "{{count}} roles, {{rated}} rated"
     },
-    "averageText": "Average {{avg}} of 5"
+    "averageText": "Average {{avg}} of {{max}}"
   },
   "checklist": {
     "role": "Add a role",
