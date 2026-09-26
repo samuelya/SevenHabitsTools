@@ -131,7 +131,7 @@ test.describe('Your mission (h2-mission)', () => {
     const presence = activeStep(page).locator('.suggestion', { hasText: 'presence' });
     await presence.click();
     await expect(presence).toHaveAttribute('aria-pressed', 'true');
-    const ownValue = activeStep(page).locator('mat-chip-grid input');
+    const ownValue = activeStep(page).locator('app-mission-chips mat-form-field input');
     await ownValue.fill('time');
     await ownValue.press('Enter');
     // The chip's label, not the row: the row's text also holds the remove icon's ligature.

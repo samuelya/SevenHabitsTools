@@ -43,14 +43,16 @@
           </button>
         </mat-chip-row>
       }
-      <input
-        [placeholder]="'h2Mission.' + ns() + '.ownPlaceholder' | transloco"
-        [matChipInputFor]="ownGrid"
-        [matChipInputSeparatorKeyCodes]="separatorKeys"
-        [matChipInputAddOnBlur]="true"
-        [attr.aria-describedby]="ns() + '-prompt'"
-        (matChipInputTokenEnd)="onAdd($event)"
-      />
     </mat-chip-grid>
+    <!-- A sibling of the grid, not a child: `role=grid` allows only rows (axe
+         `aria-required-children`, critical); Material's own chip examples put it here too. -->
+    <input
+      [placeholder]="'h2Mission.' + ns() + '.ownPlaceholder' | transloco"
+      [matChipInputFor]="ownGrid"
+      [matChipInputSeparatorKeyCodes]="separatorKeys"
+      [matChipInputAddOnBlur]="true"
+      [attr.aria-describedby]="ns() + '-prompt'"
+      (matChipInputTokenEnd)="onAdd($event)"
+    />
   </mat-form-field>
 </div>
