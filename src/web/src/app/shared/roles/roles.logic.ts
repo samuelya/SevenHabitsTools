@@ -156,7 +156,7 @@ function replaceOne(list: readonly Role[], id: string, changed: Role, now: Date)
   );
 }
 
-/** Whether `a` and `b` store the same fields (both already tidied). */
+/** Whether `a` and `b` store the same fields (both tidied, so an `undefined` key counts as absent). */
 function sameFields(a: Role, b: Role): boolean {
   const aKeys = Object.keys(a);
   const record = b as unknown as Record<string, unknown>;
@@ -190,7 +190,7 @@ export function editRole(
     allowed[key] = key === 'color' && edit.color === null ? undefined : edit[key];
   }
   const changed = tidyRole({ ...target, ...allowed } as Role);
-  if (sameFields(changed, target)) {
+  if (sameFields(changed, tidyRole(target))) {
     return list;
   }
   return replaceOne(adopting(list, target, now), id, changed, now);
