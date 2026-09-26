@@ -1,4 +1,12 @@
-import { Injector, Signal, computed, inject, runInInjectionContext, signal } from '@angular/core';
+import {
+  Injector,
+  Signal,
+  computed,
+  inject,
+  runInInjectionContext,
+  signal,
+  untracked,
+} from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { TranslocoService } from '@jsverse/transloco';
 import { Observable, combineLatest, map, of, switchMap } from 'rxjs';
@@ -25,14 +33,16 @@ export function storeStatusFactory<T>(
 
 /** The one read of `ExerciseRegistryEntry.statusFactory`: calls it in `injector`'s context, and
  * reads an entry that doesn't register one as "no status", so no caller branches on the optional
- * field itself. Its `keyParams` come back translated (`translatedHubStatus()`). */
+ * field itself. Its `keyParams` come back translated (`translatedHubStatus()`). Built `untracked`:
+ * the hub and Today create these lazily from a template or a `computed`, and the translation's
+ * `toObservable` effect must not be created inside that reactive context (NG0602). */
 export function exerciseStatusSignal(
   entry: ExerciseRegistryEntry,
   injector: Injector,
 ): Signal<HubStatusText | null> {
   const factory = entry.statusFactory;
   return factory
-    ? runInInjectionContext(injector, () => translatedHubStatus(factory()))
+    ? untracked(() => runInInjectionContext(injector, () => translatedHubStatus(factory())))
     : signal(null);
 }
 

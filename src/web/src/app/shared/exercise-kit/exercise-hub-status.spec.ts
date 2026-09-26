@@ -1,4 +1,4 @@
-import { Injector, inject, signal } from '@angular/core';
+import { Injector, computed, inject, signal } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { TestBed } from '@angular/core/testing';
 import { featureStore } from '../../core/data/feature-store';
@@ -144,5 +144,13 @@ describe('exerciseStatusSignal keyParams (issue #60)', () => {
       injector,
     );
     expect(status()).toEqual({ key: 'k', count: 2 });
+  });
+
+  it('can be created lazily inside a computed, as the hub and Today do (NG0602)', () => {
+    const injector = setUpWithTransloco();
+    const lazy = computed(() =>
+      exerciseStatusSignal(entry({ statusFactory: () => signal(centre('work')) }), injector)(),
+    );
+    expect(() => lazy()).not.toThrow();
   });
 });
