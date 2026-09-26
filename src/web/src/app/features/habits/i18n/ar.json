@@ -234,6 +234,18 @@
         "many": "{{count}} دورًا",
         "other": "{{count}} دور"
       }
+    },
+    "h2-long-view": {
+      "title": "انظر إلى الوراء من النهاية",
+      "shortTitle": "نظرتك البعيدة",
+      "scenarioCount": {
+        "zero": "{{count}} من {{total}} نظرات بعيدة",
+        "one": "{{count}} من {{total}} نظرات بعيدة",
+        "two": "{{count}} من {{total}} نظرات بعيدة",
+        "few": "{{count}} من {{total}} نظرات بعيدة",
+        "many": "{{count}} من {{total}} نظرات بعيدة",
+        "other": "{{count}} من {{total}} نظرات بعيدة"
+      }
     }
   }
 }

@@ -95,6 +95,9 @@ export interface AssessmentResultSummary {
 export interface AssessmentHistoryItem {
   readonly id: string;
   readonly date: string;
+  /** An already-translated row title (issue #58: the long view's scenario). With one, the date
+   * moves to the row's second line, before the summary. */
+  readonly label?: string;
   readonly summary?: AssessmentResultSummary;
 }
 

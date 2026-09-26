@@ -16,6 +16,9 @@
               ? (item.summary.key | appPlural: item.summary.count)
               : (item.summary.key | transloco)
             : '';
+        <!-- A labelled row (issue #58) is titled by its label, with the date first on its line. -->
+        @let lineText =
+          item.label ? (summaryText ? dateText + ' · ' + summaryText : dateText) : summaryText;
         <!-- The swipe host (issue #203), same shape as `ExerciseList`'s own row wrapper
              (`exercise-list.html`): a bin `<button>` can't nest inside the row's own `<button>`. -->
         <div
@@ -37,11 +40,9 @@
             (click)="itemSelected.emit(item.id)"
           >
             <span class="assessment-history-list__item-accent" aria-hidden="true"></span>
-            <span matListItemTitle>{{ dateText }}</span>
-            @if (summaryText) {
-              <span matListItemLine class="assessment-history-list__summary">{{
-                summaryText
-              }}</span>
+            <span matListItemTitle>{{ item.label || dateText }}</span>
+            @if (lineText) {
+              <span matListItemLine class="assessment-history-list__summary">{{ lineText }}</span>
             }
           </button>
           @if (deletable()) {
@@ -49,9 +50,9 @@
               type="button"
               class="assessment-history-list__delete"
               [attr.aria-label]="
-                summaryText
+                lineText
                   ? ('exerciseKit.history.deleteAria'
-                    | transloco: { date: dateText, summary: summaryText })
+                    | transloco: { date: item.label || dateText, summary: lineText })
                   : ('exerciseKit.list.deleteAria' | transloco: { item: dateText })
               "
               (click)="requestDelete(item)"

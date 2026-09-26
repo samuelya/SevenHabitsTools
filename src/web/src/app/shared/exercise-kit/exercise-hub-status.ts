@@ -1,26 +1,18 @@
-import { Injector, Signal, computed, runInInjectionContext, signal } from '@angular/core';
-import { featureStore } from '../../core/data/feature-store';
-import { getRegisteredModels } from '../../core/data/registry';
+import { Injector, Signal, runInInjectionContext, signal } from '@angular/core';
 import type { ExerciseHubStatus, ExerciseRegistryEntry } from './exercise-registry';
+import { storeSignalFactory } from './store-signal-factory';
 
 /**
  * Builds an `ExerciseRegistryEntry.statusFactory` (issues #52, #219) from an exercise's own pure
  * `hubStatus(value)` over its `featureStore` slice — the status-column twin of
- * `storeStartedFactory()` (`exercise-started.ts`), with the same lazy calling convention and the
- * same guard: a spec that reset the model registry without re-registering this model reads as "no
- * status" instead of throwing during change detection.
+ * `storeStartedFactory()` (`exercise-started.ts`), both built on `storeSignalFactory()`: an
+ * unregistered model reads as "no status".
  */
 export function storeStatusFactory<T>(
   modelKey: string,
   hubStatus: (value: T) => ExerciseHubStatus | null,
 ): () => Signal<ExerciseHubStatus | null> {
-  return () => {
-    if (!getRegisteredModels().some((model) => model.key === modelKey)) {
-      return signal(null);
-    }
-    const store = featureStore<T>(modelKey);
-    return computed(() => hubStatus(store.value()));
-  };
+  return storeSignalFactory<T, ExerciseHubStatus | null>(modelKey, hubStatus, null);
 }
 
 /** The one read of `ExerciseRegistryEntry.statusFactory`: calls it in `injector`'s context, and
