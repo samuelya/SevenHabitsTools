@@ -57,5 +57,19 @@
   },
   "roles": {
     "renewal": "Sharpen the Saw"
+  },
+  "principle": {
+    "fairness": "Fairness",
+    "honesty": "Honesty",
+    "integrity": "Integrity",
+    "dignity": "Dignity",
+    "service": "Service",
+    "excellence": "Excellence",
+    "growth": "Growth",
+    "patience": "Patience",
+    "courage": "Courage",
+    "kindness": "Kindness",
+    "responsibility": "Responsibility",
+    "gratitude": "Gratitude"
   }
 }

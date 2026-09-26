@@ -1,0 +1,26 @@
+<div class="centres-factors">
+  @if (centreLabel(); as centre) {
+    <p class="step-prompt">{{ 'h2Centres.step2.prompt' | transloco: { centre: centre } }}</p>
+    @for (factor of factorKeys; track factor) {
+      @let promptId = 'centres-factor-' + factor + '-prompt';
+      <p class="field-prompt" [id]="promptId">
+        {{ 'h2Centres.factor.' + factor + 'Prompt' | transloco }}
+      </p>
+      <mat-form-field appearance="outline" class="field">
+        <mat-label>{{ 'h2Centres.factor.' + factor + 'Label' | transloco }}</mat-label>
+        <textarea
+          matInput
+          cdkTextareaAutosize
+          cdkAutosizeMinRows="2"
+          cdkAutosizeMaxRows="8"
+          [placeholder]="'h2Centres.factor.' + factor + 'Placeholder' | transloco"
+          [value]="factors()?.[factor] ?? ''"
+          [attr.aria-describedby]="promptId"
+          (input)="onInput(factor, $event)"
+        ></textarea>
+      </mat-form-field>
+    }
+  } @else {
+    <p class="none-text">{{ 'h2Centres.step2.noneText' | transloco }}</p>
+  }
+</div>

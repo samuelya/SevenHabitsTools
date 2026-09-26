@@ -246,6 +246,42 @@
         "many": "{{count}} من {{total}} نظرات بعيدة",
         "other": "{{count}} من {{total}} نظرات بعيدة"
       }
+    },
+    "h2-centres": {
+      "title": "اكتشف ما تدور حوله حياتك",
+      "shortTitle": "مركزك",
+      "topCentre": {
+        "partner": {
+          "other": "المركز: الشريك"
+        },
+        "family": {
+          "other": "المركز: العائلة"
+        },
+        "money": {
+          "other": "المركز: المال"
+        },
+        "work": {
+          "other": "المركز: العمل"
+        },
+        "possessions": {
+          "other": "المركز: الممتلكات"
+        },
+        "pleasure": {
+          "other": "المركز: المتعة"
+        },
+        "friends": {
+          "other": "المركز: الأصدقاء"
+        },
+        "enemies": {
+          "other": "المركز: الأعداء"
+        },
+        "religion": {
+          "other": "المركز: الدين"
+        },
+        "self": {
+          "other": "المركز: الذات"
+        }
+      }
     }
   }
 }

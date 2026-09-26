@@ -1,0 +1,149 @@
+{
+  "prompt": {
+    "title": "Find what your life revolves around",
+    "text": "Something sits at the centre of your life and quietly runs it. Rate ten common centres for how much each one drives you, look hard at the top one, then choose the principles you'd rather have there.",
+    "glossText": "The book calls these centres, and says each one shapes your security, guidance, wisdom and power. A life built on principles instead is what it calls principle-centred.",
+    "whyItMatters": "If work is your centre, a bad review shakes everything. If it's a person, their mood does. Principles don't have bad days. Knowing your centre explains a lot of your reactions, and it's the first thing to change.",
+    "chapterReference": "Habit 2: Begin with the End in Mind"
+  },
+  "list": {
+    "newButton": "New assessment",
+    "empty": "No assessment yet. It takes about eight minutes.",
+    "topCentreText": "Centre: {{centre}}",
+    "principleCountText": { "one": "1 principle", "other": "{{count}} principles" },
+    "deleted": "Assessment deleted",
+    "undo": "Undo"
+  },
+  "step1": {
+    "stepTitle": "What drives you",
+    "prompt": "For each one: how much does it run your choices right now? Not how much it should."
+  },
+  "rating": {
+    "0": "Not me",
+    "1": "A little",
+    "2": "Quite a lot",
+    "3": "This is me"
+  },
+  "centre": {
+    "partner": {
+      "title": "Partner",
+      "text": "Your mood follows theirs. A rough evening at home ruins the next day."
+    },
+    "family": {
+      "title": "Family",
+      "text": "The family's name and habits decide for you. Stepping out of line feels like betrayal."
+    },
+    "money": {
+      "title": "Money",
+      "text": "You feel safe when the numbers are up and shaky when they dip, whatever else is going on."
+    },
+    "work": {
+      "title": "Work",
+      "text": "You are your job. Praise lifts you for days; a setback feels personal."
+    },
+    "possessions": {
+      "title": "Possessions",
+      "text": "What you own, or your reputation, is how you measure yourself and others."
+    },
+    "pleasure": {
+      "title": "Pleasure",
+      "text": "The next good time comes first. Anything that asks for effort can wait."
+    },
+    "friends": {
+      "title": "Friends",
+      "text": "Being liked steers you. You say what the group wants to hear."
+    },
+    "enemies": {
+      "title": "Enemies",
+      "text": "Someone you resent takes up your head. Their move decides your next one."
+    },
+    "religion": {
+      "title": "Religion",
+      "text": "Being seen as devout matters more than living what you believe. Appearance leads."
+    },
+    "self": {
+      "title": "Yourself",
+      "text": "What you want and feel comes first, and everyone else's needs come after."
+    }
+  },
+  "step2": {
+    "stepTitle": "Your top centre",
+    "prompt": "Right now it's {{centre}}. Four quick questions about how that shows up.",
+    "noneText": "You rated everything \"Not me\". Go back and pick at least one that's a little true, or skip ahead."
+  },
+  "factor": {
+    "securityLabel": "Security",
+    "securityPrompt": "When this is going well, what do you feel sure of? And when it isn't?",
+    "securityPlaceholder": "e.g. Sure of myself after a good review. Nothing after a bad one.",
+    "guidanceLabel": "Guidance",
+    "guidancePrompt": "When you have to decide something, what does this centre tell you to do?",
+    "guidancePlaceholder": "e.g. Take the option that looks best to my boss.",
+    "wisdomLabel": "Perspective",
+    "wisdomPrompt": "How does it make you see people and events? What does it make small?",
+    "wisdomPlaceholder": "e.g. People are useful or not. Family time looks like lost time.",
+    "powerLabel": "Power",
+    "powerPrompt": "What can you do when it's on your side, and what can't you do when it's not?",
+    "powerPlaceholder": "e.g. I push hard when the project's hot. I go quiet when I'm sidelined."
+  },
+  "step3": {
+    "stepTitle": "Principles at the centre",
+    "prompt": "Which principles do you want running your choices instead? Pick up to five, or add your own words.",
+    "suggestionsLabel": "Suggested principles",
+    "customLabel": "Your own",
+    "customPlaceholder": "e.g. keeping my word",
+    "removeAria": "Remove {{principle}}",
+    "maxHint": "Five is enough to live by. Drop one before adding another."
+  },
+  "result": {
+    "rankedTitle": "What drives you",
+    "ratingText": "{{centre}}: {{rating}} of {{total}}",
+    "factorsTitle": "Your top centre: {{centre}}",
+    "principlesTitle": "Principles you chose",
+    "deltaTitle": "Since last time",
+    "deltaText": "{{centre}} {{from}} → {{to}}",
+    "noDeltaText": "Same ratings as last time."
+  },
+  "editor": {
+    "saveButton": "Save",
+    "editButton": "Edit"
+  },
+  "checklist": {
+    "ratings": "Rate the ten centres",
+    "factors": "Say how your top centre shapes you",
+    "principle": "Pick one principle for the centre"
+  },
+  "guide": {
+    "inShort": "You'll rate ten things a life can revolve around, look closely at your top one, and choose the principles you want there instead. About eight minutes. Redo it in a few months to see what moved.",
+    "howTo": [
+      "Tap \"New assessment\". Rate each centre for how much it runs you today, not how much you'd like it to.",
+      "On the next step, answer four short questions about your top centre. Be specific.",
+      "Pick up to five principles you'd rather build on. Add your own words if the list doesn't fit.",
+      "Save. Read the bars once, then the answers. Do they match what people who know you would say?",
+      "Tap \"Mark done\". Take your principles into Your mission."
+    ],
+    "examples": [
+      {
+        "kind": "fields",
+        "title": "An assessment",
+        "fields": [
+          { "label": "What drives you", "value": "Work 3 of 3, Money 2 of 3, Friends 1 of 3" },
+          {
+            "label": "Security",
+            "value": "Sure of myself after a good review. Nothing after a bad one."
+          },
+          { "label": "Guidance", "value": "Take the option that looks best to my boss." },
+          {
+            "label": "Perspective",
+            "value": "People are useful or not. Family time looks like lost time."
+          },
+          {
+            "label": "Power",
+            "value": "I push hard when the project's hot. I go quiet when I'm sidelined."
+          },
+          { "label": "Principles you chose", "value": "Integrity, Service, keeping my word" }
+        ]
+      }
+    ],
+    "afterwards": "Your top centre isn't a verdict; it's a habit of attention. Each time it pulls at you this week, name it and ask what your principles would do. Re-assess in three months."
+  }
+}

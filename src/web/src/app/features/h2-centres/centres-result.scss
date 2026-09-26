@@ -1,0 +1,72 @@
+.centres-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.actions button {
+  min-block-size: 44px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.section-title {
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+.bars,
+.deltas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 8rem) 1fr 1.5rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bar-track {
+  block-size: 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--mat-sys-surface-container-highest);
+  overflow: hidden;
+}
+
+// Grows from the inline start, so from the right under `dir="rtl"`.
+.bar-fill {
+  block-size: 100%;
+  background: var(--mat-sys-primary);
+}
+
+.bar-value {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.factor-label {
+  margin: 0;
+  font: var(--mat-sys-label-large);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.factor-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bar-fill {
+    transition: inline-size 200ms ease-out;
+  }
+}

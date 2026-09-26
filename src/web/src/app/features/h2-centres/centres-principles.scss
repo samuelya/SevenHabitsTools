@@ -1,0 +1,18 @@
+.centres-principles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field-prompt,
+.max-hint {
+  margin: 0;
+}
+
+.max-hint {
+  color: var(--mat-sys-error);
+}
+
+.field {
+  inline-size: 100%;
+}

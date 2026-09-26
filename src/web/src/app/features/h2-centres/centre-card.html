@@ -1,0 +1,22 @@
+@let titleId = 'centre-' + centre() + '-title';
+<div class="centre-card">
+  <div class="centre-copy">
+    <h3 class="centre-title" [id]="titleId">
+      {{ 'h2Centres.centre.' + centre() + '.title' | transloco }}
+    </h3>
+    <p class="centre-text">{{ 'h2Centres.centre.' + centre() + '.text' | transloco }}</p>
+  </div>
+  <mat-button-toggle-group
+    class="rating-group"
+    hideSingleSelectionIndicator
+    [value]="rating()"
+    [attr.aria-labelledby]="titleId"
+    (change)="onChange($event)"
+  >
+    @for (value of ratings; track value) {
+      <mat-button-toggle [value]="value">{{
+        'h2Centres.rating.' + value | transloco
+      }}</mat-button-toggle>
+    }
+  </mat-button-toggle-group>
+</div>
