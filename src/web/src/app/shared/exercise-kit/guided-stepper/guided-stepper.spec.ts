@@ -128,6 +128,47 @@ describe('GuidedStepper', () => {
     expect(host.selectedIndex).toBe(1);
   });
 
+  it('keeps a skipped step passable after an unrelated steps change (#61)', () => {
+    // A step left without `done` counts as complete once the user leaves it (`interacted`). A new
+    // `steps` array from an edit on a later step must not take that back, or `linear` blocks
+    // "Next" from every step after it.
+    const state: BreakpointState = { matches: false, breakpoints: {} };
+    TestBed.configureTestingModule({
+      providers: [
+        provideTranslocoTesting(),
+        provideTranslocoScope('exercise-kit'),
+        {
+          provide: BreakpointObserver,
+          useValue: { observe: () => of(state), isMatched: () => false },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(GuidedStepper);
+    const steps = (): GuidedStepDefinition[] => [
+      { key: 'first', label: 'First' },
+      { key: 'second', label: 'Second' },
+      { key: 'third', label: 'Third' },
+    ];
+    fixture.componentRef.setInput('steps', steps());
+    fixture.detectChanges();
+    const selected = () =>
+      [...fixture.nativeElement.querySelectorAll('mat-step-header')].findIndex(
+        (header: Element) => header.getAttribute('aria-selected') === 'true',
+      );
+
+    buttonsWithText(fixture, 'Next')[0].click();
+    fixture.detectChanges();
+    expect(selected()).toBe(1);
+
+    // An edit on step 2 recomputes the definitions; step 1 is still not done.
+    fixture.componentRef.setInput('steps', steps());
+    fixture.detectChanges();
+
+    buttonsWithText(fixture, 'Next')[1].click();
+    fixture.detectChanges();
+    expect(selected()).toBe(2);
+  });
+
   it('un-ticks a step when its done flag regresses back to undefined', () => {
     // Regression test for a review finding: the effect only ever set `completed = true`, so a
     // step that arrives already done (e.g. reloaded data, before the user has interacted with it

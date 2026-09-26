@@ -104,6 +104,12 @@ export class GuidedStepper {
     // bindings, so neither goes through the `booleanAttribute` transform that caused the original
     // bug — see the class doc comment for why `reset()`, not an explicit `completed = false`, is
     // the regression branch.
+    //
+    // `reset()` runs only on a real regression (`done` was `true` on the previous run): it also
+    // clears `interacted`, so calling it on every run (issue #61) took a skipped step's "leaving
+    // me marks me done" pass away on the next unrelated edit, and `linear` then blocked "Next"
+    // from every later step.
+    const wasDone = new Set<string>();
     effect(() => {
       const steps = this.steps();
       const instances = this.stepInstances();
@@ -114,7 +120,8 @@ export class GuidedStepper {
         }
         if (step.done === true) {
           instance.completed = true;
-        } else {
+          wasDone.add(step.key);
+        } else if (wasDone.delete(step.key)) {
           instance.reset();
         }
       });
