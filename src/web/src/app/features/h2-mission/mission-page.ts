@@ -52,6 +52,7 @@ import {
 import {
   CHECKLIST_KEYS,
   MAX_LINES,
+  MAX_NOTE_LENGTH,
   MissionListKey,
   canSaveVersion,
   checklistLabelsFrom,
@@ -156,6 +157,7 @@ export class MissionPage {
   protected readonly collectionLink = COLLECTION_LINK;
   protected readonly reviewKeys = REVIEW_KEYS;
   protected readonly maxLines = MAX_LINES;
+  protected readonly maxNoteLength = MAX_NOTE_LENGTH;
 
   private readonly draftEditor = viewChild<ReflectionEditor>('draftEditor');
   private readonly noteField = viewChild<ElementRef<HTMLInputElement>>('noteField');
@@ -376,12 +378,20 @@ export class MissionPage {
     }
   }
 
-  /** "Restore": copies the version into the draft, asking first when that would replace words
-   * not saved as the latest version. */
+  /** "Restore": copies the version into the draft, asking first when that would replace words no
+   * version holds. The draft is checked again once the dialog closes: if it changed meanwhile (the
+   * editor, another tab) into words that would be lost, it asks again rather than overwrite. */
   protected async onRestore(versionId: string): Promise<void> {
     this.draftEditor()?.flush();
-    if (restoreNeedsConfirm(this.record(), versionId) && !(await this.confirmRestore(versionId))) {
-      return;
+    const asked = this.record()?.draft;
+    if (restoreNeedsConfirm(this.record())) {
+      if (!(await this.confirmRestore(versionId))) {
+        return;
+      }
+      this.draftEditor()?.flush();
+      if (this.record()?.draft !== asked && restoreNeedsConfirm(this.record())) {
+        return this.onRestore(versionId);
+      }
     }
     if (this.mission.restoreVersion(versionId)) {
       const index = this.versions().findIndex((version) => version.id === versionId);
@@ -390,8 +400,12 @@ export class MissionPage {
     }
   }
 
+  /** A refused write (read-only tab, whose own message explains it) puts the toggle back on the
+   * stored rhythm. */
   protected onIntervalChange(interval: ReviewInterval): void {
-    this.mission.setReviewInterval(interval);
+    if (!this.mission.setReviewInterval(interval)) {
+      this.reviewSection()?.showStoredInterval();
+    }
   }
 
   /** "Reviewed today". From the banner, which then goes away, focus moves to the Review heading. */

@@ -181,6 +181,7 @@
             aria-describedby="mission-note-prompt"
             [placeholder]="'h2Mission.step6.notePlaceholder' | transloco"
             [value]="note()"
+            [attr.maxlength]="maxNoteLength"
             (input)="onNoteInput($event)"
           />
         </mat-form-field>

@@ -7,7 +7,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatButtonToggleGroup, MatButtonToggleModule } from '@angular/material/button-toggle';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppDatePipe, AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { REVIEW_INTERVALS, ReviewInterval } from '../../shared/mission/mission.model';
@@ -36,6 +36,13 @@ export class MissionReview {
   protected readonly quarterMonths = 3;
 
   private readonly heading = viewChild.required<ElementRef<HTMLElement>>('heading');
+  private readonly toggle = viewChild.required(MatButtonToggleGroup);
+
+  /** Puts the toggle back on `interval()` after the page couldn't store the user's pick: the input
+   * didn't change, so the binding alone wouldn't move the selection back. */
+  showStoredInterval(): void {
+    this.toggle().value = this.interval();
+  }
 
   /** Where focus lands once the page's due banner, and the button in it, go away. */
   focusHeading(): void {

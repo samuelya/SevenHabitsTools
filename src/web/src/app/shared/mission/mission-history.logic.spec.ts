@@ -4,6 +4,7 @@ import {
   hubStatus,
   isReviewDue,
   nextReviewDate,
+  MAX_NOTE_LENGTH,
   restoreNeedsConfirm,
   reviewOf,
   versionRows,
@@ -86,6 +87,17 @@ describe('diffWords (issue #62)', () => {
   it('sums nothing for identical texts', () => {
     expect(diffSummary(diffWords('same', 'same'))).toEqual({ added: 0, removed: 0 });
   });
+
+  it('diffs two 3,000-word texts with a one-word change quickly (#62 review 8)', () => {
+    const words = Array.from({ length: 3000 }, (_, index) => `w${index}`);
+    const changed = [...words];
+    changed[1500] = 'changed';
+    const started = performance.now();
+    const parts = diffWords(words.join(' '), changed.join(' '));
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(parts.map((part) => part.kind)).toEqual(['same', 'removed', 'added', 'same']);
+    expect(diffSummary(parts)).toEqual({ added: 1, removed: 1 });
+  });
 });
 
 describe('versions list and restore (issue #62)', () => {
@@ -122,21 +134,30 @@ describe('versions list and restore (issue #62)', () => {
     expect(withRestoredVersion(current, 'nope', NOW)).toBe(current);
   });
 
-  it('asks before replacing a draft that differs from the latest version', () => {
-    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: v2.text }), 'v1')).toBe(false);
-    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: 'New words' }), 'v1')).toBe(
-      true,
+  it('asks only when the draft holds words no saved version has (#62 review 2)', () => {
+    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: v2.text }))).toBe(false);
+    // An older saved version as the draft loses nothing either.
+    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: `  ${v1.text} ` }))).toBe(
+      false,
     );
-    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: ' ' }), 'v1')).toBe(false);
-    // Already the draft: restoring changes nothing.
-    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: v1.text }), 'v1')).toBe(false);
-    expect(restoreNeedsConfirm(null, 'v1')).toBe(false);
+    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: 'New words' }))).toBe(true);
+    expect(restoreNeedsConfirm(mission({ versions: [v1, v2], draft: ' ' }))).toBe(false);
+    expect(restoreNeedsConfirm(null)).toBe(false);
   });
 
   it('stores a note normalised, and none when blank', () => {
     const saved = withVersion(mission({ draft: 'x' }), 'v1', NOW, '  cut  the part ');
     expect(saved.versions[0].note).toBe('cut the part');
     expect('note' in withVersion(mission({ draft: 'x' }), 'v1', NOW, '  ').versions[0]).toBe(false);
+  });
+
+  it('clamps a note to MAX_NOTE_LENGTH, on save and on display (#62 review 9)', () => {
+    const long = 'a'.repeat(MAX_NOTE_LENGTH + 20);
+    const saved = withVersion(mission({ draft: 'x' }), 'v1', NOW, long);
+    expect(saved.versions[0].note).toBe('a'.repeat(MAX_NOTE_LENGTH));
+    // An imported note over the limit shows clamped.
+    const imported = version('v1', '2026-01-01T09:00:00.000Z', 'x', long);
+    expect(versionRows([imported])[0].note).toHaveLength(MAX_NOTE_LENGTH);
   });
 });
 
@@ -198,11 +219,12 @@ describe('review rhythm (issue #62)', () => {
     expect(saved.review).toEqual({ interval: 'monthly', nextAt: '2026-03-10' });
   });
 
-  it('shows "Review due" on the hub while due, else the version count', () => {
+  it('shows "Review due" on the hub while due, over the done date, else the version count', () => {
     const monthly = withReviewInterval(mission({ versions }), 'monthly', NOW);
     expect(hubStatus(monthly, '2026-02-28')).toEqual({
       key: 'habits.exercises.h2-mission.reviewDue',
       count: 1,
+      overridesDone: true,
     });
     expect(hubStatus(monthly, '2026-02-27')).toEqual({
       key: 'habits.exercises.h2-mission.versionCount',

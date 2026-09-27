@@ -46,6 +46,8 @@ function record(fields: Partial<Mission> = {}): Mission {
 }
 
 const dialogOpen = vi.fn();
+/** Flipped to `false` to make this tab read-only: `DocumentStore` then refuses every write. */
+const isWriter = signal(true);
 
 async function setUp(
   mission: Mission | null,
@@ -53,6 +55,7 @@ async function setUp(
 ): Promise<{ fixture: ComponentFixture<MissionPage>; host: HTMLElement }> {
   dialogOpen.mockReset();
   dialogOpen.mockImplementation(async () => ({ afterClosed: () => of(confirm) }));
+  isWriter.set(true);
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -60,7 +63,7 @@ async function setUp(
       provideTranslocoScope('h2-mission'),
       provideTranslocoScope('exercise-kit'),
       { provide: CLOCK, useValue: { now: () => NOW } },
-      { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
+      { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter } },
       { provide: AppDialog, useValue: { open: dialogOpen } },
       {
         provide: DELETE_CONFIRM_DIALOG_LOADER,
@@ -169,9 +172,47 @@ describe('MissionPage versions and review (issue #62)', () => {
     expect(dialogOpen).not.toHaveBeenCalled();
     expect(service().record()?.draft).toBe('I keep my word.');
     expect(service().record()?.versions).toHaveLength(2);
-    expect(host.querySelector('.detail .status')?.textContent?.trim()).toBe(
+    // Outside the panels, in a live region rendered from the start (#62 review 5, 6).
+    expect(host.querySelector('.detail .status')).toBeNull();
+    expect(host.querySelector('app-mission-versions .status')?.textContent?.trim()).toBe(
       'Version 1 is now your draft.',
     );
+  });
+
+  it('keeps its live regions rendered, empty, before anything happens', async () => {
+    const { host } = await setUp(record());
+    const status = host.querySelector('app-mission-versions .status');
+    const summary = host.querySelector('app-mission-versions .diff-summary');
+    expect(status?.getAttribute('aria-live')).toBe('polite');
+    expect(summary?.getAttribute('aria-live')).toBe('polite');
+    expect(status?.textContent?.trim()).toBe('');
+    expect(summary?.textContent?.trim()).toBe('');
+  });
+
+  it('restores without asking when the draft is an older saved version (#62 review 2)', async () => {
+    const { fixture, host } = await setUp(record({ draft: 'I keep my word.' }));
+    rows(host)[0].click();
+    await settle(fixture);
+    button(host, 'Restore').click();
+    await settle(fixture);
+    expect(dialogOpen).not.toHaveBeenCalled();
+    expect(service().record()?.draft).toBe('I keep my word and call first.');
+  });
+
+  it('asks again when the draft changed while the dialog was open (#62 review 3)', async () => {
+    const { fixture, host } = await setUp(record({ draft: 'Something new.' }));
+    dialogOpen
+      .mockImplementationOnce(async () => {
+        service().edit({ draft: 'Changed meanwhile.' });
+        return { afterClosed: () => of(true) };
+      })
+      .mockImplementationOnce(async () => ({ afterClosed: () => of(false) }));
+    rows(host)[1].click();
+    await settle(fixture);
+    button(host, 'Restore').click();
+    await vi.waitFor(() => expect(dialogOpen).toHaveBeenCalledTimes(2));
+    await settle(fixture);
+    expect(service().record()?.draft).toBe('Changed meanwhile.');
   });
 
   it('asks before replacing an unsaved draft, and "Keep draft" keeps it', async () => {
@@ -232,6 +273,34 @@ describe('MissionPage versions and review (issue #62)', () => {
       'Next review:',
     );
     expect(host.querySelector('.due-banner')).toBeNull();
+  });
+
+  it('puts the toggle back when a read-only tab refuses the interval (#62 review 4)', async () => {
+    const { fixture, host } = await setUp(record({ review: { interval: 'yearly' } }));
+    isWriter.set(false);
+    const toggles = [...host.querySelectorAll('app-mission-review mat-button-toggle')];
+    toggles[0].querySelector('button')!.click();
+    await settle(fixture);
+    expect(service().record()?.review?.interval).toBe('yearly');
+    const checked = host.querySelectorAll('app-mission-review .mat-button-toggle-checked');
+    expect([...checked].map((toggle) => toggle.textContent?.trim())).toEqual(['Year']);
+  });
+
+  it('changes nothing visible when a read-only tab refuses "Reviewed today"', async () => {
+    const { fixture, host } = await setUp(record({ review: { interval: 'monthly' } }));
+    isWriter.set(false);
+    button(host.querySelector('.due-banner') as HTMLElement, 'Reviewed today').click();
+    await settle(fixture);
+    expect(service().record()?.review?.lastReviewedAt).toBeUndefined();
+    expect(host.querySelector('.due-banner')).not.toBeNull();
+    expect(document.activeElement?.id).not.toBe('mission-review-title');
+  });
+
+  it('limits the note field to MAX_NOTE_LENGTH characters (#62 review 9)', async () => {
+    const { fixture, host } = await setUp(record({ draft: 'I keep my word, always.' }));
+    host.querySelectorAll<HTMLElement>('.mat-step-header')[5].click();
+    await settle(fixture);
+    expect(host.querySelector('.note-field input')?.getAttribute('maxlength')).toBe('140');
   });
 
   it('shows the due banner when the date has come, and "Reviewed today" clears it', async () => {

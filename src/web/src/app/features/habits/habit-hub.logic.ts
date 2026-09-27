@@ -8,7 +8,8 @@ export type HubRowStatus =
   | { readonly kind: 'notStarted' };
 
 /** Resolves a hub row's status in a fixed order, so an exercise that registers neither `isStarted`
- * nor `statusFactory` still gets a correct row: done (check and date) wins; then the exercise's own
+ * nor `statusFactory` still gets a correct row: a status flagged `overridesDone` ("Review due",
+ * #62) wins; then done (check and date); then the exercise's own
  * in-progress text ("2 of 3 steps"); then a generic "In progress" once started; otherwise "Not
  * started". */
 export function hubRowStatus(
@@ -17,6 +18,9 @@ export function hubRowStatus(
   started: boolean,
   status: HubStatusText | null,
 ): HubRowStatus {
+  if (status?.overridesDone) {
+    return { kind: 'progress', status };
+  }
   if (done) {
     return { kind: 'done', completedAt };
   }

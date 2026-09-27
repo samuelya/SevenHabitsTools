@@ -2,7 +2,17 @@
   display: block;
 }
 
-.versions,
+// The section spaces its children with margins, not `gap`, so an idle live region (always
+// rendered, empty) takes no space.
+.versions {
+  display: flex;
+  flex-direction: column;
+}
+
+.versions > * + *:not(.idle) {
+  margin-block-start: 0.75rem;
+}
+
 .detail,
 .compare {
   display: flex;
@@ -33,6 +43,7 @@
 
 .version-note {
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .version-text {

@@ -16,8 +16,6 @@ import type {
   HubStatusKeyParam,
   HubStatusText,
 } from './exercise-registry';
-import { featureStore } from '../../core/data/feature-store';
-import { getRegisteredModels } from '../../core/data/registry';
 import { storeSignalFactory } from './store-signal-factory';
 import { todaySignal } from './today';
 
@@ -39,18 +37,24 @@ export function storeStatusFactory<T>(
  * `hubStatus(value, today)` also gets `CLOCK`'s local date (`YYYY-MM-DD`) from `todaySignal()`,
  * which changes just after local midnight and when the tab comes back into view, so a hub left
  * open overnight updates without a reload. The timer stops with the injector the factory runs in.
+ * An unregistered model reads as "no status", through `storeSignalFactory()`'s guard.
  */
 export function storeStatusOnDayFactory<T>(
   modelKey: string,
   hubStatus: (value: T, today: string) => ExerciseHubStatus | null,
 ): () => Signal<ExerciseHubStatus | null> {
   return () => {
-    if (!getRegisteredModels().some((model) => model.key === modelKey)) {
-      return signal(null);
-    }
-    const store = featureStore<T>(modelKey);
+    // Boxed, so a model whose value may itself be `null` still reaches `hubStatus`.
+    const slice = storeSignalFactory<T, { readonly value: T } | null>(
+      modelKey,
+      (value) => ({ value }),
+      null,
+    )();
     const today = todaySignal();
-    return computed(() => hubStatus(store.value(), today()));
+    return computed(() => {
+      const current = slice();
+      return current === null ? null : hubStatus(current.value, today());
+    });
   };
 }
 

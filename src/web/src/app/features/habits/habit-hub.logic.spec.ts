@@ -14,6 +14,14 @@ describe('hubRowStatus (#219)', () => {
     expect(hubRowStatus(false, null, true, status)).toEqual({ kind: 'progress', status });
   });
 
+  it('shows a status flagged overridesDone even when done (#62)', () => {
+    const due = { key: 'x.due', count: 0, overridesDone: true } as const;
+    expect(hubRowStatus(true, '2026-01-01T00:00:00.000Z', true, due)).toEqual({
+      kind: 'progress',
+      status: due,
+    });
+  });
+
   it('falls back to a generic "In progress" once started', () => {
     expect(hubRowStatus(false, null, true, null)).toEqual({ kind: 'started' });
   });

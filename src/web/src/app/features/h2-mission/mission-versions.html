@@ -46,16 +46,19 @@
           </button>
         }
       </div>
-      <p class="status" aria-live="polite">
-        @if (restored(); as n) {
-          {{ 'h2Mission.versions.restoredText' | transloco: { n: (n | appNumber) } }}
-        }
-      </p>
     </div>
   }
 
-  @if (compare(); as pair) {
-    <div class="compare">
+  <!-- Live regions stay rendered and only their text is conditional, so the first change is
+       announced; outside the panels, so the restored status never sits under another version. -->
+  <p class="status" aria-live="polite" [class.idle]="restored() === null">
+    @if (restored(); as n) {
+      {{ 'h2Mission.versions.restoredText' | transloco: { n: (n | appNumber) } }}
+    }
+  </p>
+
+  <div class="compare" [class.idle]="compare() === null">
+    @if (compare(); as pair) {
       <div class="compare-picks">
         <mat-form-field subscriptSizing="dynamic">
           <mat-label>{{ 'h2Mission.versions.compareFromLabel' | transloco }}</mat-label>
@@ -78,57 +81,60 @@
           </select>
         </mat-form-field>
       </div>
+    }
 
+    <p class="diff-summary" aria-live="polite">
       @if (diff(); as result) {
-        <p class="diff-summary" aria-live="polite">
-          @if (result.summary.added + result.summary.removed === 0) {
-            {{ 'h2Mission.versions.noChangeText' | transloco }}
-          } @else {
-            {{
-              'h2Mission.versions.diffSummaryText'
-                | transloco
-                  : {
-                      added:
-                        ('h2Mission.versions.addedCountText'
-                        | appPlural
-                          : result.summary.added
-                          : { count: (result.summary.added | appNumber) }),
-                      removed:
-                        ('h2Mission.versions.removedCountText'
-                        | appPlural
-                          : result.summary.removed
-                          : { count: (result.summary.removed | appNumber) }),
-                    }
-            }}
-          }
-        </p>
-        <!-- One run per part; the visually hidden prefix names the change for a screen reader, the
-             colour and the underline/strikethrough show it. `dir="auto"`: the text's own direction. -->
-        <p class="diff" dir="auto">
-          @for (part of result.parts; track $index) {
-            @switch (part.kind) {
-              @case ('added') {
-                <ins
-                  ><span class="visually-hidden"
-                    >{{ 'h2Mission.versions.addedLabel' | transloco }}: </span
-                  >{{ part.text }}</ins
-                >
-              }
-              @case ('removed') {
-                <del
-                  ><span class="visually-hidden"
-                    >{{ 'h2Mission.versions.removedLabel' | transloco }}: </span
-                  >{{ part.text }}</del
-                >
-              }
-              @default {
-                <span>{{ part.text }}</span>
-              }
-            }
-            {{ $last ? '' : ' ' }}
-          }
-        </p>
+        @if (result.summary.added + result.summary.removed === 0) {
+          {{ 'h2Mission.versions.noChangeText' | transloco }}
+        } @else {
+          {{
+            'h2Mission.versions.diffSummaryText'
+              | transloco
+                : {
+                    added:
+                      ('h2Mission.versions.addedCountText'
+                      | appPlural
+                        : result.summary.added
+                        : { count: (result.summary.added | appNumber) }),
+                    removed:
+                      ('h2Mission.versions.removedCountText'
+                      | appPlural
+                        : result.summary.removed
+                        : { count: (result.summary.removed | appNumber) }),
+                  }
+          }}
+        }
       }
-    </div>
-  }
+    </p>
+
+    @if (diff(); as result) {
+      <!-- One run per part; the visually hidden prefix names the change for a screen reader, the
+             colour and the underline/strikethrough show it. `dir="auto"`: the text's own direction. -->
+      <p class="diff" dir="auto">
+        @for (part of result.parts; track $index) {
+          @switch (part.kind) {
+            @case ('added') {
+              <ins
+                ><span class="visually-hidden"
+                  >{{ 'h2Mission.versions.addedLabel' | transloco }}: </span
+                >{{ part.text }}</ins
+              >
+            }
+            @case ('removed') {
+              <del
+                ><span class="visually-hidden"
+                  >{{ 'h2Mission.versions.removedLabel' | transloco }}: </span
+                >{{ part.text }}</del
+              >
+            }
+            @default {
+              <span>{{ part.text }}</span>
+            }
+          }
+          {{ $last ? '' : ' ' }}
+        }
+      </p>
+    }
+  </div>
 </section>

@@ -175,17 +175,28 @@ export function canSaveVersion(mission: Mission | null): boolean {
   return mission.draft.trim() !== currentStatement(mission);
 }
 
+/** The longest "What changed" note (#62): one line on a 360 px version row. */
+export const MAX_NOTE_LENGTH = 140;
+
+/** A note as stored and shown: one line, at most `MAX_NOTE_LENGTH` characters; `undefined` when
+ * blank. */
+export function clampNote(note: string | undefined): string | undefined {
+  const line = normaliseLine(note ?? '');
+  return line === '' ? undefined : line.slice(0, MAX_NOTE_LENGTH).trimEnd();
+}
+
 /** `mission` with the draft appended as a new version; the same reference when it can't be. A
  * rhythm never reviewed counts from the latest version, so its stored `nextAt` moves with it. */
 export function withVersion(mission: Mission, id: string, now: Date, note?: string): Mission {
   if (!canSaveVersion(mission)) {
     return mission;
   }
+  const clamped = clampNote(note);
   const version: MissionVersion = {
     id,
     savedAt: now.toISOString(),
     text: mission.draft.trim(),
-    ...(note?.trim() ? { note: normaliseLine(note) } : {}),
+    ...(clamped ? { note: clamped } : {}),
   };
   const versions = [...mission.versions, version];
   const review = mission.review && syncedReview(mission.review, versions);
@@ -202,14 +213,15 @@ export function withRestoredVersion(mission: Mission, versionId: string, now: Da
   return touch({ ...mission, draft: version.text }, now);
 }
 
-/** Restoring asks first when it would replace a draft that isn't saved as the latest version:
- * words the user wrote and could lose. */
-export function restoreNeedsConfirm(mission: Mission | null, versionId: string): boolean {
+/** Restoring asks first only when it would replace unsaved words: a draft with words that matches
+ * no saved version (trimmed). `versionId` isn't needed: restoring any version over a saved draft
+ * loses nothing. */
+export function restoreNeedsConfirm(mission: Mission | null): boolean {
   if (mission === null || mission.draft.trim() === '') {
     return false;
   }
-  const version = mission.versions.find((candidate) => candidate.id === versionId);
-  return mission.draft !== version?.text && mission.draft.trim() !== currentStatement(mission);
+  const draft = mission.draft.trim();
+  return !mission.versions.some((version) => version.text.trim() === draft);
 }
 
 /** One row of the versions list, newest first; `n` is the 1-based version number. */
@@ -228,7 +240,7 @@ export function versionRows(versions: readonly MissionVersion[]): readonly Versi
       id: version.id,
       n: index + 1,
       savedAt: version.savedAt,
-      ...(version.note ? { note: version.note } : {}),
+      ...(clampNote(version.note) ? { note: clampNote(version.note) } : {}),
       words: wordCount(version.text),
       text: version.text,
     }))
@@ -393,12 +405,13 @@ export function isStarted(mission: Mission | null): boolean {
   return mission !== null;
 }
 
-/** The hub's text: "Review due" once the rhythm's date has come (`today`, local), else "Version n"
+/** The hub's text: "Review due" once the rhythm's date has come (`today`, local), shown even on
+ * a done mission (`overridesDone`), else "Version n"
  * once saved, "Draft, n words" while drafting, else `null`. */
 export function hubStatus(mission: Mission | null, today: string): ExerciseHubStatus | null {
   const versions = mission?.versions.length ?? 0;
   if (mission && versions > 0 && isReviewDue(reviewOf(mission), mission.versions, today)) {
-    return { key: 'habits.exercises.h2-mission.reviewDue', count: 1 };
+    return { key: 'habits.exercises.h2-mission.reviewDue', count: 1, overridesDone: true };
   }
   if (versions > 0) {
     return { key: 'habits.exercises.h2-mission.versionCount', count: versions };

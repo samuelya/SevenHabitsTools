@@ -14,6 +14,9 @@ export interface ExerciseHubStatus {
   /** Params whose value is a translation the hub resolves before interpolating `key` (issue #60:
    * "Centre: {{centre}}" with the centre's title from the exercise's own scope). */
   readonly keyParams?: Readonly<Record<string, HubStatusKeyParam>>;
+  /** Shows this status on the hub row even when the exercise is done (issue #62: "Review due" on
+   * a finished mission); without it a done row shows its check and date. */
+  readonly overridesDone?: true;
 }
 
 /** A translation in a feature `scope` (loaded on demand), e.g. `{ scope: 'h2-centres', key:
@@ -28,6 +31,8 @@ export interface HubStatusText {
   readonly key: string;
   readonly count: number;
   readonly params?: Readonly<Record<string, number | string>>;
+  /** See `ExerciseHubStatus.overridesDone`. */
+  readonly overridesDone?: true;
 }
 
 /**

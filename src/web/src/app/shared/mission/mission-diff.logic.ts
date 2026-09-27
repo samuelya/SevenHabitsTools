@@ -18,13 +18,38 @@ function tokens(text: string): string[] {
  * The words of `before` and `after` as runs of same / removed / added, in reading order: a longest
  * common subsequence over whitespace-split tokens (which holds for Arabic as for English); on a tie
  * the removed words come first, so a replaced phrase reads old then new. Whitespace isn't
- * compared, so a re-wrapped line is no change.
+ * compared, so a re-wrapped line is no change. The common prefix and suffix are matched first and
+ * the table (typed-array rows) covers only the changed middle, so a small edit to a long draft
+ * stays cheap in time and memory.
  */
 export function diffWords(before: string, after: string): readonly DiffPart[] {
   const a = tokens(before);
   const b = tokens(after);
+  let start = 0;
+  while (start < a.length && start < b.length && a[start] === b[start]) {
+    start++;
+  }
+  let endA = a.length;
+  let endB = b.length;
+  while (endA > start && endB > start && a[endA - 1] === b[endB - 1]) {
+    endA--;
+    endB--;
+  }
+  const words: { kind: DiffPart['kind']; word: string }[] = a
+    .slice(0, start)
+    .map((word) => ({ kind: 'same', word }));
+  words.push(...middleDiff(a.slice(start, endA), b.slice(start, endB)));
+  words.push(...a.slice(endA).map((word) => ({ kind: 'same' as const, word })));
+  return runsOf(words);
+}
+
+/** The LCS walk over two token lists that share no prefix or suffix. */
+function middleDiff(
+  a: readonly string[],
+  b: readonly string[],
+): { kind: DiffPart['kind']; word: string }[] {
   // lcs[i][j]: the common subsequence length of a[i..] and b[j..].
-  const lcs = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+  const lcs = Array.from({ length: a.length + 1 }, () => new Uint32Array(b.length + 1));
   for (let i = a.length - 1; i >= 0; i--) {
     for (let j = b.length - 1; j >= 0; j--) {
       lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
@@ -46,7 +71,7 @@ export function diffWords(before: string, after: string): readonly DiffPart[] {
       j++;
     }
   }
-  return runsOf(words);
+  return words;
 }
 
 /** Consecutive words of one kind joined into one run. */

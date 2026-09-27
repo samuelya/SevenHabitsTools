@@ -252,9 +252,13 @@ test.describe('Your mission (h2-mission)', () => {
       checklist: {},
       versions: [{ id: 'v1', savedAt: T, text: 'I keep my word.' }],
     };
-    const withMission = (fields: object) => {
+    const withMission = (fields: object, shared: object = {}) => {
       const doc = inputs();
-      return { ...doc, habits: { ...doc.habits, h2: { mission: { ...mission, ...fields } } } };
+      return {
+        ...doc,
+        shared: { ...doc.shared, ...shared },
+        habits: { ...doc.habits, h2: { mission: { ...mission, ...fields } } },
+      };
     };
     await seedDocument(withMission({}));
     await page.goto(ROUTE);
@@ -297,11 +301,23 @@ test.describe('Your mission (h2-mission)', () => {
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
 
-    // A review that came due while away: the banner on the page, "Review due" on the hub.
+    // A review that came due while away, on a mission marked done: the banner on the page, and
+    // "Review due" on the hub instead of the done date.
     await seedDocument(
-      withMission({
-        review: { interval: 'monthly', lastReviewedAt: '2020-01-01', nextAt: '2020-02-01' },
-      }),
+      withMission(
+        { review: { interval: 'monthly', lastReviewedAt: '2020-01-01', nextAt: '2020-02-01' } },
+        {
+          exerciseCompletions: [
+            {
+              id: 'c16d7e8f-90a1-4b2c-8ed5-d6f708192a3b',
+              createdAt: T,
+              updatedAt: T,
+              exerciseId: 'h2-mission',
+              completedAt: T,
+            },
+          ],
+        },
+      ),
     );
     await page.goto('/habits/h2');
     await expect(
