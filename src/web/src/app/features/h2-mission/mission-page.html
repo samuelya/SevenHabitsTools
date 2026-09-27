@@ -102,7 +102,10 @@
               (valueChange)="onDraftChanged($event, draftEditor)"
             />
             <p class="word-count">
-              {{ 'h2Mission.step5.wordCountText' | appPlural: liveWords() }}
+              {{
+                'h2Mission.step5.wordCountText'
+                  | appPlural: liveWords() : { count: (liveWords() | appNumber) }
+              }}
             </p>
           </div>
           <app-mission-collection
@@ -144,7 +147,12 @@
         <h3 class="preview-title">{{ 'h2Mission.step6.previewLabel' | transloco }}</h3>
         @if (words() > 0) {
           <blockquote class="preview">{{ draft() }}</blockquote>
-          <p class="word-count">{{ 'h2Mission.step5.wordCountText' | appPlural: words() }}</p>
+          <p class="word-count">
+            {{
+              'h2Mission.step5.wordCountText'
+                | appPlural: words() : { count: (words() | appNumber) }
+            }}
+          </p>
         } @else {
           <p class="empty">{{ 'h2Mission.step6.emptyDraftHint' | transloco }}</p>
         }
@@ -159,7 +167,7 @@
         </div>
         <p class="saved" aria-live="polite">
           @if (savedVersion(); as n) {
-            {{ 'h2Mission.step6.savedText' | transloco: { n } }}
+            {{ 'h2Mission.step6.savedText' | transloco: { n: (n | appNumber) } }}
           }
         </p>
       </div>

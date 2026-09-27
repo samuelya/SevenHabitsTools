@@ -2,13 +2,17 @@ import { MissionInputItem } from '../../shared/mission-inputs/mission-inputs';
 import { MissionRoleLine } from '../../shared/mission/mission.model';
 import { hasLine, normaliseLine, sameLine } from '../../shared/mission/mission.logic';
 
-/** A suggestion chip in steps 1–2: pressed while its text is in the record. */
+/** A suggestion chip in steps 1–2: pressed while its `value` is in the record. */
 export interface SuggestionRow {
+  /** What the record keeps: the item's `key` (a suggested principle, translated on render, #299)
+   * or its normalised text (the user's own words from another exercise). */
+  readonly value: string;
+  /** What the chip shows: the item's text in the current language. */
   readonly text: string;
   readonly pressed: boolean;
 }
 
-/** The source's items as suggestion chips, one per distinct text (case-insensitive). */
+/** The source's items as suggestion chips, one per distinct value (case-insensitive). */
 export function suggestionRows(
   items: readonly MissionInputItem[],
   kept: readonly string[],
@@ -16,8 +20,9 @@ export function suggestionRows(
   const rows: SuggestionRow[] = [];
   for (const item of items) {
     const text = normaliseLine(item.text);
-    if (text !== '' && !rows.some((row) => sameLine(row.text, text))) {
-      rows.push({ text, pressed: hasLine(kept, text) });
+    const value = item.key ?? text;
+    if (text !== '' && !rows.some((row) => sameLine(row.value, value))) {
+      rows.push({ value, text, pressed: hasLine(kept, value) });
     }
   }
   return rows;
@@ -44,7 +49,7 @@ export function suggestionGroups(
   const offered: SuggestionRow[] = [];
   for (const source of sources) {
     const rows = suggestionRows(source.items, kept).filter(
-      (row) => !offered.some((earlier) => sameLine(earlier.text, row.text)),
+      (row) => !offered.some((earlier) => sameLine(earlier.value, row.value)),
     );
     offered.push(...rows);
     if (rows.length > 0) {
@@ -56,6 +61,7 @@ export function suggestionGroups(
 
 /** A kept line that no suggestion offers: the user's own words, removable from the chip grid. */
 export interface OwnLine {
+  /** What the chip shows: `labelOf(line)`, the line as typed unless it is a suggestion's key. */
   readonly text: string;
   /** Its index in the record's list, what `MissionService.removeLine()` takes. */
   readonly index: number;
@@ -64,10 +70,24 @@ export interface OwnLine {
 export function ownLines(
   kept: readonly string[],
   suggestions: readonly SuggestionRow[],
+  labelOf: (line: string) => string = (line) => line,
 ): readonly OwnLine[] {
   return kept
-    .map((text, index) => ({ text, index }))
-    .filter((line) => !suggestions.some((row) => sameLine(row.text, line.text)));
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => !suggestions.some((row) => sameLine(row.value, line)))
+    .map(({ line, index }) => ({ text: labelOf(line), index }));
+}
+
+/** A kept principle's label (issue #61's contract): a suggestion's key translated through
+ * `exerciseKit.principle.*` (`keyLabels`), anything else as typed. A key whose label hasn't
+ * loaded yet shows as stored. */
+export function principleLineLabel(
+  line: string,
+  keyLabels: Readonly<Record<string, string>>,
+): string {
+  return Object.prototype.hasOwnProperty.call(keyLabels, line) && keyLabels[line] !== ''
+    ? keyLabels[line]
+    : line;
 }
 
 /** A role row of step 3. `label` is `null` for a deleted role (shown as "Deleted role"). */

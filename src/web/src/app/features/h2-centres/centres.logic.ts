@@ -41,22 +41,7 @@ export const CENTRE_KEYS = [
   'self',
 ] as const;
 
-/** The twelve suggested principles, labelled through `exerciseKit.principle.*` (#61 reads them
- * too). */
-export const PRINCIPLE_KEYS = [
-  'fairness',
-  'honesty',
-  'integrity',
-  'dignity',
-  'service',
-  'excellence',
-  'growth',
-  'patience',
-  'courage',
-  'kindness',
-  'responsibility',
-  'gratitude',
-] as const;
+export { PRINCIPLE_KEYS } from '../../shared/exercise-kit/principle-keys';
 
 /** "Not me / A little / Quite a lot / This is me". */
 export const RATINGS = [0, 1, 2, 3] as const;

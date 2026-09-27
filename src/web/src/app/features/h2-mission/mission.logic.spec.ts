@@ -4,6 +4,7 @@ import {
   collectionTags,
   filterCollection,
   ownLines,
+  principleLineLabel,
   roleLineRows,
   suggestionGroups,
   suggestionRows,
@@ -24,8 +25,18 @@ describe('suggestions', () => {
       item('d', { text: '  ' }),
     ];
     expect(suggestionRows(items, ['PRESENCE'])).toEqual([
-      { text: 'Presence', pressed: true },
-      { text: 'Time', pressed: false },
+      { value: 'Presence', text: 'Presence', pressed: true },
+      { value: 'Time', text: 'Time', pressed: false },
+    ]);
+  });
+
+  it('keeps a keyed suggestion by its key, whatever language its label is in (#299)', () => {
+    const items = [item('k', { text: 'النزاهة', key: 'integrity' })];
+    expect(suggestionRows(items, ['integrity'])).toEqual([
+      { value: 'integrity', text: 'النزاهة', pressed: true },
+    ]);
+    expect(ownLines(['integrity', 'keeping my word'], suggestionRows(items, []))).toEqual([
+      { text: 'keeping my word', index: 1 },
     ]);
   });
 
@@ -42,8 +53,8 @@ describe('suggestions', () => {
       ['calm'],
     );
     expect(groups).toEqual([
-      { sourceExerciseId: 'h2-long-view', rows: [{ text: 'Time', pressed: false }] },
-      { sourceExerciseId: 'h2-third', rows: [{ text: 'Calm', pressed: true }] },
+      { sourceExerciseId: 'h2-long-view', rows: [{ value: 'Time', text: 'Time', pressed: false }] },
+      { sourceExerciseId: 'h2-third', rows: [{ value: 'Calm', text: 'Calm', pressed: true }] },
     ]);
   });
 
@@ -53,6 +64,17 @@ describe('suggestions', () => {
       { text: 'loyalty', index: 1 },
       { text: 'presence', index: 2 },
     ]);
+  });
+
+  it('labels an own line through labelOf', () => {
+    const labels = { courage: 'الشجاعة', honesty: '' };
+    const label = (line: string) => principleLineLabel(line, labels);
+    expect(ownLines(['courage', 'showing up', 'honesty'], [], label)).toEqual([
+      { text: 'الشجاعة', index: 0 },
+      { text: 'showing up', index: 1 },
+      { text: 'honesty', index: 2 },
+    ]);
+    expect(principleLineLabel('constructor', labels)).toBe('constructor');
   });
 });
 

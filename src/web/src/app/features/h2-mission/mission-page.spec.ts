@@ -3,9 +3,10 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideTranslocoScope } from '@jsverse/transloco';
+import { TranslocoService, provideTranslocoScope } from '@jsverse/transloco';
 import { of } from 'rxjs';
 import type { Mock } from 'vitest';
+import { DocumentStore } from '../../core/data/document.store';
 import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
@@ -28,6 +29,8 @@ const snackbarOpen = vi.fn(async () => undefined);
 interface Seed {
   readonly values?: readonly string[];
   readonly inspirations?: readonly object[];
+  readonly principles?: readonly object[];
+  readonly numerals?: 'western' | 'arabic';
 }
 
 async function setUp(
@@ -63,6 +66,17 @@ async function setUp(
           answers: [{ promptKey: 'oneYear.who', text: 'My family', values: seed.values }],
         }),
       ]);
+    }
+    if (seed.principles) {
+      featureStore<object[]>('h2-centres').update(() => [
+        rec('c1', { date: '2026-09-20', ratings: {}, principles: seed.principles }),
+      ]);
+    }
+    if (seed.numerals) {
+      TestBed.inject(DocumentStore).update('settings', () => ({
+        language: 'en',
+        numerals: seed.numerals,
+      }));
     }
     if (seed.inspirations) {
       featureStore<object[]>('h2-inspiration').update(() => [...seed.inspirations!]);
@@ -112,6 +126,44 @@ describe('MissionPage', () => {
     suggestion(host, 'presence').click();
     fixture.detectChanges();
     expect(mission().record()?.values).toEqual([]);
+  });
+
+  it('keeps a suggested principle by its key and shows it in the current language', async () => {
+    const { fixture, host } = await setUp({
+      principles: [{ key: 'integrity' }, { name: 'keeping my word' }],
+    });
+    suggestion(host, 'Integrity').click();
+    suggestion(host, 'keeping my word').click();
+    fixture.detectChanges();
+    expect(mission().record()?.principles).toEqual(['integrity', 'keeping my word']);
+
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(suggestion(host, 'النزاهة').getAttribute('aria-pressed')).toBe('true');
+    expect(suggestion(host, 'keeping my word').getAttribute('aria-pressed')).toBe('true');
+    const own = [...host.querySelectorAll('.chip-label')].map((chip) => chip.textContent?.trim());
+    expect(own).not.toContain('Integrity');
+    expect(own).not.toContain('integrity');
+    TestBed.inject(TranslocoService).setActiveLang('en');
+  });
+
+  it('shows a kept principle key its source no longer offers translated, typed ones as typed', async () => {
+    const { fixture, host } = await setUp();
+    mission().addLine('principles', 'courage');
+    mission().addLine('principles', 'showing up');
+    fixture.detectChanges();
+    const own = () =>
+      [...host.querySelectorAll('.chip-label')].map((chip) => chip.textContent?.trim());
+    expect(own()).toEqual(['Courage', 'showing up']);
+
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(own()).toEqual(['الشجاعة', 'showing up']);
+    TestBed.inject(TranslocoService).setActiveLang('en');
   });
 
   it('shows the roles empty line with a link, then a line editor per active role', async () => {
@@ -293,6 +345,18 @@ describe('MissionPage', () => {
     buttonsWithText(host, 'Copy statement')[0].click();
     expect(copy).toHaveBeenCalledWith('I keep my word.');
     expect(snackbarOpen).toHaveBeenCalledWith('Copied.', '', { duration: 3000 });
+  });
+
+  it('writes the word count and the saved version in the chosen numerals', async () => {
+    const { fixture, host } = await setUp({ numerals: 'arabic' });
+    mission().edit({ draft: 'I keep my word.' });
+    fixture.detectChanges();
+    expect(host.textContent).toContain('٤ words');
+    expect(host.textContent).not.toContain('4 words');
+
+    buttonsWithText(host, 'Save version')[0].click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Version ١ saved.');
   });
 
   it('stores the review answers', async () => {

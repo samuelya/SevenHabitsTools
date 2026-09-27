@@ -48,7 +48,7 @@
     "draftLabel": "Your mission statement",
     "draftPlaceholder": "e.g. I want to be present with the people I love and honest in the work I do…",
     "wordCountText": {
-      "one": "1 word",
+      "one": "{{count}} word",
       "other": "{{count}} words"
     }
   },

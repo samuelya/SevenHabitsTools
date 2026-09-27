@@ -11,14 +11,14 @@
       }}
     </p>
     <div class="suggestions" role="group" [attr.aria-labelledby]="ns() + '-suggestions-' + g">
-      @for (row of group.rows; track row.text) {
+      @for (row of group.rows; track row.value) {
         <button
           mat-stroked-button
           type="button"
           class="suggestion"
           [class.suggestion--on]="row.pressed"
           [attr.aria-pressed]="row.pressed ? 'true' : 'false'"
-          (click)="toggled.emit(row.text)"
+          (click)="toggled.emit(row.value)"
         >
           @if (row.pressed) {
             <mat-icon aria-hidden="true">check</mat-icon>

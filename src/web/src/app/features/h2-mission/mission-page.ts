@@ -17,6 +17,7 @@ import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
 import { map } from 'rxjs';
 import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
+import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
@@ -29,6 +30,7 @@ import {
   GuidedStepDefinition,
   GuidedStepper,
 } from '../../shared/exercise-kit/guided-stepper/guided-stepper';
+import { PRINCIPLE_KEYS } from '../../shared/exercise-kit/principle-keys';
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
 import {
   MissionInputItem,
@@ -58,7 +60,13 @@ import { MissionCollection } from './mission-collection';
 import { LineAdd } from './mission-line-add';
 import { MissionLines } from './mission-lines';
 import { MissionChips } from './mission-chips';
-import { RoleLineRow, ownLines, roleLineRows, suggestionGroups } from './mission.logic';
+import {
+  RoleLineRow,
+  ownLines,
+  principleLineLabel,
+  roleLineRows,
+  suggestionGroups,
+} from './mission.logic';
 import { H2_MISSION_ID } from './mission.model';
 
 /** `[0]` is the `appGuidedStep` key, `[1]` the i18n namespace of the step's strings. */
@@ -83,6 +91,7 @@ const COLLECTION_LINK = '/habits/h2/inspiration';
 @Component({
   selector: 'app-mission-page',
   imports: [
+    AppNumberPipe,
     AppPluralPipe,
     DoneToggle,
     ExercisePage,
@@ -142,12 +151,24 @@ export class MissionPage {
   protected readonly principleSuggestions = computed(() =>
     suggestionGroups(this.principleSources(), this.record()?.principles ?? []),
   );
-  protected readonly ownPrinciples = computed(() =>
-    ownLines(
+  /** `exerciseKit.principle.*` by key: a kept suggestion is stored as its key and shown in the
+   * current language, even once its source no longer offers it (#299). */
+  private readonly principleKeyLabels = translateSignal(
+    PRINCIPLE_KEYS.map((key) => `principle.${key}`),
+    undefined,
+    'exercise-kit',
+  );
+  protected readonly ownPrinciples = computed(() => {
+    const translated = this.principleKeyLabels();
+    const keyLabels = Object.fromEntries(
+      PRINCIPLE_KEYS.map((key, index) => [key, translated[index] ?? '']),
+    );
+    return ownLines(
       this.record()?.principles ?? [],
       this.principleSuggestions().flatMap((group) => group.rows),
-    ),
-  );
+      (line) => principleLineLabel(line, keyLabels),
+    );
+  });
 
   // Labels: `translateSignal` with the scope named, keys relative to it (playbook §6).
   private readonly renewalLabel = translateSignal('roles.renewal', undefined, 'exercise-kit');
