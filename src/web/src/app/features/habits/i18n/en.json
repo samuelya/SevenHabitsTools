@@ -224,6 +224,18 @@
         "one": "Review due",
         "other": "Review due"
       }
+    },
+    "h2-affirmations": {
+      "title": "Write it, then see it",
+      "shortTitle": "Your affirmations",
+      "practisedToday": {
+        "one": "Practised today",
+        "other": "Practised today"
+      },
+      "affirmationCount": {
+        "one": "1 affirmation",
+        "other": "{{count}} affirmations"
+      }
     }
   }
 }

@@ -1,0 +1,88 @@
+<header class="practice-header">
+  <button
+    mat-icon-button
+    type="button"
+    class="practice-close"
+    (click)="close()"
+    [attr.aria-label]="'h2Affirmations.practice.closeButton' | transloco"
+  >
+    <mat-icon aria-hidden="true">close</mat-icon>
+  </button>
+  <h2 matDialogTitle class="practice-title">
+    {{ 'h2Affirmations.practice.title' | transloco }}
+  </h2>
+</header>
+
+<div matDialogContent class="practice-content">
+  <p class="practice-text">{{ data.text }}</p>
+  @if (data.scene) {
+    <p class="practice-scene">{{ data.scene }}</p>
+  }
+  <p class="practice-hint">{{ 'h2Affirmations.practice.hint' | transloco }}</p>
+
+  <div class="practice-length">
+    <span class="practice-length-label" id="practice-length-label">
+      {{ 'h2Affirmations.practice.lengthLabel' | transloco }}
+    </span>
+    <mat-button-toggle-group
+      aria-labelledby="practice-length-label"
+      [value]="length()"
+      [disabled]="started()"
+      (change)="onLengthChange($event.value)"
+    >
+      @for (option of lengths; track option) {
+        <mat-button-toggle [value]="option">{{
+          'h2Affirmations.length.' + option | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </div>
+
+  @let timeText = (time().minutes | appNumber) + ':' + (time().seconds | appNumber: twoDigits);
+  <!-- `role="timer"` is not a live region by default: the countdown is never read every second.
+       `dir="ltr"` keeps minutes before seconds with Arabic-Indic digits in RTL. -->
+  <p
+    class="practice-countdown"
+    role="timer"
+    dir="ltr"
+    [attr.aria-label]="'h2Affirmations.practice.remainingText' | transloco: { time: timeText }"
+  >
+    {{ timeText }}
+  </p>
+  <!-- Always rendered, only its text changes: announced at halfway and at zero (playbook §6). -->
+  <p class="practice-announcement" aria-live="polite">
+    @switch (announcement()) {
+      @case ('halfway') {
+        {{ 'h2Affirmations.practice.halfwayText' | transloco }}
+      }
+      @case ('finished') {
+        {{ 'h2Affirmations.practice.finishedText' | transloco }}
+      }
+    }
+  </p>
+</div>
+
+<div matDialogActions class="practice-actions">
+  @if (started()) {
+    <button
+      mat-flat-button
+      #doneButton
+      type="button"
+      class="practice-done"
+      [attr.aria-describedby]="tooShort() ? 'practice-too-short' : null"
+      (click)="done()"
+    >
+      {{ 'h2Affirmations.practice.doneButton' | transloco }}
+    </button>
+    <!-- Said before Done is pressed: Done this early closes without logging (lead decision). -->
+    @if (tooShort()) {
+      <p class="practice-too-short" id="practice-too-short">
+        {{ 'h2Affirmations.practice.tooShortText' | transloco }}
+      </p>
+    }
+  } @else {
+    <button mat-flat-button type="button" class="practice-start" (click)="start()">
+      {{ 'h2Affirmations.practice.startButton' | transloco }}
+    </button>
+  }
+</div>

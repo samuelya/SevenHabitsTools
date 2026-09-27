@@ -171,9 +171,10 @@ export function summarize(list: readonly Commitment[], today: string): Commitmen
  * interpolated value, so a braced token loops forever. */
 export const SOURCE_TOKEN = '@@exercise@@';
 
-/** "From: Your influence": `template` (`list.sourceText`, token kept) with the source's title. */
+/** "From: Your influence": `template` (`list.sourceText`, token kept) with the source's title,
+ * taken literally (a function replacement: a string one would read `$'` or `$&` as a pattern). */
 export function sourceLine(template: string, title: string): string {
-  return template.replace(SOURCE_TOKEN, title);
+  return template.replace(SOURCE_TOKEN, () => title);
 }
 
 /** Already-translated text for a row, built by the page (playbook §6 "Reactive labels"). */

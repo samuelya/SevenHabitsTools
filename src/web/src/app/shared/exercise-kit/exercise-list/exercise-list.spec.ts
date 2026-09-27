@@ -257,6 +257,34 @@ describe('ExerciseList', () => {
     expect(selected).toEqual([]);
   });
 
+  it('renders a row action named by its label and emits actionRequested (issue #64)', () => {
+    const fixture = setUp([
+      {
+        id: 'a',
+        title: 'One',
+        action: { icon: 'self_improvement', label: 'Practise: One', hint: 'Practise' },
+      },
+      { id: 'b', title: 'Two' },
+    ]);
+    const actions = [
+      ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+        '.exercise-list__action',
+      ),
+    ];
+    expect(actions).toHaveLength(1);
+    expect(actions[0].getAttribute('aria-label')).toBe('Practise: One');
+    expect(actions[0].getAttribute('title')).toBe('Practise');
+    expect(actions[0].hasAttribute('aria-pressed')).toBe(false);
+
+    const emitted: string[] = [];
+    fixture.componentInstance.actionRequested.subscribe((id: string) => emitted.push(id));
+    const selected: string[] = [];
+    fixture.componentInstance.itemSelected.subscribe((id: string) => selected.push(id));
+    actions[0].click();
+    expect(emitted).toEqual(['a']);
+    expect(selected).toEqual([]);
+  });
+
   it('renders no bin button when deletable is left at its default (issue #203)', () => {
     const fixture = setUp();
 

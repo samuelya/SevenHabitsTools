@@ -123,6 +123,17 @@
               }}</mat-icon>
             </button>
           }
+          @if (item.action; as action) {
+            <button
+              type="button"
+              class="exercise-list__action"
+              [attr.aria-label]="action.label"
+              [attr.title]="action.hint ?? null"
+              (click)="actionRequested.emit(item.id)"
+            >
+              <mat-icon aria-hidden="true">{{ action.icon }}</mat-icon>
+            </button>
+          }
           @if (isRowDeletable(item)) {
             <button
               type="button"

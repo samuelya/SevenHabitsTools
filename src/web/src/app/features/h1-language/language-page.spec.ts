@@ -80,7 +80,7 @@ function click(harness: RouterTestingHarness, selector: string): void {
   harness.detectChanges();
 }
 
-/** The tab coming back into view: the page re-reads `CLOCK` (`minuteClock()`). */
+/** The tab coming back into view: the page re-reads `CLOCK` (`pollingClock()`). */
 function showTab(harness: RouterTestingHarness): void {
   const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
   document.dispatchEvent(new Event('visibilitychange'));

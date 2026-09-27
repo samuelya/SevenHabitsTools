@@ -26,6 +26,7 @@ const SCOPES = {
   h2Centres: 'src/app/features/h2-centres/i18n',
   h2Inspiration: 'src/app/features/h2-inspiration/i18n',
   h2Mission: 'src/app/features/h2-mission/i18n',
+  h2Affirmations: 'src/app/features/h2-affirmations/i18n',
   h1Circle: 'src/app/features/h1-circle/i18n',
   h1Rehearsal: 'src/app/features/h1-rehearsal/i18n',
   h1Challenge: 'src/app/features/h1-challenge/i18n',

@@ -59,6 +59,10 @@ export const ROUTE_REGISTRY: readonly FeatureRoute[] = [
     loadChildren: () => import('./features/h2-centres/centres.routes'),
   },
   {
+    path: 'habits/h2/affirmations',
+    loadChildren: () => import('./features/h2-affirmations/affirmations.routes'),
+  },
+  {
     path: 'habits/h2/inspiration',
     loadChildren: () => import('./features/h2-inspiration/inspiration.routes'),
   },

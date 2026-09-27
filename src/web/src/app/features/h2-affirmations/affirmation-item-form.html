@@ -1,0 +1,101 @@
+<form class="affirmation-item-form">
+  <p class="field-prompt" id="affirmation-text-prompt">
+    {{ 'h2Affirmations.form.textPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Affirmations.form.textLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #textField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="8"
+      required
+      [placeholder]="'h2Affirmations.form.textPlaceholder' | transloco"
+      [value]="item().text"
+      [attr.aria-describedby]="
+        textError() ? 'affirmation-text-prompt affirmation-text-error' : 'affirmation-text-prompt'
+      "
+      (input)="onTextInput($event)"
+      (blur)="onTextBlur()"
+    ></textarea>
+  </mat-form-field>
+  <!-- A plain alert, not `<mat-error>`: this signal-driven form has no `NgControl` (playbook §6). -->
+  @if (textError()) {
+    <p id="affirmation-text-error" class="field-error" role="alert">
+      {{ 'h2Affirmations.form.textRequired' | transloco }}
+    </p>
+  }
+
+  <fieldset class="checks">
+    <legend>{{ 'h2Affirmations.form.checksLegend' | transloco }}</legend>
+    @for (key of checkKeys; track key) {
+      <div class="check">
+        <mat-checkbox
+          [attr.data-check]="key"
+          [checked]="item().checks[key]"
+          [aria-describedby]="'affirmation-check-hint-' + key"
+          (change)="onCheckChange(key, $event.checked)"
+        >
+          {{ 'h2Affirmations.check.' + key + 'Label' | transloco }}
+        </mat-checkbox>
+        <p class="check-hint" [id]="'affirmation-check-hint-' + key">
+          {{ 'h2Affirmations.check.' + key + 'Hint' | transloco }}
+        </p>
+      </div>
+    }
+  </fieldset>
+  <!-- Always rendered, so the change to "complete" is announced (playbook §6, live regions). -->
+  <p class="incomplete-hint" aria-live="polite">
+    @if (!complete()) {
+      {{ 'h2Affirmations.form.incompleteHint' | transloco }}
+    }
+  </p>
+
+  <p class="field-prompt" id="affirmation-scene-prompt">
+    {{ 'h2Affirmations.form.scenePrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Affirmations.form.sceneLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
+      aria-describedby="affirmation-scene-prompt"
+      [placeholder]="'h2Affirmations.form.scenePlaceholder' | transloco"
+      [value]="item().scene ?? ''"
+      (input)="onSceneInput($event)"
+    ></textarea>
+  </mat-form-field>
+
+  <div class="actions">
+    @if (item().archived) {
+      <button
+        mat-stroked-button
+        type="button"
+        class="unarchive"
+        (click)="archivedChange.emit(false)"
+      >
+        <mat-icon aria-hidden="true">unarchive</mat-icon>
+        {{ 'h2Affirmations.form.unarchiveButton' | transloco }}
+      </button>
+    } @else {
+      <button
+        mat-stroked-button
+        type="button"
+        class="archive"
+        [disabled]="!saved()"
+        (click)="archivedChange.emit(true)"
+      >
+        <mat-icon aria-hidden="true">archive</mat-icon>
+        {{ 'h2Affirmations.form.archiveButton' | transloco }}
+      </button>
+    }
+    <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+      <mat-icon aria-hidden="true">delete</mat-icon>
+      {{ 'h2Affirmations.form.delete' | transloco }}
+    </button>
+  </div>
+</form>

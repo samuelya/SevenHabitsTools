@@ -44,6 +44,7 @@
 // discoverable, so the same bin button that opens the confirm dialog is on the row at all times).
 // ≥ 44px in both dimensions for the touch target (architecture issue #1 §7).
 .exercise-list__toggle,
+.exercise-list__action,
 .exercise-list__delete {
   flex: 0 0 auto;
   inline-size: 44px;
@@ -59,7 +60,9 @@
 
 .exercise-list__toggle--pressed,
 .exercise-list__toggle:hover,
-.exercise-list__toggle:focus-visible {
+.exercise-list__toggle:focus-visible,
+.exercise-list__action:hover,
+.exercise-list__action:focus-visible {
   color: var(--mat-sys-primary, #1565c0);
 }
 

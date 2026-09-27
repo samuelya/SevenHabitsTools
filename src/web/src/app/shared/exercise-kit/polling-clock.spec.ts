@@ -1,9 +1,11 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { CLOCK } from '../../core/time/clock';
-import { MINUTE_MS, minuteClock } from './minute-clock';
+import { pollingClock } from './polling-clock';
 
-describe('minuteClock', () => {
+const MINUTE_MS = 60_000;
+
+describe('pollingClock', () => {
   let now: Date;
 
   beforeEach(() => {
@@ -16,7 +18,7 @@ describe('minuteClock', () => {
   afterEach(() => vi.useRealTimers());
 
   function create() {
-    return runInInjectionContext(TestBed.inject(Injector), () => minuteClock());
+    return runInInjectionContext(TestBed.inject(Injector), () => pollingClock(MINUTE_MS));
   }
 
   it('re-reads the clock once a minute, not in between', () => {
@@ -48,5 +50,20 @@ describe('minuteClock', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     expect(clock.now()).toEqual(new Date(2026, 2, 10, 9, 0, 0));
     visibility.mockRestore();
+  });
+
+  it('stop() ends the periodic re-read, and destroying the context clears it', () => {
+    const clock = create();
+    expect(vi.getTimerCount()).toBe(1);
+    clock.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    now = new Date(2026, 2, 10, 9, 5, 0);
+    vi.advanceTimersByTime(MINUTE_MS * 5);
+    expect(clock.now()).toEqual(new Date(2026, 2, 10, 9, 0, 0));
+
+    create();
+    expect(vi.getTimerCount()).toBe(1);
+    TestBed.resetTestingModule();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

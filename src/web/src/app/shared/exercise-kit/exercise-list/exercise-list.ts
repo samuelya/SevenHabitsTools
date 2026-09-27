@@ -72,6 +72,8 @@ export class ExerciseList<T extends ExerciseListItem = ExerciseListItem> {
   readonly deleteRequested = output<string>();
   /** A click on a row's `toggle` button (`ExerciseListItem.toggle`); the caller flips it. */
   readonly toggleRequested = output<string>();
+  /** A click on a row's `action` button (`ExerciseListItem.action`); the caller runs it. */
+  readonly actionRequested = output<string>();
 
   protected readonly query = signal('');
   /** `null` until the user picks a sort explicitly; `sort()` falls back to `initialSort()` until
