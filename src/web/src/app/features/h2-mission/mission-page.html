@@ -1,0 +1,186 @@
+<app-exercise-page [title]="'h2Mission.prompt.title' | transloco">
+  <app-exercise-prompt-card
+    intro
+    [heading]="'h2Mission.prompt.title' | transloco"
+    [prompt]="'h2Mission.prompt.text' | transloco"
+    [gloss]="'h2Mission.prompt.glossText' | transloco"
+    [chapterReference]="'h2Mission.prompt.chapterReference' | transloco"
+    [whyItMatters]="'h2Mission.prompt.whyItMatters' | transloco"
+    [guide]="guideContent()"
+    [collapsedByDefault]="collapsedByDefault()"
+  />
+
+  <app-guided-stepper
+    [steps]="steps()"
+    [selectedIndex]="selectedIndex()"
+    (selectedIndexChange)="onStepChange($event)"
+  >
+    <ng-template appGuidedStep="values">
+      <app-mission-chips
+        class="step"
+        ns="step1"
+        [suggestions]="valueSuggestions()"
+        [own]="ownValues()"
+        (toggled)="onToggleLine('values', $event)"
+        (added)="onLineAdded('values', $event)"
+        (removed)="onLineRemoved('values', $event)"
+      />
+    </ng-template>
+
+    <ng-template appGuidedStep="principles">
+      <app-mission-chips
+        class="step"
+        ns="step2"
+        [suggestions]="principleSuggestions()"
+        [own]="ownPrinciples()"
+        (toggled)="onToggleLine('principles', $event)"
+        (added)="onLineAdded('principles', $event)"
+        (removed)="onLineRemoved('principles', $event)"
+      />
+    </ng-template>
+
+    <ng-template appGuidedStep="roles">
+      <div class="step">
+        <p class="field-prompt">{{ 'h2Mission.step3.prompt' | transloco }}</p>
+        @for (row of roleRows(); track row.roleId) {
+          <section class="role-line">
+            <h3 class="role-name" [id]="'mission-role-' + row.roleId">
+              {{ row.label ?? ('h2Mission.step3.deletedRole' | transloco) }}
+            </h3>
+            <app-reflection-editor
+              #roleEditor
+              [value]="row.text"
+              [label]="'h2Mission.step3.roleLineLabel' | transloco"
+              [placeholder]="'h2Mission.step3.roleLinePlaceholder' | transloco"
+              [promptId]="'mission-role-' + row.roleId"
+              [sessionStatus]="true"
+              (valueChange)="onRoleLineChanged(row.roleId, $event, roleEditor)"
+            />
+          </section>
+        } @empty {
+          <p class="empty">{{ 'h2Mission.step3.emptyText' | transloco }}</p>
+          <a mat-stroked-button class="link-button" [routerLink]="rolesLink">
+            {{ 'h2Mission.step3.rolesButton' | transloco }}
+          </a>
+        }
+      </div>
+    </ng-template>
+
+    <ng-template appGuidedStep="beAndDo">
+      <div class="step">
+        <app-mission-lines
+          kind="be"
+          [lines]="record()?.toBe ?? []"
+          [max]="maxLines"
+          (added)="onLineAdded('toBe', $event)"
+          (removed)="onLineRemoved('toBe', $event)"
+        />
+        <app-mission-lines
+          kind="do"
+          [lines]="record()?.toDo ?? []"
+          [max]="maxLines"
+          (added)="onLineAdded('toDo', $event)"
+          (removed)="onLineRemoved('toDo', $event)"
+        />
+      </div>
+    </ng-template>
+
+    <ng-template appGuidedStep="draft">
+      <div class="step">
+        <p class="field-prompt" id="mission-draft-prompt">
+          {{ 'h2Mission.step5.prompt' | transloco }}
+        </p>
+        <div class="draft-grid">
+          <div class="draft-editor">
+            <app-reflection-editor
+              #draftEditor
+              [value]="draft()"
+              [label]="'h2Mission.step5.draftLabel' | transloco"
+              [placeholder]="'h2Mission.step5.draftPlaceholder' | transloco"
+              [promptId]="'mission-draft-prompt'"
+              [sessionStatus]="true"
+              (valueChange)="onDraftChanged($event, draftEditor)"
+            />
+            <p class="word-count">
+              {{
+                'h2Mission.step5.wordCountText'
+                  | appPlural: liveWords() : { count: (liveWords() | appNumber) }
+              }}
+            </p>
+          </div>
+          <app-mission-collection
+            class="draft-panel"
+            [items]="inspirationItems()"
+            [startExpanded]="!handset()"
+            [usedId]="usedId()"
+            [collectionLink]="collectionLink"
+            (used)="onUse($event, draftEditor)"
+          />
+        </div>
+      </div>
+    </ng-template>
+
+    <ng-template appGuidedStep="review">
+      <div class="step">
+        <p class="field-prompt">{{ 'h2Mission.step6.prompt' | transloco }}</p>
+        @for (key of reviewKeys; track key) {
+          <div class="review-row">
+            <p class="review-question" [id]="'mission-review-' + key">
+              {{ 'h2Mission.review.' + key | transloco }}
+            </p>
+            <mat-button-toggle-group
+              class="review-toggle"
+              [attr.aria-labelledby]="'mission-review-' + key"
+              [value]="record()?.checklist?.[key]"
+              (change)="onCheck(key, $event.value)"
+            >
+              <mat-button-toggle [value]="true">{{
+                'h2Mission.review.yes' | transloco
+              }}</mat-button-toggle>
+              <mat-button-toggle [value]="false">{{
+                'h2Mission.review.no' | transloco
+              }}</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+        }
+
+        <h3 class="preview-title">{{ 'h2Mission.step6.previewLabel' | transloco }}</h3>
+        @if (words() > 0) {
+          <blockquote class="preview">{{ draft() }}</blockquote>
+          <p class="word-count">
+            {{
+              'h2Mission.step5.wordCountText'
+                | appPlural: words() : { count: (words() | appNumber) }
+            }}
+          </p>
+        } @else {
+          <p class="empty">{{ 'h2Mission.step6.emptyDraftHint' | transloco }}</p>
+        }
+
+        <div class="review-actions">
+          <button mat-flat-button type="button" [disabled]="!canSave()" (click)="onSaveVersion()">
+            {{ 'h2Mission.step6.saveVersionButton' | transloco }}
+          </button>
+          <button mat-stroked-button type="button" [disabled]="words() === 0" (click)="onCopy()">
+            {{ 'h2Mission.step6.copyButton' | transloco }}
+          </button>
+        </div>
+        <p class="saved" aria-live="polite">
+          @if (savedVersion(); as n) {
+            {{ 'h2Mission.step6.savedText' | transloco: { n: (n | appNumber) } }}
+          }
+        </p>
+      </div>
+    </ng-template>
+  </app-guided-stepper>
+
+  <div footer class="footer-section">
+    <app-done-toggle
+      [done]="done()"
+      [completedAt]="completedAt()"
+      [disabled]="!readyToMarkDone()"
+      [checklist]="checklist()"
+      (toggled)="onToggleDone()"
+    />
+  </div>
+</app-exercise-page>

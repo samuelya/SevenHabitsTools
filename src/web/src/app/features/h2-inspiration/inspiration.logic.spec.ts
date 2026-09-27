@@ -295,14 +295,14 @@ describe('mission input', () => {
   it('offers counted items with a line, favourites first, in the #61 shape', () => {
     const list = [
       item('a', { text: ' First ', source: '  ', tags: ['Time'] }),
-      item('b', { text: 'Second', source: ' Uncle ', favourite: true }),
+      item('b', { text: 'Second', source: ' Uncle ', favourite: true, kind: 'idea' }),
       item('s', { sample: true }),
       item('d', { deletedAt: T0 }),
       item('e', { text: '  ', source: 'Only a source' }),
     ];
     expect(forMission(list)).toEqual([
-      { id: 'b', text: 'Second', detail: 'Uncle', tags: [], favourite: true },
-      { id: 'a', text: 'First', tags: ['time'], favourite: false },
+      { id: 'b', text: 'Second', kind: 'idea', detail: 'Uncle', tags: [], favourite: true },
+      { id: 'a', text: 'First', kind: 'saying', tags: ['time'], favourite: false },
     ]);
     expect(forMission([])).toEqual([]);
   });

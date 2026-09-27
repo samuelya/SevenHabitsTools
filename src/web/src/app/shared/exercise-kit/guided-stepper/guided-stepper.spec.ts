@@ -128,102 +128,97 @@ describe('GuidedStepper', () => {
     expect(host.selectedIndex).toBe(1);
   });
 
-  it('un-ticks a step when its done flag regresses back to undefined', () => {
-    // Regression test for a review finding: the effect only ever set `completed = true`, so a
-    // step that arrives already done (e.g. reloaded data, before the user has interacted with it
-    // this session) but is then emptied out kept its green check while the checklist correctly
-    // listed it as unmet. Drives `GuidedStepper` directly with `setInput` (rather than through a
-    // host component's template binding) so reassigning `steps` reliably updates the signal input
-    // between assertions.
-    const state: BreakpointState = { matches: false, breakpoints: {} };
-    TestBed.configureTestingModule({
-      providers: [
-        provideTranslocoTesting(),
-        provideTranslocoScope('exercise-kit'),
-        {
-          provide: BreakpointObserver,
-          useValue: { observe: () => of(state), isMatched: () => false },
+  describe('done flags (#61)', () => {
+    function setUpDirect(steps: GuidedStepDefinition[]) {
+      const state: BreakpointState = { matches: false, breakpoints: {} };
+      TestBed.configureTestingModule({
+        providers: [
+          provideTranslocoTesting(),
+          provideTranslocoScope('exercise-kit'),
+          {
+            provide: BreakpointObserver,
+            useValue: { observe: () => of(state), isMatched: () => false },
+          },
+        ],
+      });
+      // Driven through `setInput` so each new `steps` array reliably reaches the signal input.
+      const fixture = TestBed.createComponent(GuidedStepper);
+      fixture.componentRef.setInput('steps', steps);
+      fixture.detectChanges();
+      const headers = () => [...fixture.nativeElement.querySelectorAll('mat-step-header')];
+      return {
+        fixture,
+        setSteps: (next: GuidedStepDefinition[]) => {
+          fixture.componentRef.setInput('steps', next);
+          fixture.detectChanges();
         },
-      ],
-    });
-    const fixture = TestBed.createComponent(GuidedStepper);
-    const steps: GuidedStepDefinition[] = [
+        selected: () =>
+          headers().findIndex((header: Element) => header.getAttribute('aria-selected') === 'true'),
+        // A header shows "number" while its step is not complete (and always while selected).
+        ticked: (index: number) =>
+          !(headers()[index].querySelector('.mat-step-icon') as HTMLElement).className.includes(
+            'mat-step-icon-state-number',
+          ),
+        click: (element: HTMLElement) => {
+          element.click();
+          fixture.detectChanges();
+        },
+        headers,
+      };
+    }
+
+    const plain = (): GuidedStepDefinition[] => [
       { key: 'first', label: 'First' },
       { key: 'second', label: 'Second' },
       { key: 'third', label: 'Third' },
     ];
-    fixture.componentRef.setInput('steps', steps);
-    fixture.detectChanges();
-    const stepIcon = () =>
-      [...fixture.nativeElement.querySelectorAll('mat-step-header')][2].querySelector(
-        '.mat-step-icon',
-      ) as HTMLElement;
 
-    fixture.componentRef.setInput('steps', [
-      steps[0],
-      steps[1],
-      { key: 'third', label: 'Third', done: true },
-    ]);
-    fixture.detectChanges();
-    expect(stepIcon().className).not.toContain('mat-step-icon-state-number');
+    it('does not tick a step the user skipped with "Next"', () => {
+      const stepper = setUpDirect(plain());
 
-    // The user deletes the content that completed the step.
-    fixture.componentRef.setInput('steps', [steps[0], steps[1], { key: 'third', label: 'Third' }]);
-    fixture.detectChanges();
-    expect(stepIcon().className).toContain('mat-step-icon-state-number');
-  });
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[0]);
 
-  it('un-ticks a regressed step even after leaving it once latched `interacted`', () => {
-    // Regression test for the round-4 review finding: the round-3 fix cleared `_completedOverride`
-    // to `null` on regression, but `CdkStep.interacted` latches `true` the moment the stepper
-    // *leaves* a step — including this step, on the "Next" click below — and is never reset by
-    // clearing the override alone, so `completed` fell back to `interacted && …` and stayed `true`.
-    // The test above never navigates, so `interacted` stays `false` throughout and never exercises
-    // that path; this one drives real "Next"/"Back" clicks to latch it for real.
-    const state: BreakpointState = { matches: false, breakpoints: {} };
-    TestBed.configureTestingModule({
-      providers: [
-        provideTranslocoTesting(),
-        provideTranslocoScope('exercise-kit'),
-        {
-          provide: BreakpointObserver,
-          useValue: { observe: () => of(state), isMatched: () => false },
-        },
-      ],
+      expect(stepper.selected()).toBe(1);
+      expect(stepper.ticked(0)).toBe(false);
     });
-    const fixture = TestBed.createComponent(GuidedStepper);
-    fixture.componentRef.setInput('steps', [
-      { key: 'first', label: 'First' },
-      { key: 'second', label: 'Second' },
-      { key: 'third', label: 'Third', done: true },
-    ]);
-    fixture.detectChanges();
-    const thirdStepIcon = () =>
-      [...fixture.nativeElement.querySelectorAll('mat-step-header')][2].querySelector(
-        '.mat-step-icon',
-      ) as HTMLElement;
 
-    // Visit step 3 and leave it again, the way skipping ahead and coming back would — this is what
-    // latches its `interacted` flag. Its own header shows "number", not "done", the whole time
-    // it's the selected step (`CdkStep.indicatorType` always does that), so the tick is only
-    // observable once another step is selected.
-    buttonsWithText(fixture, 'Next')[0].click();
-    fixture.detectChanges();
-    buttonsWithText(fixture, 'Next')[1].click();
-    fixture.detectChanges();
-    buttonsWithText(fixture, 'Back')[1].click();
-    fixture.detectChanges();
-    expect(thirdStepIcon().className).not.toContain('mat-step-icon-state-number');
+    it('keeps "Next" working after an unrelated steps change', () => {
+      const stepper = setUpDirect(plain());
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[0]);
 
-    // The user deletes the content that completed step 3, while sitting elsewhere.
-    fixture.componentRef.setInput('steps', [
-      { key: 'first', label: 'First' },
-      { key: 'second', label: 'Second' },
-      { key: 'third', label: 'Third' },
-    ]);
-    fixture.detectChanges();
+      stepper.setSteps(plain());
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[1]);
 
-    expect(thirdStepIcon().className).toContain('mat-step-icon-state-number');
+      expect(stepper.selected()).toBe(2);
+    });
+
+    it('un-ticks a step whose done goes back, and still lets the user past it', () => {
+      const done = plain().map((step) => ({ ...step, done: true }));
+      const stepper = setUpDirect(done);
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[0]);
+      stepper.click(buttonsWithText(stepper.fixture, 'Back')[0]);
+      expect(stepper.ticked(1)).toBe(true);
+
+      // The user empties steps 1 and 2 while sitting on step 1.
+      stepper.setSteps([plain()[0], plain()[1], done[2]]);
+      expect(stepper.ticked(1)).toBe(false);
+      expect(stepper.ticked(2)).toBe(true);
+
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[0]);
+      expect(stepper.selected()).toBe(1);
+      stepper.click(buttonsWithText(stepper.fixture, 'Next')[1]);
+      expect(stepper.selected()).toBe(2);
+    });
+
+    it('lets a header click reach any step, done or not', () => {
+      const stepper = setUpDirect([plain()[0], { ...plain()[1], done: true }, plain()[2]]);
+
+      stepper.click(stepper.headers()[2] as HTMLElement);
+
+      expect(stepper.selected()).toBe(2);
+      expect(stepper.ticked(0)).toBe(false);
+      expect(stepper.ticked(1)).toBe(true);
+    });
   });
 
   it('does not render "Back" on the first step', () => {

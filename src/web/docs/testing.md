@@ -119,6 +119,10 @@ Two more that cost #58 and #63 a red-CI round each (Habit 2):
 - **Assert a chip's label, not its row.** A `mat-chip-row`'s text includes the remove icon's
   ligature (`cancel`), so `toHaveText(['craft'])` on the row fails. Assert the label element
   inside the chip, as `e2e/h2-long-view.spec.ts` does.
+- **Chip input beside the grid, not in it.** An `<input matChipInputFor>` inside
+  `mat-chip-grid` fails axe `aria-required-children` (critical) whenever a chip is on screen,
+  because `role=grid` allows only rows. Put the input after `</mat-chip-grid>` inside the
+  `mat-form-field`, as `h2-mission/mission-chips.html` does (#61).
 - **Wait for each stepper step.** Under zoneless change detection a `fill()` right after
   Next can land in the previous step's field. Wait for the new step's field to be visible
   before filling it.

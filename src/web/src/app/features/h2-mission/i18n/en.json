@@ -1,0 +1,160 @@
+{
+  "suggestionsFrom": "From {{source}}",
+  "prompt": {
+    "title": "Write your personal mission statement",
+    "text": "Put into words what you want to be, what you want to do, and what you stand on. Start from what you've already written here: your values, your principles, your roles. It takes a few passes; the first one is enough for today.",
+    "glossText": "The book calls this a personal mission statement: your own constitution, the thing you check decisions against.",
+    "whyItMatters": "Without it, whoever shouts loudest sets your priorities. With it, a hard choice gets simpler: does this fit who I said I'd be? It also makes the rest of the habits point somewhere.",
+    "chapterReference": "Habit 2: Begin with the End in Mind"
+  },
+  "step1": {
+    "stepTitle": "Values",
+    "prompt": "Which of the values you heard in your long views belong at the heart of this? Tap to keep them, or add your own.",
+    "emptyText": "No values yet. Do a long view first, or type what you already know matters.",
+    "ownLabel": "Your own",
+    "ownPlaceholder": "e.g. presence"
+  },
+  "step2": {
+    "stepTitle": "Principles",
+    "prompt": "Which principles do you want your choices to rest on? Keep the ones you picked in Your centre, or add others.",
+    "emptyText": "No principles yet. Assess your centre first, or type the ones you want.",
+    "ownLabel": "Your own",
+    "ownPlaceholder": "e.g. keeping my word"
+  },
+  "step3": {
+    "stepTitle": "Roles",
+    "prompt": "For each role, one line: in this role, what do you want to be?",
+    "roleLineLabel": "In this role I want to be",
+    "roleLinePlaceholder": "e.g. the parent who asks a second question.",
+    "emptyText": "No roles yet. Name your roles first; they give the mission its shape.",
+    "rolesButton": "Go to Your roles",
+    "deletedRole": "Deleted role"
+  },
+  "step4": {
+    "stepTitle": "To be, to do",
+    "beLabel": "To be",
+    "bePrompt": "What kind of person do you want to be? Short lines, one quality each.",
+    "bePlaceholder": "e.g. calm under pressure",
+    "doLabel": "To do",
+    "doPrompt": "What do you want to have done, or keep doing?",
+    "doPlaceholder": "e.g. teach what I know",
+    "addButton": "Add line",
+    "removeButton": "Remove line",
+    "maxHint": "Ten is plenty. Combine two before adding more."
+  },
+  "step5": {
+    "stepTitle": "Draft",
+    "prompt": "Now write it as you'd say it. Use your values, principles and role lines; borrow from your collection. Rough is fine.",
+    "draftLabel": "Your mission statement",
+    "draftPlaceholder": "e.g. I want to be present with the people I love and honest in the work I do…",
+    "wordCountText": {
+      "one": "{{count}} word",
+      "other": "{{count}} words"
+    }
+  },
+  "panel": {
+    "title": "Your collection",
+    "useButton": "Use this",
+    "usedText": "Added to the end of your draft.",
+    "emptyText": "Your collection is empty. Add a few lines there and they'll show up here.",
+    "collectionButton": "Go to Your collection",
+    "filterAll": "All",
+    "kindLabel": "Show",
+    "tagLabel": "Tag",
+    "noMatchText": "Nothing in your collection matches these filters.",
+    "clearFiltersButton": "Clear filters",
+    "kind": {
+      "saying": "Something I heard",
+      "thought": "My own thought",
+      "idea": "An idea to try"
+    }
+  },
+  "step6": {
+    "stepTitle": "Review",
+    "prompt": "Read it once out loud. Then answer honestly.",
+    "previewLabel": "Your statement",
+    "saveVersionButton": "Save version",
+    "savedText": "Version {{n}} saved.",
+    "copyButton": "Copy statement",
+    "copiedText": "Copied.",
+    "emptyDraftHint": "Write your draft first, then save a version."
+  },
+  "review": {
+    "roles": "It covers every role that matters to me.",
+    "beAndDo": "It says what I want to be and what I want to do.",
+    "principles": "It rests on principles, not on moods or other people.",
+    "ownWords": "It's in my own words.",
+    "gladToLive": "I'd be glad to live by it.",
+    "yes": "Yes",
+    "no": "Not yet"
+  },
+  "checklist": {
+    "valueOrPrinciple": "Choose or write one value or principle",
+    "roleLine": "Write a line for one role",
+    "draft": "Write your draft",
+    "version": "Save a version"
+  },
+  "guide": {
+    "inShort": "You'll build a first mission statement in six short steps, starting from what you already wrote in Habit 2. Twenty to thirty minutes for a rough first version. You'll come back and improve it; that's the point.",
+    "howTo": [
+      "Keep the values and principles that still ring true. Add any you're missing.",
+      "Write one line per role: in this role, what do you want to be?",
+      "List a few things you want to be, and a few you want to do.",
+      "Write the draft in your own voice. Borrow lines from your collection with \"Use this\".",
+      "Read it aloud and answer the five review questions. Fix what's missing.",
+      "Tap \"Save version\", then \"Mark done\". Revisit it in a month."
+    ],
+    "examples": [
+      {
+        "kind": "fields",
+        "title": "Values",
+        "fields": [{ "label": "Kept", "value": "presence, loyalty, time" }]
+      },
+      {
+        "kind": "fields",
+        "title": "Principles",
+        "fields": [{ "label": "Kept", "value": "Integrity, Service, keeping my word" }]
+      },
+      {
+        "kind": "fields",
+        "title": "Roles",
+        "fields": [
+          { "label": "Dad", "value": "the parent who asks a second question." },
+          { "label": "Team lead", "value": "the one who gives the credit away." },
+          { "label": "Friend", "value": "the one who calls first." }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "To be, to do",
+        "fields": [
+          { "label": "To be", "value": "calm under pressure, honest when it costs" },
+          { "label": "To do", "value": "teach what I know, be home for dinner" }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "Draft",
+        "fields": [
+          {
+            "label": "Your mission statement",
+            "value": "I want to be present with the people I love and honest in the work I do. I keep my word, especially the small ones. At home I ask the second question. At work I give the credit away and build people who don't need me. I'd rather be trusted than impressive."
+          }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "Review",
+        "fields": [
+          { "label": "Covers every role", "value": "Yes" },
+          { "label": "Says what I want to be and do", "value": "Yes" },
+          { "label": "Rests on principles", "value": "Yes" },
+          { "label": "My own words", "value": "Yes" },
+          { "label": "Glad to live by it", "value": "Not yet" },
+          { "label": "Saved", "value": "Version 1" }
+        ]
+      }
+    ],
+    "afterwards": "Read it every Sunday when you plan your week. When a decision is hard, hold it against the statement. Rewrite a line whenever it stops sounding like you; each save becomes a version you can look back on."
+  }
+}

@@ -208,6 +208,18 @@
         "one": "1 collected",
         "other": "{{count}} collected"
       }
+    },
+    "h2-mission": {
+      "title": "Write your personal mission statement",
+      "shortTitle": "Your mission",
+      "draftWords": {
+        "one": "Draft, 1 word",
+        "other": "Draft, {{count}} words"
+      },
+      "versionCount": {
+        "one": "Version 1",
+        "other": "Version {{count}}"
+      }
     }
   }
 }

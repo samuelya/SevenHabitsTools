@@ -268,6 +268,26 @@
         "many": "{{count}} عنصرًا",
         "other": "{{count}} عنصر"
       }
+    },
+    "h2-mission": {
+      "title": "اكتب رسالتك الشخصية",
+      "shortTitle": "رسالتك",
+      "draftWords": {
+        "zero": "مسودة",
+        "one": "مسودة، كلمة واحدة",
+        "two": "مسودة، كلمتان",
+        "few": "مسودة، {{count}} كلمات",
+        "many": "مسودة، {{count}} كلمة",
+        "other": "مسودة، {{count}} كلمة"
+      },
+      "versionCount": {
+        "zero": "النسخة {{count}}",
+        "one": "النسخة {{count}}",
+        "two": "النسخة {{count}}",
+        "few": "النسخة {{count}}",
+        "many": "النسخة {{count}}",
+        "other": "النسخة {{count}}"
+      }
     }
   }
 }
