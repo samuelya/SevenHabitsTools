@@ -3,6 +3,9 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   linkedSignal,
@@ -12,13 +15,21 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { RouterLink } from '@angular/router';
-import { translateSignal, TranslocoPipe } from '@jsverse/transloco';
-import { map } from 'rxjs';
+import { translateSignal, TranslocoPipe, TranslocoService } from '@jsverse/transloco';
+import { firstValueFrom, map } from 'rxjs';
+import { AppDialog } from '../../core/layout/app-dialog';
 import { HANDSET_QUERY } from '../../core/layout/breakpoints';
 import { AppSnackbar } from '../../core/layout/app-snackbar';
+import { LanguageStore } from '../../core/i18n/language-store';
+import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
+import { parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import type { DeleteConfirmDialogData } from '../../shared/exercise-kit/delete-confirm-dialog/delete-confirm-dialog';
+import { DELETE_CONFIRM_DIALOG_LOADER } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import { exerciseGuideSignal } from '../../shared/exercise-kit/exercise-guide/exercise-guide-signal';
 import { ExercisePage } from '../../shared/exercise-kit/exercise-page/exercise-page';
@@ -32,6 +43,7 @@ import {
 } from '../../shared/exercise-kit/guided-stepper/guided-stepper';
 import { PRINCIPLE_KEYS } from '../../shared/exercise-kit/principle-keys';
 import { ReflectionEditor } from '../../shared/exercise-kit/reflection-editor/reflection-editor';
+import { todaySignal } from '../../shared/exercise-kit/today';
 import {
   MissionInputItem,
   MissionInputKind,
@@ -46,13 +58,22 @@ import {
   checklistLoaded,
   doneChecklist,
   isComplete,
+  isReviewDue,
   isStarted,
+  nextReviewDate,
+  restoreNeedsConfirm,
+  reviewOf,
   stepsDone,
   appendParagraph,
   sameLine,
   wordCount,
 } from '../../shared/mission/mission.logic';
-import { MissionRoleLine, REVIEW_KEYS, ReviewKey } from '../../shared/mission/mission.model';
+import {
+  MissionRoleLine,
+  REVIEW_KEYS,
+  ReviewInterval,
+  ReviewKey,
+} from '../../shared/mission/mission.model';
 import { MissionService } from '../../shared/mission/mission.service';
 import { roleLabel } from '../../shared/roles/roles.logic';
 import { RolesService } from '../../shared/roles/roles.service';
@@ -60,6 +81,8 @@ import { MissionCollection } from './mission-collection';
 import { LineAdd } from './mission-line-add';
 import { MissionLines } from './mission-lines';
 import { MissionChips } from './mission-chips';
+import { MissionReview } from './mission-review';
+import { MissionVersions } from './mission-versions';
 import {
   RoleLineRow,
   ownLines,
@@ -84,9 +107,11 @@ const COLLECTION_LINK = '/habits/h2/inspiration';
 
 /**
  * Your mission (issue #61): the worksheet that turns Habit 2's values, principles, roles and
- * collection into a personal mission statement, then saves it as a version. The container: it
- * reads `MissionService`, `RolesService` and the mission inputs, and passes plain values to the
- * kit and to its presentational parts (`MissionChips`, `MissionLines`, `MissionCollection`).
+ * collection into a personal mission statement, then saves it as a version; its versions and
+ * review rhythm follow the stepper (#62). The container: it reads `MissionService`,
+ * `RolesService` and the mission inputs, and passes plain values to the kit and to its
+ * presentational parts (`MissionChips`, `MissionLines`, `MissionCollection`, `MissionVersions`,
+ * `MissionReview`).
  */
 @Component({
   selector: 'app-mission-page',
@@ -100,9 +125,13 @@ const COLLECTION_LINK = '/habits/h2/inspiration';
     GuidedStepper,
     MatButtonModule,
     MatButtonToggleModule,
+    MatFormFieldModule,
+    MatInputModule,
     MissionChips,
     MissionCollection,
     MissionLines,
+    MissionReview,
+    MissionVersions,
     ReflectionEditor,
     RouterLink,
     TranslocoPipe,
@@ -116,6 +145,11 @@ export class MissionPage {
   private readonly roles = inject(RolesService);
   private readonly clipboard = inject(Clipboard);
   private readonly snackbar = inject(AppSnackbar);
+  private readonly transloco = inject(TranslocoService);
+  private readonly dialog = inject(AppDialog);
+  private readonly languageStore = inject(LanguageStore);
+  private readonly loadConfirmDialog = inject(DELETE_CONFIRM_DIALOG_LOADER);
+  private readonly injector = inject(Injector);
   protected readonly progress = inject(ExerciseProgress);
 
   protected readonly rolesLink = ROLES_LINK;
@@ -124,6 +158,8 @@ export class MissionPage {
   protected readonly maxLines = MAX_LINES;
 
   private readonly draftEditor = viewChild<ReflectionEditor>('draftEditor');
+  private readonly noteField = viewChild<ElementRef<HTMLInputElement>>('noteField');
+  private readonly reviewSection = viewChild(MissionReview);
 
   protected readonly record = this.mission.record;
   protected readonly started = computed(() => isStarted(this.record()));
@@ -219,6 +255,28 @@ export class MissionPage {
   /** The number of the version this visit saved, for "Version n saved." */
   protected readonly savedVersion = signal<number | null>(null);
   private readonly copiedText = translateSignal('step6.copiedText', undefined, H2_MISSION_ID);
+  /** Step 6's optional "What changed", kept until a version is saved with it. */
+  protected readonly note = signal('');
+
+  // Versions and review (#62), shown once a version exists. `today` is `CLOCK`'s local date and
+  // changes at midnight, so the due banner appears on a page left open overnight.
+  private readonly today = todaySignal();
+  protected readonly versions = computed(() => this.record()?.versions ?? []);
+  private readonly review = computed(() => reviewOf(this.record()));
+  protected readonly interval = computed(() => this.review().interval);
+  protected readonly nextReview = computed(() => {
+    const next = nextReviewDate(this.review(), this.versions(), this.today());
+    return next === null ? null : parseIsoDate(next);
+  });
+  protected readonly lastReviewed = computed(() => {
+    const last = this.review().lastReviewedAt;
+    return last === undefined ? null : parseIsoDate(last);
+  });
+  protected readonly reviewDue = computed(
+    () => this.versions().length > 0 && isReviewDue(this.review(), this.versions(), this.today()),
+  );
+  /** The number of the version this visit restored, for "Version n is now your draft." */
+  protected readonly restoredVersion = signal<number | null>(null);
 
   protected readonly selectedIndex = signal(0);
   private readonly stepLabels = translateSignal(
@@ -279,6 +337,7 @@ export class MissionPage {
   protected onDraftChanged(text: string, editor: ReflectionEditor): void {
     editor.reportSaveOutcome(this.mission.edit({ draft: text }));
     this.savedVersion.set(null);
+    this.restoredVersion.set(null);
   }
 
   /** "Use this": the typing still in the editor's debounce is stored first, then the item is
@@ -297,12 +356,71 @@ export class MissionPage {
     this.mission.setCheck(key, value);
   }
 
+  protected onNoteInput(event: Event): void {
+    this.note.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Saves the draft with the note; a refused save keeps the note in its field. */
   protected onSaveVersion(): void {
     this.draftEditor()?.flush();
-    const saved = this.mission.saveVersion();
+    const saved = this.mission.saveVersion(this.note());
     if (saved !== null) {
       this.savedVersion.set(saved);
+      this.restoredVersion.set(null);
+      this.note.set('');
+      // `[value]` last rendered '' too when nothing was typed before, so clear the field itself.
+      const field = this.noteField()?.nativeElement;
+      if (field) {
+        field.value = '';
+      }
     }
+  }
+
+  /** "Restore": copies the version into the draft, asking first when that would replace words
+   * not saved as the latest version. */
+  protected async onRestore(versionId: string): Promise<void> {
+    this.draftEditor()?.flush();
+    if (restoreNeedsConfirm(this.record(), versionId) && !(await this.confirmRestore(versionId))) {
+      return;
+    }
+    if (this.mission.restoreVersion(versionId)) {
+      const index = this.versions().findIndex((version) => version.id === versionId);
+      this.restoredVersion.set(index + 1);
+      this.savedVersion.set(null);
+    }
+  }
+
+  protected onIntervalChange(interval: ReviewInterval): void {
+    this.mission.setReviewInterval(interval);
+  }
+
+  /** "Reviewed today". From the banner, which then goes away, focus moves to the Review heading. */
+  protected onReviewed(fromBanner: boolean): void {
+    if (this.mission.markReviewed() && fromBanner) {
+      afterNextRender(() => this.reviewSection()?.focusHeading(), { injector: this.injector });
+    }
+  }
+
+  private async confirmRestore(versionId: string): Promise<boolean> {
+    const n = this.versions().findIndex((version) => version.id === versionId) + 1;
+    const locale = intlLocaleFor(this.languageStore.language(), this.languageStore.numerals());
+    const title = this.transloco.translate<string>('h2Mission.versions.itemTitle', {
+      n: new Intl.NumberFormat(locale).format(n),
+    });
+    const { DeleteConfirmDialog } = await this.loadConfirmDialog();
+    const ref = await this.dialog.open<
+      InstanceType<typeof DeleteConfirmDialog>,
+      DeleteConfirmDialogData,
+      boolean
+    >(DeleteConfirmDialog, {
+      data: {
+        title,
+        body: this.transloco.translate('h2Mission.versions.restoreConfirmText'),
+        confirmLabel: this.transloco.translate('h2Mission.versions.restoreConfirmButton'),
+        cancelLabel: this.transloco.translate('h2Mission.versions.cancelButton'),
+      },
+    });
+    return (await firstValueFrom(ref.afterClosed())) === true;
   }
 
   protected onCopy(): void {

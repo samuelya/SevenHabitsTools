@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.versions,
+.detail,
+.compare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-title,
+.detail-title {
+  margin: 0;
+}
+
+.section-title {
+  font: var(--mat-sys-title-medium);
+}
+
+.detail-title {
+  font: var(--mat-sys-title-small);
+}
+
+.version-list {
+  padding-block: 0;
+}
+
+.version-row[aria-pressed='true'] {
+  background-color: var(--mat-sys-secondary-container);
+}
+
+.version-note {
+  white-space: normal;
+}
+
+.version-text {
+  margin: 0;
+  padding-inline-start: 1rem;
+  border-inline-start: 3px solid var(--mat-sys-outline-variant);
+  white-space: pre-line;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button {
+  min-block-size: 44px;
+}
+
+.status,
+.diff-summary,
+.diff {
+  margin: 0;
+}
+
+.compare-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.compare-picks mat-form-field {
+  flex: 1 1 10rem;
+}
+
+// Added and removed words: a colour pair from the theme (contrast by design) plus an underline or
+// a strikethrough, so the change never rests on colour alone.
+.diff ins {
+  color: var(--mat-sys-on-primary-container);
+  background-color: var(--mat-sys-primary-container);
+  text-decoration: underline;
+}
+
+.diff del {
+  color: var(--mat-sys-on-error-container);
+  background-color: var(--mat-sys-error-container);
+  text-decoration: line-through;
+}

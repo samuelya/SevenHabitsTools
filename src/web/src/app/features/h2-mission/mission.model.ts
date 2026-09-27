@@ -4,7 +4,7 @@ import {
   getRegisteredExercises,
   registerExercise,
 } from '../../shared/exercise-kit/exercise-registry';
-import { storeStatusFactory } from '../../shared/exercise-kit/exercise-hub-status';
+import { storeStatusOnDayFactory } from '../../shared/exercise-kit/exercise-hub-status';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
 import { hubStatus, isStarted } from '../../shared/mission/mission.logic';
 
@@ -29,7 +29,7 @@ export function registerMissionExercise(): void {
     route: H2_MISSION_ROUTE,
     order: 50,
     isStarted: storeStartedFactory<Mission | null>(MISSION_MODEL_KEY, isStarted),
-    statusFactory: storeStatusFactory<Mission | null>(MISSION_MODEL_KEY, hubStatus),
+    statusFactory: storeStatusOnDayFactory<Mission | null>(MISSION_MODEL_KEY, hubStatus),
   });
 }
 

@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
+import { localDateString } from '../exercise-kit/assessment-history.logic';
 import { MAX_LINES } from './mission.logic';
 import { MISSION_PATH, registerMissionModel } from './mission.model';
 import { MissionService } from './mission.service';
@@ -89,6 +90,37 @@ describe('MissionService', () => {
       'I keep my word.',
       'I keep my word, especially the small ones.',
     ]);
+  });
+
+  it('restores a version into the draft and keeps the versions (#62)', () => {
+    const { service } = setUp();
+    expect(service.restoreVersion('v1')).toBe(true);
+    expect(service.record()).toBeNull();
+    service.edit({ draft: 'First.' });
+    service.saveVersion();
+    service.edit({ draft: 'Second.' });
+    service.saveVersion();
+    const [first] = service.record()!.versions;
+    expect(service.restoreVersion(first.id)).toBe(true);
+    expect(service.record()?.draft).toBe('First.');
+    expect(service.record()?.versions).toHaveLength(2);
+  });
+
+  it("sets the rhythm and marks it reviewed on CLOCK's local date (#62)", () => {
+    const { service } = setUp();
+    expect(service.setReviewInterval('monthly')).toBe(true);
+    expect(service.record()).toBeNull();
+    service.edit({ draft: 'I keep my word.' });
+    service.saveVersion();
+    expect(service.setReviewInterval('quarterly')).toBe(true);
+    expect(service.record()?.review?.interval).toBe('quarterly');
+    const before = service.record();
+    expect(service.markReviewed()).toBe(true);
+    expect(service.record()?.review?.lastReviewedAt).toBe(localDateString(NOW));
+    expect(service.record()).not.toBe(before);
+    const reviewed = service.record();
+    expect(service.markReviewed()).toBe(true);
+    expect(service.record()).toBe(reviewed);
   });
 
   it('reports a refused write in a read-only tab and keeps the typed line', () => {

@@ -77,7 +77,10 @@
     "savedText": "Version {{n}} saved.",
     "copyButton": "Copy statement",
     "copiedText": "Copied.",
-    "emptyDraftHint": "Write your draft first, then save a version."
+    "emptyDraftHint": "Write your draft first, then save a version.",
+    "noteLabel": "What changed",
+    "notePrompt": "Optional: one line on what you changed and why.",
+    "notePlaceholder": "e.g. Added the friend line. Cut the part about success."
   },
   "review": {
     "roles": "It covers every role that matters to me.",
@@ -86,7 +89,50 @@
     "ownWords": "It's in my own words.",
     "gladToLive": "I'd be glad to live by it.",
     "yes": "Yes",
-    "no": "Not yet"
+    "no": "Not yet",
+    "legend": "Review",
+    "prompt": "How often do you want to reread this? A month is a good start.",
+    "intervalLabel": "Every",
+    "nextText": "Next review: {{date}}",
+    "lastText": "Last reviewed {{date}}",
+    "reviewedButton": "Reviewed today",
+    "dueTitle": "Time to reread your mission",
+    "dueText": "Read it once, slowly. Change a line if it no longer sounds like you, then tap \"Reviewed today\"."
+  },
+  "versions": {
+    "legend": "Versions",
+    "itemTitle": "Version {{n}}",
+    "savedText": "Saved {{date}}",
+    "wordCountText": {
+      "one": "{{count}} word",
+      "other": "{{count}} words"
+    },
+    "restoreButton": "Restore",
+    "compareButton": "Compare",
+    "compareFromLabel": "From",
+    "compareToLabel": "To",
+    "addedLabel": "added",
+    "removedLabel": "removed",
+    "diffSummaryText": "{{added}}, {{removed}}",
+    "addedCountText": {
+      "one": "{{count}} word added",
+      "other": "{{count}} words added"
+    },
+    "removedCountText": {
+      "one": "{{count}} removed",
+      "other": "{{count}} removed"
+    },
+    "noChangeText": "These two versions are the same.",
+    "restoreConfirmText": "Replace your current draft with this version? Your draft isn't saved as a version yet.",
+    "restoreConfirmButton": "Restore",
+    "cancelButton": "Keep draft",
+    "restoredText": "Version {{n}} is now your draft."
+  },
+  "interval": {
+    "monthly": "Month",
+    "quarterly": "{{count}} months",
+    "yearly": "Year",
+    "off": "Off"
   },
   "checklist": {
     "valueOrPrinciple": "Choose or write one value or principle",
@@ -102,7 +148,8 @@
       "List a few things you want to be, and a few you want to do.",
       "Write the draft in your own voice. Borrow lines from your collection with \"Use this\".",
       "Read it aloud and answer the five review questions. Fix what's missing.",
-      "Tap \"Save version\", then \"Mark done\". Revisit it in a month."
+      "Tap \"Save version\", then \"Mark done\". Revisit it in a month.",
+      "Set a review rhythm. When it's due, reread it, change what's stale, save a version."
     ],
     "examples": [
       {
@@ -152,6 +199,16 @@
           { "label": "My own words", "value": "Yes" },
           { "label": "Glad to live by it", "value": "Not yet" },
           { "label": "Saved", "value": "Version 1" }
+        ]
+      },
+      {
+        "kind": "fields",
+        "title": "Comparing two versions",
+        "fields": [
+          { "label": "From", "value": "Version 1" },
+          { "label": "To", "value": "Version 2" },
+          { "label": "Result", "value": "2 words added, 5 removed" },
+          { "label": "What changed", "value": "Added the friend line. Cut the part about success." }
         ]
       }
     ],

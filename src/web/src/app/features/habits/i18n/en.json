@@ -219,6 +219,10 @@
       "versionCount": {
         "one": "Version 1",
         "other": "Version {{count}}"
+      },
+      "reviewDue": {
+        "one": "Review due",
+        "other": "Review due"
       }
     }
   }
