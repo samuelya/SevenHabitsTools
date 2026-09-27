@@ -1,0 +1,164 @@
+{
+  "prompt": {
+    "title": "Picture the result, then plan the steps",
+    "chapterReference": "Habit 2: Begin with the End in Mind",
+    "text": "Pick something you'll have to do soon: a trip, a talk, a room to sort out. Before you list a single step, write what it looks like when it's done well. Then the steps.",
+    "glossText": "The book says everything is created twice: first in the mind, then in the world. This is the first creation.",
+    "whyItMatters": "Steps written before the result tend to reproduce last time. A clear picture of \"done\" changes which steps you pick and lets you skip the ones that don't lead there. It also makes the end recognisable when you reach it."
+  },
+  "list": {
+    "addButton": "Add project",
+    "searchLabel": "Search projects",
+    "empty": "No projects yet. What's coming up in the next few weeks?",
+    "noMatch": "No projects match your search.",
+    "deleted": "Project deleted",
+    "undo": "Undo",
+    "example": "Example",
+    "overdue": "Overdue",
+    "progressText": {
+      "one": "{{done}} of {{total}} step",
+      "other": "{{done}} of {{total}} steps"
+    }
+  },
+  "group": {
+    "underWayLegend": "Under way",
+    "finishedLegend": "Finished"
+  },
+  "editor": {
+    "newTitle": "New project",
+    "editTitle": "Edit project"
+  },
+  "form": {
+    "nameLabel": "The project",
+    "namePrompt": "What's it called? A few words.",
+    "namePlaceholder": "e.g. Mum's 70th birthday lunch",
+    "nameRequired": "Name the project first.",
+    "desiredResultLabel": "What done looks like",
+    "desiredResultPrompt": "It's over and it went well. What do you see? Who's there, what happened, how does it feel?",
+    "desiredResultPlaceholder": "e.g. Everyone she loves in one room, her old photos on the wall, and she's laughing. Nobody's on a phone.",
+    "desiredResultRequired": "Write what done looks like before the steps.",
+    "criteriaLabel": "How you'll know",
+    "criteriaPrompt": "Up to five things that will be true if it worked.",
+    "criteriaPlaceholder": "e.g. All four siblings came.",
+    "criteriaAddButton": "Add line",
+    "criteriaRemoveButton": "Remove line",
+    "criteriaMaxHint": "Five is enough. Combine two before adding more.",
+    "deadlineLabel": "By when",
+    "statusLabel": "Status",
+    "delete": "Delete project"
+  },
+  "status": {
+    "planning": "Planning",
+    "underWay": "Under way",
+    "done": "Done",
+    "dropped": "Dropped"
+  },
+  "steps": {
+    "legend": "Steps",
+    "prompt": "Now the steps, from where you are to that picture.",
+    "lockedHint": "Write what done looks like first, then the steps will open.",
+    "newStepLabel": "Next step",
+    "stepLabel": "Step {{n}}",
+    "placeholder": "e.g. Ask each sibling which Sunday works.",
+    "addButton": "Add step",
+    "dateLabel": "Date",
+    "moveUpButton": "Move up",
+    "moveDownButton": "Move down",
+    "removeButton": "Remove step",
+    "allDoneText": "Every step is ticked. Is the picture true?",
+    "markProjectDoneButton": "Mark project Done"
+  },
+  "summary": {
+    "title": "Your projects",
+    "projectsText": {
+      "one": "1 project, {{done}} done",
+      "other": "{{count}} projects, {{done}} done"
+    },
+    "stepsText": {
+      "one": "{{stepsDone}} of {{steps}} step done",
+      "other": "{{stepsDone}} of {{steps}} steps done"
+    }
+  },
+  "checklist": {
+    "name": "Name a project",
+    "result": "Write what done looks like",
+    "step": "Add the first step",
+    "finished": "Finish the project"
+  },
+  "guide": {
+    "inShort": "You'll take one upcoming project, describe how it looks when it's done well, then list the steps. Ten minutes to plan; the steps get ticked off as you go. The order is the exercise.",
+    "howTo": [
+      "Tap \"Add project\" and name it. Something real, due in the next few weeks.",
+      "Write what done looks like: the scene, the people, the feeling. Only then do the steps open.",
+      "Add up to five lines on how you'll know it worked.",
+      "List the steps from here to that picture. Reorder until they make sense; give the first one a date.",
+      "Tick steps as you do them. When the picture is true, mark the project Done, then \"Mark done\" here."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "Mum's 70th birthday lunch",
+        "subtitle": "0 of 3 steps · in 14 days",
+        "done": false,
+        "fields": [
+          {
+            "label": "What done looks like",
+            "value": "Everyone she loves in one room, her old photos on the wall, and she's laughing. Nobody's on a phone."
+          },
+          {
+            "label": "How you'll know",
+            "value": "All four siblings came. She asked for the photos afterwards."
+          },
+          { "label": "By when", "value": "14 days from today" },
+          {
+            "label": "Steps",
+            "value": "○ Ask each sibling which Sunday works. ○ Book the back room at Rosa's. ○ Scan 30 photos with Dad."
+          },
+          { "label": "Status", "value": "Planning" }
+        ],
+        "sample": {
+          "name": "Mum's 70th birthday lunch",
+          "desiredResult": "Everyone she loves in one room, her old photos on the wall, and she's laughing. Nobody's on a phone.",
+          "criteria": ["All four siblings came.", "She asked for the photos afterwards."],
+          "deadline": true,
+          "steps": [
+            { "text": "Ask each sibling which Sunday works.", "done": false },
+            { "text": "Book the back room at Rosa's.", "done": false },
+            { "text": "Scan 30 photos with Dad.", "done": false }
+          ],
+          "status": "planning"
+        }
+      },
+      {
+        "kind": "card",
+        "title": "Team offsite talk",
+        "subtitle": "1 of 3 steps",
+        "done": false,
+        "fields": [
+          {
+            "label": "What done looks like",
+            "value": "Twenty minutes, one idea, and two people ask me about it at lunch."
+          },
+          { "label": "How you'll know", "value": "No slide has more than eight words." },
+          {
+            "label": "Steps",
+            "value": "✓ Write the one idea in a sentence. ○ Draft five slides. ○ Rehearse once for Dina."
+          },
+          { "label": "Status", "value": "Under way" }
+        ],
+        "sample": {
+          "name": "Team offsite talk",
+          "desiredResult": "Twenty minutes, one idea, and two people ask me about it at lunch.",
+          "criteria": ["No slide has more than eight words."],
+          "steps": [
+            { "text": "Write the one idea in a sentence.", "done": true },
+            { "text": "Draft five slides.", "done": false },
+            { "text": "Rehearse once for Dina.", "done": false }
+          ],
+          "status": "underWay"
+        }
+      }
+    ],
+    "afterwards": "When the project's over, compare the result with the picture you wrote. What did the picture make you skip, and what did it make you add? Use the same order for the next one; it gets faster."
+  }
+}

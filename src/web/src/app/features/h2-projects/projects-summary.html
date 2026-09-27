@@ -1,0 +1,26 @@
+<mat-card class="projects-summary" appearance="outlined">
+  <mat-card-content>
+    <h2 class="title">{{ 'h2Projects.summary.title' | transloco }}</h2>
+    <p class="projects">
+      {{
+        'h2Projects.summary.projectsText'
+          | appPlural
+            : summary().count
+            : { count: (summary().count | appNumber), done: (summary().done | appNumber) }
+      }}
+    </p>
+    @if (summary().steps > 0) {
+      <p class="steps">
+        {{
+          'h2Projects.summary.stepsText'
+            | appPlural
+              : summary().steps
+              : {
+                  steps: (summary().steps | appNumber),
+                  stepsDone: (summary().stepsDone | appNumber),
+                }
+        }}
+      </p>
+    }
+  </mat-card-content>
+</mat-card>

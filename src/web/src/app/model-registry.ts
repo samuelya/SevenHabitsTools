@@ -22,9 +22,11 @@ import './features/h2-centres/centres.model';
 import './features/h2-inspiration/inspiration.model';
 import './features/h2-mission/mission.model';
 import './features/h2-affirmations/affirmations.model';
+import './features/h2-projects/projects.model';
 import './shared/exercise-kit/exercise-kit.model';
 // Shared entities (`shared.*`): registered here, eagerly, not by the features that use them.
 import './shared/commitments/commitments.model';
 import './shared/roles/roles.model';
 import './shared/roles/role-goals.model';
 import './shared/mission/mission.model';
+import './shared/projects/projects.model';
