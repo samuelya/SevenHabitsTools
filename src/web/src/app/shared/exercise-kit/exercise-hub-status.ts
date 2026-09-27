@@ -17,6 +17,7 @@ import type {
   HubStatusText,
 } from './exercise-registry';
 import { storeSignalFactory } from './store-signal-factory';
+import { todaySignal } from './today';
 
 /**
  * Builds an `ExerciseRegistryEntry.statusFactory` (issues #52, #219) from an exercise's own pure
@@ -29,6 +30,32 @@ export function storeStatusFactory<T>(
   hubStatus: (value: T) => ExerciseHubStatus | null,
 ): () => Signal<ExerciseHubStatus | null> {
   return storeSignalFactory<T, ExerciseHubStatus | null>(modelKey, hubStatus, null);
+}
+
+/**
+ * `storeStatusFactory()` for a status that depends on the date ("Review due", issue #62): the pure
+ * `hubStatus(value, today)` also gets `CLOCK`'s local date (`YYYY-MM-DD`) from `todaySignal()`,
+ * which changes just after local midnight and when the tab comes back into view, so a hub left
+ * open overnight updates without a reload. The timer stops with the injector the factory runs in.
+ * An unregistered model reads as "no status", through `storeSignalFactory()`'s guard.
+ */
+export function storeStatusOnDayFactory<T>(
+  modelKey: string,
+  hubStatus: (value: T, today: string) => ExerciseHubStatus | null,
+): () => Signal<ExerciseHubStatus | null> {
+  return () => {
+    // Boxed, so a model whose value may itself be `null` still reaches `hubStatus`.
+    const slice = storeSignalFactory<T, { readonly value: T } | null>(
+      modelKey,
+      (value) => ({ value }),
+      null,
+    )();
+    const today = todaySignal();
+    return computed(() => {
+      const current = slice();
+      return current === null ? null : hubStatus(current.value, today());
+    });
+  };
 }
 
 /** The one read of `ExerciseRegistryEntry.statusFactory`: calls it in `injector`'s context, and

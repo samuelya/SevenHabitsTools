@@ -1,0 +1,37 @@
+:host {
+  display: block;
+}
+
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-title {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.field-prompt,
+.review-date {
+  margin: 0;
+}
+
+.interval-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.interval-toggle {
+  // 44 px touch target (issue #194); four options fit 360 px.
+  --mat-button-toggle-height: 44px;
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.reviewed-button {
+  align-self: flex-start;
+  min-block-size: 44px;
+}

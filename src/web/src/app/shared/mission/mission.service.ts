@@ -1,6 +1,7 @@
 import { Injectable, Signal, computed, inject } from '@angular/core';
 import { featureStore } from '../../core/data/feature-store';
 import { CLOCK } from '../../core/time/clock';
+import { localDateString } from '../exercise-kit/assessment-history.logic';
 import {
   AddOutcome,
   MissionListKey,
@@ -10,14 +11,23 @@ import {
   maxFor,
   roleLinesWith,
   withLine,
+  withRestoredVersion,
+  withReviewInterval,
+  withReviewed,
   withVersion,
   withoutLine,
 } from './mission.logic';
-import { MISSION_MODEL_KEY, Mission, MissionFields, ReviewKey } from './mission.model';
+import {
+  MISSION_MODEL_KEY,
+  Mission,
+  MissionFields,
+  ReviewInterval,
+  ReviewKey,
+} from './mission.model';
 
 /**
- * The only writer of `habits.h2.mission` (issue #61): the Mission page now, #62's history and
- * review later; #71 and #97 only read `currentStatement`. The record is created by the first write
+ * The only writer of `habits.h2.mission` (issue #61): the Mission page, with its version history and
+ * review (#62); #71 and #97 only read `currentStatement`. The record is created by the first write
  * that carries something the user wrote or chose. Every write returns whether it applied (`false`
  * in a read-only tab, `FeatureStore.update()`); a no-op writes nothing and reports `true`.
  */
@@ -82,6 +92,26 @@ export class MissionService {
       return null;
     }
     return next.versions.length;
+  }
+
+  /** Copies version `id`'s text into the draft; the versions are untouched (#62). */
+  restoreVersion(id: string): boolean {
+    return this.writeExisting((mission) => withRestoredVersion(mission, id, this.clock.now()));
+  }
+
+  setReviewInterval(interval: ReviewInterval): boolean {
+    return this.writeExisting((mission) => withReviewInterval(mission, interval, this.clock.now()));
+  }
+
+  /** "Reviewed today": today is the local date of `CLOCK`. */
+  markReviewed(): boolean {
+    const now = this.clock.now();
+    return this.writeExisting((mission) => withReviewed(mission, localDateString(now), now));
+  }
+
+  /** `write` for an edit that needs the record: before it exists there is nothing to change. */
+  private writeExisting(apply: (mission: Mission) => Mission): boolean {
+    return this.write((mission) => (mission === null ? null : apply(mission)));
   }
 
   /** Applies `apply` unless it returns the record unchanged, so a no-op (or an empty first edit)

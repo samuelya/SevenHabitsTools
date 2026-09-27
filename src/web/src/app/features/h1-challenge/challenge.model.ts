@@ -1,5 +1,3 @@
-import { Signal, computed, signal } from '@angular/core';
-import { featureStore } from '../../core/data/feature-store';
 import { BaseRecord } from '../../core/data/record';
 import {
   isArrayOf,
@@ -10,9 +8,9 @@ import {
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
 import { isValidIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
-import { ExerciseHubStatus, registerExercise } from '../../shared/exercise-kit/exercise-registry';
+import { storeStatusOnDayFactory } from '../../shared/exercise-kit/exercise-hub-status';
+import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
-import { todaySignal } from '../../shared/exercise-kit/today';
 import { hubStatus, isStarted } from './challenge.logic';
 
 /** A test's state (issue #56): `active` while it runs, then Completed ("Finish test") or Stopped
@@ -116,17 +114,6 @@ function isChallenge(value: unknown): value is Challenge {
 
 export const isChallengeArray = isArrayOf(isChallenge);
 
-/** The hub's status text needs today's date (day number and streak), so this is
- * `storeStatusFactory()` plus `todaySignal()`: the hub row rolls over at midnight too. */
-function challengeStatusFactory(): Signal<ExerciseHubStatus | null> {
-  if (!getRegisteredModels().some((model) => model.key === CHALLENGE_MODEL_KEY)) {
-    return signal(null);
-  }
-  const store = featureStore<Challenge[]>(CHALLENGE_MODEL_KEY);
-  const today = todaySignal();
-  return computed(() => hubStatus(store.value(), today()));
-}
-
 /** Registers the `h1-challenge` model and exercise, a no-op if already done (Vitest runs with
  * `isolate: false`). */
 export function registerChallengeModel(): void {
@@ -148,7 +135,7 @@ export function registerChallengeModel(): void {
     route: CHALLENGE_ROUTE,
     order: 40,
     isStarted: storeStartedFactory<Challenge[]>(CHALLENGE_MODEL_KEY, isStarted),
-    statusFactory: challengeStatusFactory,
+    statusFactory: storeStatusOnDayFactory<Challenge[]>(CHALLENGE_MODEL_KEY, hubStatus),
   });
 }
 

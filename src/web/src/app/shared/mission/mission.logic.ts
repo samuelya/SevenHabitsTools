@@ -1,10 +1,13 @@
 import { newRecord, touch } from '../../core/data/record';
+import { localDateString } from '../exercise-kit/assessment-history.logic';
 import type { ExerciseHubStatus } from '../exercise-kit/exercise-registry';
 import {
   Mission,
   MissionFields,
   MissionLineList,
+  MissionReview,
   MissionVersion,
+  ReviewInterval,
   ReviewKey,
 } from './mission.model';
 
@@ -172,18 +175,169 @@ export function canSaveVersion(mission: Mission | null): boolean {
   return mission.draft.trim() !== currentStatement(mission);
 }
 
-/** `mission` with the draft appended as a new version; the same reference when it can't be. */
+/** The longest "What changed" note (#62): one line on a 360 px version row. */
+export const MAX_NOTE_LENGTH = 140;
+
+/** A note as stored and shown: one line, at most `MAX_NOTE_LENGTH` characters; `undefined` when
+ * blank. */
+export function clampNote(note: string | undefined): string | undefined {
+  const line = normaliseLine(note ?? '');
+  return line === '' ? undefined : line.slice(0, MAX_NOTE_LENGTH).trimEnd();
+}
+
+/** `mission` with the draft appended as a new version; the same reference when it can't be. A
+ * rhythm never reviewed counts from the latest version, so its stored `nextAt` moves with it. */
 export function withVersion(mission: Mission, id: string, now: Date, note?: string): Mission {
   if (!canSaveVersion(mission)) {
     return mission;
   }
+  const clamped = clampNote(note);
   const version: MissionVersion = {
     id,
     savedAt: now.toISOString(),
     text: mission.draft.trim(),
-    ...(note?.trim() ? { note: note.trim() } : {}),
+    ...(clamped ? { note: clamped } : {}),
   };
-  return touch({ ...mission, versions: [...mission.versions, version] }, now);
+  const versions = [...mission.versions, version];
+  const review = mission.review && syncedReview(mission.review, versions);
+  return touch({ ...mission, versions, ...(review ? { review } : {}) }, now);
+}
+
+/** `mission` with version `versionId`'s text as the draft ("Restore"); the version list is
+ * untouched. The same reference when there is no such version or the draft already holds it. */
+export function withRestoredVersion(mission: Mission, versionId: string, now: Date): Mission {
+  const version = mission.versions.find((candidate) => candidate.id === versionId);
+  if (!version || mission.draft === version.text) {
+    return mission;
+  }
+  return touch({ ...mission, draft: version.text }, now);
+}
+
+/** Restoring asks first only when it would replace unsaved words: a draft with words that matches
+ * no saved version (trimmed). `versionId` isn't needed: restoring any version over a saved draft
+ * loses nothing. */
+export function restoreNeedsConfirm(mission: Mission | null): boolean {
+  if (mission === null || mission.draft.trim() === '') {
+    return false;
+  }
+  const draft = mission.draft.trim();
+  return !mission.versions.some((version) => version.text.trim() === draft);
+}
+
+/** One row of the versions list, newest first; `n` is the 1-based version number. */
+export interface VersionRow {
+  readonly id: string;
+  readonly n: number;
+  readonly savedAt: string;
+  readonly note?: string;
+  readonly words: number;
+  readonly text: string;
+}
+
+export function versionRows(versions: readonly MissionVersion[]): readonly VersionRow[] {
+  return versions
+    .map((version, index) => ({
+      id: version.id,
+      n: index + 1,
+      savedAt: version.savedAt,
+      ...(clampNote(version.note) ? { note: clampNote(version.note) } : {}),
+      words: wordCount(version.text),
+      text: version.text,
+    }))
+    .reverse();
+}
+
+const INTERVAL_MONTHS: Readonly<Record<Exclude<ReviewInterval, 'off'>, number>> = {
+  monthly: 1,
+  quarterly: 3,
+  yearly: 12,
+};
+
+/** `date` (`YYYY-MM-DD`) plus `months` calendar months, the day clamped to the target month's
+ * length: Jan 31 + 1 month is Feb 28 (29 in a leap year). */
+export function addMonths(date: string, months: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const target = new Date(year, month - 1 + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  return localDateString(new Date(target.getFullYear(), target.getMonth(), Math.min(day, lastDay)));
+}
+
+/** The rhythm the page shows: stored, or "Off" before it is first set. */
+export function reviewOf(mission: Mission | null): MissionReview {
+  return mission?.review ?? { interval: 'off' };
+}
+
+/**
+ * The next review date (`YYYY-MM-DD`): the last review, or the latest version's local save date
+ * when never reviewed (`today` when there is neither), plus the interval. `null` when the rhythm
+ * is off. Derived, never read back from the stored `nextAt`, so an imported `nextAt` that
+ * disagrees can't make the page and the hub disagree.
+ */
+export function nextReviewDate(
+  review: MissionReview,
+  versions: readonly MissionVersion[],
+  today: string,
+): string | null {
+  if (review.interval === 'off') {
+    return null;
+  }
+  const latest = versions.at(-1);
+  const base =
+    review.lastReviewedAt ?? (latest ? localDateString(new Date(latest.savedAt)) : today);
+  return addMonths(base, INTERVAL_MONTHS[review.interval]);
+}
+
+/** Due once a rhythm is set and its next date has come (local dates compare as strings). */
+export function isReviewDue(
+  review: MissionReview,
+  versions: readonly MissionVersion[],
+  today: string,
+): boolean {
+  const next = nextReviewDate(review, versions, today);
+  return next !== null && next <= today;
+}
+
+/** `review` with `nextAt` recomputed (removed when off), for #98's reminders; the same reference
+ * when it already agrees. Without a base date (no version, no review) it is left as it is. */
+function syncedReview(review: MissionReview, versions: readonly MissionVersion[]): MissionReview {
+  const base = review.lastReviewedAt ?? versions.at(-1)?.savedAt;
+  if (review.interval !== 'off' && base === undefined) {
+    return review;
+  }
+  const next = nextReviewDate(review, versions, '') ?? undefined;
+  if (review.nextAt === next) {
+    return review;
+  }
+  return {
+    interval: review.interval,
+    ...(review.lastReviewedAt ? { lastReviewedAt: review.lastReviewedAt } : {}),
+    ...(next ? { nextAt: next } : {}),
+  };
+}
+
+function withReview(mission: Mission, review: MissionReview, now: Date): Mission {
+  const synced = syncedReview(review, mission.versions);
+  const current = mission.review;
+  return current &&
+    current.interval === synced.interval &&
+    current.nextAt === synced.nextAt &&
+    current.lastReviewedAt === synced.lastReviewedAt
+    ? mission
+    : touch({ ...mission, review: synced }, now);
+}
+
+/** `mission` with the rhythm set; the same reference when unchanged, "Off" before any rhythm
+ * included (nothing to store). */
+export function withReviewInterval(mission: Mission, interval: ReviewInterval, now: Date): Mission {
+  if (mission.review === undefined && interval === 'off') {
+    return mission;
+  }
+  return withReview(mission, { ...reviewOf(mission), interval }, now);
+}
+
+/** `mission` reviewed on `today` ("Reviewed today"): the next date counts from it. */
+export function withReviewed(mission: Mission, today: string, now: Date): Mission {
+  return withReview(mission, { ...reviewOf(mission), lastReviewedAt: today }, now);
 }
 
 /** The four gate items (issue #61), in step order. */
@@ -251,9 +405,14 @@ export function isStarted(mission: Mission | null): boolean {
   return mission !== null;
 }
 
-/** The hub's text: "Version n" once saved, "Draft, n words" while drafting, else `null`. */
-export function hubStatus(mission: Mission | null): ExerciseHubStatus | null {
+/** The hub's text: "Review due" once the rhythm's date has come (`today`, local), shown even on
+ * a done mission (`overridesDone`), else "Version n"
+ * once saved, "Draft, n words" while drafting, else `null`. */
+export function hubStatus(mission: Mission | null, today: string): ExerciseHubStatus | null {
   const versions = mission?.versions.length ?? 0;
+  if (mission && versions > 0 && isReviewDue(reviewOf(mission), mission.versions, today)) {
+    return { key: 'habits.exercises.h2-mission.reviewDue', count: 1, overridesDone: true };
+  }
   if (versions > 0) {
     return { key: 'habits.exercises.h2-mission.versionCount', count: versions };
   }

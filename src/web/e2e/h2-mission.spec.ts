@@ -7,7 +7,9 @@ import { t, type Locale } from './i18n';
  * Your mission (issue #61). Happy path from the hub, with Habit 2's inputs seeded: keep a value
  * from a long view and add one of your own, keep a principle from Your centre, write a role line,
  * a "to be" line and the draft, borrow a line from the collection with "Use this", answer a review
- * question, save a version, check the hub's status, mark the exercise done and reload.
+ * question, save a version, check the hub's status, mark the exercise done and reload. Then #62:
+ * save a second version with a note, compare it with the first, set a monthly rhythm, and with a
+ * seeded overdue review see the page's banner and the hub's "Review due".
  */
 
 function localeFor(testInfo: TestInfo): Locale {
@@ -33,6 +35,22 @@ function textFor(locale: Locale) {
     saveVersion: own('step6.saveVersionButton'),
     savedText: own('step6.savedText', { n: 1 }),
     checklistVersion: own('checklist.version'),
+    savedSecond: own('step6.savedText', { n: 2 }),
+    compare: own('versions.compareButton'),
+    diffSummary: own('versions.diffSummaryText', {
+      added: own(`versions.addedCountText.${new Intl.PluralRules(locale).select(4)}`, { count: 4 }),
+      removed: own(`versions.removedCountText.${new Intl.PluralRules(locale).select(1)}`, {
+        count: 1,
+      }),
+    }),
+    monthly: own('interval.monthly'),
+    dueTitle: own('review.dueTitle'),
+    reviewed: own('review.reviewedButton'),
+    reviewDue: t(
+      locale,
+      'habits',
+      `exercises.h2-mission.reviewDue.${new Intl.PluralRules(locale).select(1)}`,
+    ),
     markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
     reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
   };
@@ -214,5 +232,104 @@ test.describe('Your mission (h2-mission)', () => {
     expect(
       results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
+  });
+
+  test('saves a second version with a note, compares, sets a rhythm, and shows a due review (#62)', async ({
+    page,
+    seedDocument,
+  }, testInfo) => {
+    const text = TEXT[localeFor(testInfo)];
+    const mission = {
+      id: 'b05c6d7e-8f90-4a1b-9dc4-c5e6f708192a',
+      createdAt: T,
+      updatedAt: T,
+      values: [],
+      principles: [],
+      roleLines: [],
+      toBe: [],
+      toDo: [],
+      draft: 'I keep my word and call first.',
+      checklist: {},
+      versions: [{ id: 'v1', savedAt: T, text: 'I keep my word.' }],
+    };
+    const withMission = (fields: object, shared: object = {}) => {
+      const doc = inputs();
+      return {
+        ...doc,
+        shared: { ...doc.shared, ...shared },
+        habits: { ...doc.habits, h2: { mission: { ...mission, ...fields } } },
+      };
+    };
+    await seedDocument(withMission({}));
+    await page.goto(ROUTE);
+
+    // Step 6: a second version with a note.
+    await page.locator('.mat-step-header').nth(5).click();
+    const note = activeStep(page).locator('.note-field input');
+    await expect(note).toBeVisible();
+    await note.fill('Added the friend line.');
+    await activeStep(page).getByRole('button', { name: text.saveVersion }).click();
+    await expect(activeStep(page).locator('.saved')).toHaveText(text.savedSecond);
+    await expect(note).toHaveValue('');
+
+    // Versions: newest first, with its note; compare it with the first.
+    const rows = page.locator('app-mission-versions .version-row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.first()).toContainText('Added the friend line.');
+    await rows.first().click();
+    await page.locator('app-mission-versions').getByRole('button', { name: text.compare }).click();
+    await expect(page.locator('.diff-summary')).toHaveText(text.diffSummary);
+    await expect(page.locator('.diff ins')).toHaveCount(1);
+    await expect(page.locator('.diff del')).toHaveCount(1);
+
+    // Review: monthly; the next date is a month away, so nothing is due yet.
+    await page
+      // Exact: "Month" is also inside "3 months" (and شهر inside أشهر).
+      .locator('app-mission-review mat-button-toggle', {
+        hasText: new RegExp(`^\\s*${text.monthly}\\s*$`),
+      })
+      .locator('button')
+      .click();
+    await expect(page.locator('app-mission-review .review-date')).toBeVisible();
+    await expect(page.locator('.due-banner')).toHaveCount(0);
+
+    await page
+      .locator('app-mission-versions .compare')
+      .evaluate((compare) => compare.scrollIntoView({ block: 'center' }));
+    const results = await new AxeBuilder({ page }).analyze();
+    expect(
+      results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+    ).toEqual([]);
+
+    // A review that came due while away, on a mission marked done: the banner on the page, and
+    // "Review due" on the hub instead of the done date.
+    await seedDocument(
+      withMission(
+        { review: { interval: 'monthly', lastReviewedAt: '2020-01-01', nextAt: '2020-02-01' } },
+        {
+          exerciseCompletions: [
+            {
+              id: 'c16d7e8f-90a1-4b2c-8ed5-d6f708192a3b',
+              createdAt: T,
+              updatedAt: T,
+              exerciseId: 'h2-mission',
+              completedAt: T,
+            },
+          ],
+        },
+      ),
+    );
+    await page.goto('/habits/h2');
+    await expect(
+      page
+        .locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle })
+        .locator('.hub-exercise-status'),
+    ).toContainText(text.reviewDue);
+    await page.goto(ROUTE);
+    const banner = page.locator('.due-banner');
+    await expect(banner).toContainText(text.dueTitle);
+    await banner.getByRole('button', { name: text.reviewed }).click();
+    await expect(banner).toHaveCount(0);
+    await expect(page.locator('#mission-review-title')).toBeFocused();
   });
 });

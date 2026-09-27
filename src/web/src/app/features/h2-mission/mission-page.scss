@@ -92,6 +92,43 @@
   min-block-size: 44px;
 }
 
+// #62: the due banner above the stepper, versions and review below it.
+.due-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-block-end: 1rem;
+  padding: 1rem;
+  border-radius: var(--mat-sys-corner-medium);
+  color: var(--mat-sys-on-tertiary-container);
+  background-color: var(--mat-sys-tertiary-container);
+}
+
+.due-title {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.due-text {
+  margin: 0;
+}
+
+.due-button {
+  align-self: flex-start;
+  min-block-size: 44px;
+}
+
+.note-field {
+  inline-size: 100%;
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-block: 1.5rem;
+}
+
 .footer-section {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,140 @@
+<section class="versions" aria-labelledby="mission-versions-title">
+  <h2 id="mission-versions-title" class="section-title">
+    {{ 'h2Mission.versions.legend' | transloco }}
+  </h2>
+
+  <mat-action-list class="version-list">
+    @for (row of rows(); track row.id) {
+      <button
+        mat-list-item
+        type="button"
+        class="version-row"
+        [lines]="row.note ? 3 : 2"
+        [attr.aria-pressed]="row.id === selectedId()"
+        (click)="onSelect(row.id)"
+      >
+        <span matListItemTitle>
+          {{ 'h2Mission.versions.itemTitle' | transloco: { n: (row.n | appNumber) } }}
+        </span>
+        <span matListItemLine class="version-meta">
+          {{ 'h2Mission.versions.savedText' | transloco: { date: (row.savedAt | appDate) } }} ·
+          {{
+            'h2Mission.versions.wordCountText'
+              | appPlural: row.words : { count: (row.words | appNumber) }
+          }}
+        </span>
+        @if (row.note) {
+          <span matListItemLine class="version-note" dir="auto">{{ row.note }}</span>
+        }
+      </button>
+    }
+  </mat-action-list>
+
+  @if (selected(); as row) {
+    <div class="detail">
+      <h3 class="detail-title">
+        {{ 'h2Mission.versions.itemTitle' | transloco: { n: (row.n | appNumber) } }}
+      </h3>
+      <blockquote class="version-text" dir="auto">{{ row.text }}</blockquote>
+      <div class="actions">
+        <button mat-stroked-button type="button" (click)="restore.emit(row.id)">
+          {{ 'h2Mission.versions.restoreButton' | transloco }}
+        </button>
+        @if (row.n > 1) {
+          <button mat-stroked-button type="button" (click)="onCompare(row)">
+            {{ 'h2Mission.versions.compareButton' | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Live regions stay rendered and only their text is conditional, so the first change is
+       announced; outside the panels, so the restored status never sits under another version. -->
+  <p class="status" aria-live="polite" [class.idle]="restored() === null">
+    @if (restored(); as n) {
+      {{ 'h2Mission.versions.restoredText' | transloco: { n: (n | appNumber) } }}
+    }
+  </p>
+
+  <div class="compare" [class.idle]="compare() === null">
+    @if (compare(); as pair) {
+      <div class="compare-picks">
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label>{{ 'h2Mission.versions.compareFromLabel' | transloco }}</mat-label>
+          <select matNativeControl (change)="onPick('from', $event)">
+            @for (option of rows(); track option.id) {
+              <option [value]="option.id" [selected]="option.id === pair.from">
+                {{ 'h2Mission.versions.itemTitle' | transloco: { n: (option.n | appNumber) } }}
+              </option>
+            }
+          </select>
+        </mat-form-field>
+        <mat-form-field subscriptSizing="dynamic">
+          <mat-label>{{ 'h2Mission.versions.compareToLabel' | transloco }}</mat-label>
+          <select matNativeControl (change)="onPick('to', $event)">
+            @for (option of rows(); track option.id) {
+              <option [value]="option.id" [selected]="option.id === pair.to">
+                {{ 'h2Mission.versions.itemTitle' | transloco: { n: (option.n | appNumber) } }}
+              </option>
+            }
+          </select>
+        </mat-form-field>
+      </div>
+    }
+
+    <p class="diff-summary" aria-live="polite">
+      @if (diff(); as result) {
+        @if (result.summary.added + result.summary.removed === 0) {
+          {{ 'h2Mission.versions.noChangeText' | transloco }}
+        } @else {
+          {{
+            'h2Mission.versions.diffSummaryText'
+              | transloco
+                : {
+                    added:
+                      ('h2Mission.versions.addedCountText'
+                      | appPlural
+                        : result.summary.added
+                        : { count: (result.summary.added | appNumber) }),
+                    removed:
+                      ('h2Mission.versions.removedCountText'
+                      | appPlural
+                        : result.summary.removed
+                        : { count: (result.summary.removed | appNumber) }),
+                  }
+          }}
+        }
+      }
+    </p>
+
+    @if (diff(); as result) {
+      <!-- One run per part; the visually hidden prefix names the change for a screen reader, the
+             colour and the underline/strikethrough show it. `dir="auto"`: the text's own direction. -->
+      <p class="diff" dir="auto">
+        @for (part of result.parts; track $index) {
+          @switch (part.kind) {
+            @case ('added') {
+              <ins
+                ><span class="visually-hidden"
+                  >{{ 'h2Mission.versions.addedLabel' | transloco }}: </span
+                >{{ part.text }}</ins
+              >
+            }
+            @case ('removed') {
+              <del
+                ><span class="visually-hidden"
+                  >{{ 'h2Mission.versions.removedLabel' | transloco }}: </span
+                >{{ part.text }}</del
+              >
+            }
+            @default {
+              <span>{{ part.text }}</span>
+            }
+          }
+          {{ $last ? '' : ' ' }}
+        }
+      </p>
+    }
+  </div>
+</section>

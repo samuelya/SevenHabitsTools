@@ -4,7 +4,12 @@ import { TestBed } from '@angular/core/testing';
 import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
-import { exerciseStatusSignal, storeStatusFactory } from './exercise-hub-status';
+import { CLOCK } from '../../core/time/clock';
+import {
+  exerciseStatusSignal,
+  storeStatusFactory,
+  storeStatusOnDayFactory,
+} from './exercise-hub-status';
 import {
   EXERCISE_COMPLETIONS_MODEL_KEY,
   ExerciseCompletion,
@@ -84,6 +89,72 @@ describe('storeStatusFactory (issue #219)', () => {
     const injector = setUp();
     const status = exerciseStatusSignal(
       entry({ statusFactory: storeStatusFactory('no-such-model', () => ({ key: 'k', count: 1 })) }),
+      injector,
+    );
+    expect(status()).toBeNull();
+  });
+});
+
+describe('storeStatusOnDayFactory (issue #62)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  /** "Due" from 2026-03-01 while any completion exists: a status that needs the date. */
+  const dueFrom = (
+    value: readonly ExerciseCompletion[],
+    today: string,
+  ): ExerciseHubStatus | null =>
+    value.length > 0 ? { key: today >= '2026-03-01' ? 'due' : 'notDue', count: 1 } : null;
+
+  function setUpAt(start: Date): { injector: Injector; clock: { now: () => Date } } {
+    vi.useFakeTimers({ now: start });
+    const clock = { now: () => new Date() };
+    registerExerciseKitModel();
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: CLOCK, useValue: clock },
+        { provide: WRITER_LOCK, useValue: { role: signal('writer'), isWriter: signal(true) } },
+      ],
+    });
+    return { injector: TestBed.inject(Injector), clock };
+  }
+
+  it("passes CLOCK's local date and follows the store value", () => {
+    const { injector } = setUpAt(new Date(2026, 2, 1, 12));
+    const status = exerciseStatusSignal(
+      entry({ statusFactory: storeStatusOnDayFactory(EXERCISE_COMPLETIONS_MODEL_KEY, dueFrom) }),
+      injector,
+    );
+    expect(status()).toBeNull();
+
+    TestBed.runInInjectionContext(() =>
+      featureStore<ExerciseCompletion[]>(EXERCISE_COMPLETIONS_MODEL_KEY).update(() => [
+        { id: 'c1', createdAt: NOW, updatedAt: NOW, exerciseId: 'x', completedAt: NOW },
+      ]),
+    );
+    expect(status()).toEqual({ key: 'due', count: 1 });
+  });
+
+  it('recomputes just after local midnight, without a reload', () => {
+    const { injector } = setUpAt(new Date(2026, 1, 28, 23, 59, 0));
+    TestBed.runInInjectionContext(() =>
+      featureStore<ExerciseCompletion[]>(EXERCISE_COMPLETIONS_MODEL_KEY).update(() => [
+        { id: 'c1', createdAt: NOW, updatedAt: NOW, exerciseId: 'x', completedAt: NOW },
+      ]),
+    );
+    const status = exerciseStatusSignal(
+      entry({ statusFactory: storeStatusOnDayFactory(EXERCISE_COMPLETIONS_MODEL_KEY, dueFrom) }),
+      injector,
+    );
+    expect(status()).toEqual({ key: 'notDue', count: 1 });
+
+    vi.advanceTimersByTime(2 * 60 * 1000);
+    expect(status()).toEqual({ key: 'due', count: 1 });
+  });
+
+  it('reads as no status when the model is not registered', () => {
+    const { injector } = setUpAt(new Date(2026, 2, 1, 12));
+    const status = exerciseStatusSignal(
+      entry({ statusFactory: storeStatusOnDayFactory('no-such-model', dueFrom) }),
       injector,
     );
     expect(status()).toBeNull();

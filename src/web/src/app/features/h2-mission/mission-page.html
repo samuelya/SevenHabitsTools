@@ -10,6 +10,18 @@
     [collapsedByDefault]="collapsedByDefault()"
   />
 
+  @if (reviewDue()) {
+    <section class="due-banner" aria-labelledby="mission-due-title">
+      <h2 id="mission-due-title" class="due-title">
+        {{ 'h2Mission.review.dueTitle' | transloco }}
+      </h2>
+      <p class="due-text">{{ 'h2Mission.review.dueText' | transloco }}</p>
+      <button mat-flat-button type="button" class="due-button" (click)="onReviewed(true)">
+        {{ 'h2Mission.review.reviewedButton' | transloco }}
+      </button>
+    </section>
+  }
+
   <app-guided-stepper
     [steps]="steps()"
     [selectedIndex]="selectedIndex()"
@@ -157,6 +169,23 @@
           <p class="empty">{{ 'h2Mission.step6.emptyDraftHint' | transloco }}</p>
         }
 
+        <p class="field-prompt" id="mission-note-prompt">
+          {{ 'h2Mission.step6.notePrompt' | transloco }}
+        </p>
+        <mat-form-field class="note-field" subscriptSizing="dynamic">
+          <mat-label>{{ 'h2Mission.step6.noteLabel' | transloco }}</mat-label>
+          <input
+            #noteField
+            matInput
+            type="text"
+            aria-describedby="mission-note-prompt"
+            [placeholder]="'h2Mission.step6.notePlaceholder' | transloco"
+            [value]="note()"
+            [attr.maxlength]="maxNoteLength"
+            (input)="onNoteInput($event)"
+          />
+        </mat-form-field>
+
         <div class="review-actions">
           <button mat-flat-button type="button" [disabled]="!canSave()" (click)="onSaveVersion()">
             {{ 'h2Mission.step6.saveVersionButton' | transloco }}
@@ -173,6 +202,23 @@
       </div>
     </ng-template>
   </app-guided-stepper>
+
+  @if (versions().length > 0) {
+    <div class="history">
+      <app-mission-versions
+        [versions]="versions()"
+        [restored]="restoredVersion()"
+        (restore)="onRestore($event)"
+      />
+      <app-mission-review
+        [interval]="interval()"
+        [nextDate]="nextReview()"
+        [lastReviewed]="lastReviewed()"
+        (intervalChange)="onIntervalChange($event)"
+        (reviewed)="onReviewed(false)"
+      />
+    </div>
+  }
 
   <div footer class="footer-section">
     <app-done-toggle

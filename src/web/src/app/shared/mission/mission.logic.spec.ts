@@ -27,6 +27,7 @@ import {
 
 const T0 = '2026-01-01T00:00:00.000Z';
 const NOW = new Date('2026-01-05T10:00:00.000Z');
+const TODAY = '2026-01-05';
 
 function mission(fields: Partial<Mission> = {}): Mission {
   return {
@@ -185,7 +186,7 @@ describe('gate, steps and hub', () => {
     expect(isComplete(null)).toBe(false);
     expect(isStarted(null)).toBe(false);
     expect(stepsDone(null)).toEqual([false, false, false, false, false, false]);
-    expect(hubStatus(null)).toBeNull();
+    expect(hubStatus(null, TODAY)).toBeNull();
   });
 
   it('meets each item from the record, and done needs a version', () => {
@@ -217,13 +218,13 @@ describe('gate, steps and hub', () => {
   });
 
   it('shows words while drafting and the version count once saved', () => {
-    expect(hubStatus(mission({ values: ['time'] }))).toBeNull();
-    expect(hubStatus(mission({ draft: 'I keep my word' }))).toEqual({
+    expect(hubStatus(mission({ values: ['time'] }), TODAY)).toBeNull();
+    expect(hubStatus(mission({ draft: 'I keep my word' }), TODAY)).toEqual({
       key: 'habits.exercises.h2-mission.draftWords',
       count: 4,
     });
     const saved = withVersion(mission({ draft: 'I keep my word' }), 'v1', NOW);
-    expect(hubStatus(withVersion({ ...saved, draft: 'Again' }, 'v2', NOW))).toEqual({
+    expect(hubStatus(withVersion({ ...saved, draft: 'Again' }, 'v2', NOW), TODAY)).toEqual({
       key: 'habits.exercises.h2-mission.versionCount',
       count: 2,
     });

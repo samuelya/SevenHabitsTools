@@ -1,0 +1,40 @@
+<section class="review" aria-labelledby="mission-review-title">
+  <h2 #heading id="mission-review-title" class="section-title" tabindex="-1">
+    {{ 'h2Mission.review.legend' | transloco }}
+  </h2>
+  <p class="field-prompt">{{ 'h2Mission.review.prompt' | transloco }}</p>
+
+  <div class="interval-row">
+    <span class="interval-label" id="mission-review-interval">
+      {{ 'h2Mission.review.intervalLabel' | transloco }}
+    </span>
+    <mat-button-toggle-group
+      class="interval-toggle"
+      aria-labelledby="mission-review-interval"
+      [value]="interval()"
+      (change)="intervalChange.emit($event.value)"
+    >
+      @for (option of intervals; track option) {
+        <mat-button-toggle [value]="option">
+          {{ 'h2Mission.interval.' + option | transloco: { count: (quarterMonths | appNumber) } }}
+        </mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </div>
+
+  @if (nextDate(); as next) {
+    <p class="review-date">
+      {{ 'h2Mission.review.nextText' | transloco: { date: (next | appDate) } }}
+    </p>
+  }
+  @if (lastReviewed(); as last) {
+    <p class="review-date">
+      {{ 'h2Mission.review.lastText' | transloco: { date: (last | appDate) } }}
+    </p>
+  }
+  @if (interval() !== 'off') {
+    <button mat-stroked-button type="button" class="reviewed-button" (click)="reviewed.emit()">
+      {{ 'h2Mission.review.reviewedButton' | transloco }}
+    </button>
+  }
+</section>
