@@ -1,0 +1,314 @@
+<form class="project-item-form" (submit)="$event.preventDefault()">
+  <p class="field-prompt" id="project-name-prompt">
+    {{ 'h2Projects.form.namePrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Projects.form.nameLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #nameField
+      appEditorInitialFocus
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="3"
+      required
+      class="name-field"
+      [placeholder]="'h2Projects.form.namePlaceholder' | transloco"
+      [value]="item().name"
+      [attr.aria-describedby]="
+        nameError() ? 'project-name-prompt project-name-error' : 'project-name-prompt'
+      "
+      (input)="onNameInput($event)"
+      (blur)="touch('name')"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: no `NgControl` here (playbook §6). Always rendered, so the live region
+       exists before its text arrives. -->
+  <p class="field-error" id="project-name-error" role="alert">
+    @if (nameError()) {
+      {{ 'h2Projects.form.nameRequired' | transloco }}
+    }
+  </p>
+
+  <p class="field-prompt" id="project-result-prompt">
+    {{ 'h2Projects.form.desiredResultPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Projects.form.desiredResultLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="3"
+      cdkAutosizeMaxRows="10"
+      class="result-field"
+      [placeholder]="'h2Projects.form.desiredResultPlaceholder' | transloco"
+      [value]="item().desiredResult ?? ''"
+      [attr.aria-describedby]="
+        desiredResultError()
+          ? 'project-result-prompt project-result-error'
+          : 'project-result-prompt'
+      "
+      (input)="onDesiredResultInput($event)"
+      (blur)="touch('desiredResult')"
+    ></textarea>
+  </mat-form-field>
+  <p class="field-error" id="project-result-error" role="alert">
+    @if (desiredResultError()) {
+      {{ 'h2Projects.form.desiredResultRequired' | transloco }}
+    }
+  </p>
+
+  <fieldset class="group criteria">
+    <legend>{{ 'h2Projects.form.criteriaLabel' | transloco }}</legend>
+    <p class="field-prompt" id="project-criteria-prompt">
+      {{ 'h2Projects.form.criteriaPrompt' | transloco }}
+    </p>
+    @if (item().criteria.length) {
+      <ul class="row-list">
+        @for (line of item().criteria; track $index; let index = $index) {
+          <li class="criterion-row">
+            <mat-form-field appearance="outline" class="row-field" subscriptSizing="dynamic">
+              <input
+                matInput
+                type="text"
+                autocomplete="off"
+                class="criterion-field"
+                [attr.data-index]="index"
+                [attr.aria-label]="
+                  ('h2Projects.form.criteriaLabel' | transloco) + ' ' + (index + 1 | appNumber)
+                "
+                aria-describedby="project-criteria-prompt"
+                [placeholder]="
+                  index === 0 ? ('h2Projects.form.criteriaPlaceholder' | transloco) : ''
+                "
+                [value]="line"
+                (input)="onCriterionInput(index, $event)"
+              />
+            </mat-form-field>
+            <button
+              mat-icon-button
+              type="button"
+              class="remove-criterion"
+              [attr.aria-label]="
+                ('h2Projects.form.criteriaRemoveButton' | transloco) + ' ' + (index + 1 | appNumber)
+              "
+              (click)="onRemoveCriterion(index)"
+            >
+              <mat-icon aria-hidden="true">close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+    <button
+      mat-stroked-button
+      type="button"
+      class="add-criterion"
+      disabledInteractive
+      [disabled]="criteriaFull()"
+      aria-describedby="project-criteria-hint"
+      (click)="onAddCriterion()"
+    >
+      <mat-icon aria-hidden="true">add</mat-icon>
+      {{ 'h2Projects.form.criteriaAddButton' | transloco }}
+    </button>
+    <p class="hint" id="project-criteria-hint" aria-live="polite">
+      @if (criteriaFull()) {
+        {{ 'h2Projects.form.criteriaMaxHint' | transloco }}
+      }
+    </p>
+  </fieldset>
+
+  <mat-form-field appearance="outline" class="field date-field">
+    <mat-label>{{ 'h2Projects.form.deadlineLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      #deadlineInput
+      class="deadline-field"
+      autocomplete="off"
+      [matDatepicker]="deadlinePicker"
+      [value]="deadline()"
+      (dateChange)="onDeadlineChange($event, deadlineInput)"
+    />
+    <mat-datepicker-toggle matIconSuffix [for]="deadlinePicker" />
+    <mat-datepicker #deadlinePicker />
+  </mat-form-field>
+
+  <fieldset class="group">
+    <legend id="project-status-legend">{{ 'h2Projects.form.statusLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      class="status"
+      hideSingleSelectionIndicator
+      aria-labelledby="project-status-legend"
+      [value]="item().status"
+      (change)="onStatusChange($event)"
+    >
+      @for (status of statuses; track status) {
+        <mat-button-toggle [value]="status">{{
+          'h2Projects.status.' + status | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  <fieldset class="group steps">
+    <legend>{{ 'h2Projects.steps.legend' | transloco }}</legend>
+    <p class="field-prompt" id="project-steps-prompt">
+      {{ 'h2Projects.steps.prompt' | transloco }}
+    </p>
+    @if (item().steps.length) {
+      <ul class="row-list step-list">
+        @for (step of item().steps; track step.key; let index = $index) {
+          <li class="step-row" [attr.data-step-key]="step.key">
+            <div class="step-main">
+              <mat-checkbox
+                class="step-done"
+                [checked]="step.done"
+                [aria-label]="
+                  step.text.trim() ||
+                  ('h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) })
+                "
+                (change)="onStepToggle(step, $event)"
+              />
+              <mat-form-field appearance="outline" class="row-field" subscriptSizing="dynamic">
+                <input
+                  matInput
+                  type="text"
+                  autocomplete="off"
+                  class="step-field"
+                  [attr.aria-label]="
+                    'h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) }
+                  "
+                  [value]="step.text"
+                  (input)="onStepInput(step, $event)"
+                />
+              </mat-form-field>
+            </div>
+            <div class="step-tools">
+              <mat-form-field appearance="outline" class="step-date" subscriptSizing="dynamic">
+                <mat-label>{{ 'h2Projects.steps.dateLabel' | transloco }}</mat-label>
+                <input
+                  matInput
+                  #stepDateInput
+                  autocomplete="off"
+                  [attr.aria-describedby]="'project-step-' + index"
+                  [matDatepicker]="stepPicker"
+                  [value]="stepDate(step)"
+                  (dateChange)="onStepDateChange(step, $event, stepDateInput)"
+                />
+                <mat-datepicker-toggle matIconSuffix [for]="stepPicker" />
+                <mat-datepicker #stepPicker />
+              </mat-form-field>
+              <span class="visually-hidden" [id]="'project-step-' + index">{{
+                'h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) }
+              }}</span>
+              <button
+                mat-icon-button
+                type="button"
+                class="move-up"
+                disabledInteractive
+                [disabled]="!canMove(step, 'up')"
+                [attr.aria-label]="
+                  ('h2Projects.steps.moveUpButton' | transloco) +
+                  ', ' +
+                  ('h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) })
+                "
+                (click)="onMoveStep(step, 'up')"
+              >
+                <mat-icon aria-hidden="true">arrow_upward</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                class="move-down"
+                disabledInteractive
+                [disabled]="!canMove(step, 'down')"
+                [attr.aria-label]="
+                  ('h2Projects.steps.moveDownButton' | transloco) +
+                  ', ' +
+                  ('h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) })
+                "
+                (click)="onMoveStep(step, 'down')"
+              >
+                <mat-icon aria-hidden="true">arrow_downward</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
+                class="remove-step"
+                [attr.aria-label]="
+                  ('h2Projects.steps.removeButton' | transloco) +
+                  ', ' +
+                  ('h2Projects.steps.stepLabel' | transloco: { n: (index + 1 | appNumber) })
+                "
+                (click)="onRemoveStep(step)"
+              >
+                <mat-icon aria-hidden="true">close</mat-icon>
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    <!-- Always rendered, so the offer is announced when the last step is ticked. -->
+    <div class="all-done" aria-live="polite">
+      @if (offerDone()) {
+        <p class="all-done-text">{{ 'h2Projects.steps.allDoneText' | transloco }}</p>
+        <button
+          mat-flat-button
+          type="button"
+          class="mark-project-done"
+          (click)="onMarkProjectDone()"
+        >
+          <mat-icon aria-hidden="true">flag</mat-icon>
+          {{ 'h2Projects.steps.markProjectDoneButton' | transloco }}
+        </button>
+      }
+    </div>
+
+    <div class="new-step">
+      <mat-form-field appearance="outline" class="row-field" subscriptSizing="dynamic">
+        <mat-label>{{ 'h2Projects.steps.newStepLabel' | transloco }}</mat-label>
+        <input
+          matInput
+          type="text"
+          autocomplete="off"
+          class="new-step-field"
+          [disabled]="!stepsOpen()"
+          [placeholder]="'h2Projects.steps.placeholder' | transloco"
+          [value]="newStepText()"
+          [attr.aria-describedby]="
+            stepsOpen() ? 'project-steps-prompt' : 'project-steps-prompt project-steps-hint'
+          "
+          (input)="onNewStepInput($event)"
+          (keydown.enter)="onAddStep($event)"
+        />
+      </mat-form-field>
+      <button
+        mat-stroked-button
+        type="button"
+        class="add-step"
+        disabledInteractive
+        [disabled]="!stepsOpen() || !newStepText().trim()"
+        [attr.aria-describedby]="stepsOpen() ? null : 'project-steps-hint'"
+        (click)="onAddStep()"
+      >
+        <mat-icon aria-hidden="true">add</mat-icon>
+        {{ 'h2Projects.steps.addButton' | transloco }}
+      </button>
+    </div>
+    <p class="hint" id="project-steps-hint" aria-live="polite">
+      @if (!stepsOpen()) {
+        {{ 'h2Projects.steps.lockedHint' | transloco }}
+      }
+    </p>
+  </fieldset>
+
+  <div class="actions">
+    <button mat-stroked-button type="button" class="delete-button" (click)="deleted.emit()">
+      <mat-icon aria-hidden="true">delete</mat-icon>
+      {{ 'h2Projects.form.delete' | transloco }}
+    </button>
+  </div>
+</form>

@@ -236,6 +236,14 @@
         "one": "1 affirmation",
         "other": "{{count}} affirmations"
       }
+    },
+    "h2-projects": {
+      "title": "Picture the result, then plan the steps",
+      "shortTitle": "Your projects",
+      "underWayCount": {
+        "one": "1 under way",
+        "other": "{{count}} under way"
+      }
     }
   }
 }
