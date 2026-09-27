@@ -241,6 +241,24 @@ earlier "create the record on the Add button" convention; details in `exercise-l
   creation, and a form section that saves on its own (Afterwards) only shows once the draft is a
   record (#55).
 
+**Pitfalls that each cost a Habit 2 PR a fix round (#58–#63, #291):**
+
+- **Every displayed number goes through `appNumber`.** Pick the plural category from the raw
+  number, then format the shown number; totals are a `{{total}}` param, never a literal digit.
+  Mixed digit systems ("٢ من 4", "17 هدفًا، ٤") failed review or the tester three times (#58,
+  #300, #303). Unit-test one string with Arabic-Indic numerals.
+- **Store keys, render labels.** A suggested value (a principle, a kind) is stored by its key and
+  translated on display; storing the translated label breaks after a language switch (#299).
+- **Samples count nowhere.** An example record or its children never count toward a gate, a hub
+  count, a summary or a read API another feature uses (`openSteps()`); use one helper (#59, #291).
+- **A no-op or refused write changes nothing.** Return the same reference so the store skips the
+  write, and re-sync the UI (toggle, focus intent) when `update()` refuses in a read-only tab
+  (#59, #62, #291).
+- **Never create an effect inside a computed.** `translateSignal`/`toObservable` built lazily from a
+  template or `computed` throws NG0602; build it once, `untracked`, and cache it (#60).
+- **Live regions exist before their text.** Render the `aria-live` container always and make
+  only its content conditional, or the first announcement is lost (#62).
+
 ## 7. Tests (what each exercise ships)
 
 | File                       | Covers                                                                                                                                                                                                                                                                                                                                                                                                                                        |
