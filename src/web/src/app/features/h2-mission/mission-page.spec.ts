@@ -193,8 +193,8 @@ describe('MissionPage', () => {
   it('keeps "All" selected when it is tapped again', async () => {
     const { fixture, host } = await setUp({
       inspirations: [
-        rec('i1', { text: 'Call first.', kind: 'idea' }),
-        rec('i2', { text: 'Be kind.', kind: 'saying' }),
+        rec('i1', { text: 'Call first.', kind: 'idea', tags: [] }),
+        rec('i2', { text: 'Be kind.', kind: 'saying', tags: [] }),
       ],
     });
     const all = [...host.querySelectorAll('app-mission-collection mat-chip-option')].find(
