@@ -6,7 +6,8 @@ import { t, type Locale } from './i18n';
 /**
  * Your roles (issue #59), the reference exercise for Habit 2. Happy path from the hub: add two
  * roles, rate them and the built-in Sharpen the Saw (which doesn't count toward the gate), add a
- * third, write a picture note, mark the exercise done, reload. Plus the shared slice's eager registration: `shared.roles` survives export -> wipe ->
+ * third, write a picture note, give a role a goal with a first step (#291), mark the exercise
+ * done, reload. Plus the shared slice's eager registration: `shared.roles` survives export -> wipe ->
  * import with the Roles page never opened.
  */
 
@@ -31,6 +32,8 @@ function textFor(locale: Locale) {
     markDone: t(locale, 'exerciseKit', 'doneToggle.markDone'),
     reopen: t(locale, 'exerciseKit', 'doneToggle.reopen'),
     checklistRated: own('checklist.rated'),
+    checklistGoal: own('checklist.goal'),
+    oneGoal: own('goals.countText.one'),
     exportButton: t(locale, 'settings', 'backup.export'),
     importButton: t(locale, 'settings', 'backup.import'),
     replaceButton: t(locale, 'root', 'data.import.replace'),
@@ -46,8 +49,20 @@ const SAVED_URL = /\/habits\/h2\/roles\/(?!new$)[^/]+$/;
 
 /** `shared.roles` as IndexedDB holds it; `null` while the slice doesn't exist. */
 async function storedRoles(page: Page): Promise<Record<string, unknown>[] | null> {
+  return storedSlice(page, 'roles');
+}
+
+/** `habits.h2.roleGoals` as IndexedDB holds it; `null` while the slice doesn't exist. */
+async function storedGoals(page: Page): Promise<Record<string, unknown>[] | null> {
+  return storedSlice(page, 'roleGoals');
+}
+
+async function storedSlice(
+  page: Page,
+  slice: 'roles' | 'roleGoals',
+): Promise<Record<string, unknown>[] | null> {
   return page.evaluate(
-    () =>
+    (name) =>
       new Promise<Record<string, unknown>[] | null>((resolve, reject) => {
         const open = indexedDB.open('sevenhabits');
         open.onerror = () => reject(open.error);
@@ -61,11 +76,13 @@ async function storedRoles(page: Page): Promise<Record<string, unknown>[] | null
           const get = db.transaction('documents').objectStore('documents').get('current');
           get.onsuccess = () => {
             db.close();
-            resolve(get.result?.shared?.roles ?? null);
+            const doc = get.result;
+            resolve((name === 'roles' ? doc?.shared?.roles : doc?.habits?.h2?.roleGoals) ?? null);
           };
           get.onerror = () => reject(get.error);
         };
       }),
+    slice,
   );
 }
 
@@ -145,6 +162,32 @@ test.describe('Your roles (h2-roles)', () => {
     const markDoneButton = page.locator('app-done-toggle button', { hasText: text.markDone });
     await expect(markDoneButton).toHaveAttribute('aria-disabled', 'true');
     await addRole(page, isMobile, 'Coach', 5);
+    // Three rated roles and a note: only the goal row is left.
+    await expect(markDoneButton).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.locator('.done-checklist', { hasText: text.checklistGoal })).toBeVisible();
+
+    // A goal with one first step on Dad (#291): created on the first typed character.
+    await rows.filter({ hasText: 'Dad' }).click();
+    const goals = page.locator('app-role-goals-section');
+    await goals.locator('.add-goal').click();
+    const what = goals.locator('.what-field');
+    await expect(what).toBeFocused();
+    await what.fill("One evening a week that's just us.");
+    await goals.locator('.add-step').click();
+    const stepField = goals.locator('.step-field input');
+    await expect(stepField).toBeFocused();
+    await stepField.fill('Ask her which evening works.');
+    // Contrast is left to the page-level scan below: under the sticky footer axe reads the wrong
+    // background (playbook §7, #288).
+    const goalScan = await new AxeBuilder({ page })
+      .include('app-role-goals-section')
+      .disableRules(['color-contrast'])
+      .analyze();
+    expect(
+      goalScan.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
+    ).toEqual([]);
+    await closeEditor(page, isMobile);
+    await expect(rows.filter({ hasText: 'Dad' })).toContainText(text.oneGoal);
     await expect(markDoneButton).toBeEnabled();
     await markDoneButton.click();
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
@@ -155,6 +198,11 @@ test.describe('Your roles (h2-roles)', () => {
     await expect(page.locator('app-done-toggle', { hasText: text.reopen })).toBeVisible();
     const stored = await storedRoles(page);
     expect(stored?.map((role) => role['satisfaction']).sort()).toEqual([2, 3, 4, 5]);
+    const storedGoalList = await storedGoals(page);
+    expect(storedGoalList).toHaveLength(1);
+    expect(storedGoalList?.[0]['steps']).toEqual([
+      expect.objectContaining({ text: 'Ask her which evening works.', done: false }),
+    ]);
 
     const results = await new AxeBuilder({ page }).analyze();
     expect(
