@@ -105,13 +105,19 @@ test.describe('Your projects (h2-projects)', () => {
     await page.locator('.exercise-list__item').first().click();
     const checks = form.getByRole('checkbox');
     await expect(checks).toHaveCount(2);
-    await checks.nth(0).check();
+    // `click()`, not `check()`: the box shows the stored value, which arrives with the next render,
+    // after `check()` has already looked.
+    await checks.nth(0).click();
+    await expect(checks.nth(0)).toBeChecked();
     await expect(form.locator('.mark-project-done')).toHaveCount(0);
-    await checks.nth(1).check();
+    await checks.nth(1).click();
+    await expect(checks.nth(1)).toBeChecked();
     const markProjectDone = form.locator('.mark-project-done');
-    await expect(markProjectDone).toHaveText(text.markProjectDone);
+    await expect(markProjectDone).toHaveAccessibleName(text.markProjectDone);
     await markProjectDone.click();
     await expect(markProjectDone).toHaveCount(0);
+    // The button is gone: focus lands on the status group, on Done.
+    await expect(form.locator('.status .mat-button-toggle-checked button')).toBeFocused();
     await closeEditor();
 
     const finishedToggle = page.locator('#finished-toggle');
