@@ -5,6 +5,7 @@ import {
   VALUE_TOKEN,
   checklistLabelsFrom,
   checklistLoaded,
+  countedGoals,
   countedRoles,
   doneChecklist,
   hubStatus,
@@ -18,6 +19,7 @@ import {
   summarize,
   toListItem,
 } from './roles.logic';
+import { RoleGoal } from '../../shared/roles/role-goals.model';
 
 const T0 = '2026-01-01T00:00:00.000Z';
 
@@ -31,9 +33,24 @@ const LABELS: RoleLabels = {
   example: 'Example',
   ratingTemplate: `${VALUE_TOKEN} of ${MAX_TOKEN}`,
   formatNumber: (value) => String(value),
+  goalCount: (count) => `${count} goals`,
 };
 
-const CHECKLIST = checklistLabelsFrom(['Add a role', 'Rate', 'Note']);
+const CHECKLIST = checklistLabelsFrom(['Add a role', 'Rate', 'Note', 'Goal']);
+
+function goal(id: string, roleId: string, fields: Partial<RoleGoal> = {}): RoleGoal {
+  return {
+    id,
+    createdAt: T0,
+    updatedAt: T0,
+    roleId,
+    what: 'One evening a week',
+    horizon: 'year',
+    status: 'open',
+    steps: [{ key: 'k', text: 'Ask her', done: false }],
+    ...fields,
+  };
+}
 
 describe('roles page logic (#59)', () => {
   it('is started by a counted role, not a sample or a deleted one', () => {
@@ -60,25 +77,44 @@ describe('roles page logic (#59)', () => {
     const onlySaw = [saw, role('gone', { deletedAt: T0 })];
     expect(isStarted(onlySaw)).toBe(false);
     expect(hubStatus(onlySaw)).toBeNull();
-    expect(summarize(onlySaw)).toBeNull();
-    expect(doneChecklist(onlySaw, CHECKLIST).map((item) => item.met)).toEqual([
+    expect(summarize(onlySaw, [])).toBeNull();
+    expect(doneChecklist(onlySaw, [], CHECKLIST).map((item) => item.met)).toEqual([
+      false,
       false,
       false,
       false,
     ]);
   });
 
-  it('opens the gate at three rated roles and one note, and the checklist agrees', () => {
+  it('opens the gate at three rated roles, one note and a goal with a step; the checklist agrees', () => {
+    const goals = [goal('g', 'a')];
     const two = [role('a', { satisfaction: 3, note: 'Not yet.' }), role('b', { satisfaction: 4 })];
-    expect(isComplete(two)).toBe(false);
-    expect(doneChecklist(two, CHECKLIST).map((item) => item.met)).toEqual([true, false, true]);
+    expect(isComplete(two, goals)).toBe(false);
+    expect(doneChecklist(two, goals, CHECKLIST).map((item) => item.met)).toEqual([
+      true,
+      false,
+      true,
+      true,
+    ]);
 
     const three = [...two, role('c', { satisfaction: 2 })];
-    expect(isComplete(three)).toBe(true);
-    expect(doneChecklist(three, CHECKLIST).every((item) => item.met)).toBe(true);
+    expect(isComplete(three, goals)).toBe(true);
+    expect(doneChecklist(three, goals, CHECKLIST).every((item) => item.met)).toBe(true);
+    expect(isComplete(three, [])).toBe(false);
 
     const noNote = three.map((r) => ({ ...r, note: r.note ? '  ' : undefined }));
-    expect(isComplete(noNote)).toBe(false);
+    expect(isComplete(noNote, goals)).toBe(false);
+  });
+
+  it('counts a goal toward the gate only with a step, not a sample, and for an active role (#291)', () => {
+    const roles = [role('a'), role('b', { archived: true })];
+    const met = (goals: RoleGoal[]) => doneChecklist(roles, goals, CHECKLIST)[3].met;
+    expect(met([goal('g', 'a', { steps: [{ key: 'k', text: '  ', done: false }] })])).toBe(false);
+    expect(met([goal('g', 'a', { sample: true })])).toBe(false);
+    expect(met([goal('g', 'a', { deletedAt: T0 })])).toBe(false);
+    expect(met([goal('g', 'b')])).toBe(false);
+    expect(met([goal('g', 'a', { status: 'reached' })])).toBe(true);
+    expect(countedGoals(roles, [goal('g', 'a'), goal('h', 'b')]).map((g) => g.id)).toEqual(['g']);
   });
 
   it('never counts samples, archived or deleted roles toward the gate', () => {
@@ -88,8 +124,13 @@ describe('roles page logic (#59)', () => {
       role('c', { satisfaction: 3, archived: true }),
       role('d', { satisfaction: 3, deletedAt: T0 }),
     ];
-    expect(isComplete(list)).toBe(false);
-    expect(doneChecklist([], CHECKLIST).map((item) => item.met)).toEqual([false, false, false]);
+    expect(isComplete(list, [goal('g', 'a')])).toBe(false);
+    expect(doneChecklist([], [], CHECKLIST).map((item) => item.met)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
   });
 
   it('waits for real checklist labels before rendering', () => {
@@ -98,15 +139,31 @@ describe('roles page logic (#59)', () => {
   });
 
   it('summarizes counted roles, null with none, average null until one is rated', () => {
-    expect(summarize([role('s', { sample: true })])).toBeNull();
-    expect(summarize([role('a')])).toEqual({ count: 1, rated: 0, average: null });
+    expect(summarize([role('s', { sample: true })], [])).toBeNull();
+    expect(summarize([role('a')], [])).toEqual({
+      count: 1,
+      rated: 0,
+      average: null,
+      goals: 0,
+      goalsWithStep: 0,
+    });
     expect(
-      summarize([
-        role('a', { satisfaction: 3 }),
-        role('b', { satisfaction: 4 }),
-        role('c', { satisfaction: 4 }),
-      ]),
-    ).toEqual({ count: 3, rated: 3, average: 11 / 3 });
+      summarize(
+        [
+          role('a', { satisfaction: 3 }),
+          role('b', { satisfaction: 4 }),
+          role('c', { satisfaction: 4 }),
+        ],
+        [goal('g1', 'a'), goal('g2', 'b', { steps: [] }), goal('g3', 'a', { sample: true })],
+      ),
+    ).toEqual({ count: 3, rated: 3, average: 11 / 3, goals: 2, goalsWithStep: 1 });
+  });
+
+  it('adds "2 goals" to the row subtitle once the role has a goal (#291)', () => {
+    expect(toListItem(role('a', { description: 'Around' }), LABELS, 2).subtitle).toBe(
+      'Around · 2 goals',
+    );
+    expect(toListItem(role('a'), LABELS, 0).subtitle).toBeUndefined();
   });
 
   it('builds a row: title, "3 of 5" and description, swatch, lock for the built-in', () => {

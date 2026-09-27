@@ -7,6 +7,14 @@
           | appPlural: summary().count : { rated: (summary().rated | appNumber) }
       }}
     </p>
+    @if (summary().goals > 0) {
+      <p class="goals">
+        {{
+          'h2Roles.summary.goalsText'
+            | appPlural: summary().goals : { withStep: (summary().goalsWithStep | appNumber) }
+        }}
+      </p>
+    }
     @if (summary().average; as average) {
       <p class="average">
         {{

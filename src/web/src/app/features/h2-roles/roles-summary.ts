@@ -6,7 +6,8 @@ import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { RATING_MAX } from '../../shared/roles/roles.logic';
 import { RolesSummary as RolesSummaryData } from './roles.logic';
 
-/** "Your picture" (issue #59): "4 roles, 3 rated" and, once one is rated, "Average 3.3 of 5".
+/** "Your picture" (issue #59): "4 roles, 3 rated", once a goal exists "2 goals, 1 with a first step"
+ * (#291) and, once one is rated, "Average 3.3 of 5".
  * Presentational: the page renders it only once a counted role exists (`summarize()`), so no zero
  * is ever shown. Plural-correct through `AppPluralPipe`; numbers follow the numerals setting. */
 @Component({

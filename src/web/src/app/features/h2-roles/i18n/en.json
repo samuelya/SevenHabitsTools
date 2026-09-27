@@ -48,6 +48,53 @@
     "builtInHint": "This role comes with the app. You can describe and rate it, but not rename or remove it.",
     "delete": "Delete role"
   },
+  "goals": {
+    "legend": "Goals for this role",
+    "addButton": "Add goal",
+    "empty": "No goals yet. What would make this role a success in a year?",
+    "countText": {
+      "one": "1 goal",
+      "other": "{{count}} goals"
+    }
+  },
+  "goal": {
+    "whatLabel": "What you want to reach",
+    "whatPrompt": "In this role, what do you want to be true a while from now?",
+    "whatPlaceholder": "e.g. One evening a week that's just us, phones away.",
+    "whatRequired": "Write what you want to reach first.",
+    "whyLabel": "Why it matters",
+    "whyPrompt": "Why this, and why now?",
+    "whyPlaceholder": "e.g. She's twelve. In a few years she won't want to.",
+    "howLabel": "How you'll know",
+    "howPrompt": "What will you see or hear when you've got there?",
+    "howPlaceholder": "e.g. She suggests what we do, not me.",
+    "horizonLabel": "When",
+    "statusLabel": "Status",
+    "reachedButton": "Reached",
+    "droppedButton": "Drop",
+    "reopenButton": "Reopen",
+    "deleteButton": "Delete goal",
+    "deleted": "Goal deleted"
+  },
+  "horizon": {
+    "year": "This year",
+    "threeYears": "In 3 years",
+    "fiveYears": "In 5 years",
+    "lifetime": "Lifetime"
+  },
+  "goalStatus": {
+    "open": "Open",
+    "reached": "Reached",
+    "dropped": "Dropped"
+  },
+  "steps": {
+    "legend": "First steps",
+    "prompt": "What's the first small thing? Up to five.",
+    "placeholder": "e.g. Ask her which evening works.",
+    "addButton": "Add step",
+    "removeButton": "Remove step",
+    "maxHint": "Five is plenty. Finish one before adding more."
+  },
   "color": {
     "none": "None",
     "red": "Red",
@@ -65,12 +112,17 @@
       "one": "1 role, {{rated}} rated",
       "other": "{{count}} roles, {{rated}} rated"
     },
-    "averageText": "Average {{avg}} of {{max}}"
+    "averageText": "Average {{avg}} of {{max}}",
+    "goalsText": {
+      "one": "1 goal, {{withStep}} with a first step",
+      "other": "{{count}} goals, {{withStep}} with a first step"
+    }
   },
   "checklist": {
     "role": "Add a role",
     "rated": "Say how it's going (1–5)",
-    "note": "Write whether this is the picture you want"
+    "note": "Write whether this is the picture you want",
+    "goal": "Give one role a goal with a first step"
   },
   "guide": {
     "inShort": "You'll list the roles you play and rate how each is going. Ten minutes. The list feeds your mission statement and, later, your weekly plan. Sharpen the Saw, looking after yourself, is added for you.",
@@ -79,7 +131,7 @@
       "Add a line on what the role means to you. A colour helps you spot it later.",
       "Rate how it's going, 1 to 5. Be honest; nobody else sees it.",
       "Write whether this is the picture you want, and what's missing if not.",
-      "Repeat until the list feels like your life. Seven or fewer is easier to live by.",
+      "For your most important roles, add a goal: what you want to reach, why, and how you'll know. Give it one first step.",
       "Tap \"Mark done\" once three roles are rated and one has a note."
     ],
     "examples": [
@@ -88,22 +140,90 @@
         "title": "Dad",
         "done": true,
         "fields": [
-          { "label": "What it's about", "value": "Being around, not just providing." },
-          { "label": "How it's going", "value": "3 of 5" },
-          { "label": "The picture", "value": "Not yet. I'm there for homework, not for fun." }
+          {
+            "label": "What it's about",
+            "value": "Being around, not just providing."
+          },
+          {
+            "label": "How it's going",
+            "value": "3 of 5"
+          },
+          {
+            "label": "The picture",
+            "value": "Not yet. I'm there for homework, not for fun."
+          }
         ],
-        "sample": { "name": "Dad", "description": "Being around, not just providing." }
+        "sample": {
+          "name": "Dad",
+          "description": "Being around, not just providing."
+        }
       },
       {
         "kind": "card",
         "title": "Friend",
         "done": true,
         "fields": [
-          { "label": "What it's about", "value": "The one who calls first." },
-          { "label": "How it's going", "value": "4 of 5" },
-          { "label": "The picture", "value": "Mostly. I've lost touch with two people I miss." }
+          {
+            "label": "What it's about",
+            "value": "The one who calls first."
+          },
+          {
+            "label": "How it's going",
+            "value": "4 of 5"
+          },
+          {
+            "label": "The picture",
+            "value": "Mostly. I've lost touch with two people I miss."
+          }
         ],
-        "sample": { "name": "Friend", "description": "The one who calls first." }
+        "sample": {
+          "name": "Friend",
+          "description": "The one who calls first."
+        }
+      },
+      {
+        "kind": "card",
+        "title": "One evening a week that's just us, phones away.",
+        "subtitle": "Dad · This year",
+        "done": false,
+        "fields": [
+          {
+            "label": "Why it matters",
+            "value": "She's twelve. In a few years she won't want to."
+          },
+          {
+            "label": "How you'll know",
+            "value": "She suggests what we do, not me."
+          },
+          {
+            "label": "When",
+            "value": "This year"
+          },
+          {
+            "label": "First steps",
+            "value": "Ask her which evening works. (done) · Put it in the calendar for a month."
+          }
+        ],
+        "sample": {
+          "role": {
+            "name": "Dad",
+            "description": "Being around, not just providing."
+          },
+          "what": "One evening a week that's just us, phones away.",
+          "why": "She's twelve. In a few years she won't want to.",
+          "how": "She suggests what we do, not me.",
+          "horizon": "year",
+          "steps": [
+            {
+              "text": "Ask her which evening works.",
+              "done": false
+            },
+            {
+              "text": "Put it in the calendar for a month.",
+              "done": false
+            }
+          ]
+        }
       }
     ],
     "afterwards": "Look at the lowest rating. That's where your week probably needs a goal. Come back after your mission statement and re-rate; the numbers move once the roles get real attention."

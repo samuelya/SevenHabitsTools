@@ -3,14 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
+import { registerRoleGoalsModel } from './role-goals.model';
+import { RoleGoalsService } from './role-goals.service';
 import { registerRolesModel } from './roles.model';
 import { RolesService } from './roles.service';
 
+let clockNow = new Date('2026-03-10T09:00:00');
+
 function setUp(isWriter = true): RolesService {
+  clockNow = new Date('2026-03-10T09:00:00');
   registerRolesModel();
+  registerRoleGoalsModel();
   TestBed.configureTestingModule({
     providers: [
-      { provide: CLOCK, useValue: { now: () => new Date('2026-03-10T09:00:00') } },
+      { provide: CLOCK, useValue: { now: () => clockNow } },
       {
         provide: WRITER_LOCK,
         useValue: { role: signal(isWriter ? 'writer' : 'reader'), isWriter: signal(isWriter) },
@@ -112,5 +118,44 @@ describe('RolesService', () => {
     expect(service.add({ name: 'Dad' })).toBeNull();
     expect(service.ensureBuiltIn()).toBeNull();
     expect(service.all()).toEqual([]);
+  });
+
+  it("remove() takes the role's goals with it and restore() brings back only those (#291)", () => {
+    const service = setUp();
+    const goals = TestBed.inject(RoleGoalsService);
+    const dad = service.add({ name: 'Dad' })!;
+    const friend = service.add({ name: 'Friend' })!;
+    const evening = goals.add({ roleId: dad, what: 'One evening a week' })!;
+    const earlier = goals.add({ roleId: dad, what: 'Deleted on its own' })!;
+    const call = goals.add({ roleId: friend, what: 'Call first' })!;
+    goals.remove(earlier);
+    clockNow = new Date('2026-03-10T10:00:00');
+
+    expect(service.remove(dad)).toBe(true);
+    expect(goals.forRole(dad)).toEqual([]);
+    expect(goals.forRole(friend).map((goal) => goal.id)).toEqual([call]);
+
+    expect(service.restore(dad)).toBe(true);
+    expect(goals.forRole(dad).map((goal) => goal.id)).toEqual([evening]);
+  });
+
+  it('a refused delete of the built-in leaves its goals alone', () => {
+    const service = setUp();
+    const saw = service.ensureBuiltIn()!;
+    const goals = TestBed.inject(RoleGoalsService);
+    goals.add({ roleId: saw, what: 'Walk daily' });
+    service.remove(saw);
+    expect(goals.forRole(saw)).toHaveLength(1);
+  });
+
+  it('deleting a role with no goals writes no goals slice', () => {
+    const service = setUp();
+    const dad = service.add({ name: 'Dad' })!;
+    service.remove(dad);
+    service.restore(dad);
+    const doc = TestBed.inject(DocumentStore).document() as unknown as {
+      habits?: { h2?: { roleGoals?: unknown } };
+    };
+    expect(doc.habits?.h2?.roleGoals).toBeUndefined();
   });
 });

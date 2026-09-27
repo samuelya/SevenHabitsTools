@@ -2,12 +2,14 @@ import { Injectable, Signal, computed, inject } from '@angular/core';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { CLOCK } from '../../core/time/clock';
+import { RoleGoalsService } from './role-goals.service';
 import {
   RoleDirection,
   RoleEdit,
   activeRoles,
   builtInRole,
   editRole,
+  findRole,
   insertRole,
   removeRole,
   reorder,
@@ -29,12 +31,14 @@ export interface NewRole {
  * The only writer of `shared.roles` (issue #59): the Roles page, the mission (#61), the weekly
  * planner (#71) and renewal (#92/#93) all go through it. Every write returns whether it applied
  * (`false` in a read-only tab, `FeatureStore.update()`); refused edits (renaming, archiving or
- * deleting the built-in) leave the list unchanged.
+ * deleting the built-in) leave the list unchanged. Deleting a role takes its goals with it, and undo
+ * brings them back (issue #291).
  */
 @Injectable({ providedIn: 'root' })
 export class RolesService {
   private readonly clock = inject(CLOCK);
   private readonly store = featureStore<readonly Role[]>(ROLES_MODEL_KEY);
+  private readonly goals = inject(RoleGoalsService);
 
   /** Every live role, archived and samples included, by `order`. */
   readonly all: Signal<readonly Role[]> = computed(() => sortedRoles(this.store.value()));
@@ -111,13 +115,28 @@ export class RolesService {
     return this.store.update((list) => setArchived(list, id, false, this.clock.now()));
   }
 
-  /** Soft delete; refused for the built-in. */
+  /** Soft delete, with the role's goals at the same time (issue #291); refused for the built-in. */
   remove(id: string): boolean {
-    return this.store.update((list) => removeRole(list, id, this.clock.now()));
+    const now = this.clock.now();
+    const applied = this.store.update((list) => removeRole(list, id, now));
+    if (applied && this.deletedAt(id) === now.toISOString()) {
+      this.goals.removeForRole(id, now);
+    }
+    return applied;
   }
 
-  /** Undoes `remove()` (the page's delete-with-undo snackbar). */
+  /** Undoes `remove()` (the page's delete-with-undo snackbar), the goals deleted with it included. */
   restore(id: string): boolean {
-    return this.store.update((list) => restoreRole(list, id, this.clock.now()));
+    const deletedAt = this.deletedAt(id);
+    const applied = this.store.update((list) => restoreRole(list, id, this.clock.now()));
+    if (applied && deletedAt !== undefined && findRole(this.store.value(), id) !== null) {
+      this.goals.restoreForRole(id, deletedAt);
+    }
+    return applied;
+  }
+
+  /** When the role `id` was deleted; `undefined` while live or unknown. */
+  private deletedAt(id: string): string | undefined {
+    return this.store.value().find((role) => role.id === id)?.deletedAt;
   }
 }

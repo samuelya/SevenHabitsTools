@@ -25,4 +25,5 @@ import './shared/exercise-kit/exercise-kit.model';
 // Shared entities (`shared.*`): registered here, eagerly, not by the features that use them.
 import './shared/commitments/commitments.model';
 import './shared/roles/roles.model';
+import './shared/roles/role-goals.model';
 import './shared/mission/mission.model';

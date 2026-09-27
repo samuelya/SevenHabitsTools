@@ -13,6 +13,8 @@ import {
   ExerciseListItem,
 } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
+import { hasStep } from '../../shared/roles/role-goals.logic';
+import { RoleGoal } from '../../shared/roles/role-goals.model';
 import {
   BuiltInRoleLabels,
   activeRoles,
@@ -44,6 +46,13 @@ export function countedRoles(list: readonly Role[]): Role[] {
   return activeRoles(list).filter(isUserRole);
 }
 
+/** Goals the user made (live, not an untouched guide example) for a live, unarchived role: what the
+ * summary and the gate count (issue #291). An archived role's goals stay stored but don't count. */
+export function countedGoals(roles: readonly Role[], goals: readonly RoleGoal[]): RoleGoal[] {
+  const active = new Set(activeRoles(roles).map((role) => role.id));
+  return goals.filter((goal) => isCounted(goal) && active.has(goal.roleId));
+}
+
 /** The hub's status text: "5 roles", `null` with none. */
 export function hubStatus(list: readonly Role[]): ExerciseHubStatus | null {
   const count = countedRoles(list).length;
@@ -53,34 +62,39 @@ export function hubStatus(list: readonly Role[]): ExerciseHubStatus | null {
 /** How many rated roles "Mark done" needs (issue #59). */
 export const RATED_TO_FINISH = 3;
 
-/** The three gate items (issue #59), in the order the user does them. */
-export const CHECKLIST_KEYS = ['role', 'rated', 'note'] as const;
+/** The gate items (issues #59, #291), in the order the user does them. */
+export const CHECKLIST_KEYS = ['role', 'rated', 'note', 'goal'] as const;
 export type RolesChecklistKey = (typeof CHECKLIST_KEYS)[number];
 
 const hasNote = (role: Role): boolean => (role.note ?? '').trim() !== '';
 
-/** The gate is over the whole list, not one item: a role exists, `RATED_TO_FINISH` are rated and
- * one has a note. Both `isComplete()` and `doneChecklist()` reduce this one map, so the button and
- * its checklist never disagree. */
-function checklistMet(list: readonly Role[]): ChecklistMet<RolesChecklistKey> {
+/** The gate is over the whole list, not one item: a role exists, `RATED_TO_FINISH` are rated, one
+ * has a note and one counted goal has a first step. Both `isComplete()` and `doneChecklist()`
+ * reduce this one map, so the button and its checklist never disagree. */
+function checklistMet(
+  list: readonly Role[],
+  goals: readonly RoleGoal[],
+): ChecklistMet<RolesChecklistKey> {
   const counted = countedRoles(list);
   return {
     role: counted.length > 0,
     rated: counted.filter((role) => isRating(role.satisfaction)).length >= RATED_TO_FINISH,
     note: counted.some(hasNote),
+    goal: countedGoals(list, goals).some(hasStep),
   };
 }
 
-export function isComplete(list: readonly Role[]): boolean {
-  const met = checklistMet(list);
+export function isComplete(list: readonly Role[], goals: readonly RoleGoal[]): boolean {
+  const met = checklistMet(list, goals);
   return CHECKLIST_KEYS.every((key) => met[key]);
 }
 
 export function doneChecklist(
   list: readonly Role[],
+  goals: readonly RoleGoal[],
   labels: ChecklistLabels<RolesChecklistKey>,
 ): readonly DoneChecklistItem[] {
-  return checklistItems(CHECKLIST_KEYS, checklistMet(list), labels);
+  return checklistItems(CHECKLIST_KEYS, checklistMet(list, goals), labels);
 }
 
 export function checklistLabelsFrom(
@@ -94,22 +108,27 @@ export function checklistLoaded(labels: ChecklistLabels<RolesChecklistKey>): boo
 }
 
 /** "Your picture": `null` until a counted role exists, so the card never shows a zero. `average`
- * is `null` until one is rated. */
+ * is `null` until one is rated; the goals line shows once `goals` is non-zero. */
 export interface RolesSummary {
   readonly count: number;
   readonly rated: number;
   readonly average: number | null;
+  readonly goals: number;
+  readonly goalsWithStep: number;
 }
 
-export function summarize(list: readonly Role[]): RolesSummary | null {
+export function summarize(list: readonly Role[], goals: readonly RoleGoal[]): RolesSummary | null {
   const counted = countedRoles(list);
   if (counted.length === 0) {
     return null;
   }
+  const goalsCounted = countedGoals(list, goals);
   return {
     count: counted.length,
     rated: counted.filter((role) => isRating(role.satisfaction)).length,
     average: averageSatisfaction(counted),
+    goals: goalsCounted.length,
+    goalsWithStep: goalsCounted.filter(hasStep).length,
   };
 }
 
@@ -141,6 +160,8 @@ export interface RoleLabels {
   readonly ratingTemplate: string;
   /** Formats a number in the active numerals. */
   readonly formatNumber: (value: number) => string;
+  /** "3 goals", plural-correct, in the active numerals (issue #291). */
+  readonly goalCount: (count: number) => string;
 }
 
 /** "3 of 5", both numbers in the active numerals, or `''` when unrated or before the template has
@@ -153,12 +174,14 @@ export function ratingLine(role: Pick<Role, 'satisfaction'>, labels: RoleLabels)
     : '';
 }
 
-/** A role as an `ExerciseList` row: its name (or the built-in label) as title; "3 of 5" and the
- * description as subtitle; a colour dot; a lock for the built-in, which can't be deleted. */
-export function toListItem(role: Role, labels: RoleLabels): ExerciseListItem {
+/** A role as an `ExerciseList` row: its name (or the built-in label) as title; "3 of 5", the
+ * description and, with at least one live goal, "2 goals" as subtitle; a colour dot; a lock for the
+ * built-in, which can't be deleted. */
+export function toListItem(role: Role, labels: RoleLabels, goalCount = 0): ExerciseListItem {
   const chips: ExerciseListChip[] = role.sample ? [{ label: labels.example }] : [];
   const builtIn = isBuiltIn(role);
-  const subtitle = [ratingLine(role, labels), role.description?.trim() ?? '']
+  const goals = goalCount > 0 ? labels.goalCount(goalCount) : '';
+  const subtitle = [ratingLine(role, labels), role.description?.trim() ?? '', goals]
     .filter((part) => part !== '')
     .join(' · ');
   return {

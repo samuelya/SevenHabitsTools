@@ -91,7 +91,20 @@
         (moved)="onMoved(role.id, $event)"
         (archivedChange)="onArchivedChange(role.id, $event)"
         (deleted)="onItemDeleted(role.id)"
-      />
+      >
+        @if (!draft.unsaved()) {
+          <app-role-goals-section
+            goalsSlot
+            [roleId]="role.id"
+            [goals]="displayGoals()"
+            [expandedId]="expandedGoalId()"
+            [unsavedId]="unsavedGoalId()"
+            (added)="onGoalAdd()"
+            (expandedChange)="onGoalExpanded($event)"
+            (goalAction)="onGoalAction($event)"
+          />
+        }
+      </app-roles-item-form>
     }
   </div>
 
