@@ -1,17 +1,16 @@
 <mat-stepper
   class="guided-stepper"
-  [linear]="linear()"
+  [linear]="false"
   [orientation]="orientation()"
   [selectedIndex]="selectedIndex()"
   (selectedIndexChange)="selectedIndexChange.emit($event)"
 >
   @for (step of steps(); track step.key; let i = $index) {
-    <!-- No `[completed]` binding here on purpose: the constructor's `effect` sets completion
-         imperatively, only on the matching `MatStep` instance — see the class doc comment.
-         Always exactly one `<mat-step>` per step, so `step.done` changing never swaps a template
+    <!-- Always exactly one `<mat-step>` per step, so `step.done` changing never swaps a template
          branch and destroys/recreates the projected content the user may be typing into. -->
     <mat-step
       [label]="step.label"
+      [completed]="step.done === true"
       [aria-label]="
         ('exerciseKit.stepper.step' | transloco: { number: (i + 1 | appNumber) }) +
         ': ' +

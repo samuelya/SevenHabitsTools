@@ -127,6 +127,86 @@ describe('MissionPage', () => {
     expect(host.textContent).toContain('In this role I want to be');
   });
 
+  it('keeps a role row on screen until the step is left, even once archived and cleared', async () => {
+    const { fixture, host } = await setUp();
+    const roles = TestBed.inject(RolesService);
+    const id = roles.add({ name: 'Coach' })!;
+    mission().setRoleLine(id, 'show up');
+    fixture.detectChanges();
+    const names = () =>
+      [...host.querySelectorAll('.role-name')].map((name) => name.textContent?.trim());
+
+    roles.archive(id);
+    mission().setRoleLine(id, '');
+    fixture.detectChanges();
+    expect(names()).toContain('Coach');
+
+    // Retyping on the kept row writes the line again.
+    mission().setRoleLine(id, 'show up again');
+    fixture.detectChanges();
+    expect(names()).toContain('Coach');
+    mission().setRoleLine(id, '');
+    fixture.detectChanges();
+
+    (host.querySelectorAll('mat-step-header')[3] as HTMLElement).click();
+    fixture.detectChanges();
+    expect(names()).not.toContain('Coach');
+  });
+
+  it('counts the draft words on every keystroke, before the autosave', async () => {
+    const { fixture, host } = await setUp();
+    const field = host.querySelector('.draft-editor textarea') as HTMLTextAreaElement;
+    field.value = 'one two three';
+    field.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    expect(host.querySelector('.draft-editor .word-count')?.textContent?.trim()).toBe('3 words');
+    expect(mission().record()).toBeNull();
+  });
+
+  it('says when the collection filters match nothing and clears them', async () => {
+    const { fixture, host } = await setUp({
+      inspirations: [
+        rec('i1', { text: 'Call first.', kind: 'idea', tags: ['friends'] }),
+        rec('i2', { text: 'Be kind.', kind: 'saying', tags: ['work'] }),
+      ],
+    });
+    const panel = host.querySelector('app-mission-collection') as HTMLElement;
+    const chip = (text: string) =>
+      [...panel.querySelectorAll('mat-chip-option')]
+        .find((option) => option.textContent?.trim() === text)!
+        .querySelector('button') as HTMLButtonElement;
+
+    chip('An idea to try').click();
+    fixture.detectChanges();
+    chip('work').click();
+    fixture.detectChanges();
+    expect(panel.textContent).toContain('Nothing in your collection matches these filters.');
+    expect(panel.querySelectorAll('.item')).toHaveLength(0);
+
+    buttonsWithText(panel, 'Clear filters')[0].click();
+    fixture.detectChanges();
+    expect(panel.querySelectorAll('.item')).toHaveLength(2);
+    expect(panel.textContent).not.toContain('Nothing in your collection matches');
+  });
+
+  it('keeps "All" selected when it is tapped again', async () => {
+    const { fixture, host } = await setUp({
+      inspirations: [
+        rec('i1', { text: 'Call first.', kind: 'idea' }),
+        rec('i2', { text: 'Be kind.', kind: 'saying' }),
+      ],
+    });
+    const all = [...host.querySelectorAll('app-mission-collection mat-chip-option')].find(
+      (option) => option.textContent?.trim() === 'All',
+    )!;
+    (all.querySelector('button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(all.querySelector('[role="option"]')?.getAttribute('aria-selected')).toBe('true');
+    expect(host.querySelectorAll('app-mission-collection .item')).toHaveLength(2);
+  });
+
   it('keeps a typed line that the full list refuses and shows the hint', async () => {
     const { fixture, host } = await setUp();
     for (let i = 0; i < MAX_LINES; i++) {

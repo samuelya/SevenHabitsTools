@@ -1,4 +1,5 @@
 {
+  "suggestionsFrom": "From {{source}}",
   "prompt": {
     "title": "Write your personal mission statement",
     "text": "Put into words what you want to be, what you want to do, and what you stand on. Start from what you've already written here: your values, your principles, your roles. It takes a few passes; the first one is enough for today.",
@@ -9,7 +10,6 @@
   "step1": {
     "stepTitle": "Values",
     "prompt": "Which of the values you heard in your long views belong at the heart of this? Tap to keep them, or add your own.",
-    "suggestionsLabel": "From Your long view",
     "emptyText": "No values yet. Do a long view first, or type what you already know matters.",
     "ownLabel": "Your own",
     "ownPlaceholder": "e.g. presence"
@@ -17,7 +17,6 @@
   "step2": {
     "stepTitle": "Principles",
     "prompt": "Which principles do you want your choices to rest on? Keep the ones you picked in Your centre, or add others.",
-    "suggestionsLabel": "From Your centre",
     "emptyText": "No principles yet. Assess your centre first, or type the ones you want.",
     "ownLabel": "Your own",
     "ownPlaceholder": "e.g. keeping my word"
@@ -62,6 +61,8 @@
     "filterAll": "All",
     "kindLabel": "Show",
     "tagLabel": "Tag",
+    "noMatchText": "Nothing in your collection matches these filters.",
+    "clearFiltersButton": "Clear filters",
     "kind": {
       "saying": "Something I heard",
       "thought": "My own thought",

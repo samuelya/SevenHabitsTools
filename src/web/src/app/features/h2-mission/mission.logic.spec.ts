@@ -5,6 +5,7 @@ import {
   filterCollection,
   ownLines,
   roleLineRows,
+  suggestionGroups,
   suggestionRows,
 } from './mission.logic';
 
@@ -25,6 +26,24 @@ describe('suggestions', () => {
     expect(suggestionRows(items, ['PRESENCE'])).toEqual([
       { text: 'Presence', pressed: true },
       { text: 'Time', pressed: false },
+    ]);
+  });
+
+  it('groups suggestions by source, without repeating a text or keeping an empty group', () => {
+    const groups = suggestionGroups(
+      [
+        { sourceExerciseId: 'h2-long-view', items: [item('a', { text: 'Time' })] },
+        { sourceExerciseId: 'h2-other', items: [item('b', { text: 'time' })] },
+        {
+          sourceExerciseId: 'h2-third',
+          items: [item('c', { text: 'Calm' }), item('d', { text: 'TIME' })],
+        },
+      ],
+      ['calm'],
+    );
+    expect(groups).toEqual([
+      { sourceExerciseId: 'h2-long-view', rows: [{ text: 'Time', pressed: false }] },
+      { sourceExerciseId: 'h2-third', rows: [{ text: 'Calm', pressed: true }] },
     ]);
   });
 
@@ -57,6 +76,25 @@ describe('roleLineRows', () => {
       { roleId: 'gone', label: null, text: 'kept my word' },
       { roleId: 'archived', label: 'Coach', text: 'showed up' },
     ]);
+  });
+
+  it('keeps a shown row in place once its role is archived and its line cleared', () => {
+    const labelOf = (id: string) => (id === 'r1' ? 'Parent' : null);
+    // r1 was archived and its line cleared while on screen; r3 is new.
+    const rows = roleLineRows([...active.slice(1), { id: 'r3', label: 'Coach' }], [], labelOf, [
+      'r1',
+      'r2',
+    ]);
+    expect(rows).toEqual([
+      { roleId: 'r1', label: 'Parent', text: '' },
+      { roleId: 'r2', label: 'Friend', text: '' },
+      { roleId: 'r3', label: 'Coach', text: '' },
+    ]);
+  });
+
+  it('labels a shown row whose role was deleted as deleted, and lets it be retyped', () => {
+    const rows = roleLineRows([], [{ roleId: 'gone', text: 'again' }], () => null, ['gone']);
+    expect(rows).toEqual([{ roleId: 'gone', label: null, text: 'again' }]);
   });
 
   it('is empty with no roles and no lines', () => {

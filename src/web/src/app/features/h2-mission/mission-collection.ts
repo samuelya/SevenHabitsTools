@@ -73,13 +73,24 @@ export class MissionCollection {
     );
   }
 
+  protected clearFilters(): void {
+    this.kind.set(null);
+    this.tag.set(null);
+  }
+
   protected toggle(): void {
     this.expanded.update((expanded) => !expanded);
   }
 
+  /** Tapping the selected chip ("All" included) deselects it in the listbox; that is a
+   * re-selection, not a change: the chip is selected again and the filter stays (#292 finding 4). */
   protected onKindChange(event: MatChipListboxChange): void {
     const value = event.value as CollectionKind | typeof ALL | undefined;
-    this.kind.set(value ? value : null);
+    if (value === undefined) {
+      event.source.value = this.kind() ?? ALL;
+      return;
+    }
+    this.kind.set(value === ALL ? null : value);
   }
 
   protected onTagChange(event: MatChipListboxChange): void {

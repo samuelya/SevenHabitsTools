@@ -4,6 +4,7 @@ import {
   ElementRef,
   Injector,
   OnDestroy,
+  Signal,
   afterNextRender,
   computed,
   inject,
@@ -81,6 +82,9 @@ export class ReflectionEditor implements OnDestroy {
    * but keeps its own writes in between — the caret-adjacent draft while the user is still typing,
    * ahead of the debounced `valueChange` this same edit will eventually emit. */
   protected readonly draft = linkedSignal(() => this.value());
+  /** The field's text as typed, on every keystroke, ahead of the debounced `valueChange`: for a
+   * caller that shows something live beside the field (issue #61's word count). */
+  readonly liveText: Signal<string> = this.draft.asReadonly();
   protected readonly characterCount = computed(() => this.draft().length);
   /** `null` until the first keystroke of this session; `'saving'` while the debounce is pending,
    * `'saved'` once the caller confirms the write landed (`reportSaveOutcome`). Only rendered when

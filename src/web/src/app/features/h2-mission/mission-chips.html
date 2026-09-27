@@ -3,12 +3,15 @@
     {{ 'h2Mission.' + ns() + '.prompt' | transloco }}
   </p>
 
-  @if (suggestions().length) {
-    <p class="hint" [id]="ns() + '-suggestions'">
-      {{ 'h2Mission.' + ns() + '.suggestionsLabel' | transloco }}
+  @for (group of suggestions(); track group.sourceExerciseId; let g = $index) {
+    <p class="hint" [id]="ns() + '-suggestions-' + g">
+      {{
+        'h2Mission.suggestionsFrom'
+          | transloco: { source: ('titles.' + group.sourceExerciseId | transloco) }
+      }}
     </p>
-    <div class="suggestions" role="group" [attr.aria-labelledby]="ns() + '-suggestions'">
-      @for (row of suggestions(); track row.text) {
+    <div class="suggestions" role="group" [attr.aria-labelledby]="ns() + '-suggestions-' + g">
+      @for (row of group.rows; track row.text) {
         <button
           mat-stroked-button
           type="button"
@@ -24,7 +27,7 @@
         </button>
       }
     </div>
-  } @else {
+  } @empty {
     <p class="empty">{{ 'h2Mission.' + ns() + '.emptyText' | transloco }}</p>
   }
 

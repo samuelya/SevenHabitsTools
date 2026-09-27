@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -49,7 +50,7 @@ import {
   sameLine,
   wordCount,
 } from '../../shared/mission/mission.logic';
-import { REVIEW_KEYS, ReviewKey } from '../../shared/mission/mission.model';
+import { MissionRoleLine, REVIEW_KEYS, ReviewKey } from '../../shared/mission/mission.model';
 import { MissionService } from '../../shared/mission/mission.service';
 import { roleLabel } from '../../shared/roles/roles.logic';
 import { RolesService } from '../../shared/roles/roles.service';
@@ -57,7 +58,7 @@ import { MissionCollection } from './mission-collection';
 import { LineAdd } from './mission-line-add';
 import { MissionLines } from './mission-lines';
 import { MissionChips } from './mission-chips';
-import { ownLines, roleLineRows, suggestionRows } from './mission.logic';
+import { RoleLineRow, ownLines, roleLineRows, suggestionGroups } from './mission.logic';
 import { H2_MISSION_ID } from './mission.model';
 
 /** `[0]` is the `appGuidedStep` key, `[1]` the i18n namespace of the step's strings. */
@@ -125,39 +126,70 @@ export class MissionPage {
   );
 
   // Each kind's sources, read once here (an injection context), never inside a `computed`.
-  private readonly valueItems = this.inputItems('values');
-  private readonly principleItems = this.inputItems('principles');
+  private readonly valueSources = this.inputSources('values');
+  private readonly principleSources = this.inputSources('principles');
   protected readonly inspirationItems = this.inputItems('inspiration');
 
   protected readonly valueSuggestions = computed(() =>
-    suggestionRows(this.valueItems(), this.record()?.values ?? []),
+    suggestionGroups(this.valueSources(), this.record()?.values ?? []),
   );
   protected readonly ownValues = computed(() =>
-    ownLines(this.record()?.values ?? [], this.valueSuggestions()),
+    ownLines(
+      this.record()?.values ?? [],
+      this.valueSuggestions().flatMap((group) => group.rows),
+    ),
   );
   protected readonly principleSuggestions = computed(() =>
-    suggestionRows(this.principleItems(), this.record()?.principles ?? []),
+    suggestionGroups(this.principleSources(), this.record()?.principles ?? []),
   );
   protected readonly ownPrinciples = computed(() =>
-    ownLines(this.record()?.principles ?? [], this.principleSuggestions()),
+    ownLines(
+      this.record()?.principles ?? [],
+      this.principleSuggestions().flatMap((group) => group.rows),
+    ),
   );
 
   // Labels: `translateSignal` with the scope named, keys relative to it (playbook §6).
   private readonly renewalLabel = translateSignal('roles.renewal', undefined, 'exercise-kit');
-  protected readonly roleRows = computed(() => {
+  private readonly activeRoles = computed(() => {
     const builtIn = { renewal: this.renewalLabel() ?? '' };
-    const active = this.roles
+    return this.roles
       .active()
       .filter((role) => !role.sample)
       .map((role) => ({ id: role.id, label: roleLabel(role, builtIn) }));
-    return roleLineRows(active, this.record()?.roleLines ?? [], (roleId) => {
-      const role = this.roles.byId(roleId);
-      return role ? roleLabel(role, builtIn) : null;
-    });
+  });
+  /** Step 3's rows. While the user stays on the step, a row once shown keeps its place even if
+   * its role is archived or deleted or its line cleared (`roleLineRows`' `shown`); leaving the
+   * step (`selectedIndex` changes) drops the rows that no longer qualify. */
+  protected readonly roleRows = linkedSignal<
+    {
+      readonly step: number;
+      readonly active: readonly { readonly id: string; readonly label: string }[];
+      readonly lines: readonly MissionRoleLine[];
+    },
+    readonly RoleLineRow[]
+  >({
+    source: () => ({
+      step: this.selectedIndex(),
+      active: this.activeRoles(),
+      lines: this.record()?.roleLines ?? [],
+    }),
+    computation: (source, previous) =>
+      roleLineRows(
+        source.active,
+        source.lines,
+        (roleId) => this.roleLabelOf(roleId),
+        previous?.source.step === source.step ? previous.value.map((row) => row.roleId) : [],
+      ),
   });
 
   protected readonly draft = computed(() => this.record()?.draft ?? '');
+  /** The stored draft's words: step 6's preview and "Copy statement" read the record. */
   protected readonly words = computed(() => wordCount(this.draft()));
+  /** The editor's words on every keystroke, ahead of the autosave debounce (step 5). */
+  protected readonly liveWords = computed(() =>
+    wordCount(this.draftEditor()?.liveText() ?? this.draft()),
+  );
   /** The collection item "Use this" last appended, shown with "Added to the end of your draft." */
   protected readonly usedId = signal<string | null>(null);
   private readonly usedText = translateSignal('panel.usedText', undefined, H2_MISSION_ID);
@@ -178,8 +210,7 @@ export class MissionPage {
     return STEPS.map(([key], index) => ({
       key,
       label: this.stepLabels()[index] ?? '',
-      // `true` or `undefined`, never `false` (`GuidedStepper`'s doc comment).
-      done: done[index] ? true : undefined,
+      done: done[index],
     }));
   });
 
@@ -268,8 +299,27 @@ export class MissionPage {
     }
   }
 
+  private roleLabelOf(roleId: string): string | null {
+    const role = this.roles.byId(roleId);
+    return role ? roleLabel(role, { renewal: this.renewalLabel() ?? '' }) : null;
+  }
+
   private inputItems(kind: MissionInputKind) {
-    const sources = getMissionInputs(kind).map((entry) => entry.read());
-    return computed<readonly MissionInputItem[]>(() => sources.flatMap((items) => items()));
+    const sources = this.inputSources(kind);
+    return computed<readonly MissionInputItem[]>(() => sources().flatMap((source) => source.items));
+  }
+
+  /** Each registered source of `kind` with its items, so a suggestion can name its source. */
+  private inputSources(kind: MissionInputKind) {
+    const sources = getMissionInputs(kind).map((entry) => ({
+      sourceExerciseId: entry.sourceExerciseId,
+      items: entry.read(),
+    }));
+    return computed(() =>
+      sources.map((source) => ({
+        sourceExerciseId: source.sourceExerciseId,
+        items: source.items(),
+      })),
+    );
   }
 }

@@ -54,6 +54,12 @@
           </mat-chip-listbox>
         </div>
       }
+      @if (filtered().length === 0) {
+        <p class="empty">{{ 'h2Mission.panel.noMatchText' | transloco }}</p>
+        <button mat-stroked-button type="button" (click)="clearFilters()">
+          {{ 'h2Mission.panel.clearFiltersButton' | transloco }}
+        </button>
+      }
       <ul class="items">
         @for (item of filtered(); track item.id) {
           <li #row class="item">

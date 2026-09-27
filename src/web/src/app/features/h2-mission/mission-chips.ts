@@ -6,11 +6,12 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { LineAdd, clearsInput } from './mission-line-add';
-import { OwnLine, SuggestionRow } from './mission.logic';
+import { OwnLine, SuggestionGroup } from './mission.logic';
 
 /**
- * Steps 1 and 2 (issue #61): a source's suggestions as toggle buttons (`aria-pressed`), then the
- * user's own words as a chip grid. Presentational: `ns` picks the step's strings (`step1`/`step2`),
+ * Steps 1 and 2 (issue #61): each source's suggestions as toggle buttons (`aria-pressed`), in a
+ * group labelled "From <source>" (the source's root `titles.<sourceExerciseId>`, so a new mission
+ * input needs no change here), then the user's own words as a chip grid. Presentational: `ns` picks the step's strings (`step1`/`step2`),
  * and every change goes to the page as an output.
  */
 @Component({
@@ -22,7 +23,7 @@ import { OwnLine, SuggestionRow } from './mission.logic';
 })
 export class MissionChips {
   readonly ns = input.required<'step1' | 'step2'>();
-  readonly suggestions = input.required<readonly SuggestionRow[]>();
+  readonly suggestions = input.required<readonly SuggestionGroup[]>();
   readonly own = input.required<readonly OwnLine[]>();
   readonly toggled = output<string>();
   readonly added = output<LineAdd>();

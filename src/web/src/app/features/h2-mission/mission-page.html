@@ -101,7 +101,9 @@
               [sessionStatus]="true"
               (valueChange)="onDraftChanged($event, draftEditor)"
             />
-            <p class="word-count">{{ 'h2Mission.step5.wordCountText' | appPlural: words() }}</p>
+            <p class="word-count">
+              {{ 'h2Mission.step5.wordCountText' | appPlural: liveWords() }}
+            </p>
           </div>
           <app-mission-collection
             class="draft-panel"

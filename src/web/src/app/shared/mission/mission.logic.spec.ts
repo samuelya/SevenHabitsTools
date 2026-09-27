@@ -84,10 +84,15 @@ describe('editMission', () => {
   it('creates the record on the first edit worth saving, never on an empty one', () => {
     expect(editMission(null, { draft: '   ' }, NOW)).toBeNull();
     expect(editMission(null, { values: [] }, NOW)).toBeNull();
-    expect(editMission(null, { checklist: { roles: false } }, NOW)).toBeNull();
     const created = editMission(null, { values: ['time'] }, NOW);
     expect(created).toMatchObject({ values: ['time'], draft: '', versions: [], checklist: {} });
     expect(created?.createdAt).toBe(NOW.toISOString());
+  });
+
+  it('creates the record on a "No" checklist answer (#298 finding 4)', () => {
+    expect(editMission(null, { checklist: { roles: false } }, NOW)).toMatchObject({
+      checklist: { roles: false },
+    });
   });
 
   it('returns the same record for a no-op and touches a real change', () => {
@@ -102,6 +107,7 @@ describe('editMission', () => {
     expect(isDraftWorthSaving({})).toBe(false);
     expect(isDraftWorthSaving({ draft: ' ' })).toBe(false);
     expect(isDraftWorthSaving({ roleLines: [] })).toBe(false);
+    expect(isDraftWorthSaving({ checklist: {} })).toBe(false);
     expect(isDraftWorthSaving({ checklist: { roles: true } })).toBe(true);
     expect(isDraftWorthSaving({ toBe: ['calm'] })).toBe(true);
     expect(isDraftWorthSaving({ draft: 'I' })).toBe(true);

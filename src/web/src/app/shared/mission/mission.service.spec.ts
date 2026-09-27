@@ -28,12 +28,17 @@ describe('MissionService', () => {
     const { service, store } = setUp();
     const before = store.document();
     expect(service.edit({ draft: '  ' })).toBe(true);
-    expect(service.setCheck('roles', false)).toBe(true);
     expect(service.setRoleLine('r1', '')).toBe(true);
     expect(store.document()).toBe(before);
     // The empty document's own slot (the model's `defaults()`), untouched: same document above.
     expect(store.select(MISSION_PATH)()).toBeNull();
     expect(service.record()).toBeNull();
+  });
+
+  it('creates the record on a first "No" checklist answer', () => {
+    const { service, store } = setUp();
+    expect(service.setCheck('roles', false)).toBe(true);
+    expect(store.select(MISSION_PATH)()).toMatchObject({ checklist: { roles: false } });
   });
 
   it('creates the record on the first real edit and keeps its id after', () => {

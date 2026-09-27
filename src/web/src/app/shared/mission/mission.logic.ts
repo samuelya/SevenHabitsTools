@@ -75,7 +75,8 @@ export function blankMissionFields(): MissionFields {
 }
 
 /** Whether an edit carries anything the user wrote or chose: the record is created on the first
- * one (a chip added, a line typed), never on an empty keystroke or an unchecked box. */
+ * one (a chip added, a line typed, any checklist answer, "No" included), never on an empty
+ * keystroke. */
 export function isDraftWorthSaving(fields: Partial<MissionFields>): boolean {
   return Object.values(fields).some((value) => {
     if (typeof value === 'string') {
@@ -85,7 +86,7 @@ export function isDraftWorthSaving(fields: Partial<MissionFields>): boolean {
       return value.length > 0;
     }
     if (typeof value === 'object' && value !== null) {
-      return Object.values(value).some((answer) => answer === true);
+      return Object.values(value).some((answer) => typeof answer === 'boolean');
     }
     return false;
   });

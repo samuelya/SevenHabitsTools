@@ -259,6 +259,16 @@ describe('ReflectionEditor', () => {
     expect(emitted).toEqual(['a', 'ab']);
   });
 
+  it('exposes the typed text on every keystroke, ahead of the debounce (issue #61)', () => {
+    const fixture = setUp('Draft', null, true);
+    const editor = fixture.componentInstance;
+    expect(editor.liveText()).toBe('Draft');
+
+    typeInto(fixture, 'Draft two');
+
+    expect(editor.liveText()).toBe('Draft two');
+  });
+
   describe('announce() and scrollToEnd() (issue #61)', () => {
     function status(fixture: { nativeElement: HTMLElement }): string {
       return (fixture.nativeElement.querySelector('.status') as HTMLElement).textContent!.trim();

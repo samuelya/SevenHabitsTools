@@ -23,6 +23,37 @@ export function suggestionRows(
   return rows;
 }
 
+/** One source's suggestion chips, labelled by its root `titles.<sourceExerciseId>` short title. */
+export interface SuggestionGroup {
+  readonly sourceExerciseId: string;
+  readonly rows: readonly SuggestionRow[];
+}
+
+/**
+ * Each source's items as a group of suggestion chips, in registration order. A text an earlier
+ * source already offers isn't repeated, and a source left with no rows is dropped.
+ */
+export function suggestionGroups(
+  sources: readonly {
+    readonly sourceExerciseId: string;
+    readonly items: readonly MissionInputItem[];
+  }[],
+  kept: readonly string[],
+): readonly SuggestionGroup[] {
+  const groups: SuggestionGroup[] = [];
+  const offered: SuggestionRow[] = [];
+  for (const source of sources) {
+    const rows = suggestionRows(source.items, kept).filter(
+      (row) => !offered.some((earlier) => sameLine(earlier.text, row.text)),
+    );
+    offered.push(...rows);
+    if (rows.length > 0) {
+      groups.push({ sourceExerciseId: source.sourceExerciseId, rows });
+    }
+  }
+  return groups;
+}
+
 /** A kept line that no suggestion offers: the user's own words, removable from the chip grid. */
 export interface OwnLine {
   readonly text: string;
@@ -50,25 +81,31 @@ export interface RoleLineRow {
  * One row per active role, in the roles' order, then any written line whose role is no longer
  * active (archived or deleted), so a line is never hidden with its text still in the statement's
  * inputs. `labelOf` returns a role's label, or `null` once it is deleted.
+ *
+ * `shown` is the row ids already on screen during this visit to the step: they keep their place
+ * and stay listed even once their role leaves `active` or their line is cleared, so a row never
+ * disappears or moves under the user mid-edit (#298 finding 3). Rows not yet shown follow them.
  */
 export function roleLineRows(
   active: readonly { readonly id: string; readonly label: string }[],
   lines: readonly MissionRoleLine[],
   labelOf: (roleId: string) => string | null,
+  shown: readonly string[] = [],
 ): readonly RoleLineRow[] {
   const textOf = (roleId: string): string =>
     lines.find((line) => line.roleId === roleId)?.text ?? '';
-  const rows: RoleLineRow[] = active.map((role) => ({
-    roleId: role.id,
-    label: role.label,
-    text: textOf(role.id),
+  const labelFor = (roleId: string): string | null =>
+    active.find((role) => role.id === roleId)?.label ?? labelOf(roleId);
+  const ids = [
+    ...shown,
+    ...active.map((role) => role.id),
+    ...lines.filter((line) => line.text.trim() !== '').map((line) => line.roleId),
+  ];
+  return [...new Set(ids)].map((roleId) => ({
+    roleId,
+    label: labelFor(roleId),
+    text: textOf(roleId),
   }));
-  for (const line of lines) {
-    if (line.text.trim() !== '' && !active.some((role) => role.id === line.roleId)) {
-      rows.push({ roleId: line.roleId, label: labelOf(line.roleId), text: line.text });
-    }
-  }
-  return rows;
 }
 
 /** The kinds an inspiration item can have, in filter order; labelled in this scope
