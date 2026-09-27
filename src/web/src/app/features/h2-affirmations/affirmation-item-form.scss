@@ -1,0 +1,57 @@
+.affirmation-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.field-prompt {
+  margin: 0;
+}
+
+.field-error {
+  color: var(--mat-sys-error, darkred);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 0;
+}
+
+.checks {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.checks legend {
+  font-weight: 600;
+  padding: 0;
+  margin-block-end: 0.25rem;
+}
+
+// The hint sits under the label text, past the checkbox's own 40 px touch area.
+.check-hint {
+  margin: 0;
+  padding-inline-start: 2.5rem;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.incomplete-hint {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant, gray);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button {
+  min-block-size: 44px;
+}

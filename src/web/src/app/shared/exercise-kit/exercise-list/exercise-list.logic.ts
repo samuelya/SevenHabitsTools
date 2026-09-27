@@ -39,6 +39,17 @@ export interface ExerciseListItem {
   /** An on/off button at the row's inline end (issue #63's favourite star), clicked through
    * `ExerciseList`'s `toggleRequested`. */
   readonly toggle?: ExerciseListToggle;
+  /** A one-shot button at the row's inline end (issue #64's "Practise"), clicked through
+   * `ExerciseList`'s `actionRequested`. */
+  readonly action?: ExerciseListAction;
+}
+
+/** A row's action button: `icon` is decorative, `label` its accessible name (name the row's item,
+ * as the bin button does) and `hint` its tooltip, if any. All already translated. */
+export interface ExerciseListAction {
+  readonly icon: string;
+  readonly label: string;
+  readonly hint?: string;
 }
 
 /** A row's on/off button: `pressed` drives `aria-pressed` and which icon shows. `label` is its

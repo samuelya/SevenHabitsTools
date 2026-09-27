@@ -1,0 +1,157 @@
+{
+  "prompt": {
+    "title": "Write it, then see it",
+    "chapterReference": "Habit 2: Begin with the End in Mind",
+    "text": "Pick a moment where you keep reacting in a way you don't like. Write one sentence about the person you are in that moment instead. Then spend a minute a day picturing it, in detail, before it happens.",
+    "glossText": "The book calls the sentence an affirmation and the daily picturing visualization. Together they rewrite the response before the moment arrives.",
+    "whyItMatters": "Deciding to be calmer doesn't survive contact with a slammed door. Having already seen yourself calm, in that hallway, with that face, does. Athletes rehearse this way; so can you."
+  },
+  "list": {
+    "addButton": "Add affirmation",
+    "searchLabel": "Search affirmations",
+    "empty": "Nothing yet. Think of the last time you reacted and wished you hadn't.",
+    "noMatch": "No affirmations match your search.",
+    "deleted": "Affirmation deleted",
+    "undo": "Undo",
+    "example": "Example",
+    "checksText": "{{n}} of {{total}}",
+    "practisedTodayText": "Practised today",
+    "lastPractisedText": "Last practised {{date}}",
+    "practiseButton": "Practise",
+    "practiseAria": "Practise: {{item}}"
+  },
+  "group": {
+    "activeLegend": "Your affirmations",
+    "archivedLegend": "Archived"
+  },
+  "editor": {
+    "newTitle": "New affirmation",
+    "editTitle": "Edit affirmation"
+  },
+  "form": {
+    "textLabel": "The affirmation",
+    "textPrompt": "One sentence: who are you in that moment? Present tense, and what you do rather than what you stop.",
+    "textPlaceholder": "e.g. When my son slams the door, I breathe out, lower my voice and ask what happened.",
+    "textRequired": "Write the affirmation first.",
+    "checksLegend": "The five qualities",
+    "sceneLabel": "The scene",
+    "scenePrompt": "Picture it: where you are, who's there, what you feel.",
+    "scenePlaceholder": "e.g. The hallway after school. His bag on the floor. My shoulders drop and I feel steady.",
+    "archiveButton": "Archive",
+    "unarchiveButton": "Unarchive",
+    "incompleteHint": "Tick all five before you practise.",
+    "delete": "Delete affirmation"
+  },
+  "check": {
+    "personalLabel": "It's about me",
+    "personalHint": "\"I\", not \"people should\".",
+    "positiveLabel": "It says what I do, not what I stop",
+    "positiveHint": "\"I lower my voice\", not \"I don't shout\".",
+    "presentLabel": "It's in the present tense",
+    "presentHint": "\"I breathe out\", not \"I will try to\".",
+    "visualLabel": "I can see it",
+    "visualHint": "A place, a face, a movement you could film.",
+    "emotionalLabel": "I can feel it",
+    "emotionalHint": "Name the feeling: calm, warm, steady."
+  },
+  "practice": {
+    "title": "Practise",
+    "lengthLabel": "How long",
+    "hint": "Close your eyes if you can. See the place, the faces, and yourself doing it. Feel it.",
+    "startButton": "Start",
+    "doneButton": "Done",
+    "closeButton": "Close",
+    "remainingText": "{{time}} left",
+    "halfwayText": "Halfway.",
+    "finishedText": "Time's up. Tap Done when you're ready.",
+    "loggedText": "Practised. See you tomorrow."
+  },
+  "length": {
+    "30": "30 s",
+    "60": "1 min",
+    "120": "2 min"
+  },
+  "summary": {
+    "title": "Your practice",
+    "daysText": {
+      "one": "Practised 1 day",
+      "other": "Practised {{count}} days"
+    },
+    "streakText": {
+      "one": "1-day streak",
+      "other": "{{count}}-day streak"
+    }
+  },
+  "checklist": {
+    "text": "Write an affirmation",
+    "checks": "Tick all five qualities",
+    "practice": "Practise it once"
+  },
+  "guide": {
+    "inShort": "You'll write one sentence about who you are in a moment you keep getting wrong, check it against five qualities, and picture it for a minute a day. Two minutes to write; one a day to practise.",
+    "howTo": [
+      "Tap \"Add affirmation\". Name the moment and write who you are in it, in one sentence.",
+      "Tick the five qualities. If one doesn't fit, change the sentence until it does.",
+      "Add the scene: where, who, what you feel. The more you can see, the better it works.",
+      "Tap \"Practise\", pick a length, press Start and picture it with your eyes closed.",
+      "Do it daily, ideally before the moment tends to happen. Tap \"Mark done\" after your first practice."
+    ],
+    "examples": [
+      {
+        "kind": "card",
+        "title": "When my son slams the door, I breathe out, lower my voice and ask what happened.",
+        "subtitle": "Practised today",
+        "done": true,
+        "fields": [
+          {
+            "label": "The five qualities",
+            "value": "5 of 5"
+          },
+          {
+            "label": "The scene",
+            "value": "The hallway after school. His bag on the floor. My shoulders drop and I feel steady."
+          }
+        ],
+        "sample": {
+          "text": "When my son slams the door, I breathe out, lower my voice and ask what happened.",
+          "checks": {
+            "personal": true,
+            "positive": true,
+            "present": true,
+            "visual": true,
+            "emotional": true
+          },
+          "scene": "The hallway after school. His bag on the floor. My shoulders drop and I feel steady."
+        }
+      },
+      {
+        "kind": "card",
+        "title": "In the meeting, I let her finish, then say what I think, once, clearly.",
+        "subtitle": "4 of 5",
+        "done": false,
+        "fields": [
+          {
+            "label": "The five qualities",
+            "value": "4 of 5 (I can feel it: not yet)"
+          },
+          {
+            "label": "The scene",
+            "value": "The small room, Tuesday 10 a.m. Hands still on the table."
+          }
+        ],
+        "sample": {
+          "text": "In the meeting, I let her finish, then say what I think, once, clearly.",
+          "checks": {
+            "personal": true,
+            "positive": true,
+            "present": true,
+            "visual": true,
+            "emotional": false
+          },
+          "scene": "The small room, Tuesday 10 a.m. Hands still on the table."
+        }
+      }
+    ],
+    "afterwards": "After a week, notice the moment itself: did the picture come to mind before you reacted? Adjust the sentence, not the goal. When it becomes how you actually respond, archive it and write the next one."
+  }
+}
