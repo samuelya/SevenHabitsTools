@@ -1,0 +1,197 @@
+<div class="role-goal-form">
+  <p class="field-prompt" [id]="uid + '-what-prompt'">
+    {{ 'h2Roles.goal.whatPrompt' | transloco }}
+  </p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Roles.goal.whatLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      #whatField
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="4"
+      required
+      class="what-field"
+      [placeholder]="'h2Roles.goal.whatPlaceholder' | transloco"
+      [value]="goal().what"
+      [attr.aria-describedby]="
+        whatMissing() ? uid + '-what-prompt ' + uid + '-what-error' : uid + '-what-prompt'
+      "
+      (input)="onWhatInput($event)"
+      (blur)="touchWhat()"
+    ></textarea>
+  </mat-form-field>
+  <!-- Not `<mat-error>`: no `NgControl` here (playbook §6). Always rendered, so the live region
+       exists before its text arrives. -->
+  <p class="field-error" role="alert" [id]="uid + '-what-error'">
+    @if (whatMissing()) {
+      {{ 'h2Roles.goal.whatRequired' | transloco }}
+    }
+  </p>
+
+  <p class="field-prompt" [id]="uid + '-why-prompt'">{{ 'h2Roles.goal.whyPrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Roles.goal.whyLabel' | transloco }}</mat-label>
+    <textarea
+      matInput
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="6"
+      class="why-field"
+      [attr.aria-describedby]="uid + '-why-prompt'"
+      [placeholder]="'h2Roles.goal.whyPlaceholder' | transloco"
+      [value]="goal().why ?? ''"
+      (input)="onWhyInput($event)"
+    ></textarea>
+  </mat-form-field>
+
+  <p class="field-prompt" [id]="uid + '-how-prompt'">{{ 'h2Roles.goal.howPrompt' | transloco }}</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>{{ 'h2Roles.goal.howLabel' | transloco }}</mat-label>
+    <input
+      matInput
+      type="text"
+      autocomplete="off"
+      class="how-field"
+      [attr.aria-describedby]="uid + '-how-prompt'"
+      [placeholder]="'h2Roles.goal.howPlaceholder' | transloco"
+      [value]="goal().how ?? ''"
+      (input)="onHowInput($event)"
+    />
+  </mat-form-field>
+
+  <fieldset class="option-group">
+    <legend [id]="uid + '-horizon'">{{ 'h2Roles.goal.horizonLabel' | transloco }}</legend>
+    <mat-button-toggle-group
+      class="horizon"
+      hideSingleSelectionIndicator
+      [attr.aria-labelledby]="uid + '-horizon'"
+      [value]="goal().horizon"
+      (change)="onHorizonChange($event)"
+    >
+      @for (horizon of horizons; track horizon) {
+        <mat-button-toggle [value]="horizon">{{
+          'h2Roles.horizon.' + horizon | transloco
+        }}</mat-button-toggle>
+      }
+    </mat-button-toggle-group>
+  </fieldset>
+
+  @if (saved()) {
+    <fieldset class="option-group steps">
+      <legend>{{ 'h2Roles.steps.legend' | transloco }}</legend>
+      <p class="field-prompt" [id]="uid + '-steps-prompt'">
+        {{ 'h2Roles.steps.prompt' | transloco }}
+      </p>
+      @if (goal().steps.length) {
+        <ul class="step-list">
+          @for (step of goal().steps; track step.key; let index = $index) {
+            <li class="step-row">
+              <mat-checkbox
+                class="step-done"
+                [checked]="step.done"
+                [aria-label]="('h2Roles.steps.legend' | transloco) + ' ' + (index + 1 | appNumber)"
+                (change)="onStepToggle(step, $event)"
+              />
+              <mat-form-field appearance="outline" class="step-field" subscriptSizing="dynamic">
+                <input
+                  matInput
+                  #stepField
+                  type="text"
+                  autocomplete="off"
+                  [attr.aria-label]="
+                    ('h2Roles.steps.legend' | transloco) + ' ' + (index + 1 | appNumber)
+                  "
+                  [attr.aria-describedby]="uid + '-steps-prompt'"
+                  [placeholder]="index === 0 ? ('h2Roles.steps.placeholder' | transloco) : ''"
+                  [value]="step.text"
+                  (input)="onStepInput(step, $event)"
+                />
+              </mat-form-field>
+              <button
+                mat-icon-button
+                type="button"
+                class="remove-step"
+                [attr.aria-label]="
+                  ('h2Roles.steps.removeButton' | transloco) + ' ' + (index + 1 | appNumber)
+                "
+                (click)="action.emit({ kind: 'removeStep', key: step.key })"
+              >
+                <mat-icon aria-hidden="true">close</mat-icon>
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      <button
+        mat-stroked-button
+        type="button"
+        class="add-step"
+        disabledInteractive
+        [disabled]="full()"
+        [attr.aria-describedby]="uid + '-steps-hint'"
+        (click)="onAddStep()"
+      >
+        <mat-icon aria-hidden="true">add</mat-icon>
+        {{ 'h2Roles.steps.addButton' | transloco }}
+      </button>
+      <p class="hint" aria-live="polite" [id]="uid + '-steps-hint'">
+        @if (full()) {
+          {{ 'h2Roles.steps.maxHint' | transloco }}
+        }
+      </p>
+    </fieldset>
+
+    <div class="status">
+      <p class="status-text">
+        {{ 'h2Roles.goal.statusLabel' | transloco }}:
+        <strong>{{ 'h2Roles.goalStatus.' + goal().status | transloco }}</strong>
+        @if (resolvedDate(); as date) {
+          · {{ date | appDate }}
+        }
+      </p>
+      <div class="actions">
+        @if (goal().status === 'open') {
+          <button
+            mat-stroked-button
+            type="button"
+            class="reached"
+            (click)="action.emit({ kind: 'status', status: 'reached' })"
+          >
+            <mat-icon aria-hidden="true">flag</mat-icon>
+            {{ 'h2Roles.goal.reachedButton' | transloco }}
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
+            class="dropped"
+            (click)="action.emit({ kind: 'status', status: 'dropped' })"
+          >
+            <mat-icon aria-hidden="true">block</mat-icon>
+            {{ 'h2Roles.goal.droppedButton' | transloco }}
+          </button>
+        } @else {
+          <button
+            mat-stroked-button
+            type="button"
+            class="reopen"
+            (click)="action.emit({ kind: 'reopen' })"
+          >
+            <mat-icon aria-hidden="true">undo</mat-icon>
+            {{ 'h2Roles.goal.reopenButton' | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+  }
+
+  <button
+    mat-stroked-button
+    type="button"
+    class="delete-goal"
+    (click)="action.emit({ kind: 'delete' })"
+  >
+    <mat-icon aria-hidden="true">delete</mat-icon>
+    {{ 'h2Roles.goal.deleteButton' | transloco }}
+  </button>
+</div>

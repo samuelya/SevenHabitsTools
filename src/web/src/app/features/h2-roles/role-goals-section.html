@@ -1,0 +1,59 @@
+<section class="role-goals" [attr.aria-labelledby]="'goals-legend-' + roleId()">
+  <h3 class="legend" [id]="'goals-legend-' + roleId()">{{ 'h2Roles.goals.legend' | transloco }}</h3>
+
+  @if (goals().length === 0) {
+    <p class="empty">{{ 'h2Roles.goals.empty' | transloco }}</p>
+  }
+
+  @if (goals().length) {
+    <ul class="goal-list">
+      @for (goal of goals(); track goal.id) {
+        <li class="goal" [class.goal--open]="expandedId() === goal.id">
+          <button
+            type="button"
+            class="goal-header"
+            [attr.aria-expanded]="expandedId() === goal.id"
+            [attr.aria-controls]="'goal-panel-' + goal.id"
+            (click)="toggle(goal.id)"
+          >
+            <span class="goal-title">
+              @if (goal.what.trim()) {
+                {{ goal.what }}
+              } @else {
+                <span class="goal-title--empty">{{ 'h2Roles.goal.whatLabel' | transloco }}</span>
+              }
+            </span>
+            <span class="goal-meta">
+              {{ 'h2Roles.horizon.' + goal.horizon | transloco }}
+              @if (goal.status !== 'open') {
+                · {{ 'h2Roles.goalStatus.' + goal.status | transloco }}
+              }
+              @if (goal.sample) {
+                <span class="goal-chip">{{ 'h2Roles.list.example' | transloco }}</span>
+              }
+            </span>
+            <mat-icon class="goal-chevron" aria-hidden="true">{{
+              expandedId() === goal.id ? 'expand_less' : 'expand_more'
+            }}</mat-icon>
+          </button>
+          @if (expandedId() === goal.id) {
+            <div class="goal-panel" [id]="'goal-panel-' + goal.id">
+              <app-role-goal-form
+                [goal]="goal"
+                [saved]="unsavedId() !== goal.id"
+                [focusOnOpen]="unsavedId() === goal.id"
+                [focusStepKey]="focusStepKey()"
+                (action)="goalAction.emit({ goalId: goal.id, action: $event })"
+              />
+            </div>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <button mat-stroked-button type="button" class="add-goal" (click)="added.emit()">
+    <mat-icon aria-hidden="true">add</mat-icon>
+    {{ 'h2Roles.goals.addButton' | transloco }}
+  </button>
+</section>

@@ -1,0 +1,106 @@
+.role-goal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.field {
+  inline-size: 100%;
+}
+
+.field-prompt,
+.hint,
+.status-text {
+  margin: 0;
+}
+
+.field-error {
+  color: var(--mat-sys-error, darkred);
+  font-size: 0.75rem;
+  margin: -0.5rem 0 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.hint:empty {
+  display: none;
+}
+
+.option-group {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-inline-size: 0;
+}
+
+.option-group legend {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  padding: 0;
+}
+
+// Four options wrap at 360 px; each keeps a 44 px touch target.
+.horizon {
+  display: flex;
+  flex-wrap: wrap;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+}
+
+.horizon mat-button-toggle {
+  min-block-size: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.step-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.step-field {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+.remove-step {
+  flex: none;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions button,
+.add-step,
+.delete-goal {
+  min-block-size: 44px;
+}
+
+.add-step,
+.delete-goal {
+  align-self: flex-start;
+}

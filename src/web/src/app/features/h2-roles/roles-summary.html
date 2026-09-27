@@ -4,9 +4,24 @@
     <p class="count">
       {{
         'h2Roles.summary.countText'
-          | appPlural: summary().count : { rated: (summary().rated | appNumber) }
+          | appPlural
+            : summary().count
+            : { count: (summary().count | appNumber), rated: (summary().rated | appNumber) }
       }}
     </p>
+    @if (summary().goals > 0) {
+      <p class="goals">
+        {{
+          'h2Roles.summary.goalsText'
+            | appPlural
+              : summary().goals
+              : {
+                  count: (summary().goals | appNumber),
+                  withStep: (summary().goalsWithStep | appNumber),
+                }
+        }}
+      </p>
+    }
     @if (summary().average; as average) {
       <p class="average">
         {{

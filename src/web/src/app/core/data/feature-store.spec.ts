@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { DocumentStore } from './document.store';
 import { featureStore } from './feature-store';
 import {
   ModelRegistration,
@@ -53,5 +54,20 @@ describe('featureStore', () => {
     mission.update((current) => ({ statement: `${current.statement}!` }));
 
     expect(mission.value()).toEqual({ statement: 'default!' });
+  });
+
+  it('writes nothing for an updater that returns what it was given, an unset slice included', () => {
+    registerModel<Mission>({
+      key: 'mission',
+      path: 'habits.h2.mission',
+      defaults: () => ({ statement: '' }),
+    });
+    const store = TestBed.inject(DocumentStore);
+    store.update<unknown>('habits.h2.mission', () => undefined);
+
+    const mission = TestBed.runInInjectionContext(() => featureStore<Mission>('mission'));
+    mission.update((current) => current);
+
+    expect(store.select<Mission>('habits.h2.mission')()).toBeUndefined();
   });
 });

@@ -17,6 +17,13 @@ import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { ROLES_MODEL_KEY, Role, registerRolesModel } from '../../shared/roles/roles.model';
 import { RolesService } from '../../shared/roles/roles.service';
+import {
+  ROLE_GOALS_MODEL_KEY,
+  RoleGoal,
+  registerRoleGoalsModel,
+} from '../../shared/roles/role-goals.model';
+import { RoleGoalsService } from '../../shared/roles/role-goals.service';
+import { RoleGoalsSection } from './role-goals-section';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { RolesItemForm } from './roles-item-form';
 import { H2_ROLES_ROUTE, registerRolesExercise } from './roles.model';
@@ -37,9 +44,10 @@ interface Setup {
 }
 
 /** Seeds the slice as stored, without `insert()`'s built-in side effect. */
-async function setUp(seed: Role[] = [], url = LIST_URL): Promise<Setup> {
+async function setUp(seed: Role[] = [], url = LIST_URL, goals: RoleGoal[] = []): Promise<Setup> {
   registerExerciseKitModel();
   registerRolesModel();
+  registerRoleGoalsModel();
   registerRolesExercise();
   const deletes: ConfirmAndDeleteOptions[] = [];
   TestBed.configureTestingModule({
@@ -61,6 +69,11 @@ async function setUp(seed: Role[] = [], url = LIST_URL): Promise<Setup> {
   if (seed.length) {
     TestBed.runInInjectionContext(() => featureStore<Role[]>(ROLES_MODEL_KEY).update(() => seed));
   }
+  if (goals.length) {
+    TestBed.runInInjectionContext(() =>
+      featureStore<RoleGoal[]>(ROLE_GOALS_MODEL_KEY).update(() => goals),
+    );
+  }
   const service = TestBed.inject(RolesService);
   const harness = await RouterTestingHarness.create(url);
   return { harness, service, deletes };
@@ -71,6 +84,26 @@ function role(id: string, fields: Partial<Role> = {}): Role {
 }
 
 const BUILT_IN = role('saw', { name: undefined, key: 'renewal', order: 0 });
+
+function goal(id: string, roleId: string, fields: Partial<RoleGoal> = {}): RoleGoal {
+  return {
+    id,
+    createdAt: T0,
+    updatedAt: T0,
+    roleId,
+    what: 'One evening a week',
+    horizon: 'year',
+    status: 'open',
+    steps: [{ key: 'k1', text: 'Ask her', done: false }],
+    ...fields,
+  };
+}
+
+function goalsSection(harness: RouterTestingHarness): RoleGoalsSection | null {
+  return (
+    harness.routeDebugElement!.query(By.directive(RoleGoalsSection))?.componentInstance ?? null
+  );
+}
 
 function host(harness: RouterTestingHarness): HTMLElement {
   return harness.routeNativeElement as HTMLElement;
@@ -236,6 +269,7 @@ describe('RolesPage', () => {
         role('c', { order: 3 }),
       ],
       `${LIST_URL}/saw`,
+      [goal('g', 'a')],
     );
     await settle(harness);
     form(harness).changed.emit({ satisfaction: 2 });
@@ -292,5 +326,175 @@ describe('RolesPage', () => {
     expect(host(harness).textContent).toContain('اشحذ المنشار');
     expect(host(harness).textContent).toContain('3 من 5');
     TestBed.inject(TranslocoService).setActiveLang('en');
+  });
+
+  it('shows the goals section only once the role is saved (#291)', async () => {
+    const { harness } = await setUp([BUILT_IN, role('dad', { order: 1 })]);
+    await settle(harness);
+    host(harness).querySelector<HTMLButtonElement>('.add-button')!.click();
+    await settle(harness);
+    expect(goalsSection(harness)).toBeNull();
+    await TestBed.inject(Router).navigateByUrl(`${LIST_URL}/dad`);
+    await settle(harness);
+    expect(goalsSection(harness)).not.toBeNull();
+    expect(host(harness).textContent).toContain('No goals yet.');
+  });
+
+  it('creates a goal on the first typed character of "what", not on Add goal', async () => {
+    const { harness } = await setUp([BUILT_IN, role('dad', { order: 1 })], `${LIST_URL}/dad`);
+    const goals = TestBed.inject(RoleGoalsService);
+    await settle(harness);
+    host(harness).querySelector<HTMLButtonElement>('.add-goal')!.click();
+    await settle(harness);
+    expect(goals.all()).toEqual([]);
+    const what = host(harness).querySelector<HTMLTextAreaElement>('.what-field')!;
+    expect(document.activeElement).toBe(what);
+
+    goalsSection(harness)!.expandedChange.emit(null);
+    await settle(harness);
+    expect(host(harness).querySelector('.what-field')).toBeNull();
+    expect(goals.all()).toEqual([]);
+
+    host(harness).querySelector<HTMLButtonElement>('.add-goal')!.click();
+    await settle(harness);
+    const field = host(harness).querySelector<HTMLTextAreaElement>('.what-field')!;
+    field.value = 'O';
+    field.dispatchEvent(new Event('input'));
+    await settle(harness);
+    expect(goals.forRole('dad')).toEqual([
+      expect.objectContaining({ roleId: 'dad', what: 'O', status: 'open', horizon: 'year' }),
+    ]);
+    // Same form instance: the field the user is typing in is still there, still focused.
+    expect(host(harness).querySelector('.what-field')).toBe(field);
+    expect(host(harness).querySelector('.add-step')).not.toBeNull();
+  });
+
+  it('applies step and status actions through the service', async () => {
+    const { harness } = await setUp([BUILT_IN, role('dad', { order: 1 })], `${LIST_URL}/dad`, [
+      goal('g', 'dad', { steps: [] }),
+    ]);
+    const goals = TestBed.inject(RoleGoalsService);
+    await settle(harness);
+    const section = goalsSection(harness)!;
+    section.goalAction.emit({ goalId: 'g', action: { kind: 'addStep' } });
+    const key = goals.forRole('dad')[0].steps[0].key;
+    section.goalAction.emit({ goalId: 'g', action: { kind: 'editStep', key, text: 'Ask' } });
+    section.goalAction.emit({ goalId: 'g', action: { kind: 'status', status: 'reached' } });
+    expect(goals.forRole('dad')[0]).toMatchObject({
+      status: 'reached',
+      resolvedOn: '2026-03-10',
+      steps: [{ key, text: 'Ask', done: false }],
+    });
+  });
+
+  it('counts goals on the row and in the summary, and gates Mark done on a goal with a step', async () => {
+    const roles = [
+      BUILT_IN,
+      role('a', { order: 1, satisfaction: 3, note: 'Not yet.' }),
+      role('b', { order: 2, satisfaction: 4 }),
+      role('c', { order: 3, satisfaction: 2 }),
+    ];
+    const { harness } = await setUp(roles, LIST_URL, [goal('g', 'a', { steps: [] })]);
+    await settle(harness);
+    expect(host(harness).textContent).toContain('1 goal');
+    expect(host(harness).querySelector('app-roles-summary')?.textContent).toContain(
+      '1 goal, 0 with a first step',
+    );
+    expect(markDoneButton(harness).getAttribute('aria-disabled')).toBe('true');
+    expect(host(harness).textContent).toContain('Give one role a goal with a first step');
+
+    const goals = TestBed.inject(RoleGoalsService);
+    const key = goals.addStep('g')!;
+    goals.editStep('g', key, 'Ask her');
+    await settle(harness);
+    expect(markDoneButton(harness).getAttribute('aria-disabled')).not.toBe('true');
+  });
+
+  it('"Try this example" on the goal adds a sample Dad role and goal, opened', async () => {
+    const { harness, service } = await setUp();
+    const goals = TestBed.inject(RoleGoalsService);
+    const prompt = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    const sample = {
+      role: { name: 'Dad', description: 'Being around, not just providing.' },
+      what: "One evening a week that's just us, phones away.",
+      horizon: 'year',
+      steps: [{ text: 'Ask her which evening works.', done: false }],
+    };
+    prompt.exampleTried.emit(sample);
+    await settle(harness);
+    expect(service.all()).toEqual([expect.objectContaining({ name: 'Dad', sample: true })]);
+    const [tried] = goals.all();
+    expect(tried).toMatchObject({ roleId: service.all()[0].id, sample: true });
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/${service.all()[0].id}`);
+    expect(host(harness).querySelector<HTMLTextAreaElement>('.what-field')?.value).toBe(
+      sample.what,
+    );
+
+    prompt.exampleTried.emit(sample);
+    await settle(harness);
+    expect(goals.all()).toHaveLength(1);
+    expect(service.all()).toHaveLength(1);
+  });
+
+  it("shows each row's goal count, plural-correct, in the active language and numerals", async () => {
+    const many = (roleId: string, count: number) =>
+      Array.from({ length: count }, (_, i) => goal(`${roleId}${i}`, roleId));
+    const roles = [BUILT_IN, role('a', { order: 1 }), role('b', { order: 2 })];
+    const { harness } = await setUp(roles, LIST_URL, [...many('a', 2), ...many('b', 11)]);
+    await settle(harness);
+    expect(rows(harness)).toEqual([expect.any(String), 'a', 'b']);
+    const text = () => host(harness).textContent ?? '';
+    expect(text()).toContain('2 goals');
+    expect(text()).toContain('11 goals');
+    expect(text()).not.toContain('{{');
+
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    await settle(harness);
+    expect(text()).toContain('هدفان');
+    expect(text()).toContain('١١ هدفًا');
+    expect(text()).not.toContain('{{');
+    TestBed.inject(TranslocoService).setActiveLang('en');
+  });
+
+  it('counts no example goal and no goal on an example role, on the row or in the summary', async () => {
+    const roles = [BUILT_IN, role('a', { order: 1 }), role('s', { order: 2, sample: true })];
+    const { harness } = await setUp(roles, LIST_URL, [
+      goal('g1', 'a', { sample: true }),
+      goal('g2', 's'),
+    ]);
+    await settle(harness);
+    expect(host(harness).textContent).not.toContain('1 goal');
+    expect(host(harness).querySelector('app-roles-summary')?.textContent).not.toContain('goal');
+  });
+
+  it('"Try this example" on the goal reuses an archived Dad instead of adding a second', async () => {
+    const { harness, service } = await setUp([
+      BUILT_IN,
+      role('dad', { name: 'Dad', order: 1, archived: true }),
+    ]);
+    const goals = TestBed.inject(RoleGoalsService);
+    const prompt = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    prompt.exampleTried.emit({ role: { name: 'Dad' }, what: 'One evening a week' });
+    await settle(harness);
+    expect(service.all().filter((r) => r.name === 'Dad')).toHaveLength(1);
+    expect(goals.forRole('dad')).toEqual([expect.objectContaining({ sample: true })]);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/dad`);
+  });
+
+  it('"Try this example" removes the sample role it added when the goal is refused', async () => {
+    const { harness, service } = await setUp();
+    vi.spyOn(TestBed.inject(RoleGoalsService), 'insert').mockReturnValue(false);
+    const prompt = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    prompt.exampleTried.emit({ role: { name: 'Dad' }, what: 'One evening a week' });
+    await settle(harness);
+    expect(service.all()).toEqual([]);
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
   });
 });

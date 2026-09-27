@@ -7,7 +7,9 @@ import { getRegisteredModels } from './registry';
 export interface FeatureStore<T> {
   /** The slice's current value, falling back to the model's `defaults()` while it is unset. */
   readonly value: Signal<T>;
-  /** Returns `false` when the edit was refused because this tab is read-only (`DocumentStore`). */
+  /** Returns `false` when the edit was refused because this tab is read-only (`DocumentStore`). An
+   * updater that returns what it was given writes nothing, an unset slice included (it stays
+   * unset rather than being stored as its defaults). */
   update(updater: PathUpdater<T>): boolean;
 }
 
@@ -30,6 +32,11 @@ export function featureStore<T>(key: string): FeatureStore<T> {
 
   return {
     value: computed(() => slice() ?? defaults()),
-    update: (updater) => store.update<T>(path, (current) => updater(current ?? defaults())),
+    update: (updater) =>
+      store.update<T>(path, (current) => {
+        const base = current ?? defaults();
+        const next = updater(base);
+        return next === base ? current : next;
+      }),
   };
 }

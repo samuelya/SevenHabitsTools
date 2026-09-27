@@ -35,7 +35,8 @@ const NO_COLOR = 'none';
 
 /**
  * The editor for one role (issue #59): name (read-only for the built-in), description, colour,
- * "How it's going" (1–5), the picture note, and Move up/down, Archive/Unarchive and Delete.
+ * "How it's going" (1–5), the picture note, a `[goalsSlot]` content slot (issue #291), and Move
+ * up/down, Archive/Unarchive and Delete.
  * Presentational: `role` is the current value; every edit is emitted at once for the page to save
  * through `RolesService` (autosave, no Save step).
  *

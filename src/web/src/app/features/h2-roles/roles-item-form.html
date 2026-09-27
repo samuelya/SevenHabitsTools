@@ -113,6 +113,9 @@
     ></textarea>
   </mat-form-field>
 
+  <!-- The role's goals (issue #291), projected by the page once the role is saved. -->
+  <ng-content select="[goalsSlot]" />
+
   <div class="actions">
     <button
       mat-stroked-button
