@@ -34,4 +34,14 @@ describe('RolesSummary', () => {
     expect(text).not.toContain('goal');
     expect(text).not.toContain('Average');
   });
+
+  it('renders every number in Arabic-Indic numerals (#303)', () => {
+    const text = render(
+      { count: 4, rated: 0, average: null, goals: 17, goalsWithStep: 4 },
+      'arabic',
+    );
+    expect(text).toContain('٤ roles, ٠ rated');
+    expect(text).toContain('١٧ goals, ٤ with a first step');
+    expect(text).not.toMatch(/[0-9]/);
+  });
 });
