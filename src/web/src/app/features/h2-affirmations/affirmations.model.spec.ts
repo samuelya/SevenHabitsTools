@@ -91,6 +91,30 @@ describe('h2-affirmations model', () => {
     expect(registration().validate?.({})).toBe(false);
   });
 
+  it('rejects a practice entry on an impossible date or with bad seconds', () => {
+    for (const entry of [
+      { date: '', seconds: 30 },
+      { date: 'yesterday', seconds: 30 },
+      { date: '2026-13-01', seconds: 30 },
+      { date: '2026-02-30', seconds: 30 },
+      { date: '2026-09-02', seconds: -1 },
+      { date: '2026-09-02', seconds: 1.5 },
+      { date: '2026-09-02', seconds: Number.NaN },
+      { date: '2026-09-02', seconds: Number.POSITIVE_INFINITY },
+    ]) {
+      expect(registration().validate?.([{ ...FULL_ITEM, practice: [entry] }])).toBe(false);
+    }
+    expect(
+      registration().validate?.([{ ...FULL_ITEM, practice: [{ date: '2026-09-02', seconds: 0 }] }]),
+    ).toBe(true);
+  });
+
+  it('fails validateDocument() on an import with a bad practice entry', () => {
+    const bad = { ...FULL_ITEM, practice: [{ date: '2026-02-30', seconds: 30 }] };
+    const issues = validateDocument({ habits: { h2: { affirmations: [bad] } } });
+    expect(issues.some((issue) => issue.path === AFFIRMATIONS_PATH)).toBe(true);
+  });
+
   it('accepts any practice length number: the offered lengths are a reader rule', () => {
     expect(registration().validate?.([{ ...FULL_ITEM, practiceSeconds: 45 }])).toBe(true);
   });

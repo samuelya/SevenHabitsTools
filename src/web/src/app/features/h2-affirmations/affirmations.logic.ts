@@ -1,5 +1,9 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
-import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import {
+  isValidIsoDate,
+  localDateString,
+  parseIsoDate,
+} from '../../shared/exercise-kit/assessment-history.logic';
 import {
   ChecklistLabels,
   ChecklistMet,
@@ -19,6 +23,7 @@ import {
   AffirmationChecks,
   AffirmationFields,
   DEFAULT_PRACTICE_LENGTH,
+  MIN_PRACTICE_SECONDS,
   PRACTICE_LENGTHS,
   PracticeEntry,
   PracticeLength,
@@ -41,14 +46,14 @@ export function checkCount(affirmation: Pick<Affirmation, 'checks'>): number {
   return AFFIRMATION_CHECKS.filter((key) => affirmation.checks[key]).length;
 }
 
-/** The number of qualities, for "{{n}} of {{total}}". */
-export function checkTotal(): number {
-  return AFFIRMATION_CHECKS.length;
+/** All five qualities ticked: the one rule for completeness and the gate's "checks" line. */
+export function allChecksTicked(affirmation: Pick<Affirmation, 'checks'>): boolean {
+  return checkCount(affirmation) === AFFIRMATION_CHECKS.length;
 }
 
 /** Complete: the sentence written and all five qualities ticked. */
 export function isItemComplete(affirmation: Pick<Affirmation, 'text' | 'checks'>): boolean {
-  return hasText(affirmation.text) && checkCount(affirmation) === AFFIRMATION_CHECKS.length;
+  return hasText(affirmation.text) && allChecksTicked(affirmation);
 }
 
 /** Only a live, complete, active affirmation can be practised. */
@@ -91,6 +96,43 @@ export function remainingSeconds(startedAt: number, now: number, chosen: number)
  * length (a device that slept through the end logs the length, not the nap). */
 export function secondsSpent(startedAt: number, endedAt: number, chosen: number): number {
   return Math.min(elapsedSeconds(startedAt, endedAt), chosen);
+}
+
+/** Whether a run of `seconds` is long enough to log ("Done" before that closes with nothing). */
+export function isLoggable(seconds: number): boolean {
+  return seconds >= MIN_PRACTICE_SECONDS;
+}
+
+/** What "Done" closes the practice dialog with. */
+export interface PracticeResult {
+  /** The seconds actually spent, capped at `length`. */
+  readonly seconds: number;
+  readonly length: PracticeLength;
+}
+
+function isPracticeLength(value: unknown): value is PracticeLength {
+  return (PRACTICE_LENGTHS as readonly unknown[]).includes(value);
+}
+
+/** Whether `seconds` of a run of `length` may be logged: a whole number from the minimum up to
+ * the length. */
+function isLoggableRun(seconds: unknown, length: unknown): boolean {
+  return (
+    isPracticeLength(length) &&
+    Number.isInteger(seconds) &&
+    isLoggable(seconds as number) &&
+    (seconds as number) <= length
+  );
+}
+
+/** A dialog's close value (an input boundary: `afterClosed()` is untyped at runtime) is only a
+ * result when it is a well-formed, loggable one. */
+export function isPracticeResult(value: unknown): value is PracticeResult {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return isLoggableRun(candidate['seconds'], candidate['length']);
 }
 
 /** What the live region says at `remaining` seconds of `chosen`: nothing in the first half, then
@@ -196,7 +238,7 @@ export type AffirmationsChecklistKey = (typeof CHECKLIST_KEYS)[number];
 function itemMet(affirmation: Affirmation): ChecklistMet<AffirmationsChecklistKey> {
   return {
     text: hasText(affirmation.text),
-    checks: checkCount(affirmation) === AFFIRMATION_CHECKS.length,
+    checks: allChecksTicked(affirmation),
     practice: affirmation.practice.length > 0,
   };
 }
@@ -236,6 +278,12 @@ export const TOTAL_TOKEN = '@@total@@';
 export const DATE_TOKEN = '@@date@@';
 export const ITEM_TOKEN = '@@item@@';
 
+/** `template` with `token` replaced by `value` taken literally: a string replacement would read
+ * `$'`, `$&` or `$$` in the user's text as a pattern. */
+function fill(template: string, token: string, value: string): string {
+  return template.replace(token, () => value);
+}
+
 /** Already-translated labels and formatters, built by the page (playbook §6). */
 export interface AffirmationLabels {
   readonly example: string;
@@ -258,9 +306,8 @@ export function rowSubtitle(
   labels: AffirmationLabels,
 ): string {
   if (!isItemComplete(affirmation)) {
-    return labels.checksTemplate
-      .replace(N_TOKEN, labels.formatNumber(checkCount(affirmation)))
-      .replace(TOTAL_TOKEN, labels.formatNumber(checkTotal()));
+    const n = fill(labels.checksTemplate, N_TOKEN, labels.formatNumber(checkCount(affirmation)));
+    return fill(n, TOTAL_TOKEN, labels.formatNumber(AFFIRMATION_CHECKS.length));
   }
   const last = lastPractised(affirmation);
   if (last === null) {
@@ -268,7 +315,7 @@ export function rowSubtitle(
   }
   return last === today
     ? labels.practisedToday
-    : labels.lastPractisedTemplate.replace(DATE_TOKEN, labels.formatDate(last));
+    : fill(labels.lastPractisedTemplate, DATE_TOKEN, labels.formatDate(last));
 }
 
 /** A row: the sentence as title, the subtitle above, "Example" on a sample, and a Practise button
@@ -290,7 +337,7 @@ export function toListItem(
       ? {
           action: {
             icon: 'self_improvement',
-            label: labels.practiseAriaTemplate.replace(ITEM_TOKEN, title),
+            label: fill(labels.practiseAriaTemplate, ITEM_TOKEN, title),
             hint: labels.practise,
           },
         }
@@ -354,14 +401,18 @@ export function editAffirmation(
   return next;
 }
 
-/** Appends `entry` to the log of `id` and remembers `length`, if it can be practised. Practising
- * a sample makes it the user's own. The same array otherwise. */
+/** Appends `entry` to the log of `id` and remembers `length`, if it can be practised and the entry
+ * is loggable (a real date, whole seconds from the minimum up to `length`). Practising a sample
+ * makes it the user's own. The same array otherwise. */
 export function logPractice(
   list: readonly Affirmation[],
   id: string,
   entry: PracticeEntry,
   length: PracticeLength,
 ): readonly Affirmation[] {
+  if (!isValidIsoDate(entry.date) || !isLoggableRun(entry.seconds, length)) {
+    return list;
+  }
   const index = list.findIndex((item) => item.id === id);
   if (index < 0 || !canPractise(list[index])) {
     return list;

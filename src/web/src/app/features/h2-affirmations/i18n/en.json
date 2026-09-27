@@ -3,7 +3,7 @@
     "title": "Write it, then see it",
     "chapterReference": "Habit 2: Begin with the End in Mind",
     "text": "Pick a moment where you keep reacting in a way you don't like. Write one sentence about the person you are in that moment instead. Then spend a minute a day picturing it, in detail, before it happens.",
-    "glossText": "The book calls the sentence an affirmation and the daily picturing visualization. Together they rewrite the response before the moment arrives.",
+    "glossText": "The book calls the sentence an affirmation and the daily picturing visualisation. Together they rewrite the response before the moment arrives.",
     "whyItMatters": "Deciding to be calmer doesn't survive contact with a slammed door. Having already seen yourself calm, in that hallway, with that face, does. Athletes rehearse this way; so can you."
   },
   "list": {
@@ -64,7 +64,8 @@
     "remainingText": "{{time}} left",
     "halfwayText": "Halfway.",
     "finishedText": "Time's up. Tap Done when you're ready.",
-    "loggedText": "Practised. See you tomorrow."
+    "loggedText": "Practised. See you tomorrow.",
+    "tooShortText": "Keep going a few more seconds: a practice this short isn't logged."
   },
   "length": {
     "30": "30 s",

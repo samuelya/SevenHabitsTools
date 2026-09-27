@@ -1,11 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   Injector,
   afterNextRender,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -15,7 +15,6 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import {
   MAT_DIALOG_DATA,
   MatDialogActions,
-  MatDialogClose,
   MatDialogContent,
   MatDialogRef,
   MatDialogTitle,
@@ -23,9 +22,11 @@ import {
 import { MatIconModule } from '@angular/material/icon';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { AppNumberPipe } from '../../core/i18n/locale.pipe';
-import { CLOCK } from '../../core/time/clock';
+import { pollingClock } from '../../shared/exercise-kit/polling-clock';
 import {
+  PracticeResult,
   clockParts,
+  isLoggable,
   practiceAnnouncement,
   remainingSeconds,
   secondsSpent,
@@ -43,20 +44,17 @@ export interface PracticeDialogData {
   readonly length: PracticeLength;
 }
 
-/** What "Done" closes with. Escape, Close and the backdrop close with no result: nothing logged. */
-export interface PracticeDialogResult {
-  /** The seconds actually spent, capped at `length`. */
-  readonly seconds: number;
-  readonly length: PracticeLength;
-}
+/** What "Done" closes with, once at least `MIN_PRACTICE_SECONDS` were spent. Escape, Close, the
+ * backdrop and an earlier Done close with no result: nothing logged. */
+export type PracticeDialogResult = PracticeResult;
 
 /**
  * The full-screen practice view (issue #64): the affirmation large, its scene, a length choice,
  * Start, a plain countdown and Done. The countdown is `remainingSeconds(startedAt, CLOCK.now())`
  * on every tick, never a decremented counter, so a tab hidden or a device asleep mid-run shows the
  * right time as soon as a tick fires (or the tab is visible again), and Done logs at most the chosen
- * length. Only Done produces a result; the interval stops when the dialog is destroyed, however it
- * closes (design check on #64).
+ * length. Only Done produces a result, and only from 5 seconds on; the clock (`pollingClock()`)
+ * stops when the dialog is destroyed, however it closes (design check on #64).
  */
 @Component({
   selector: 'app-affirmation-practice',
@@ -65,7 +63,6 @@ export interface PracticeDialogResult {
     MatButtonModule,
     MatButtonToggleModule,
     MatDialogActions,
-    MatDialogClose,
     MatDialogContent,
     MatDialogTitle,
     MatIconModule,
@@ -79,7 +76,7 @@ export class AffirmationPractice {
   protected readonly data = inject<PracticeDialogData>(MAT_DIALOG_DATA);
   private readonly dialogRef =
     inject<MatDialogRef<AffirmationPractice, PracticeDialogResult>>(MatDialogRef);
-  private readonly clock = inject(CLOCK);
+  private readonly clock = pollingClock(PRACTICE_TICK_MS);
   private readonly injector = inject(Injector);
 
   protected readonly lengths = PRACTICE_LENGTHS;
@@ -88,15 +85,21 @@ export class AffirmationPractice {
   protected readonly length = signal<PracticeLength>(this.data.length);
   /** When Start was pressed (ms, `CLOCK`), `null` before. */
   private readonly startedAt = signal<number | null>(null);
-  /** The last clock reading (ms), refreshed on every tick. */
-  private readonly now = signal(0);
 
   protected readonly started = computed(() => this.startedAt() !== null);
   protected readonly remaining = computed(() => {
     const startedAt = this.startedAt();
     return startedAt === null
       ? this.length()
-      : remainingSeconds(startedAt, this.now(), this.length());
+      : remainingSeconds(startedAt, this.clock.now().getTime(), this.length());
+  });
+  /** Started, but not yet long enough for Done to log: the dialog says so before Done is pressed. */
+  protected readonly tooShort = computed(() => {
+    const startedAt = this.startedAt();
+    return (
+      startedAt !== null &&
+      !isLoggable(secondsSpent(startedAt, this.clock.now().getTime(), this.length()))
+    );
   });
   protected readonly time = computed(() => clockParts(this.remaining()));
   protected readonly announcement = computed(() =>
@@ -104,19 +107,13 @@ export class AffirmationPractice {
   );
 
   private readonly doneButton = viewChild('doneButton', { read: ElementRef });
-  private timer: ReturnType<typeof setInterval> | undefined;
 
   constructor() {
-    // A hidden tab throttles the interval; coming back re-reads the clock at once.
-    const onVisible = (): void => {
-      if (document.visibilityState === 'visible') {
-        this.tick();
+    // The poll only redraws; once the countdown reaches zero it has nothing left to show.
+    effect(() => {
+      if (this.started() && this.remaining() === 0) {
+        this.clock.stop();
       }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    inject(DestroyRef).onDestroy(() => {
-      this.stop();
-      document.removeEventListener('visibilitychange', onVisible);
     });
   }
 
@@ -130,10 +127,8 @@ export class AffirmationPractice {
     if (this.started()) {
       return;
     }
-    const now = this.clock.now().getTime();
-    this.now.set(now);
-    this.startedAt.set(now);
-    this.timer = setInterval(() => this.tick(), PRACTICE_TICK_MS);
+    this.clock.refresh();
+    this.startedAt.set(this.clock.now().getTime());
     // Start is replaced by Done: move focus there once it is rendered, so it never drops to the
     // dialog container.
     afterNextRender(() => (this.doneButton()?.nativeElement as HTMLElement | undefined)?.focus(), {
@@ -146,23 +141,14 @@ export class AffirmationPractice {
     if (startedAt === null) {
       return;
     }
-    this.stop();
+    this.clock.stop();
+    this.clock.refresh();
     const seconds = secondsSpent(startedAt, this.clock.now().getTime(), this.length());
-    this.dialogRef.close({ seconds, length: this.length() });
+    this.dialogRef.close(isLoggable(seconds) ? { seconds, length: this.length() } : undefined);
   }
 
-  private tick(): void {
-    if (this.startedAt() === null) {
-      return;
-    }
-    this.now.set(this.clock.now().getTime());
-    if (this.remaining() === 0) {
-      this.stop();
-    }
-  }
-
-  private stop(): void {
-    clearInterval(this.timer);
-    this.timer = undefined;
+  /** The header's Close: no result, before or after Start (as Escape and the backdrop). */
+  protected close(): void {
+    this.dialogRef.close();
   }
 }

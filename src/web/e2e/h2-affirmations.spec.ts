@@ -6,8 +6,8 @@ import { t, type Locale } from './i18n';
 /**
  * Your affirmations (issue #64). Happy path from the hub: write an affirmation, tick the five
  * qualities, add the scene, practise it (30 s, Done pressed early so the test doesn't wait), see
- * "Practised today", the summary and the hub status, mark done and reload. Escape mid-run logs
- * nothing.
+ * "Practised today", the summary and the hub status, mark done and reload. Escape and the header
+ * Close mid-run log nothing. Playwright's clock skips the 5 s minimum instead of waiting it out.
  */
 
 function localeFor(testInfo: TestInfo): Locale {
@@ -44,6 +44,8 @@ test.describe('Your affirmations (h2-affirmations)', () => {
   }, testInfo) => {
     const text = TEXT[localeFor(testInfo)];
     const isMobile = testInfo.project.name.startsWith('mobile');
+    // Real time keeps flowing; `fastForward()` only jumps past the 5 s minimum.
+    await page.clock.install();
 
     await page.goto('/habits/h2');
     await page.locator('app-habit-hub-page mat-nav-list a', { hasText: text.hubTitle }).click();
@@ -98,7 +100,16 @@ test.describe('Your affirmations (h2-affirmations)', () => {
     await expect(practise).toBeFocused();
     await expect(row).not.toContainText(text.practisedToday);
 
-    // 30 s, Done pressed early.
+    // The header's Close mid-run, past the minimum, logs nothing either.
+    await practise.click();
+    await dialog.locator('.practice-start').click();
+    await page.clock.fastForward(10_000);
+    await dialog.locator('.practice-close').click();
+    await expect(dialog).toHaveCount(0);
+    await expect(practise).toBeFocused();
+    await expect(row).not.toContainText(text.practisedToday);
+
+    // 30 s, Done pressed early (after the 5 s minimum; before it the dialog says to keep going).
     await practise.click();
     await dialog
       .locator('mat-button-toggle', { hasText: text.thirtySeconds })
@@ -110,6 +121,9 @@ test.describe('Your affirmations (h2-affirmations)', () => {
       dialogScan.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical'),
     ).toEqual([]);
     await dialog.locator('.practice-start').click();
+    await expect(dialog.locator('.practice-too-short')).toBeVisible();
+    await page.clock.fastForward(6_000);
+    await expect(dialog.locator('.practice-too-short')).toHaveCount(0);
     await dialog.locator('.practice-done').click();
     await expect(dialog).toHaveCount(0);
     await expect(practise).toBeFocused();

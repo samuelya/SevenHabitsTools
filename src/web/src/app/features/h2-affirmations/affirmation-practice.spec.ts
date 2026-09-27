@@ -146,6 +146,47 @@ describe('AffirmationPractice', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('Done under 5 seconds closes without a result, and the dialog says so beforehand', () => {
+    const { fixture, close, advanceClock } = setUp();
+    click(fixture, '.practice-start');
+    const hint = () => el(fixture).querySelector('.practice-too-short');
+    expect(hint()?.textContent?.trim()).toBe(
+      "Keep going a few more seconds: a practice this short isn't logged.",
+    );
+    expect(el(fixture).querySelector('.practice-done')?.getAttribute('aria-describedby')).toBe(
+      'practice-too-short',
+    );
+    advanceClock(4_900);
+    click(fixture, '.practice-done');
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(close.mock.calls[0]).toEqual([undefined]);
+  });
+
+  it('drops the "keep going" line once 5 seconds have passed', () => {
+    const { fixture, advanceClock } = setUp();
+    click(fixture, '.practice-start');
+    advanceClock(5_000);
+    vi.advanceTimersByTime(PRACTICE_TICK_MS);
+    fixture.detectChanges();
+    expect(el(fixture).querySelector('.practice-too-short')).toBeNull();
+    expect(el(fixture).querySelector('.practice-done')?.hasAttribute('aria-describedby')).toBe(
+      false,
+    );
+  });
+
+  it('the header Close closes with no result, before and after Start', () => {
+    const before = setUp();
+    click(before.fixture, '.practice-close');
+    expect(before.close.mock.calls).toEqual([[]]);
+    TestBed.resetTestingModule();
+
+    const after = setUp();
+    click(after.fixture, '.practice-start');
+    after.advanceClock(20_000);
+    click(after.fixture, '.practice-close');
+    expect(after.close.mock.calls).toEqual([[]]);
+  });
+
   it('closed mid-run (Escape, Close) logs nothing and leaves no interval running', () => {
     const { fixture, close, advanceClock } = setUp();
     click(fixture, '.practice-start');

@@ -79,7 +79,16 @@
 }
 
 .practice-actions {
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
+}
+
+.practice-too-short {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant, gray);
+  text-align: center;
 }
 
 .practice-actions button {

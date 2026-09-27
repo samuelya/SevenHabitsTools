@@ -6,6 +6,7 @@ import {
   TOTAL_TOKEN,
   activeAffirmations,
   affirmationFromExample,
+  allChecksTicked,
   archivedAffirmations,
   canPractise,
   checkCount,
@@ -19,6 +20,8 @@ import {
   isComplete,
   isDraftWorthSaving,
   isItemComplete,
+  isLoggable,
+  isPracticeResult,
   isStarted,
   lastPractised,
   liveSampleOf,
@@ -81,6 +84,8 @@ describe('one affirmation', () => {
     expect(isItemComplete(affirmation('a'))).toBe(true);
     expect(isItemComplete(affirmation('a', { checks: { ...ALL, present: false } }))).toBe(false);
     expect(isItemComplete(affirmation('a', { text: '   ' }))).toBe(false);
+    expect(allChecksTicked(affirmation('a', { text: '' }))).toBe(true);
+    expect(allChecksTicked(affirmation('a', { checks: { ...ALL, personal: false } }))).toBe(false);
   });
 
   it('can be practised only when live, complete and not archived', () => {
@@ -101,6 +106,37 @@ describe('one affirmation', () => {
     expect(lastPractised(practised('a', '2026-09-03', '2026-09-05', '2026-09-04'))).toBe(
       '2026-09-05',
     );
+  });
+});
+
+describe('the practice result', () => {
+  it('logs 5 seconds or more, never less', () => {
+    expect(isLoggable(4)).toBe(false);
+    expect(isLoggable(5)).toBe(true);
+  });
+
+  it('accepts only a well-formed, loggable dialog result', () => {
+    expect(isPracticeResult({ seconds: 12, length: 30 })).toBe(true);
+    expect(isPracticeResult({ seconds: 5, length: 60 })).toBe(true);
+    expect(isPracticeResult({ seconds: 120, length: 120 })).toBe(true);
+    for (const value of [
+      undefined,
+      null,
+      '',
+      true,
+      {},
+      { seconds: 4, length: 30 },
+      { seconds: 0, length: 30 },
+      { seconds: 31, length: 30 },
+      { seconds: 12.5, length: 30 },
+      { seconds: Number.NaN, length: 30 },
+      { seconds: Number.POSITIVE_INFINITY, length: 30 },
+      { seconds: '12', length: 30 },
+      { seconds: 12, length: 45 },
+      { seconds: 12 },
+    ]) {
+      expect(isPracticeResult(value)).toBe(false);
+    }
   });
 });
 
@@ -275,6 +311,14 @@ describe('rows', () => {
     expect(sample.done).toBe(false);
   });
 
+  it("takes the text literally in the aria name and the subtitle ($' and $& included)", () => {
+    const text = "I say $' and $& calmly";
+    const row = toListItem(affirmation('a', { text }), today, LABELS);
+    expect(row.action?.label).toBe(`Practise: ${text}`);
+    const labels = { ...LABELS, formatDate: () => "$'$&" };
+    expect(rowSubtitle(practised('a', '2026-09-08'), today, labels)).toBe("Last practised $'$&");
+  });
+
   it('splits live affirmations into active and archived', () => {
     const list = [
       affirmation('a'),
@@ -321,6 +365,18 @@ describe('edits', () => {
     expect(logPractice(list, 'missing', entry, 30)).toBe(list);
     const sample = [{ ...affirmation('s'), sample: true }];
     expect(logPractice(sample, 's', entry, 60)[0].sample).toBeUndefined();
+  });
+
+  it('refuses an entry under 5 seconds, over the length, fractional or on a bad date', () => {
+    const list = [affirmation('a')];
+    expect(logPractice(list, 'a', { date: '2026-09-10', seconds: 4 }, 30)).toBe(list);
+    expect(logPractice(list, 'a', { date: '2026-09-10', seconds: 31 }, 30)).toBe(list);
+    expect(logPractice(list, 'a', { date: '2026-09-10', seconds: 6.5 }, 30)).toBe(list);
+    expect(logPractice(list, 'a', { date: '2026-02-30', seconds: 10 }, 30)).toBe(list);
+    expect(logPractice(list, 'a', { date: '', seconds: 10 }, 30)).toBe(list);
+    expect(logPractice(list, 'a', { date: '2026-09-10', seconds: 5 }, 30)[0].practice).toHaveLength(
+      1,
+    );
   });
 
   it('tombstones and restores', () => {

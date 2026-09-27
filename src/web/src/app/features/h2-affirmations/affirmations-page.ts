@@ -8,11 +8,12 @@ import {
   linkedSignal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
+import type { MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
 import { translateSignal, TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
-import { newRecord } from '../../core/data/record';
+import { isLive, newRecord } from '../../core/data/record';
 import { LanguageStore } from '../../core/i18n/language-store';
 import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { AppDialog } from '../../core/layout/app-dialog';
@@ -31,11 +32,7 @@ import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.se
 import { NEW_ITEM_ID, recordDraft } from '../../shared/exercise-kit/record-draft';
 import { todaySignal } from '../../shared/exercise-kit/today';
 import { AffirmationItemForm } from './affirmation-item-form';
-import {
-  AffirmationPractice,
-  PracticeDialogData,
-  PracticeDialogResult,
-} from './affirmation-practice';
+import { AffirmationPractice, PracticeDialogData } from './affirmation-practice';
 import { AffirmationsSummary } from './affirmations-summary';
 import {
   AffirmationLabels,
@@ -55,6 +52,7 @@ import {
   editFields,
   isComplete,
   isDraftWorthSaving,
+  isPracticeResult,
   isStarted,
   liveSampleOf,
   logPractice,
@@ -167,12 +165,11 @@ export class AffirmationsPage {
   });
 
   private readonly list = computed(() => this.store.value());
+  private readonly live = computed(() => this.list().filter(isLive));
   private readonly active = computed(() => activeAffirmations(this.list()));
-  private readonly live = computed(() => [...this.active(), ...archivedAffirmations(this.list())]);
+  private readonly archived = computed(() => archivedAffirmations(this.list()));
   protected readonly activeItems = computed(() => this.listItems(this.active()));
-  protected readonly archivedItems = computed(() =>
-    this.listItems(archivedAffirmations(this.list())),
-  );
+  protected readonly archivedItems = computed(() => this.listItems(this.archived()));
 
   protected readonly draft = recordDraft<Affirmation>({
     itemId: this.itemId,
@@ -270,40 +267,52 @@ export class AffirmationsPage {
     this.store.update((list) => editAffirmation(list, id, editFields({ archived })));
   }
 
+  /** Whether a practice dialog is opening or open: a double tap opens one dialog, logs once. */
+  private practising = false;
+
   /** The row's Practise button: opens the practice view and logs only what "Done" returns. The
    * dialog restores focus to this button when it closes (`MatDialog`'s `restoreFocus`). */
   protected async onPractise(id: string): Promise<void> {
     const affirmation = this.list().find((candidate) => candidate.id === id);
-    if (!affirmation || !canPractise(affirmation)) {
+    if (this.practising || !affirmation || !canPractise(affirmation)) {
       return;
     }
+    this.practising = true;
     const data: PracticeDialogData = {
       text: affirmation.text.trim(),
       ...(affirmation.scene?.trim() ? { scene: affirmation.scene.trim() } : {}),
       length: practiceLength(affirmation),
     };
-    const ref = await this.dialog.open<
-      AffirmationPractice,
-      PracticeDialogData,
-      PracticeDialogResult
-    >(AffirmationPractice, {
-      viewContainerRef: this.viewContainerRef,
-      data,
-      panelClass: 'affirmation-practice-panel',
-      width: '100vw',
-      height: '100%',
-      maxWidth: '100vw',
-      maxHeight: '100vh',
-      autoFocus: '.practice-start',
-    });
+    let ref: MatDialogRef<AffirmationPractice, unknown>;
+    try {
+      ref = await this.dialog.open<AffirmationPractice, PracticeDialogData, unknown>(
+        AffirmationPractice,
+        {
+          viewContainerRef: this.viewContainerRef,
+          data,
+          panelClass: 'affirmation-practice-panel',
+          width: '100vw',
+          height: '100%',
+          maxWidth: '100vw',
+          maxHeight: '100vh',
+          autoFocus: '.practice-start',
+        },
+      );
+    } catch (error) {
+      this.practising = false;
+      throw error;
+    }
     ref.afterClosed().subscribe((result) => {
-      if (result !== undefined) {
-        this.logPractice(id, result);
-      }
+      this.practising = false;
+      this.logPractice(id, result);
     });
   }
 
-  private logPractice(id: string, result: PracticeDialogResult): void {
+  /** Stores a practice only for a well-formed result (the close value is untyped at runtime). */
+  private logPractice(id: string, result: unknown): void {
+    if (!isPracticeResult(result)) {
+      return;
+    }
     const entry = { date: localDateString(this.clock.now()), seconds: result.seconds };
     const saved = this.store.update((list) => logPractice(list, id, entry, result.length));
     if (saved) {

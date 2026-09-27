@@ -6,6 +6,7 @@ import {
   isOptionalString,
 } from '../../core/data/record-validators';
 import { getRegisteredModels, registerModel } from '../../core/data/registry';
+import { isValidIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
 import { registerExercise } from '../../shared/exercise-kit/exercise-registry';
 import { storeStatusOnDayFactory } from '../../shared/exercise-kit/exercise-hub-status';
 import { storeStartedFactory } from '../../shared/exercise-kit/exercise-started';
@@ -26,6 +27,9 @@ export type AffirmationChecks = Readonly<Record<AffirmationCheck, boolean>>;
 export const PRACTICE_LENGTHS = [30, 60, 120] as const;
 export type PracticeLength = (typeof PRACTICE_LENGTHS)[number];
 export const DEFAULT_PRACTICE_LENGTH: PracticeLength = 60;
+
+/** The fewest seconds "Done" logs (lead decision on #64): a shorter run closes without a log. */
+export const MIN_PRACTICE_SECONDS = 5;
 
 /** One practice: the local date it ended on and the seconds actually spent. A nested value object,
  * append-only (playbook §3). */
@@ -73,7 +77,13 @@ function isPracticeEntry(value: unknown): value is PracticeEntry {
     return false;
   }
   const candidate = value as Record<string, unknown>;
-  return typeof candidate['date'] === 'string' && typeof candidate['seconds'] === 'number';
+  const seconds = candidate['seconds'];
+  return (
+    typeof candidate['date'] === 'string' &&
+    isValidIsoDate(candidate['date']) &&
+    Number.isInteger(seconds) &&
+    (seconds as number) >= 0
+  );
 }
 
 const isPracticeLog = isArrayOf(isPracticeEntry);

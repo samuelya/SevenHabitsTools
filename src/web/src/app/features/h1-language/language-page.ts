@@ -10,6 +10,7 @@ import { Numerals } from '../../core/i18n/language';
 import { intlLocaleFor } from '../../core/i18n/locale.logic';
 import { CLOCK } from '../../core/time/clock';
 import { localDateString, parseIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import { pollingClock } from '../../shared/exercise-kit/polling-clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
 import type { ExerciseGuideSample } from '../../shared/exercise-kit/exercise-guide/exercise-guide';
@@ -59,7 +60,9 @@ import {
   Phrase,
   PhraseFields,
 } from './language.model';
-import { minuteClock } from './minute-clock';
+
+/** How often the page re-reads the clock (issue #54: a coarse timer, never a per-second tick). */
+const MINUTE_MS = 60_000;
 
 /** Every new phrase's draft starts here; it becomes a record on the first typed character. */
 const DEFAULT_FIELDS: PhraseFields = { text: '', kind: 'reactive' };
@@ -71,7 +74,7 @@ const DEFAULT_FIELDS: PhraseFields = { text: '', kind: 'reactive' };
  * and `LanguageWeek`.
  *
  * Time: every rule that depends on the clock reads `now`, `CLOCK` re-read once a minute and when
- * the tab becomes visible (`minuteClock()`), so a day reaching its 24 hours ends on screen within
+ * the tab becomes visible (`pollingClock()`), so a day reaching its 24 hours ends on screen within
  * a minute, or at once on return to a hidden tab, without anything being stored.
  *
  * Routing and draft-before-record are `transition-page.ts`'s: the selected phrase is the optional
@@ -105,7 +108,7 @@ export class LanguagePage {
   private readonly lang = toSignal(this.transloco.langChanges$, {
     initialValue: this.transloco.getActiveLang(),
   });
-  private readonly clockTick = minuteClock();
+  private readonly clockTick = pollingClock(MINUTE_MS);
   private readonly now = this.clockTick.now;
   private readonly today = computed(() => localDateString(this.now()));
   protected readonly started = computed(() => isStarted(this.store.value()));

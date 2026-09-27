@@ -4,7 +4,7 @@ import { By } from '@angular/platform-browser';
 import { provideRouter, Router, Routes, withComponentInputBinding } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { TranslocoService } from '@jsverse/transloco';
-import { of } from 'rxjs';
+import { Subject, isObservable, of } from 'rxjs';
 import { DocumentStore } from '../../core/data/document.store';
 import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
@@ -20,7 +20,7 @@ import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { AffirmationItemForm } from './affirmation-item-form';
-import { PracticeDialogData, PracticeDialogResult } from './affirmation-practice';
+import { PracticeDialogData } from './affirmation-practice';
 import { uncheckedChecks } from './affirmations.logic';
 import {
   AFFIRMATIONS_MODEL_KEY,
@@ -51,11 +51,12 @@ interface Setup {
   snackbar: { open: ReturnType<typeof vi.fn> };
 }
 
-/** `dialogResult` is what the practice dialog closes with: `undefined` for Escape/Close. */
+/** `dialogResult` is what the practice dialog closes with: `undefined` for Escape/Close, anything
+ * at all at runtime, or an observable that closes it when the test says so. */
 async function setUp(
   seed: Affirmation[] = [],
   url = LIST_URL,
-  dialogResult?: PracticeDialogResult,
+  dialogResult?: unknown,
 ): Promise<Setup> {
   registerExerciseKitModel();
   registerAffirmationsModel();
@@ -84,7 +85,9 @@ async function setUp(
         useValue: {
           open: vi.fn(async (_component: unknown, config: { data?: PracticeDialogData }) => {
             opened.push(config);
-            return { afterClosed: () => of(dialogResult) };
+            return {
+              afterClosed: () => (isObservable(dialogResult) ? dialogResult : of(dialogResult)),
+            };
           }),
         },
       },
@@ -239,6 +242,46 @@ describe('AffirmationsPage', () => {
     await settle(harness);
     expect(stored()).toBe(before);
     expect(snackbar.open).not.toHaveBeenCalled();
+  });
+
+  it('logs nothing for a malformed close value', async () => {
+    for (const result of [
+      '',
+      { seconds: 3, length: 30 },
+      { seconds: 31, length: 30 },
+      { seconds: 12, length: 45 },
+      { seconds: '12', length: 30 },
+    ]) {
+      const { harness, stored, snackbar } = await setUp([affirmation('a')], LIST_URL, result);
+      await settle(harness);
+      const before = stored();
+      practiseButtons(harness)[0].click();
+      await settle(harness);
+      expect(stored()).toBe(before);
+      expect(snackbar.open).not.toHaveBeenCalled();
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('ignores Practise while a practice dialog is opening or open: one dialog, one log', async () => {
+    const closed = new Subject<unknown>();
+    const { harness, stored, opened } = await setUp([affirmation('a')], LIST_URL, closed);
+    await settle(harness);
+    practiseButtons(harness)[0].click();
+    practiseButtons(harness)[0].click();
+    await settle(harness);
+    practiseButtons(harness)[0].click();
+    await settle(harness);
+    expect(opened).toHaveLength(1);
+
+    closed.next({ seconds: 20, length: 60 });
+    closed.complete();
+    await settle(harness);
+    expect(stored()[0].practice).toEqual([{ date: TODAY, seconds: 20 }]);
+    // Closed: the next Practise opens a dialog again.
+    practiseButtons(harness)[0].click();
+    await settle(harness);
+    expect(opened).toHaveLength(2);
   });
 
   it('shows the summary and the streak once practised, and gates Mark done on a practice', async () => {

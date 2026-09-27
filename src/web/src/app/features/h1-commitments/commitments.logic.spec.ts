@@ -232,6 +232,12 @@ describe('toListItem', () => {
     expect(sourceLine(`From: ${SOURCE_TOKEN}`, 'Your influence')).toBe('From: Your influence');
   });
 
+  it("takes the source title literally, $' and $& included", () => {
+    expect(sourceLine(`From: ${SOURCE_TOKEN}.`, "A $' and $& title")).toBe(
+      "From: A $' and $& title.",
+    );
+  });
+
   // Transloco re-scans an interpolated value for `{{…}}`, so a braced token never terminates
   // (the CI hang at f0ab823).
   it('uses a source token Transloco does not interpolate again', () => {
