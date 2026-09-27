@@ -16,7 +16,7 @@
     "example": "Example",
     "overdue": "Overdue",
     "progressText": {
-      "one": "{{done}} of {{total}} steps",
+      "one": "{{done}} of {{total}} step",
       "other": "{{done}} of {{total}} steps"
     }
   },
@@ -75,7 +75,7 @@
       "other": "{{count}} projects, {{done}} done"
     },
     "stepsText": {
-      "one": "{{stepsDone}} of {{steps}} steps done",
+      "one": "{{stepsDone}} of {{steps}} step done",
       "other": "{{stepsDone}} of {{steps}} steps done"
     }
   },
@@ -98,8 +98,8 @@
       {
         "kind": "card",
         "title": "Mum's 70th birthday lunch",
-        "subtitle": "3 of 3 steps · 12 October",
-        "done": true,
+        "subtitle": "0 of 3 steps · in 14 days",
+        "done": false,
         "fields": [
           {
             "label": "What done looks like",
@@ -109,12 +109,12 @@
             "label": "How you'll know",
             "value": "All four siblings came. She asked for the photos afterwards."
           },
-          { "label": "By when", "value": "12 October" },
+          { "label": "By when", "value": "14 days from today" },
           {
             "label": "Steps",
-            "value": "✓ Ask each sibling which Sunday works. ✓ Book the back room at Rosa's. ✓ Scan 30 photos with Dad."
+            "value": "○ Ask each sibling which Sunday works. ○ Book the back room at Rosa's. ○ Scan 30 photos with Dad."
           },
-          { "label": "Status", "value": "Done" }
+          { "label": "Status", "value": "Planning" }
         ],
         "sample": {
           "name": "Mum's 70th birthday lunch",

@@ -1,5 +1,4 @@
 import {
-  MAX_CRITERIA,
   allStepsDone,
   appendCriterion,
   appendStep,
@@ -13,7 +12,7 @@ import {
   setStepDate,
   setStepDone,
 } from './project-steps.logic';
-import { ProjectStep } from './projects.model';
+import { MAX_CRITERIA, ProjectStep } from './projects.model';
 
 const STEPS: readonly ProjectStep[] = [
   { key: 'a', text: 'Ask', done: true },

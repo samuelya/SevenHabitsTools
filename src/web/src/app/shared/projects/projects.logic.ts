@@ -1,5 +1,5 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
-import { isValidIsoDate } from '../../shared/exercise-kit/assessment-history.logic';
+import { isValidIsoDate } from '../exercise-kit/assessment-history.logic';
 import {
   ChecklistLabels,
   ChecklistMet,
@@ -8,17 +8,21 @@ import {
   checklistLabels,
   closestMet,
   labelsLoaded,
-} from '../../shared/exercise-kit/done-checklist.logic';
-import type { DoneChecklistItem } from '../../shared/exercise-kit/done-toggle/done-toggle';
-import type { ExerciseHubStatus } from '../../shared/exercise-kit/exercise-registry';
-import { ExerciseListItem } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
-import { isCounted, withoutSample } from '../../shared/exercise-kit/sample-record.logic';
-import { addDays } from '../../shared/commitments/commitments.logic';
-import { MAX_CRITERIA, isFilledStep } from './project-steps.logic';
-import type { Project, ProjectFields, ProjectStatus, ProjectStep } from './projects.model';
-
-// Nothing from `projects.model.ts` is read at module load here: the model imports this file to
-// register the exercise, so only its types are used.
+} from '../exercise-kit/done-checklist.logic';
+import type { DoneChecklistItem } from '../exercise-kit/done-toggle/done-toggle';
+import type { ExerciseHubStatus } from '../exercise-kit/exercise-registry';
+import { ExerciseListItem } from '../exercise-kit/exercise-list/exercise-list.logic';
+import { isCounted, withoutSample } from '../exercise-kit/sample-record.logic';
+import { addDays } from '../commitments/commitments.logic';
+import { isFilledStep } from './project-steps.logic';
+import {
+  MAX_CRITERIA,
+  Project,
+  ProjectFields,
+  ProjectStatus,
+  ProjectStep,
+  isProjectStatus,
+} from './projects.model';
 
 const hasText = (value: string | undefined): boolean => (value ?? '').trim() !== '';
 
@@ -242,9 +246,10 @@ const cleanDate = (date: string | undefined): string | undefined =>
   date !== undefined && isValidIsoDate(date) ? date : undefined;
 
 /** A form edit as stored fields: an emptied or invalid deadline or step date is dropped (absent,
- * never `''`), an emptied desired result too, and criteria are capped at five. The page runs every
- * edit through this before `draft.edit()`, so the draft path stores the same shape as a saved
- * edit (playbook §6's first pitfall). */
+ * never `''`), an emptied desired result too. The page runs every edit through this before
+ * `draft.edit()`; the dropped fields come out as `undefined`, which `insertProject()` and
+ * `editProject()` both strip, so the draft path stores the same shape as a saved edit (playbook
+ * §6's first pitfall). Criteria pass as they are: the form never adds past `MAX_CRITERIA`. */
 export function editFields(edit: Partial<ProjectFields>): Partial<ProjectFields> {
   const fields: Record<string, unknown> = { ...edit };
   if ('deadline' in edit) {
@@ -252,9 +257,6 @@ export function editFields(edit: Partial<ProjectFields>): Partial<ProjectFields>
   }
   if ('desiredResult' in edit && !hasText(edit.desiredResult)) {
     fields['desiredResult'] = undefined;
-  }
-  if (edit.criteria !== undefined) {
-    fields['criteria'] = edit.criteria.slice(0, MAX_CRITERIA);
   }
   if (edit.steps !== undefined) {
     fields['steps'] = edit.steps.map((step) => {
@@ -274,6 +276,12 @@ const sameValue = (a: unknown, b: unknown): boolean =>
 
 function withoutUndefined<T extends object>(record: T): T {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined)) as T;
+}
+
+/** Appends `record`, its `undefined` fields left out (the draft before record and guide samples,
+ * issue #217 and #232); the same array when its id is already there. */
+export function insertProject(list: readonly Project[], record: Project): readonly Project[] {
+  return list.some((item) => item.id === record.id) ? list : [...list, withoutUndefined(record)];
 }
 
 /** Merges `fields` (cleaned) into the live project `id`, bumping `updatedAt` and making a sample
@@ -326,8 +334,6 @@ export function restoreProject(
 /** Days from creation to a sample's deadline (issue #65: today + 14, never a stored date). */
 export const SAMPLE_DEADLINE_IN_DAYS = 14;
 
-const SAMPLE_STATUSES: readonly string[] = ['planning', 'underWay', 'done', 'dropped'];
-
 const optionalText = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 
@@ -357,7 +363,7 @@ export function projectFromExample(
   const example = value as Record<string, unknown>;
   const name = optionalText(example['name']);
   const status = example['status'];
-  if (name === undefined || typeof status !== 'string' || !SAMPLE_STATUSES.includes(status)) {
+  if (name === undefined || !isProjectStatus(status)) {
     return null;
   }
   const desiredResult = optionalText(example['desiredResult']);
@@ -370,7 +376,7 @@ export function projectFromExample(
     criteria: criteria.slice(0, MAX_CRITERIA),
     ...(example['deadline'] === true ? { deadline: addDays(today, SAMPLE_DEADLINE_IN_DAYS) } : {}),
     steps: sampleSteps(example['steps'], newKey),
-    status: status as ProjectStatus,
+    status,
   };
 }
 

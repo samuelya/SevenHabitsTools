@@ -5,7 +5,7 @@ import '../../features/settings/settings.model';
 import { provideLocaleDateAdapter } from '../../shared/ui/locale-date-adapter/locale-date-adapter';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { ProjectItemForm } from './project-item-form';
-import { Project, ProjectFields } from './projects.model';
+import { Project, ProjectFields } from '../../shared/projects/projects.model';
 
 function item(overrides: Partial<Project> = {}): Project {
   return {
@@ -155,6 +155,74 @@ describe('ProjectItemForm', () => {
     );
     fixture.detectChanges();
     expect(query(fixture, '.mark-project-done')).toBeNull();
+  });
+
+  it('clears a step date from the keyboard and keeps a half-typed one across re-renders', () => {
+    const dated = [{ key: 'a', text: 'Ask', done: false, date: '2026-09-20' }];
+    const fixture = setUp(item({ desiredResult: 'x', steps: dated }));
+    const emitted = edits(fixture);
+    const field = query<HTMLInputElement>(fixture, '.step-date-field');
+    expect(field.value).not.toBe('');
+
+    type(field, 'Sept');
+    fixture.componentRef.setInput(
+      'item',
+      item({ desiredResult: 'x', name: 'Lunch!', steps: dated }),
+    );
+    fixture.detectChanges();
+    expect(field.value).toBe('Sept');
+    field.dispatchEvent(new Event('change'));
+    expect(emitted).toEqual([]);
+
+    type(field, '');
+    field.dispatchEvent(new Event('change'));
+    expect(emitted).toEqual([{ steps: [{ key: 'a', text: 'Ask', done: false }] }]);
+    fixture.componentRef.setInput('item', item({ desiredResult: 'x', steps: emitted[0].steps }));
+    fixture.detectChanges();
+    expect(field.value).toBe('');
+  });
+
+  it('moves focus to the status group after "Mark project Done"', async () => {
+    const ticked = STEPS.map((step) => ({ ...step, done: true }));
+    const fixture = setUp(item({ desiredResult: 'x', steps: ticked }));
+    const button = query<HTMLButtonElement>(fixture, '.mark-project-done');
+    button.focus();
+    button.click();
+    fixture.componentRef.setInput(
+      'item',
+      item({ desiredResult: 'x', steps: ticked, status: 'done' }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const active = document.activeElement as HTMLElement;
+    expect(active.closest('.status')).not.toBeNull();
+    expect(active.textContent?.trim()).toBe('Done');
+  });
+
+  it('moves focus to the previous step after a removal, never to a disabled field', async () => {
+    const three = [...STEPS, { key: 'c"]', text: 'Cake', done: false }];
+    const fixture = setUp(item({ desiredResult: 'x', steps: three }));
+    const emitted = edits(fixture);
+    const removeButtons = () => el(fixture).querySelectorAll<HTMLButtonElement>('.remove-step');
+    removeButtons()[2].focus();
+    removeButtons()[2].click();
+    fixture.componentRef.setInput('item', item({ desiredResult: 'x', steps: emitted[0].steps }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((document.activeElement as HTMLInputElement).value).toBe('Book');
+
+    // The first step has no previous one: focus goes to the step now first. With the steps locked
+    // (no desired result) and none left, it skips the disabled "Next step" for the result field.
+    removeButtons()[0].click();
+    fixture.componentRef.setInput('item', item({ desiredResult: 'x', steps: emitted[1].steps }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect((document.activeElement as HTMLInputElement).value).toBe('Book');
+    removeButtons()[0].click();
+    fixture.componentRef.setInput('item', item({ steps: emitted[2].steps }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement?.classList.contains('result-field')).toBe(true);
   });
 
   it('adds criteria up to five, then explains the limit', () => {

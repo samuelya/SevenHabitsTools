@@ -10,6 +10,7 @@ import {
   editProject,
   finishedProjects,
   hubStatus,
+  insertProject,
   isComplete,
   isDraftWorthSaving,
   isItemComplete,
@@ -224,12 +225,12 @@ describe('rows', () => {
 });
 
 describe('edits', () => {
-  it('cleans emptied dates and an emptied desired result to absent, and caps criteria', () => {
+  it('cleans emptied dates and an emptied desired result to absent, and keeps every criterion', () => {
     expect(editFields({ deadline: '' })).toEqual({ deadline: undefined });
     expect(editFields({ deadline: '2026-02-30' })).toEqual({ deadline: undefined });
     expect(editFields({ deadline: '2026-10-12' })).toEqual({ deadline: '2026-10-12' });
     expect(editFields({ desiredResult: '  ' })).toEqual({ desiredResult: undefined });
-    expect(editFields({ criteria: ['1', '2', '3', '4', '5', '6'] }).criteria).toHaveLength(5);
+    expect(editFields({ criteria: ['1', '2', '3', '4', '5', '6'] }).criteria).toHaveLength(6);
     expect(editFields({ steps: [{ key: 's', text: 'x', done: false, date: '' }] }).steps).toEqual([
       { key: 's', text: 'x', done: false },
     ]);
@@ -243,6 +244,21 @@ describe('edits', () => {
     expect('deadline' in next[0]).toBe(false);
     expect(editProject(list, 'a', { name: 'Project a' }, NOW)).toBe(list);
     expect(editProject(list, 'x', { name: 'Nope' }, NOW)).toBe(list);
+  });
+
+  it('stores a draft with the same shape as a saved edit: no explicit undefined (#217)', () => {
+    const draft = { ...project('d', { deadline: '2026-10-12' }), ...editFields({ deadline: '' }) };
+    expect('deadline' in draft).toBe(true);
+    const inserted = insertProject([], draft);
+    expect('deadline' in inserted[0]).toBe(false);
+    const edited = editProject(
+      [project('d', { deadline: '2026-10-12' })],
+      'd',
+      { deadline: '' },
+      NOW,
+    );
+    expect(Object.keys(inserted[0]).sort()).toEqual(Object.keys(edited[0]).sort());
+    expect(insertProject(inserted, draft)).toBe(inserted);
   });
 
   it('deletes softly and restores', () => {

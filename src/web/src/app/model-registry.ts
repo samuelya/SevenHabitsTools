@@ -29,3 +29,4 @@ import './shared/commitments/commitments.model';
 import './shared/roles/roles.model';
 import './shared/roles/role-goals.model';
 import './shared/mission/mission.model';
+import './shared/projects/projects.model';

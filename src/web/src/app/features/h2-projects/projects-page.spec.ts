@@ -16,9 +16,10 @@ import { registerExerciseKitModel } from '../../shared/exercise-kit/exercise-kit
 import { ExercisePromptCard } from '../../shared/exercise-kit/exercise-prompt-card/exercise-prompt-card';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
 import { ProjectItemForm } from './project-item-form';
-import { PROJECTS_ROUTE, Project, registerProjectsModel } from './projects.model';
+import { Project, registerProjectsModel } from '../../shared/projects/projects.model';
+import { ProjectsService } from '../../shared/projects/projects.service';
+import { PROJECTS_ROUTE, registerProjectsExercise } from './projects.model';
 import projectsRoutes from './projects.routes';
-import { ProjectsService } from './projects.service';
 
 const LIST_URL = `/${PROJECTS_ROUTE}`;
 const NOW = new Date(2026, 8, 10, 10, 0, 0);
@@ -33,6 +34,7 @@ interface Setup {
 async function setUp(seed: Project[] = [], url = LIST_URL): Promise<Setup> {
   registerExerciseKitModel();
   registerProjectsModel();
+  registerProjectsExercise();
   const deletes: ConfirmAndDeleteOptions[] = [];
   TestBed.configureTestingModule({
     providers: [
@@ -188,6 +190,30 @@ describe('ProjectsPage', () => {
     expect(rows(harness)).toEqual(['Project a', 'Project b']);
   });
 
+  it('keeps Finished collapsed when the user closes it and the selection leaves a finished project', async () => {
+    const { harness } = await setUp(
+      [project('a'), project('b', { status: 'done' })],
+      `${LIST_URL}/b`,
+    );
+    await settle(harness);
+    const toggle = () => host(harness).querySelector('#finished-toggle') as HTMLButtonElement;
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+    toggle().click();
+    await settle(harness);
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+
+    await TestBed.inject(Router).navigateByUrl(`${LIST_URL}/a`);
+    await settle(harness);
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+    await TestBed.inject(Router).navigateByUrl(LIST_URL);
+    await settle(harness);
+    expect(toggle().getAttribute('aria-expanded')).toBe('false');
+
+    await TestBed.inject(Router).navigateByUrl(`${LIST_URL}/b`);
+    await settle(harness);
+    expect(toggle().getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('shows only Finished when nothing is under way', async () => {
     const { harness } = await setUp([project('a', { status: 'done' })]);
     await settle(harness);
@@ -250,6 +276,23 @@ describe('ProjectsPage', () => {
     expect(stored()[0].deletedAt).toBe(NOW.toISOString());
     deletes[0].onUndo();
     expect(stored()[0].deletedAt).toBeUndefined();
+  });
+
+  it('uses the singular for one step in the row and the summary, in en and ar', async () => {
+    const { harness } = await setUp([
+      project('a', { steps: [{ key: 'a-1', text: 'Only', done: false }] }),
+    ]);
+    await settle(harness);
+    const summary = () => host(harness).querySelector('app-projects-summary')?.textContent ?? '';
+    expect(subtitles(harness)).toEqual(['0 of 1 step']);
+    expect(summary()).toContain('1 project, 0 done');
+    expect(summary()).toContain('0 of 1 step done');
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    await settle(harness);
+    expect(subtitles(harness)[0]).toContain('من خطوة واحدة');
+    expect(summary()).toContain('مشروع واحد، تم منه');
+    expect(summary()).toContain('من خطوة واحدة');
+    TestBed.inject(TranslocoService).setActiveLang('en');
   });
 
   it('follows a language switch in the row subtitle', async () => {

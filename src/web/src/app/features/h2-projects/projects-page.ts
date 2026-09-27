@@ -38,6 +38,7 @@ import {
   editFields,
   editProject,
   finishedProjects,
+  insertProject,
   isComplete,
   isDraftWorthSaving,
   isFinished,
@@ -49,9 +50,10 @@ import {
   summarize,
   toListItem,
   underWayProjects,
-} from './projects.logic';
-import { PROJECTS_MODEL_KEY, PROJECTS_ROUTE, Project, ProjectFields } from './projects.model';
-import { ProjectsService } from './projects.service';
+} from '../../shared/projects/projects.logic';
+import { PROJECTS_MODEL_KEY, Project, ProjectFields } from '../../shared/projects/projects.model';
+import { ProjectsService } from '../../shared/projects/projects.service';
+import { PROJECTS_ROUTE } from './projects.model';
 
 /**
  * Your projects (issue #65): a list exercise copied from `AffirmationsPage` (routing, draft before
@@ -130,7 +132,7 @@ export class ProjectsPage {
         this.clock.now(),
       ),
     isWorthSaving: isDraftWorthSaving,
-    save: (record) => this.projects.update((list) => [...list, record]),
+    save: (record) => this.projects.update((list) => insertProject(list, record)),
     update: (id, fields) =>
       this.projects.update((list) => editProject(list, id, fields, this.clock.now())),
     navigate: (segment, options) => this.goTo(segment === null ? [] : [segment], options),
@@ -138,14 +140,15 @@ export class ProjectsPage {
   });
 
   /** Whether the Finished group is open: collapsed by default; selecting a finished project, or
-   * finishing the one open, opens it. Keyed to the id so an edit doesn't reset it (playbook §6). */
+   * finishing the one open, opens it. Otherwise it stays as the user left it, also when the
+   * selection leaves a finished project. Keyed to the id so an edit doesn't reset it (playbook
+   * §6). */
   protected readonly finishedExpanded = linkedSignal<string | null, boolean>({
     source: () => {
       const selected = this.draft.selected();
       return selected && isFinished(selected.status) ? selected.id : null;
     },
-    computation: (finishedId, previous) =>
-      finishedId !== null || (previous?.source ?? null) !== null || (previous?.value ?? false),
+    computation: (finishedId, previous) => finishedId !== null || (previous?.value ?? false),
   });
 
   protected readonly summary = computed(() => summarize(this.list()));
@@ -204,7 +207,7 @@ export class ProjectsPage {
       return;
     }
     const record: Project = { ...newRecord(fields, this.clock.now()), sample: true };
-    if (this.projects.update((list) => [...list, record])) {
+    if (this.projects.update((list) => insertProject(list, record))) {
       this.goTo([record.id], options);
     }
   }

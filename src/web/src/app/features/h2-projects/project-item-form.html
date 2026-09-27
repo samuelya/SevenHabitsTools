@@ -190,6 +190,7 @@
                 <input
                   matInput
                   #stepDateInput
+                  class="step-date-field"
                   autocomplete="off"
                   [attr.aria-describedby]="'project-step-' + index"
                   [matDatepicker]="stepPicker"
@@ -274,6 +275,7 @@
           matInput
           type="text"
           autocomplete="off"
+          #newStepField
           class="new-step-field"
           [disabled]="!stepsOpen()"
           [placeholder]="'h2Projects.steps.placeholder' | transloco"

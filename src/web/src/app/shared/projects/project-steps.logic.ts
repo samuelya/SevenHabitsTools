@@ -1,13 +1,10 @@
-import type { ProjectStep } from './projects.model';
+import { MAX_CRITERIA, ProjectStep } from './projects.model';
 
 /**
  * The pure array edits behind a project's steps and "How you'll know" lines (issue #65). The form
  * builds the next array with these and emits it as a field edit. Every edit that changes nothing
  * returns the same array, so the store sees a no-op.
  */
-
-/** "Five is enough." */
-export const MAX_CRITERIA = 5;
 
 export type StepDirection = 'up' | 'down';
 

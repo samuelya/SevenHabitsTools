@@ -30,7 +30,6 @@ import {
 } from '../../shared/exercise-kit/assessment-history.logic';
 import { EditorInitialFocus } from '../../shared/exercise-kit/exercise-page/editor-initial-focus.directive';
 import {
-  MAX_CRITERIA,
   StepDirection,
   allStepsDone,
   appendCriterion,
@@ -43,15 +42,16 @@ import {
   removeStep,
   setStepDate,
   setStepDone,
-} from './project-steps.logic';
-import { canAddSteps, isFinished } from './projects.logic';
+} from '../../shared/projects/project-steps.logic';
+import { canAddSteps, isFinished } from '../../shared/projects/projects.logic';
 import {
+  MAX_CRITERIA,
   PROJECT_STATUSES,
   Project,
   ProjectFields,
   ProjectStatus,
   ProjectStep,
-} from './projects.model';
+} from '../../shared/projects/projects.model';
 
 /**
  * The form for one project (issue #65): the name, what done looks like, how you'll know (up to
@@ -93,6 +93,7 @@ export class ProjectItemForm {
   protected readonly maxCriteria = MAX_CRITERIA;
 
   private readonly nameField = viewChild<ElementRef<HTMLTextAreaElement>>('nameField');
+  private readonly newStepField = viewChild<ElementRef<HTMLInputElement>>('newStepField');
   private readonly touched = signal<ReadonlySet<'name' | 'desiredResult'>>(new Set());
   /** What is typed in "Next step", not yet added. */
   protected readonly newStepText = signal('');
@@ -110,7 +111,10 @@ export class ProjectItemForm {
   protected readonly offerDone = computed(
     () => allStepsDone(this.item().steps) && !isFinished(this.item().status),
   );
-  protected readonly deadline = computed(() => dateOrNull(this.item().deadline));
+  /** One `Date` per ISO string, for the deadline and the step dates: a new object on each render
+   * would make the datepicker input rewrite its text, undoing a half-typed or cleared date. */
+  private readonly dates = new Map<string, Date>();
+  protected readonly deadline = computed(() => this.dateFor(this.item().deadline));
 
   constructor() {
     // The form is reused when the selection moves to another project: reset local state, keyed to
@@ -125,7 +129,7 @@ export class ProjectItemForm {
       previous = id;
       untracked(() => {
         this.touched.set(new Set());
-        this.newStepText.set('');
+        this.clearNewStep();
         this.pendingStepKey = null;
         if (switched) {
           // See `TransitionItemForm` for why this is deferred.
@@ -139,9 +143,19 @@ export class ProjectItemForm {
       const key = this.pendingStepKey;
       if (key !== null && steps.some((step) => step.key === key)) {
         this.pendingStepKey = null;
-        untracked(() => this.newStepText.set(''));
+        untracked(() => this.clearNewStep());
       }
     });
+  }
+
+  /** Empties "Next step". The field itself too: if no render ran between the typing and the add,
+   * the `[value]` binding still holds `''` and would see no change to write. */
+  private clearNewStep(): void {
+    this.newStepText.set('');
+    const field = this.newStepField()?.nativeElement;
+    if (field) {
+      field.value = '';
+    }
   }
 
   protected touch(field: 'name' | 'desiredResult'): void {
@@ -214,8 +228,10 @@ export class ProjectItemForm {
     }
   }
 
+  /** The button goes once the project is Done: focus moves to the status group, on Done. */
   protected onMarkProjectDone(): void {
     this.changed.emit({ status: 'done' });
+    this.focusIfLost(['.status .mat-button-toggle-checked button', '.status button']);
   }
 
   // ---- Steps ----
@@ -268,12 +284,23 @@ export class ProjectItemForm {
    * buttons are `disabledInteractive`, so one at either end keeps focus too. */
   protected onMoveStep(step: ProjectStep, direction: StepDirection): void {
     this.emitSteps(moveStep(this.item().steps, step.key, direction));
-    this.focusAfterRender(`[data-step-key="${step.key}"] .move-${direction}`);
+    this.focusAfterRender(`${stepRow(step.key)} .move-${direction}`);
   }
 
+  /** Focus goes to the step before the one removed, else the one now in its place, else "Next
+   * step", else "What done looks like"; never to a disabled field. */
   protected onRemoveStep(step: ProjectStep): void {
-    this.emitSteps(removeStep(this.item().steps, step.key));
-    this.focusAfterRender('.new-step-field');
+    const steps = this.item().steps;
+    const index = steps.findIndex((candidate) => candidate.key === step.key);
+    const neighbours = [steps[index - 1], steps[index + 1]].filter(
+      (candidate): candidate is ProjectStep => candidate !== undefined,
+    );
+    this.emitSteps(removeStep(steps, step.key));
+    this.focusIfLost([
+      ...neighbours.map((candidate) => `${stepRow(candidate.key)} .step-field`),
+      '.new-step-field',
+      '.result-field',
+    ]);
   }
 
   private emitSteps(steps: readonly ProjectStep[]): void {
@@ -283,7 +310,19 @@ export class ProjectItemForm {
   }
 
   protected stepDate(step: ProjectStep): Date | null {
-    return dateOrNull(step.date);
+    return this.dateFor(step.date);
+  }
+
+  private dateFor(date: string | undefined): Date | null {
+    if (date === undefined || !isValidIsoDate(date)) {
+      return null;
+    }
+    let parsed = this.dates.get(date);
+    if (parsed === undefined) {
+      parsed = parseIsoDate(date);
+      this.dates.set(date, parsed);
+    }
+    return parsed;
   }
 
   /** Focuses the first element matching `selector` in this form once the edit has rendered. */
@@ -292,8 +331,31 @@ export class ProjectItemForm {
       injector: this.injector,
     });
   }
+
+  /** Once the edit has rendered, and only if the focused control went with it (a refused write
+   * leaves it in place), focuses the first enabled element matching one of `selectors`. */
+  private focusIfLost(selectors: readonly string[]): void {
+    afterNextRender(
+      () => {
+        const form = this.host.nativeElement;
+        const active = form.ownerDocument.activeElement;
+        if (active !== null && active !== form.ownerDocument.body && form.contains(active)) {
+          return;
+        }
+        for (const selector of selectors) {
+          const target = form.querySelector<HTMLElement>(selector);
+          if (target && !target.matches(':disabled')) {
+            target.focus();
+            return;
+          }
+        }
+      },
+      { injector: this.injector },
+    );
+  }
 }
 
-function dateOrNull(date: string | undefined): Date | null {
-  return date !== undefined && isValidIsoDate(date) ? parseIsoDate(date) : null;
+/** The row of step `key`, its key escaped: keys come from storage and imports. */
+function stepRow(key: string): string {
+  return `[data-step-key="${CSS.escape(key)}"]`;
 }
