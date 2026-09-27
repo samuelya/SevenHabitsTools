@@ -68,6 +68,18 @@
   color: var(--mat-sys-on-surface-variant, gray);
 }
 
+// The same "Example" chip as a sample role's row (`.exercise-list__chip`).
+.goal-chip {
+  margin-inline-start: 0.5rem;
+  padding-block: 0.125rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--mat-sys-outline-variant, lightgray);
+  border-radius: 0.5rem;
+  font: var(--mat-sys-label-medium);
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
 .goal-chevron {
   grid-column: 2;
   grid-row: 1 / span 2;

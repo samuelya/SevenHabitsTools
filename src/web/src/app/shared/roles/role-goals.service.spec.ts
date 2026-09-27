@@ -1,16 +1,22 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { DocumentStore } from '../../core/data/document.store';
+import { featureStore } from '../../core/data/feature-store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { CLOCK } from '../../core/time/clock';
 import { registerRoleGoalsModel } from './role-goals.model';
 import { RoleGoalsService } from './role-goals.service';
+import { ROLES_MODEL_KEY, Role, registerRolesModel } from './roles.model';
+
+const now = vi.fn(() => new Date('2026-03-10T09:00:00'));
 
 function setUp(isWriter = true): RoleGoalsService {
+  registerRolesModel();
   registerRoleGoalsModel();
+  now.mockClear();
   TestBed.configureTestingModule({
     providers: [
-      { provide: CLOCK, useValue: { now: () => new Date('2026-03-10T09:00:00') } },
+      { provide: CLOCK, useValue: { now } },
       {
         provide: WRITER_LOCK,
         useValue: { role: signal(isWriter ? 'writer' : 'reader'), isWriter: signal(isWriter) },
@@ -43,6 +49,8 @@ describe('RoleGoalsService', () => {
 
   it('adds up to five steps, returning each key, then null', () => {
     const service = setUp();
+    const dad: Role = { id: 'dad', createdAt: 'x', updatedAt: 'x', name: 'Dad', order: 0 };
+    TestBed.runInInjectionContext(() => featureStore<Role[]>(ROLES_MODEL_KEY).update(() => [dad]));
     const id = service.add({ roleId: 'dad', what: 'x' })!;
     const keys = Array.from({ length: 5 }, () => service.addStep(id));
     expect(keys.every((key) => typeof key === 'string')).toBe(true);
@@ -69,6 +77,15 @@ describe('RoleGoalsService', () => {
     service.update(id, { what: 'x' });
     service.reopen(id);
     expect(store.document()).toBe(doc);
+  });
+
+  it('runs each change once', () => {
+    const service = setUp();
+    const id = service.add({ roleId: 'dad', what: 'x' })!;
+    now.mockClear();
+    service.update(id, { what: 'y' });
+    // One clock read for the store's write stamp, one for the edit's `updatedAt`: not two runs.
+    expect(now).toHaveBeenCalledTimes(2);
   });
 
   it('refuses writes in a read-only tab', () => {

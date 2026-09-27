@@ -1,8 +1,6 @@
 import { RoleGoal } from '../../shared/roles/role-goals.model';
 import { Role } from '../../shared/roles/roles.model';
 import {
-  COUNT_TOKEN,
-  goalCountLine,
   goalFromExample,
   isGoalDraftWorthSaving,
   liveSampleGoalOf,
@@ -45,13 +43,6 @@ describe('goals page logic (#291)', () => {
     expect(isGoalDraftWorthSaving({ what: 'O' })).toBe(true);
   });
 
-  it('goalCountLine() picks the plural form, falls back to other, and is blank before load', () => {
-    const forms = { one: '1 goal', other: `${COUNT_TOKEN} goals` };
-    expect(goalCountLine(forms, 'one', '1')).toBe('1 goal');
-    expect(goalCountLine(forms, 'few', '٣')).toBe('٣ goals');
-    expect(goalCountLine({}, 'other', '3')).toBe('');
-  });
-
   it('goalFromExample() reads the role, the goal and up to five steps with text, undone', () => {
     let n = 0;
     const example = goalFromExample(EXAMPLE, () => `k${n++}`);
@@ -79,9 +70,10 @@ describe('goals page logic (#291)', () => {
     expect(goalFromExample(null, () => 'k')).toBeNull();
   });
 
-  it('roleNamed() finds a live, unarchived role by name', () => {
+  it('roleNamed() finds a live role by name, an active one first, else an archived one', () => {
     const roles = [role('a', { name: 'Dad', archived: true }), role('b', { name: 'Dad' })];
     expect(roleNamed(roles, 'Dad')?.id).toBe('b');
+    expect(roleNamed([role('a', { name: 'Dad', archived: true })], 'Dad')?.id).toBe('a');
     expect(roleNamed([role('c', { name: 'Dad', deletedAt: T0 })], 'Dad')).toBeUndefined();
   });
 

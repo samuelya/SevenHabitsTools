@@ -436,4 +436,65 @@ describe('RolesPage', () => {
     expect(goals.all()).toHaveLength(1);
     expect(service.all()).toHaveLength(1);
   });
+
+  it("shows each row's goal count, plural-correct, in the active language and numerals", async () => {
+    const many = (roleId: string, count: number) =>
+      Array.from({ length: count }, (_, i) => goal(`${roleId}${i}`, roleId));
+    const roles = [BUILT_IN, role('a', { order: 1 }), role('b', { order: 2 })];
+    const { harness } = await setUp(roles, LIST_URL, [...many('a', 2), ...many('b', 11)]);
+    await settle(harness);
+    expect(rows(harness)).toEqual([expect.any(String), 'a', 'b']);
+    const text = () => host(harness).textContent ?? '';
+    expect(text()).toContain('2 goals');
+    expect(text()).toContain('11 goals');
+    expect(text()).not.toContain('{{');
+
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    await settle(harness);
+    expect(text()).toContain('هدفان');
+    expect(text()).toContain('١١ هدفًا');
+    expect(text()).not.toContain('{{');
+    TestBed.inject(TranslocoService).setActiveLang('en');
+  });
+
+  it('counts no example goal and no goal on an example role, on the row or in the summary', async () => {
+    const roles = [BUILT_IN, role('a', { order: 1 }), role('s', { order: 2, sample: true })];
+    const { harness } = await setUp(roles, LIST_URL, [
+      goal('g1', 'a', { sample: true }),
+      goal('g2', 's'),
+    ]);
+    await settle(harness);
+    expect(host(harness).textContent).not.toContain('1 goal');
+    expect(host(harness).querySelector('app-roles-summary')?.textContent).not.toContain('goal');
+  });
+
+  it('"Try this example" on the goal reuses an archived Dad instead of adding a second', async () => {
+    const { harness, service } = await setUp([
+      BUILT_IN,
+      role('dad', { name: 'Dad', order: 1, archived: true }),
+    ]);
+    const goals = TestBed.inject(RoleGoalsService);
+    const prompt = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    prompt.exampleTried.emit({ role: { name: 'Dad' }, what: 'One evening a week' });
+    await settle(harness);
+    expect(service.all().filter((r) => r.name === 'Dad')).toHaveLength(1);
+    expect(goals.forRole('dad')).toEqual([expect.objectContaining({ sample: true })]);
+    expect(TestBed.inject(Router).url).toBe(`${LIST_URL}/dad`);
+  });
+
+  it('"Try this example" removes the sample role it added when the goal is refused', async () => {
+    const { harness, service } = await setUp();
+    vi.spyOn(TestBed.inject(RoleGoalsService), 'insert').mockReturnValue(false);
+    const prompt = harness.routeDebugElement!.query(By.directive(ExercisePromptCard))
+      .componentInstance as ExercisePromptCard;
+    prompt.exampleTried.emit({ role: { name: 'Dad' }, what: 'One evening a week' });
+    await settle(harness);
+    expect(service.all()).toEqual([]);
+    expect(TestBed.inject(Router).url).toBe(LIST_URL);
+  });
 });

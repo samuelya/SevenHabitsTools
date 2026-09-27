@@ -13,7 +13,7 @@ import {
   ExerciseListItem,
 } from '../../shared/exercise-kit/exercise-list/exercise-list.logic';
 import { isCounted } from '../../shared/exercise-kit/sample-record.logic';
-import { hasStep } from '../../shared/roles/role-goals.logic';
+import { countedGoals, hasStep } from '../../shared/roles/role-goals.logic';
 import { RoleGoal } from '../../shared/roles/role-goals.model';
 import {
   BuiltInRoleLabels,
@@ -46,13 +46,6 @@ export function countedRoles(list: readonly Role[]): Role[] {
   return activeRoles(list).filter(isUserRole);
 }
 
-/** Goals the user made (live, not an untouched guide example) for a live, unarchived role: what the
- * summary and the gate count (issue #291). An archived role's goals stay stored but don't count. */
-export function countedGoals(roles: readonly Role[], goals: readonly RoleGoal[]): RoleGoal[] {
-  const active = new Set(activeRoles(roles).map((role) => role.id));
-  return goals.filter((goal) => isCounted(goal) && active.has(goal.roleId));
-}
-
 /** The hub's status text: "5 roles", `null` with none. */
 export function hubStatus(list: readonly Role[]): ExerciseHubStatus | null {
   const count = countedRoles(list).length;
@@ -69,7 +62,7 @@ export type RolesChecklistKey = (typeof CHECKLIST_KEYS)[number];
 const hasNote = (role: Role): boolean => (role.note ?? '').trim() !== '';
 
 /** The gate is over the whole list, not one item: a role exists, `RATED_TO_FINISH` are rated, one
- * has a note and one counted goal has a first step. Both `isComplete()` and `doneChecklist()`
+ * has a note and one counted goal (`countedGoals()`) has a first step. Both `isComplete()` and `doneChecklist()`
  * reduce this one map, so the button and its checklist never disagree. */
 function checklistMet(
   list: readonly Role[],
@@ -80,7 +73,7 @@ function checklistMet(
     role: counted.length > 0,
     rated: counted.filter((role) => isRating(role.satisfaction)).length >= RATED_TO_FINISH,
     note: counted.some(hasNote),
-    goal: countedGoals(list, goals).some(hasStep),
+    goal: countedGoals(goals, list).some(hasStep),
   };
 }
 
@@ -122,7 +115,7 @@ export function summarize(list: readonly Role[], goals: readonly RoleGoal[]): Ro
   if (counted.length === 0) {
     return null;
   }
-  const goalsCounted = countedGoals(list, goals);
+  const goalsCounted = countedGoals(goals, list);
   return {
     count: counted.length,
     rated: counted.filter((role) => isRating(role.satisfaction)).length,
@@ -175,7 +168,7 @@ export function ratingLine(role: Pick<Role, 'satisfaction'>, labels: RoleLabels)
 }
 
 /** A role as an `ExerciseList` row: its name (or the built-in label) as title; "3 of 5", the
- * description and, with at least one live goal, "2 goals" as subtitle; a colour dot; a lock for the
+ * description and, with at least one counted goal (`countsForRoles()`), "2 goals" as subtitle; a colour dot; a lock for the
  * built-in, which can't be deleted. */
 export function toListItem(role: Role, labels: RoleLabels, goalCount = 0): ExerciseListItem {
   const chips: ExerciseListChip[] = role.sample ? [{ label: labels.example }] : [];

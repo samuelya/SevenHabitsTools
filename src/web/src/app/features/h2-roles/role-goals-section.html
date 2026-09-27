@@ -28,6 +28,9 @@
               @if (goal.status !== 'open') {
                 · {{ 'h2Roles.goalStatus.' + goal.status | transloco }}
               }
+              @if (goal.sample) {
+                <span class="goal-chip">{{ 'h2Roles.list.example' | transloco }}</span>
+              }
             </span>
             <mat-icon class="goal-chevron" aria-hidden="true">{{
               expandedId() === goal.id ? 'expand_less' : 'expand_more'
@@ -39,6 +42,7 @@
                 [goal]="goal"
                 [saved]="unsavedId() !== goal.id"
                 [focusOnOpen]="unsavedId() === goal.id"
+                [focusStepKey]="focusStepKey()"
                 (action)="goalAction.emit({ goalId: goal.id, action: $event })"
               />
             </div>

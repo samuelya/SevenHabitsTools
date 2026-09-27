@@ -11,7 +11,6 @@ import {
   input,
   output,
   signal,
-  untracked,
   viewChild,
   viewChildren,
 } from '@angular/core';
@@ -70,6 +69,10 @@ export class RoleGoalForm {
   readonly saved = input(true);
   /** Focus "What you want to reach" when this form first renders (a goal just added). */
   readonly focusOnOpen = input(false);
+  /** The key of the step this user just added (the page sets it only for its own successful
+   * "Add step"); its field takes focus once it shows. A refused add or another tab's step never
+   * sets it, so focus never jumps. */
+  readonly focusStepKey = input<string | null>(null);
 
   readonly action = output<GoalAction>();
 
@@ -89,8 +92,8 @@ export class RoleGoalForm {
   /** What is in the "what" field; `null` until typed in. It can be blank while the stored `what`
    * keeps its last valid value (`editGoal()` never stores a blank one). */
   private readonly typedWhat = signal<string | null>(null);
-  /** The step count when "Add step" was pressed; the new step's field takes focus once it shows. */
-  private readonly stepsBeforeAdd = signal<number | null>(null);
+  /** The last `focusStepKey` focused, so it is focused once, not on every later edit. */
+  private focusedStepKey: string | null = null;
 
   protected readonly whatMissing = computed(
     () => this.touchedWhat() && !(this.typedWhat() ?? this.goal().what).trim(),
@@ -103,13 +106,13 @@ export class RoleGoalForm {
       }
     });
     effect(() => {
-      const count = this.goal().steps.length;
-      const before = this.stepsBeforeAdd();
-      if (before === null || count <= before) {
+      const key = this.focusStepKey();
+      const index = this.goal().steps.findIndex((step) => step.key === key);
+      if (key === null || key === this.focusedStepKey || index === -1) {
         return;
       }
-      untracked(() => this.stepsBeforeAdd.set(null));
-      afterNextRender(() => this.stepFields().at(-1)?.nativeElement.focus(), {
+      this.focusedStepKey = key;
+      afterNextRender(() => this.stepFields().at(index)?.nativeElement.focus(), {
         injector: this.injector,
       });
     });
@@ -160,7 +163,6 @@ export class RoleGoalForm {
     if (this.full()) {
       return;
     }
-    this.stepsBeforeAdd.set(this.goal().steps.length);
     this.action.emit({ kind: 'addStep' });
   }
 }

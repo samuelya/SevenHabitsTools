@@ -1,6 +1,7 @@
 import {
   MAX_GOAL_STEPS,
   addStep,
+  countedGoals,
   countsForRoles,
   editGoal,
   editStep,
@@ -19,6 +20,7 @@ import {
   toggleStep,
 } from './role-goals.logic';
 import { RoleGoal } from './role-goals.model';
+import { Role } from './roles.model';
 
 const NOW = new Date('2026-03-10T09:00:00.000Z');
 const LATER = new Date('2026-03-11T09:00:00.000Z');
@@ -37,6 +39,19 @@ function goal(fields: Partial<RoleGoal> & Pick<RoleGoal, 'id'>): RoleGoal {
 }
 
 const step = (key: string, text: string, done = false) => ({ key, text, done });
+
+function role(id: string, fields: Partial<Role> = {}): Role {
+  return {
+    id,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    name: id,
+    order: 0,
+    ...fields,
+  };
+}
+
+const ROLES = [role('dad'), role('friend')];
 
 describe('role goals logic', () => {
   it('goalsForRole(): live goals of the role, newest first', () => {
@@ -63,22 +78,42 @@ describe('role goals logic', () => {
       goal({ id: 'd', deletedAt: NOW.toISOString(), steps: [step('s5', 'x')] }),
       goal({ id: 'e', roleId: 'friend', steps: [step('s6', ''), step('s7', 'Call')] }),
     ];
-    expect(openSteps(list)).toEqual([
+    expect(openSteps(list, ROLES)).toEqual([
       { goalId: 'a', roleId: 'dad', key: 's1', text: 'Ask her' },
       { goalId: 'e', roleId: 'friend', key: 's7', text: 'Call' },
     ]);
   });
 
-  it('countsForRoles(): live goals per listed role, zero included', () => {
+  it("openSteps(): none of an archived, deleted, sample or unknown role's goals", () => {
+    const roles = [
+      role('dad'),
+      role('coach', { archived: true }),
+      role('old', { deletedAt: NOW.toISOString() }),
+      role('tried', { sample: true }),
+    ];
+    const list = ['dad', 'coach', 'old', 'tried', 'gone'].map((roleId) =>
+      goal({ id: roleId, roleId, steps: [step(`k-${roleId}`, 'Ask')] }),
+    );
+    expect(openSteps(list, roles).map((open) => open.roleId)).toEqual(['dad']);
+    expect(countedGoals(list, roles).map((g) => g.id)).toEqual(['dad']);
+  });
+
+  it("countsForRoles(): each row's counted goals, zero included, archived rows too", () => {
     const list = [
       goal({ id: 'a' }),
       goal({ id: 'b' }),
       goal({ id: 'c', deletedAt: NOW.toISOString() }),
-      goal({ id: 'd', roleId: 'other' }),
+      goal({ id: 'd', sample: true }),
+      goal({ id: 'e', roleId: 'other' }),
+      goal({ id: 'f', roleId: 'tried' }),
+      goal({ id: 'g', roleId: 'coach' }),
     ];
-    const counts = countsForRoles(list, ['dad', 'friend']);
+    const roles = [...ROLES, role('tried', { sample: true }), role('coach', { archived: true })];
+    const counts = countsForRoles(list, roles);
     expect(counts.get('dad')).toBe(2);
     expect(counts.get('friend')).toBe(0);
+    expect(counts.get('tried')).toBe(0);
+    expect(counts.get('coach')).toBe(1);
     expect(counts.has('other')).toBe(false);
   });
 
@@ -161,25 +196,24 @@ describe('role goals logic', () => {
     expect(restoreGoal(restored, 'a', LATER)).toBe(restored);
   });
 
-  it('removeGoalsForRole() / restoreGoalsForRole() restore only the goals deleted with the role', () => {
+  it('removeGoalsForRole() marks the goals it deletes; restoreGoalsForRole() brings back only those', () => {
     const list = [
       goal({ id: 'a' }),
-      goal({ id: 'b', deletedAt: '2026-01-05T00:00:00.000Z' }),
+      goal({ id: 'b', deletedAt: NOW.toISOString() }),
       goal({ id: 'c', roleId: 'friend' }),
     ];
+    // 'b' was deleted on its own at the very time the role later is: the marker, not the time, decides.
     const removed = removeGoalsForRole(list, 'dad', NOW);
-    expect(removed.map((g) => g.deletedAt)).toEqual([
-      NOW.toISOString(),
-      '2026-01-05T00:00:00.000Z',
-      undefined,
+    expect(removed.map((g) => [g.deletedAt, g.deletedWithRole])).toEqual([
+      [NOW.toISOString(), 'dad'],
+      [NOW.toISOString(), undefined],
+      [undefined, undefined],
     ]);
     expect(removeGoalsForRole(removed, 'dad', LATER)).toBe(removed);
-    const restored = restoreGoalsForRole(removed, 'dad', NOW.toISOString(), LATER);
-    expect(restored.map((g) => g.deletedAt)).toEqual([
-      undefined,
-      '2026-01-05T00:00:00.000Z',
-      undefined,
-    ]);
-    expect(restoreGoalsForRole(restored, 'dad', NOW.toISOString(), LATER)).toBe(restored);
+    const restored = restoreGoalsForRole(removed, 'dad', LATER);
+    expect(restored.map((g) => g.deletedAt)).toEqual([undefined, NOW.toISOString(), undefined]);
+    expect('deletedWithRole' in restored[0]).toBe(false);
+    expect(restoreGoalsForRole(restored, 'dad', LATER)).toBe(restored);
+    expect(restoreGoalsForRole(removed, 'friend', LATER)).toBe(removed);
   });
 });

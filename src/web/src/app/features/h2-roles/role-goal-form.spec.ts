@@ -89,8 +89,8 @@ describe('RoleGoalForm', () => {
     fixture.detectChanges();
     expect(actions).toEqual([{ kind: 'edit', edit: { horizon: 'fiveYears' } }]);
     // Not applied (the input didn't change): the toggle shows the stored horizon again.
-    expect(toggles[0].getAttribute('aria-pressed')).toBe('true');
-    expect(toggles[2].getAttribute('aria-pressed')).toBe('false');
+    expect(toggles[0].getAttribute('aria-checked')).toBe('true');
+    expect(toggles[2].getAttribute('aria-checked')).toBe('false');
   });
 
   it('hides steps, status and the rest of a draft until it is saved', () => {
@@ -125,6 +125,30 @@ describe('RoleGoalForm', () => {
     expect(el.textContent).toContain('Five is plenty. Finish one before adding more.');
     add.click();
     expect(actions).toEqual([]);
+  });
+
+  it("focuses a new step's field only when it is this user's own successful add", async () => {
+    const s1 = { key: 's1', text: 'Ask her', done: false };
+    const { fixture, el } = setUp(goal({ steps: [s1] }));
+    el.querySelector<HTMLButtonElement>('.add-step')!.click();
+    // Refused (no key from the page), then another tab adds a step: focus stays put.
+    fixture.componentRef.setInput(
+      'goal',
+      goal({ steps: [s1, { key: 's2', text: '', done: false }] }),
+    );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement?.closest('.step-field')).toBeNull();
+
+    const s3 = { key: 's3', text: '', done: false };
+    fixture.componentRef.setInput(
+      'goal',
+      goal({ steps: [s1, { key: 's2', text: '', done: false }, s3] }),
+    );
+    fixture.componentRef.setInput('focusStepKey', 's3');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(document.activeElement).toBe(el.querySelectorAll('.step-field input')[2]);
   });
 
   it('offers Reached and Drop while open, Reopen with the date once resolved', () => {
@@ -165,6 +189,14 @@ describe('RoleGoalsSection', () => {
     expect(el.textContent).toContain('No goals yet.');
     el.querySelector<HTMLButtonElement>('.add-goal')!.click();
     expect(added).toBe(1);
+  });
+
+  it('marks a sample goal with the Example chip', () => {
+    const { el } = section([goal(), goal({ id: 'g2', sample: true })]);
+    const chips = [...el.querySelectorAll('.goal')].map(
+      (item) => item.querySelector('.goal-chip')?.textContent?.trim() ?? null,
+    );
+    expect(chips).toEqual([null, 'Example']);
   });
 
   it('expands one goal, closes it on a second press, and passes its actions on with its id', () => {

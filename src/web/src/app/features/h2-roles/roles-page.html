@@ -99,6 +99,7 @@
             [goals]="displayGoals()"
             [expandedId]="expandedGoalId()"
             [unsavedId]="unsavedGoalId()"
+            [focusStepKey]="newStepKey()"
             (added)="onGoalAdd()"
             (expandedChange)="onGoalExpanded($event)"
             (goalAction)="onGoalAction($event)"

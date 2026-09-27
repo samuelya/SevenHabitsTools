@@ -45,6 +45,9 @@ export interface RoleGoal extends BaseRecord {
   readonly steps: readonly GoalStep[];
   /** A copy of a guide example ("Try this example", issue #232). Absent means `false`. */
   readonly sample?: boolean;
+  /** Set with `deletedAt` when the goal was deleted with its role (the role's id), so undoing the
+   * role's delete brings back exactly those goals; absent on a live goal. */
+  readonly deletedWithRole?: string;
 }
 
 export type RoleGoalFields = Omit<RoleGoal, keyof BaseRecord>;
@@ -85,7 +88,8 @@ function isRoleGoal(value: unknown): value is RoleGoal {
     isGoalStatus(candidate['status']) &&
     (resolvedOn === undefined || (typeof resolvedOn === 'string' && isValidIsoDate(resolvedOn))) &&
     isGoalStepArray(candidate['steps']) &&
-    isOptionalBoolean(candidate['sample'])
+    isOptionalBoolean(candidate['sample']) &&
+    isOptionalString(candidate['deletedWithRole'])
   );
 }
 

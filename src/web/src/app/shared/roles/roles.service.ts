@@ -9,7 +9,6 @@ import {
   activeRoles,
   builtInRole,
   editRole,
-  findRole,
   insertRole,
   removeRole,
   reorder,
@@ -115,28 +114,33 @@ export class RolesService {
     return this.store.update((list) => setArchived(list, id, false, this.clock.now()));
   }
 
-  /** Soft delete, with the role's goals at the same time (issue #291); refused for the built-in. */
+  /** Soft delete, with the role's goals at the same time (issue #291). Returns whether the role was
+   * deleted: `false` for the built-in, an unknown id or a read-only tab, and then no goal is
+   * touched. */
   remove(id: string): boolean {
     const now = this.clock.now();
-    const applied = this.store.update((list) => removeRole(list, id, now));
-    if (applied && this.deletedAt(id) === now.toISOString()) {
-      this.goals.removeForRole(id, now);
+    if (!this.applyChange((list) => removeRole(list, id, now))) {
+      return false;
     }
-    return applied;
+    this.goals.removeForRole(id, now);
+    return true;
   }
 
-  /** Undoes `remove()` (the page's delete-with-undo snackbar), the goals deleted with it included. */
+  /** Undoes `remove()` (the page's delete-with-undo snackbar), the goals deleted with it included.
+   * Returns whether the role came back. */
   restore(id: string): boolean {
-    const deletedAt = this.deletedAt(id);
-    const applied = this.store.update((list) => restoreRole(list, id, this.clock.now()));
-    if (applied && deletedAt !== undefined && findRole(this.store.value(), id) !== null) {
-      this.goals.restoreForRole(id, deletedAt);
+    if (!this.applyChange((list) => restoreRole(list, id, this.clock.now()))) {
+      return false;
     }
-    return applied;
+    this.goals.restoreForRole(id);
+    return true;
   }
 
-  /** When the role `id` was deleted; `undefined` while live or unknown. */
-  private deletedAt(id: string): string | undefined {
-    return this.store.value().find((role) => role.id === id)?.deletedAt;
+  /** Writes `change` and reports whether it changed the list: `false` when it returned the list
+   * itself (refused) or the store refused the write. */
+  private applyChange(change: (list: readonly Role[]) => readonly Role[]): boolean {
+    const current = this.store.value();
+    const next = change(current);
+    return next !== current && this.store.update(() => next);
   }
 }

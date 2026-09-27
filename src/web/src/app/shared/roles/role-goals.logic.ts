@@ -1,6 +1,8 @@
 import { isLive, softDelete, touch } from '../../core/data/record';
 import { isCounted, withoutSample } from '../exercise-kit/sample-record.logic';
 import { GoalHorizon, GoalStep, RoleGoal, isGoalHorizon } from './role-goals.model';
+import { activeRoles } from './roles.logic';
+import { Role } from './roles.model';
 
 /**
  * The shared, pure half of `habits.h2.roleGoals` (issue #291): what the Roles page and the weekly
@@ -45,11 +47,26 @@ export interface OpenStep {
   readonly text: string;
 }
 
-/** Every step with text, not done, of a live, open goal the user made (not an untouched guide
- * example), newest goal first and steps in order. */
-export function openSteps(list: readonly RoleGoal[]): OpenStep[] {
-  return list
-    .filter((goal) => isCounted(goal) && goal.status === 'open')
+/** The one rule for whether a goal counts anywhere (row count, summary, gate, the planner): the
+ * user's own goal (live, not an untouched guide example) on a role that is the user's own too.
+ * Neither an example goal nor any goal on an example role counts until the user makes it theirs
+ * (issue #291, as `isCounted()` does for roles in #59). */
+export function isCountedGoal(goal: RoleGoal, role: Role | undefined): boolean {
+  return isCounted(goal) && role !== undefined && isCounted(role);
+}
+
+/** The counted goals (`isCountedGoal()`) of live, unarchived roles: what the summary, the gate and
+ * the planner read. An archived role's goals stay stored but count nowhere. */
+export function countedGoals(goals: readonly RoleGoal[], roles: readonly Role[]): RoleGoal[] {
+  const active = new Map(activeRoles(roles).map((role) => [role.id, role]));
+  return goals.filter((goal) => isCountedGoal(goal, active.get(goal.roleId)));
+}
+
+/** Every step with text, not done, of an open counted goal (`countedGoals()`), newest goal first
+ * and steps in order. */
+export function openSteps(goals: readonly RoleGoal[], roles: readonly Role[]): OpenStep[] {
+  return countedGoals(goals, roles)
+    .filter((goal) => goal.status === 'open')
     .sort(newestFirst)
     .flatMap((goal) =>
       goal.steps
@@ -63,15 +80,17 @@ export function openSteps(list: readonly RoleGoal[]): OpenStep[] {
     );
 }
 
-/** How many live goals each of `roleIds` has (0 included). */
+/** How many counted goals (`isCountedGoal()`) each of `roles` has, 0 included: a row's own count,
+ * archived rows too. */
 export function countsForRoles(
-  list: readonly RoleGoal[],
-  roleIds: readonly string[],
+  goals: readonly RoleGoal[],
+  roles: readonly Role[],
 ): ReadonlyMap<string, number> {
-  const counts = new Map(roleIds.map((id) => [id, 0]));
-  for (const goal of list) {
+  const byId = new Map(roles.map((role) => [role.id, role]));
+  const counts = new Map(roles.map((role) => [role.id, 0]));
+  for (const goal of goals) {
     const count = counts.get(goal.roleId);
-    if (count !== undefined && isLive(goal)) {
+    if (count !== undefined && isCountedGoal(goal, byId.get(goal.roleId))) {
       counts.set(goal.roleId, count + 1);
     }
   }
@@ -265,12 +284,12 @@ export function restoreGoal(list: readonly RoleGoal[], id: string, now: Date): r
   }
   return list.map((goal) =>
     goal.id === id && !isLive(goal)
-      ? touch(tidyGoal({ ...goal, deletedAt: undefined }), now)
+      ? touch(tidyGoal({ ...goal, deletedAt: undefined, deletedWithRole: undefined }), now)
       : goal,
   );
 }
 
-/** Tombstones every live goal of `roleId` at `now`, the role's own `deletedAt`, so
+/** Tombstones every live goal of `roleId`, each marked `deletedWithRole`, so
  * `restoreGoalsForRole()` brings back exactly these and not a goal deleted on its own earlier. */
 export function removeGoalsForRole(
   list: readonly RoleGoal[],
@@ -281,23 +300,25 @@ export function removeGoalsForRole(
     return list;
   }
   return list.map((goal) =>
-    goal.roleId === roleId && isLive(goal) ? softDelete(goal, now) : goal,
+    goal.roleId === roleId && isLive(goal)
+      ? { ...softDelete(goal, now), deletedWithRole: roleId }
+      : goal,
   );
 }
 
-/** Undoes `removeGoalsForRole()`: restores the goals of `roleId` tombstoned at `deletedAt`. */
+/** Undoes `removeGoalsForRole()`: restores the goals of `roleId` marked `deletedWithRole`. */
 export function restoreGoalsForRole(
   list: readonly RoleGoal[],
   roleId: string,
-  deletedAt: string,
   now: Date,
 ): readonly RoleGoal[] {
-  const matches = (goal: RoleGoal): boolean =>
-    goal.roleId === roleId && goal.deletedAt === deletedAt;
+  const matches = (goal: RoleGoal): boolean => !isLive(goal) && goal.deletedWithRole === roleId;
   if (!list.some(matches)) {
     return list;
   }
   return list.map((goal) =>
-    matches(goal) ? touch(tidyGoal({ ...goal, deletedAt: undefined }), now) : goal,
+    matches(goal)
+      ? touch(tidyGoal({ ...goal, deletedAt: undefined, deletedWithRole: undefined }), now)
+      : goal,
   );
 }

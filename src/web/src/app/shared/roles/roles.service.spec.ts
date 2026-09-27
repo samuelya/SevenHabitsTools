@@ -128,34 +128,41 @@ describe('RolesService', () => {
     const evening = goals.add({ roleId: dad, what: 'One evening a week' })!;
     const earlier = goals.add({ roleId: dad, what: 'Deleted on its own' })!;
     const call = goals.add({ roleId: friend, what: 'Call first' })!;
+    // Deleted on its own at the same instant the role is: only the marker tells them apart.
     goals.remove(earlier);
-    clockNow = new Date('2026-03-10T10:00:00');
 
     expect(service.remove(dad)).toBe(true);
     expect(goals.forRole(dad)).toEqual([]);
     expect(goals.forRole(friend).map((goal) => goal.id)).toEqual([call]);
+    expect(service.remove(dad)).toBe(false);
 
+    clockNow = new Date('2026-03-10T10:00:00');
     expect(service.restore(dad)).toBe(true);
     expect(goals.forRole(dad).map((goal) => goal.id)).toEqual([evening]);
+    expect(service.restore(dad)).toBe(false);
   });
 
-  it('a refused delete of the built-in leaves its goals alone', () => {
+  it('a refused delete of the built-in reports false and leaves its goals alone', () => {
     const service = setUp();
     const saw = service.ensureBuiltIn()!;
     const goals = TestBed.inject(RoleGoalsService);
     goals.add({ roleId: saw, what: 'Walk daily' });
-    service.remove(saw);
+    expect(service.remove(saw)).toBe(false);
     expect(goals.forRole(saw)).toHaveLength(1);
   });
 
-  it('deleting a role with no goals writes no goals slice', () => {
+  it('deleting a role with no goals never writes the goals slice', () => {
     const service = setUp();
     const dad = service.add({ name: 'Dad' })!;
+    const goalsSlice = () =>
+      (
+        TestBed.inject(DocumentStore).document() as unknown as {
+          habits?: { h2?: { roleGoals?: unknown } };
+        }
+      ).habits?.h2?.roleGoals;
+    const before = goalsSlice();
     service.remove(dad);
     service.restore(dad);
-    const doc = TestBed.inject(DocumentStore).document() as unknown as {
-      habits?: { h2?: { roleGoals?: unknown } };
-    };
-    expect(doc.habits?.h2?.roleGoals).toBeUndefined();
+    expect(goalsSlice()).toBe(before);
   });
 });

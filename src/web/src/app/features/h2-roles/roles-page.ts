@@ -5,22 +5,19 @@ import {
   inject,
   input,
   linkedSignal,
+  signal,
   untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
-import {
-  translateObjectSignal,
-  translateSignal,
-  TranslocoPipe,
-  TranslocoService,
-} from '@jsverse/transloco';
+import { translateSignal, TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { featureStore } from '../../core/data/feature-store';
 import { newRecord } from '../../core/data/record';
 import { Numerals } from '../../core/i18n/language';
 import { intlLocaleFor } from '../../core/i18n/locale.logic';
+import { translatePlural } from '../../core/i18n/plural.logic';
 import { CLOCK } from '../../core/time/clock';
 import { DeleteWithUndo } from '../../shared/exercise-kit/delete-with-undo';
 import { DoneToggle } from '../../shared/exercise-kit/done-toggle/done-toggle';
@@ -49,10 +46,8 @@ import { countsForRoles, goalsForRole } from '../../shared/roles/role-goals.logi
 import { RoleGoal } from '../../shared/roles/role-goals.model';
 import { RoleGoalsService } from '../../shared/roles/role-goals.service';
 import {
-  COUNT_TOKEN,
   GoalActionEvent,
   GoalExample,
-  goalCountLine,
   goalFromExample,
   isGoalDraftWorthSaving,
   liveSampleGoalOf,
@@ -142,30 +137,23 @@ export class RolesPage {
     { value: VALUE_TOKEN, max: MAX_TOKEN },
     H2_ROLES_ID,
   );
-  private readonly goalCountForms = translateObjectSignal(
-    'goals.countText',
-    { count: COUNT_TOKEN },
-    H2_ROLES_ID,
-  );
+  // `goalCount` reads Transloco directly (`translatePlural()`); the scope's signals above make this
+  // recompute once the scope loads, and `lang()` on a language switch.
   private readonly labels = computed<RoleLabels>(() => {
     const format = new Intl.NumberFormat(intlLocaleFor(this.lang(), this.numerals.value()));
-    const plural = new Intl.PluralRules(this.lang());
-    const forms = (this.goalCountForms() ?? {}) as Record<string, string>;
     return {
       builtIn: this.builtInLabels(),
       builtInText: this.builtInText(),
       example: this.exampleLabel(),
       ratingTemplate: this.ratingTemplate(),
       formatNumber: (value) => format.format(value),
-      goalCount: (count) => goalCountLine(forms, plural.select(count), format.format(count)),
+      goalCount: (count) =>
+        translatePlural(this.transloco, 'h2Roles.goals.countText', count, {
+          count: format.format(count),
+        }),
     };
   });
-  private readonly goalCounts = computed(() =>
-    countsForRoles(
-      this.goals(),
-      this.list().map((role) => role.id),
-    ),
-  );
+  private readonly goalCounts = computed(() => countsForRoles(this.goals(), this.list()));
 
   protected readonly activeItems = computed(() => this.listItems(activeRoles(this.list())));
   protected readonly archivedItems = computed(() => this.listItems(archivedRoles(this.list())));
@@ -244,6 +232,9 @@ export class RolesPage {
       : this.roleGoals();
   });
   protected readonly expandedGoalId = computed(() => this.goalDraft.selected()?.id ?? null);
+  /** The step this user's last "Add step" created, or `null` when it was refused: the only step
+   * whose field takes focus. */
+  protected readonly newStepKey = signal<string | null>(null);
 
   protected readonly summary = computed(() => summarize(this.list(), this.goals()));
   protected readonly readyToMarkDone = computed(() => isComplete(this.list(), this.goals()));
@@ -316,17 +307,20 @@ export class RolesPage {
     }
   }
 
-  /** The goal example goes on the live role with its name, the user's own or a sample one, which is
-   * created (as a sample) when there is none; then that role opens with the goal expanded. */
+  /** The goal example goes on the live role with its name (the user's own or a sample, archived
+   * included), or on a sample role created for it; then that role opens with the goal expanded. A
+   * role created here is removed again if the goal can't be written, so nothing half-done stays. */
   private tryGoalExample(example: GoalExample): void {
     const options = { replaceUrl: this.itemId() === NEW_ITEM_ID };
     let role = roleNamed(this.list(), example.role.name);
+    let created = false;
     if (!role) {
       const record: Role = { ...newRecord(example.role, this.clock.now()), sample: true };
       if (!this.roles.insert(record)) {
         return;
       }
       role = record;
+      created = true;
     }
     let goalId = liveSampleGoalOf(this.goals(), role.id, example.goal.what)?.id;
     if (goalId === undefined) {
@@ -335,6 +329,9 @@ export class RolesPage {
         sample: true,
       };
       if (!this.goalsService.insert(record)) {
+        if (created) {
+          this.roles.remove(role.id);
+        }
         return;
       }
       goalId = record.id;
@@ -371,7 +368,7 @@ export class RolesPage {
         this.goalsService.reopen(goalId);
         return;
       case 'addStep':
-        this.goalsService.addStep(goalId);
+        this.newStepKey.set(this.goalsService.addStep(goalId));
         return;
       case 'editStep':
         this.goalsService.editStep(goalId, action.key, action.text);

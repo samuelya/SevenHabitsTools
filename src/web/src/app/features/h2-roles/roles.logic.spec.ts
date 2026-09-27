@@ -5,7 +5,6 @@ import {
   VALUE_TOKEN,
   checklistLabelsFrom,
   checklistLoaded,
-  countedGoals,
   countedRoles,
   doneChecklist,
   hubStatus,
@@ -114,7 +113,18 @@ describe('roles page logic (#59)', () => {
     expect(met([goal('g', 'a', { deletedAt: T0 })])).toBe(false);
     expect(met([goal('g', 'b')])).toBe(false);
     expect(met([goal('g', 'a', { status: 'reached' })])).toBe(true);
-    expect(countedGoals(roles, [goal('g', 'a'), goal('h', 'b')]).map((g) => g.id)).toEqual(['g']);
+    expect(met([goal('g', 'x')])).toBe(false);
+  });
+
+  it('counts no goal on a sample role, in the gate or the summary, until the role is edited (#291)', () => {
+    const sampleRole = role('s', { satisfaction: 3, sample: true });
+    const roles = [role('a', { satisfaction: 3 }), sampleRole];
+    const goals = [goal('g', 's')];
+    expect(doneChecklist(roles, goals, CHECKLIST)[3].met).toBe(false);
+    expect(summarize(roles, goals)).toMatchObject({ goals: 0, goalsWithStep: 0 });
+    const adopted = [role('a', { satisfaction: 3 }), role('s', { satisfaction: 3 })];
+    expect(doneChecklist(adopted, goals, CHECKLIST)[3].met).toBe(true);
+    expect(summarize(adopted, goals)).toMatchObject({ goals: 1, goalsWithStep: 1 });
   });
 
   it('never counts samples, archived or deleted roles toward the gate', () => {

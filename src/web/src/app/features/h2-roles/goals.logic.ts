@@ -6,7 +6,7 @@ import {
   RoleGoalFields,
   isGoalHorizon,
 } from '../../shared/roles/role-goals.model';
-import { activeRoles } from '../../shared/roles/roles.logic';
+import { activeRoles, archivedRoles } from '../../shared/roles/roles.logic';
 import { Role, RoleFields } from '../../shared/roles/roles.model';
 import { roleFromExample } from './roles.logic';
 
@@ -17,21 +17,6 @@ import { roleFromExample } from './roles.logic';
  * "What you want to reach". */
 export function isGoalDraftWorthSaving(draft: Pick<RoleGoal, 'what'>): boolean {
   return draft.what.trim() !== '';
-}
-
-/** The token `goals.countText` is translated with as `count`, replaced by `goalCountLine()`; not
- * braced, for the reason `VALUE_TOKEN` gives. */
-export const COUNT_TOKEN = '@@count@@';
-
-/** "3 goals": the plural form for `category` (`Intl.PluralRules` in the active language), else
- * `other`, with the count in the active numerals; `''` before the forms have loaded. */
-export function goalCountLine(
-  forms: Readonly<Record<string, string>>,
-  category: string,
-  formatted: string,
-): string {
-  const form = forms[category] ?? forms['other'];
-  return typeof form === 'string' ? form.replace(COUNT_TOKEN, formatted) : '';
 }
 
 /** A guide example goal (issue #291): the role it belongs to and the goal's own fields. */
@@ -86,10 +71,11 @@ export function goalFromExample(value: unknown, newKey: () => string): GoalExamp
   };
 }
 
-/** The live, unarchived role named `name` a goal example attaches to (the user's own or a sample),
- * if any. */
+/** The live role named `name` a goal example attaches to (the user's own or a sample), if any: an
+ * active one first, else an archived one, so trying the example never adds a second "Dad". */
 export function roleNamed(roles: readonly Role[], name: string | undefined): Role | undefined {
-  return activeRoles(roles).find((role) => role.name === name);
+  const named = (role: Role): boolean => role.name === name;
+  return activeRoles(roles).find(named) ?? archivedRoles(roles).find(named);
 }
 
 /** The live, untouched sample goal of `roleId` with this `what`, if the user already tried it: trying

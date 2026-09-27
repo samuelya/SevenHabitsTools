@@ -22,6 +22,7 @@ import {
   toggleStep,
 } from './role-goals.logic';
 import { GoalHorizon, ROLE_GOALS_MODEL_KEY, RoleGoal } from './role-goals.model';
+import { ROLES_MODEL_KEY, Role } from './roles.model';
 
 /** What another tool supplies to add a goal. */
 export interface NewRoleGoal {
@@ -34,18 +35,24 @@ export interface NewRoleGoal {
  * The only writer of `habits.h2.roleGoals` (issue #291): the Roles page edits goals, and
  * `RolesService` takes a role's goals with it on delete and undo. The weekly planner (#71) reads
  * `openSteps()`. Every write returns whether it applied (`false` in a read-only tab,
- * `FeatureStore.update()`); a refused or no-op edit leaves the list unchanged.
+ * `FeatureStore.update()`); a refused or no-op edit leaves the list unchanged, and the store writes
+ * nothing for it (same-reference no-op). It reads `shared.roles` directly, never through
+ * `RolesService`, which depends on this service for its delete cascade.
  */
 @Injectable({ providedIn: 'root' })
 export class RoleGoalsService {
   private readonly clock = inject(CLOCK);
   private readonly store = featureStore<readonly RoleGoal[]>(ROLE_GOALS_MODEL_KEY);
+  private readonly roles = featureStore<readonly Role[]>(ROLES_MODEL_KEY).value;
 
   /** Every live goal, samples included. */
   readonly all: Signal<readonly RoleGoal[]> = computed(() => this.store.value().filter(isLive));
 
-  /** Steps the weekly planner may offer as big rocks (`openSteps()`). */
-  readonly openSteps: Signal<readonly OpenStep[]> = computed(() => openSteps(this.store.value()));
+  /** Steps the weekly planner may offer as big rocks: those of counted goals of active roles
+   * (`openSteps()`). */
+  readonly openSteps: Signal<readonly OpenStep[]> = computed(() =>
+    openSteps(this.store.value(), this.roles()),
+  );
 
   /** The live goals of `roleId`, newest first. A signal read, like `RolesService.byId()`. */
   forRole(roleId: string): RoleGoal[] {
@@ -90,13 +97,11 @@ export class RoleGoalsService {
   /** Appends an empty step; returns its key, or `null` when refused (five already, read-only). */
   addStep(id: string): string | null {
     const key = crypto.randomUUID();
-    let added = false;
-    const applied = this.apply((list) => {
-      const next = addStep(list, id, key, this.clock.now());
-      added = next !== list;
-      return next;
-    });
-    return applied && added ? key : null;
+    this.apply((list) => addStep(list, id, key, this.clock.now()));
+    const added = this.store
+      .value()
+      .some((goal) => goal.id === id && goal.steps.some((step) => step.key === key));
+    return added ? key : null;
   }
 
   editStep(id: string, key: string, text: string): boolean {
@@ -121,20 +126,18 @@ export class RoleGoalsService {
     return this.apply((list) => restoreGoal(list, id, this.clock.now()));
   }
 
-  /** Applies `change` unless it is a no-op, so an edit that changes nothing never writes (an absent
-   * slice would otherwise be stored as `[]`, from `defaults()`). */
-  private apply(change: (list: readonly RoleGoal[]) => readonly RoleGoal[]): boolean {
-    const current = this.store.value();
-    return change(current) === current || this.store.update(change);
-  }
-
-  /** Soft-deletes every live goal of `roleId` with the role's own deletion time (`RolesService`). */
+  /** Soft-deletes every live goal of `roleId`, marked as deleted with it (`RolesService`). */
   removeForRole(roleId: string, deletedAt: Date): boolean {
     return this.apply((list) => removeGoalsForRole(list, roleId, deletedAt));
   }
 
-  /** Undoes `removeForRole()`: the goals of `roleId` deleted at `deletedAt` (ISO) come back. */
-  restoreForRole(roleId: string, deletedAt: string): boolean {
-    return this.apply((list) => restoreGoalsForRole(list, roleId, deletedAt, this.clock.now()));
+  /** Undoes `removeForRole()`: exactly the goals deleted with `roleId` come back. */
+  restoreForRole(roleId: string): boolean {
+    return this.apply((list) => restoreGoalsForRole(list, roleId, this.clock.now()));
+  }
+
+  /** Runs `change` once; a no-op returns the same list, which the store doesn't write. */
+  private apply(change: (list: readonly RoleGoal[]) => readonly RoleGoal[]): boolean {
+    return this.store.update(change);
   }
 }

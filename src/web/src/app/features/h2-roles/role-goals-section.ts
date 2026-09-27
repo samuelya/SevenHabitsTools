@@ -25,6 +25,8 @@ export class RoleGoalsSection {
   readonly goals = input.required<readonly RoleGoal[]>();
   readonly expandedId = input<string | null>(null);
   readonly unsavedId = input<string | null>(null);
+  /** The step this user just added, for its goal's form to focus (`RoleGoalForm.focusStepKey`). */
+  readonly focusStepKey = input<string | null>(null);
 
   readonly added = output<void>();
   /** A goal header was pressed: the goal to open, or `null` to close the open one. */
