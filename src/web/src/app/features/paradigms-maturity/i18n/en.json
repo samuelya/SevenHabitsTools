@@ -94,7 +94,7 @@
   },
   "summary": {
     "totalAssessments": {
-      "one": "1 assessment taken",
+      "one": "{{count}} assessment taken",
       "other": "{{count}} assessments taken"
     },
     "latestProfile": "Latest profile: {{profile}}"

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { ProjectsSummary as ProjectsSummaryData } from '../../shared/projects/projects.logic';
 
@@ -9,7 +8,7 @@ import { ProjectsSummary as ProjectsSummaryData } from '../../shared/projects/pr
  * the page renders it only once a counted project exists (`summarize()`), so no zero is shown. */
 @Component({
   selector: 'app-projects-summary',
-  imports: [AppNumberPipe, AppPluralPipe, MatCardModule, TranslocoPipe],
+  imports: [AppPluralPipe, MatCardModule, TranslocoPipe],
   templateUrl: './projects-summary.html',
   styleUrl: './projects-summary.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

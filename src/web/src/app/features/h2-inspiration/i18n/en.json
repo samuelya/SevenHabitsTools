@@ -51,11 +51,11 @@
   "summary": {
     "title": "Your collection",
     "countText": {
-      "one": "1 in your collection",
+      "one": "{{count}} in your collection",
       "other": "{{count}} in your collection"
     },
     "favouritesText": {
-      "one": "1 favourite",
+      "one": "{{count}} favourite",
       "other": "{{count}} favourites"
     }
   },

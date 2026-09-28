@@ -114,10 +114,7 @@
               (valueChange)="onDraftChanged($event, draftEditor)"
             />
             <p class="word-count">
-              {{
-                'h2Mission.step5.wordCountText'
-                  | appPlural: liveWords() : { count: (liveWords() | appNumber) }
-              }}
+              {{ 'h2Mission.step5.wordCountText' | appPlural: liveWords() }}
             </p>
           </div>
           <app-mission-collection
@@ -160,10 +157,7 @@
         @if (words() > 0) {
           <blockquote class="preview">{{ draft() }}</blockquote>
           <p class="word-count">
-            {{
-              'h2Mission.step5.wordCountText'
-                | appPlural: words() : { count: (words() | appNumber) }
-            }}
+            {{ 'h2Mission.step5.wordCountText' | appPlural: words() }}
           </p>
         } @else {
           <p class="empty">{{ 'h2Mission.step6.emptyDraftHint' | transloco }}</p>

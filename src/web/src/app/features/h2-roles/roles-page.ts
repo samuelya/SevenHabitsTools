@@ -148,9 +148,7 @@ export class RolesPage {
       ratingTemplate: this.ratingTemplate(),
       formatNumber: (value) => format.format(value),
       goalCount: (count) =>
-        translatePlural(this.transloco, 'h2Roles.goals.countText', count, {
-          count: format.format(count),
-        }),
+        translatePlural(this.transloco, 'h2Roles.goals.countText', count, this.numerals.value()),
     };
   });
   private readonly goalCounts = computed(() => countsForRoles(this.goals(), this.list()));

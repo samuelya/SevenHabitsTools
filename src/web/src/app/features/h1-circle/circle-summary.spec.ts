@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { CircleSummary } from './circle-summary';
 
 function setUp(summary: { withStep: number; total: number }) {

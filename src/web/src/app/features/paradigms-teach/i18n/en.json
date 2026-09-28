@@ -59,11 +59,11 @@
   },
   "summary": {
     "shared": {
-      "one": "1 of {{total}} chapters shared",
+      "one": "{{count}} of {{total}} chapters shared",
       "other": "{{count}} of {{total}} chapters shared"
     },
     "overdue": {
-      "one": "1 overdue",
+      "one": "{{count}} overdue",
       "other": "{{count}} overdue"
     }
   },

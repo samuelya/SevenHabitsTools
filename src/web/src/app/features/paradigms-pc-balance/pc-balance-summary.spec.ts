@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { provideTranslocoScope } from '@jsverse/transloco';
+import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { PcBalanceSummary } from './pc-balance-summary';
 
 function setUp(summary: { totalAudits: number; latestAverageBalance: number | null }) {
@@ -28,5 +30,19 @@ describe('PcBalanceSummary', () => {
     const fixture = setUp({ totalAudits: 1, latestAverageBalance: 1.5 });
     expect(fixture.nativeElement.querySelectorAll('.count')).toHaveLength(2);
     expect(fixture.nativeElement.textContent).toContain('1.5');
+  });
+
+  it('shows its count in Arabic-Indic numerals with that setting (#305)', () => {
+    const fixture = setUp({ totalAudits: 11, latestAverageBalance: null });
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.querySelector('.total').textContent as string;
+    expect(text).toContain('١١');
+    expect(text).not.toMatch(/[0-9]/);
   });
 });

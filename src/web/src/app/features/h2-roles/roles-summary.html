@@ -2,23 +2,13 @@
   <mat-card-content>
     <h2 class="title">{{ 'h2Roles.summary.title' | transloco }}</h2>
     <p class="count">
-      {{
-        'h2Roles.summary.countText'
-          | appPlural
-            : summary().count
-            : { count: (summary().count | appNumber), rated: (summary().rated | appNumber) }
-      }}
+      {{ 'h2Roles.summary.countText' | appPlural: summary().count : { rated: summary().rated } }}
     </p>
     @if (summary().goals > 0) {
       <p class="goals">
         {{
           'h2Roles.summary.goalsText'
-            | appPlural
-              : summary().goals
-              : {
-                  count: (summary().goals | appNumber),
-                  withStep: (summary().goalsWithStep | appNumber),
-                }
+            | appPlural: summary().goals : { withStep: summary().goalsWithStep }
         }}
       </p>
     }

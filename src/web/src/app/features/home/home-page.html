@@ -21,7 +21,7 @@
       ? null
       : status === 'started'
         ? ('habits.hub.inProgress' | transloco)
-        : (status.key | appPlural: status.count : continueDetailParams());
+        : (status.key | appPlural: status.count : status.params ?? {});
   <app-continue-card
     class="today-continue"
     [link]="'/' + target.exercise.route"
