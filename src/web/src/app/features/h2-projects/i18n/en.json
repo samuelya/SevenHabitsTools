@@ -71,7 +71,7 @@
   "summary": {
     "title": "Your projects",
     "projectsText": {
-      "one": "1 project, {{done}} done",
+      "one": "{{count}} project, {{done}} done",
       "other": "{{count}} projects, {{done}} done"
     },
     "stepsText": {

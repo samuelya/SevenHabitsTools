@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { AppNumberPipe } from '../../core/i18n/locale.pipe';
 import { AppPluralPipe } from '../../core/i18n/plural.pipe';
 import { AffirmationsSummary as AffirmationsSummaryData } from './affirmations.logic';
 
@@ -9,7 +8,7 @@ import { AffirmationsSummary as AffirmationsSummaryData } from './affirmations.l
  * renders it only once a practice exists (`summarize()`), so no zero is shown. */
 @Component({
   selector: 'app-affirmations-summary',
-  imports: [AppNumberPipe, AppPluralPipe, MatCardModule, TranslocoPipe],
+  imports: [AppPluralPipe, MatCardModule, TranslocoPipe],
   templateUrl: './affirmations-summary.html',
   styleUrl: './affirmations-summary.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

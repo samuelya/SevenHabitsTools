@@ -10,7 +10,7 @@
     "newButton": "New long view",
     "empty": "Nothing here yet. Start with your funeral; it's the one that changes most.",
     "redoButton": "Redo",
-    "valueCountText": { "one": "1 value", "other": "{{count}} values" },
+    "valueCountText": { "one": "{{count}} value", "other": "{{count}} values" },
     "deleted": "Long view deleted",
     "undo": "Undo"
   },

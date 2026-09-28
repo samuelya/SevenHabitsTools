@@ -10,7 +10,7 @@
     "newButton": "New assessment",
     "empty": "No assessment yet. It takes about eight minutes.",
     "topCentreText": "Centre: {{centre}}",
-    "principleCountText": { "one": "1 principle", "other": "{{count}} principles" },
+    "principleCountText": { "one": "{{count}} principle", "other": "{{count}} principles" },
     "deleted": "Assessment deleted",
     "undo": "Undo"
   },

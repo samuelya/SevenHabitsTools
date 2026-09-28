@@ -83,7 +83,7 @@
   },
   "summary": {
     "streak": {
-      "one": "1-day streak",
+      "one": "{{count}}-day streak",
       "other": "{{count}}-day streak"
     },
     "checkedIn": {

@@ -72,15 +72,15 @@
   },
   "summary": {
     "total": {
-      "one": "1 pattern named",
+      "one": "{{count}} pattern named",
       "other": "{{count}} patterns named"
     },
     "stopped": {
-      "one": "1 stopped",
+      "one": "{{count}} stopped",
       "other": "{{count}} stopped"
     },
     "rewritten": {
-      "one": "1 rewritten",
+      "one": "{{count}} rewritten",
       "other": "{{count}} rewritten"
     }
   },

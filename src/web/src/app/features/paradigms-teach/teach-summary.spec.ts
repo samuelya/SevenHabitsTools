@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { TeachSummary } from './teach-summary';
 
 function setUp(summary: { shared: number; overdue: number; total: number }) {
@@ -41,5 +43,20 @@ describe('TeachSummary', () => {
     transloco.setActiveLang('en');
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('chapters shared');
+  });
+
+  it('shows its count in Arabic-Indic numerals with that setting (#305)', () => {
+    const fixture = setUp({ shared: 11, overdue: 0, total: 12 });
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.querySelector('.total').textContent as string;
+    expect(text).toContain('١١');
+    expect(text).toContain('١٢');
+    expect(text).not.toMatch(/[0-9]/);
   });
 });

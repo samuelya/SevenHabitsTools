@@ -27,22 +27,3 @@ export function todayContinueTarget(
   }
   return undefined;
 }
-
-/** A plural status's interpolation params with every number formatted for `locale`, so the
- * numerals setting (`settings.numerals`, #229 F-F2) reaches Today's counters; a text param (a
- * translated `keyParams` entry, #60) passes through. `count` is included: `appPlural` still picks
- * the plural category from the raw number and lets these params override the `count` it
- * interpolates. */
-export function localizedCountParams(
-  count: number,
-  params: Readonly<Record<string, number | string>>,
-  locale: string,
-): Record<string, string> {
-  const format = new Intl.NumberFormat(locale);
-  return Object.fromEntries(
-    Object.entries({ ...params, count }).map(([name, value]) => [
-      name,
-      typeof value === 'number' ? format.format(value) : value,
-    ]),
-  );
-}
