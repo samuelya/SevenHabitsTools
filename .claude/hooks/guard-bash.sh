@@ -49,6 +49,11 @@ has '\bgh pr view\b' && ! has '\bgh pr view\b[^|;&]*--json\b' && block "use scri
 has '\bgh pr checks\b.*--watch\b' && block "use scripts/gh/wait-ci.sh <pr> (bounded, prints progress)."
 has '\bgh run watch\b' && block "use scripts/gh/wait-ci.sh <pr>."
 
+# Coders push and hand off; the lead reads CI and posts failures for a fresh coder (CLAUDE.md
+# "Test cadence"). #298's coder waited on CI itself: four fix cycles in one round, 173 turns, 24M.
+[[ "$agent" == *coder* ]] && has 'wait-ci\.sh|\bgh pr checks\b' \
+  && block "coders don't wait on CI: push, post round.sh and hand off; the lead runs wait-ci.sh and posts any failures."
+
 # wait-ci.sh blocks on purpose: its 540 s deadline sits under the Bash tool's 600 s cap, so the call
 # always returns. Backgrounding it ends the agent's turn instead, and the round then sits idle until
 # someone notices the PR is already green (#235).
