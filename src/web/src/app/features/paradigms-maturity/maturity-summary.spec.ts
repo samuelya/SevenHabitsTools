@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { provideTranslocoScope } from '@jsverse/transloco';
+import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { MaturitySummary } from './maturity-summary';
 
 const PROFILE_LABELS = { 1: 'Dependence', 2: 'Independence', 3: 'Interdependence' };
@@ -30,5 +32,19 @@ describe('MaturitySummary', () => {
   it('shows the latest profile label when there is one', () => {
     const fixture = setUp({ totalAssessments: 1, latestProfile: 3 });
     expect(fixture.nativeElement.textContent).toContain('Interdependence');
+  });
+
+  it('shows its count in Arabic-Indic numerals with that setting (#305)', () => {
+    const fixture = setUp({ totalAssessments: 11, latestProfile: null });
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.querySelector('.total').textContent as string;
+    expect(text).toContain('١١');
+    expect(text).not.toMatch(/[0-9]/);
   });
 });

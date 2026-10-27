@@ -75,11 +75,11 @@
   "summary": {
     "title": "Your practice",
     "daysText": {
-      "one": "Practised 1 day",
+      "one": "Practised {{count}} day",
       "other": "Practised {{count}} days"
     },
     "streakText": {
-      "one": "1-day streak",
+      "one": "{{count}}-day streak",
       "other": "{{count}}-day streak"
     }
   },

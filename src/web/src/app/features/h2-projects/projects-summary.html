@@ -3,10 +3,7 @@
     <h2 class="title">{{ 'h2Projects.summary.title' | transloco }}</h2>
     <p class="projects">
       {{
-        'h2Projects.summary.projectsText'
-          | appPlural
-            : summary().count
-            : { count: (summary().count | appNumber), done: (summary().done | appNumber) }
+        'h2Projects.summary.projectsText' | appPlural: summary().count : { done: summary().done }
       }}
     </p>
     @if (summary().steps > 0) {
@@ -15,10 +12,7 @@
           'h2Projects.summary.stepsText'
             | appPlural
               : summary().steps
-              : {
-                  steps: (summary().steps | appNumber),
-                  stepsDone: (summary().stepsDone | appNumber),
-                }
+              : { steps: summary().steps, stepsDone: summary().stepsDone }
         }}
       </p>
     }

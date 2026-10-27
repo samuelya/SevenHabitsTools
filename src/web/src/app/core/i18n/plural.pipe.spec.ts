@@ -2,6 +2,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService } from '@jsverse/transloco';
 import { Subject } from 'rxjs';
+import { DocumentStore } from '../data/document.store';
+import '../../features/settings/settings.model';
 import { AppPluralPipe } from './plural.pipe';
 
 /** A minimal `TranslocoService` stub: flattened translations keyed like the real service stores
@@ -118,6 +120,49 @@ describe('AppPluralPipe', () => {
     );
 
     expect(fixture.nativeElement.textContent).toBe('2 of 5');
+  });
+
+  it.each([
+    [0, '٠ scripts'],
+    [1, 'one script'],
+    [2, 'two scripts'],
+    [11, '١١ scripts'],
+    [100, '١٠٠ scripts'],
+  ])(
+    'shows ar count %i in Arabic-Indic numerals with settings.numerals "arabic" (#305)',
+    (count, text) => {
+      const { fixture } = setUp(
+        'ar',
+        {
+          'summary.named.one': 'one script',
+          'summary.named.two': 'two scripts',
+          'summary.named.other': '{{count}} scripts',
+        },
+        { count },
+      );
+      TestBed.inject(DocumentStore).update('settings', () => ({
+        language: 'ar',
+        numerals: 'arabic',
+      }));
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.textContent).toBe(text);
+    },
+  );
+
+  it('formats numeric params with the numerals setting but leaves a pre-formatted count alone', () => {
+    const { fixture } = setUp(
+      'en',
+      { 'summary.named.other': '{{count}} of {{total}}' },
+      { count: 2, params: { count: '٢', total: 5 } },
+    );
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'en',
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toBe('٢ of ٥');
   });
 
   it('re-renders once the scope finishes loading (cold load, issue #187)', () => {

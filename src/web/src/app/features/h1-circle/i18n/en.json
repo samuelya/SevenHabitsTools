@@ -80,7 +80,7 @@
   },
   "summary": {
     "withStep": {
-      "one": "1 of {{total}} has a first step",
+      "one": "{{count}} of {{total}} has a first step",
       "other": "{{count}} of {{total}} have a first step"
     }
   },

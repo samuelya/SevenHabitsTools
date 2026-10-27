@@ -18,10 +18,7 @@
         </span>
         <span matListItemLine class="version-meta">
           {{ 'h2Mission.versions.savedText' | transloco: { date: (row.savedAt | appDate) } }} ·
-          {{
-            'h2Mission.versions.wordCountText'
-              | appPlural: row.words : { count: (row.words | appNumber) }
-          }}
+          {{ 'h2Mission.versions.wordCountText' | appPlural: row.words }}
         </span>
         @if (row.note) {
           <span matListItemLine class="version-note" dir="auto">{{ row.note }}</span>
@@ -92,16 +89,9 @@
             'h2Mission.versions.diffSummaryText'
               | transloco
                 : {
-                    added:
-                      ('h2Mission.versions.addedCountText'
-                      | appPlural
-                        : result.summary.added
-                        : { count: (result.summary.added | appNumber) }),
+                    added: ('h2Mission.versions.addedCountText' | appPlural: result.summary.added),
                     removed:
-                      ('h2Mission.versions.removedCountText'
-                      | appPlural
-                        : result.summary.removed
-                        : { count: (result.summary.removed | appNumber) }),
+                      ('h2Mission.versions.removedCountText' | appPlural: result.summary.removed),
                   }
           }}
         }

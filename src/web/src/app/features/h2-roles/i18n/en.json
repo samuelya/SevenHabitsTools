@@ -53,7 +53,7 @@
     "addButton": "Add goal",
     "empty": "No goals yet. What would make this role a success in a year?",
     "countText": {
-      "one": "1 goal",
+      "one": "{{count}} goal",
       "other": "{{count}} goals"
     }
   },
@@ -109,12 +109,12 @@
   "summary": {
     "title": "Your picture",
     "countText": {
-      "one": "1 role, {{rated}} rated",
+      "one": "{{count}} role, {{rated}} rated",
       "other": "{{count}} roles, {{rated}} rated"
     },
     "averageText": "Average {{avg}} of {{max}}",
     "goalsText": {
-      "one": "1 goal, {{withStep}} with a first step",
+      "one": "{{count}} goal, {{withStep}} with a first step",
       "other": "{{count}} goals, {{withStep}} with a first step"
     }
   },

@@ -2,17 +2,11 @@
   <mat-card-content>
     <h2 class="title">{{ 'h2Affirmations.summary.title' | transloco }}</h2>
     <p class="days">
-      {{
-        'h2Affirmations.summary.daysText'
-          | appPlural: summary().days : { count: (summary().days | appNumber) }
-      }}
+      {{ 'h2Affirmations.summary.daysText' | appPlural: summary().days }}
     </p>
     @if (summary().streak > 0) {
       <p class="streak">
-        {{
-          'h2Affirmations.summary.streakText'
-            | appPlural: summary().streak : { count: (summary().streak | appNumber) }
-        }}
+        {{ 'h2Affirmations.summary.streakText' | appPlural: summary().streak }}
       </p>
     }
   </mat-card-content>

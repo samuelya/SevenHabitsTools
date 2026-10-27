@@ -1,13 +1,16 @@
 import { ChangeDetectorRef, OnDestroy, Pipe, PipeTransform, inject } from '@angular/core';
 import { TranslocoService } from '@jsverse/transloco';
 import { Subscription, filter, merge } from 'rxjs';
+import { featureStore } from '../data/feature-store';
+import { Numerals } from './language';
 import { translatePlural } from './plural.logic';
 
 /**
  * Plural-correct counts without `transloco-messageformat` (issue #133: that plugin costs initial
  * bundle bytes for every page, not just the ones with a count to render). The form is picked by
  * `translatePlural()` (`plural.logic.ts`), which a page building a label in a `computed()` uses
- * too.
+ * too. Numbers it interpolates (`count` and numeric params) follow `settings.numerals`, the same
+ * rule as `appNumber` (#305), so a template passes raw numbers and never pre-formats them.
  *
  * Reactive, unlike a naive impure pipe that only reads `getTranslation()`/`translate()`
  * synchronously: this exercise's scope loads over HTTP and only once something asks for it, so a
@@ -27,6 +30,7 @@ import { translatePlural } from './plural.logic';
 export class AppPluralPipe implements PipeTransform, OnDestroy {
   private readonly transloco = inject(TranslocoService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly numerals = featureStore<Numerals>('numerals');
   private subscription: Subscription | null = null;
 
   transform(key: string, count: number, params: Record<string, unknown> = {}): string {
@@ -43,7 +47,7 @@ export class AppPluralPipe implements PipeTransform, OnDestroy {
       this.transloco.langChanges$,
       this.transloco.events$.pipe(filter((event) => event.type === 'translationLoadSuccess')),
     ).subscribe(() => this.cdr.markForCheck());
-    return translatePlural(this.transloco, key, count, params);
+    return translatePlural(this.transloco, key, count, this.numerals.value(), params);
   }
 
   ngOnDestroy(): void {

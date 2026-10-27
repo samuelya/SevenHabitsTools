@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideTranslocoScope, TranslocoService } from '@jsverse/transloco';
+import { DocumentStore } from '../../core/data/document.store';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { TransitionSummary } from './transition-summary';
 
 function setUp(summary: { stopped: number; rewritten: number; total: number }) {
@@ -46,5 +48,19 @@ describe('TransitionSummary', () => {
     transloco.setActiveLang('en');
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('patterns named');
+  });
+
+  it('shows its count in Arabic-Indic numerals with that setting (#305)', () => {
+    const fixture = setUp({ stopped: 2, rewritten: 1, total: 11 });
+    TestBed.inject(TranslocoService).setActiveLang('ar');
+    TestBed.inject(DocumentStore).update('settings', () => ({
+      language: 'ar',
+      numerals: 'arabic',
+    }));
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.querySelector('.total').textContent as string;
+    expect(text).toContain('١١');
+    expect(text).not.toMatch(/[0-9]/);
   });
 });

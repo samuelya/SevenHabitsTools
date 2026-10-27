@@ -101,7 +101,7 @@
   },
   "summary": {
     "success": {
-      "one": "{{chosen}} of 1 went as planned",
+      "one": "{{chosen}} of {{count}} went as planned",
       "other": "{{chosen}} of {{count}} went as planned"
     }
   },

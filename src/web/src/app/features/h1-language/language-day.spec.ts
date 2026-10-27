@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslocoService, provideTranslocoScope } from '@jsverse/transloco';
 import { provideTranslocoTesting } from '../../testing/transloco-testing';
+import '../settings/settings.model';
 import { LanguageDay } from './language-day';
 import { DayState } from './language.logic';
 import { ListeningDay } from './language.model';

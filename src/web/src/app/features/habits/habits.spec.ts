@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { TranslocoService } from '@jsverse/transloco';
 import { HABITS } from '../../core/habits/habits';
 import { ExerciseGuideOpener } from '../../shared/exercise-kit/exercise-guide/exercise-guide-opener';
+import { DocumentStore } from '../../core/data/document.store';
 import { WRITER_LOCK } from '../../core/data/multi-tab/writer-lock';
 import { ExerciseProgress } from '../../shared/exercise-kit/exercise-progress.service';
 import {
@@ -297,6 +298,32 @@ describe('Habits feature', () => {
       const host = fixture.nativeElement as HTMLElement;
 
       expect(host.querySelector('app-habit-hub-page .hub-exercise-status')).not.toBeNull();
+    });
+
+    it('shows the status count in Arabic-Indic numerals with that setting (#305)', async () => {
+      registerExercise({
+        exerciseId: 'h3-example',
+        habit: 'h3',
+        titleKey: 'titles.paradigms',
+        shortTitleKey: 'titles.paradigms',
+        icon: 'flag',
+        route: 'habits/h3/example',
+        statusFactory: (): Signal<ExerciseHubStatus | null> =>
+          signal({ key: 'habits.exercises.paradigms-teach.sharedCount', count: 11 }),
+      });
+      configureApp({ handset: false });
+      const fixture = await renderShellAt('/habits/h3');
+      TestBed.inject(DocumentStore).update('settings', (settings) => ({
+        ...(settings as object),
+        numerals: 'arabic',
+      }));
+      fixture.detectChanges();
+
+      const status = (fixture.nativeElement as HTMLElement).querySelector(
+        'app-habit-hub-page .hub-exercise-status',
+      );
+      expect(status?.textContent).toContain('١١');
+      expect(status?.textContent).not.toMatch(/[0-9]/);
     });
   });
 

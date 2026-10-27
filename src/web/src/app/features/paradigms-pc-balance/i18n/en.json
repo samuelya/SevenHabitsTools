@@ -83,7 +83,7 @@
   },
   "summary": {
     "totalAudits": {
-      "one": "1 audit taken",
+      "one": "{{count}} audit taken",
       "other": "{{count}} audits taken"
     },
     "latestBalance": "Latest average balance: {{value}}"

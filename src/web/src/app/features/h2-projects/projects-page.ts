@@ -104,16 +104,18 @@ export class ProjectsPage {
   private readonly overdueLabel = translateSignal('list.overdue', undefined, PROJECTS_MODEL_KEY);
   private readonly labels = computed<ProjectLabels>(() => {
     const locale = intlLocaleFor(this.languageStore.language(), this.languageStore.numerals());
-    const numbers = new Intl.NumberFormat(locale);
     const dates = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' });
     return {
       example: this.exampleLabel() ?? '',
       overdue: this.overdueLabel() ?? '',
       progress: (done, total) =>
-        translatePlural(this.transloco, 'h2Projects.list.progressText', total, {
-          done: numbers.format(done),
-          total: numbers.format(total),
-        }),
+        translatePlural(
+          this.transloco,
+          'h2Projects.list.progressText',
+          total,
+          this.languageStore.numerals(),
+          { done, total },
+        ),
       formatDate: (date) => dates.format(parseIsoDate(date)),
     };
   });
